@@ -307,6 +307,8 @@
     "contract_sign_before_send": "Bizning imzo — mijozga yuborişdan oldin",
     "contract_sign_before_sendHint": "Öçirilsa — şartnoma tayyor bölişi bilan ketadi.",
     "contract_deviations_allowed": "Şablondan çetlaniş — «Huquq» egasiga ariza bilan",
+    "contract_four_eyes": "Öz şartnomasi böyiça qaror — «Huquq»ning boşqa egasi tomonidan",
+    "contract_four_eyesHint": "Hamkor şartnomasini tayyorlagan kişi u böyiça özi qaror qilmaydi. Yagona ega tasdiqlaş bilan qaror qiladi, yozuv jurnalga tuşadi.",
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
     "defaultClientTemplate": "Standart şablon: mijoz",
     "defaultPartnerTemplate": "Standart şablon: hamkor",

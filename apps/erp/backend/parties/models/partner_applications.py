@@ -16,7 +16,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import get_private_storage, partner_application_contract_path
+from core.storage import get_private_storage, partner_application_contract_path, partner_application_scan_path
 
 from .relationships import PartnerKind
 
@@ -25,6 +25,22 @@ class PartnerApplicationSource(models.TextChoices):
     PUBLIC = "public", _("Внешний вход")
     CLIENT_CABINET = "client_cabinet", _("Кабинет клиента")
     LETTER = "letter", _("Входящее письмо")
+    LEAD = "lead", _("Лид CRM")
+
+
+class PartnerContractSource(models.TextChoices):
+    """ПД-1: откуда договор кандидата. Пусто — договор ещё не подготовлен."""
+
+    TEMPLATE = "template", _("Утверждённый шаблон")
+    UPLOAD = "upload", _("Свой файл")
+
+
+class PartnerContractApproval(models.TextChoices):
+    """ПД-1: внутреннее согласование договора. Пусто — согласования не требуется (шаблон без отступлений)."""
+
+    REQUESTED = "requested", _("Ждёт решения держателя «Право»")
+    APPROVED = "approved", _("Согласован")
+    RETURNED = "returned", _("Возвращён на доработку")
 
 
 class PartnerApplicationStatus(models.TextChoices):
@@ -137,8 +153,11 @@ class PartnerApplication(models.Model):
         max_length=32,
         blank=True,
         default="",
-        verbose_name=_("Номер входящего письма"),
-        help_text=_("План 1.9: заявку завёл сотрудник по входящему письму — «Передать в работу»"),
+        verbose_name=_("Номер входящего письма или лида"),
+        help_text=_(
+            "План 1.9: заявку завёл сотрудник по входящему письму — «Передать в работу»; "
+            "ЛП-1: номер лида CRM, если заявка из его карточки"
+        ),
     )
     contract_number = models.CharField(
         max_length=64,
@@ -159,6 +178,68 @@ class PartnerApplication(models.Model):
         verbose_name=_("PDF договора"),
         help_text=_("Файл проекта или согласованного/подписанного договора"),
     )
+    # ПД-1: подготовка договора — из утверждённого шаблона библиотеки либо своим файлом; факты, из которых
+    # карточка выводит «что дальше» (шаблона и файла нет — отправлять нечего, встроенного образца нет).
+    contract_source = models.CharField(
+        max_length=16,
+        choices=PartnerContractSource.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Откуда договор"),
+    )
+    contract_template = models.ForeignKey(
+        "documents.DocumentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Шаблон договора"),
+        help_text=_("Утверждённая редакция шаблона, по которой собран договор; не меняется при выходе новой"),
+    )
+    contract_language = models.CharField(
+        max_length=8, blank=True, default="", verbose_name=_("Язык договора"), help_text=_("ru, en или uz")
+    )
+    contract_file = models.FileField(
+        upload_to=partner_application_contract_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Файл договора"),
+        help_text=_("Договор, который кандидат видит и скачивает: PDF по шаблону или свой файл (PDF, DOCX)"),
+    )
+    contract_deviation_text = models.TextField(
+        max_length=4000,
+        blank=True,
+        default="",
+        verbose_name=_("Отступление от шаблона"),
+        help_text=_("Чем текст отличается от утверждённого шаблона; пусто — отступлений нет"),
+    )
+    contract_approval = models.CharField(
+        max_length=16, choices=PartnerContractApproval.choices, blank=True, default="", verbose_name=_("Согласование")
+    )
+    contract_approval_requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    contract_approval_requested_at = models.DateTimeField(null=True, blank=True)
+    contract_approval_decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    contract_approval_decided_at = models.DateTimeField(null=True, blank=True)
+    contract_approval_note = models.TextField(max_length=1000, blank=True, default="")
+    candidate_returned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Когда кандидат вернул договор с замечанием"),
+        help_text=_("Сбрасывается при повторной отправке; замечание — в `candidate_notes`"),
+    )
+    signed_scan = models.FileField(
+        upload_to=partner_application_scan_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Скан подписанного договора"),
+    )
+    signed_scan_at = models.DateTimeField(null=True, blank=True)
     contract_draft_sent_at = models.DateTimeField(
         null=True,
         blank=True,

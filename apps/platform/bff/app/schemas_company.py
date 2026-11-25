@@ -522,6 +522,7 @@ class QuoteDefaults(BaseModel):
     contract_auto_send: bool = True
     contract_sign_before_send: bool = True
     contract_deviations_allowed: bool = True
+    contract_four_eyes: bool = True
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
     # ДС-1: срок договора («Правила работы · Продажи»)
@@ -574,6 +575,7 @@ class QuoteDefaultsUpdate(Patch):
     contract_auto_send: bool | None = None
     contract_sign_before_send: bool | None = None
     contract_deviations_allowed: bool | None = None
+    contract_four_eyes: bool | None = None
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
     contract_term_rule: Literal["calendar_year", "twelve_months", "open"] | None = None
@@ -615,6 +617,7 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "contract_auto_send": raw.get("contract_auto_send") is not False,
         "contract_sign_before_send": raw.get("contract_sign_before_send") is not False,
         "contract_deviations_allowed": raw.get("contract_deviations_allowed") is not False,
+        "contract_four_eyes": raw.get("contract_four_eyes") is not False,
         "default_client_contract_template": maybe_int(raw.get("default_client_contract_template")),
         "default_partner_contract_template": maybe_int(
             raw.get("default_partner_contract_template")

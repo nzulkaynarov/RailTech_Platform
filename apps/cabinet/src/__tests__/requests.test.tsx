@@ -13,7 +13,7 @@ describe('Заявки', () => {
     const list = await screen.findByRole('list', { name: 'Заявки' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(6);
     expect(within(list).getByText('Новая')).toBeInTheDocument();
-    expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
+    expect(within(list).getAllByText('Есть предложение')).toHaveLength(2);
     expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
 
     const link = within(list).getByRole('link', { name: /^ЗВ-2026-042/ });
@@ -27,7 +27,7 @@ describe('Заявки', () => {
     signedIn();
     renderApp('/requests/501');
     await heading('Заявка ЗВ-2026-042');
-    expect(screen.getByText('КП готово — откройте его ниже.')).toBeInTheDocument();
+    expect(screen.getByText('Предложение готово — откройте его ниже.')).toBeInTheDocument();
     expect(screen.getByText('Через менеджера')).toBeInTheDocument();
     expect(screen.getByText('Ведёт')).toBeInTheDocument();
     expect(screen.getByText('Дилноза Каримова')).toBeInTheDocument();

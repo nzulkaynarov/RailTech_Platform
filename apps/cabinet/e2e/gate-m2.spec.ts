@@ -373,13 +373,13 @@ test.describe('C. КП: «Требует вашего решения», прин
   step('C1. «Запросы» и блок «Требует вашего решения»', async () => {
     await open('/requests');
     await expect(client.getByText('Требует вашего решения')).toBeVisible();
-    await expect(client.getByText('Посмотреть КП')).toBeVisible();
+    await expect(client.getByText('Посмотреть предложение')).toBeVisible();
     await snap(client, 'requests-action-required');
   });
 
   step('C2. список КП и карточка', async () => {
     await open('/quotes');
-    await expect(client.getByText('1 КП ждёт вашего решения')).toBeVisible();
+    await expect(client.getByText('1 предложение ждёт вашего решения')).toBeVisible();
     await snap(client, 'quotes-list');
     await client.getByRole('link', { name: /КП-\d{4}-\d+/ }).first().click();
     await expect(client.getByRole('button', { name: 'Принять' })).toBeVisible();
@@ -392,7 +392,7 @@ test.describe('C. КП: «Требует вашего решения», прин
     test.info().annotations.push({ type: 'D-3 не исправлен (Q-FIX55-1)', description: `promised_date: null — ${emptyDates}, заполнен — ${filledDates}` });
   });
 
-  step('C3. принять КП: код из письма → «КП принято», договор готов', async () => {
+  step('C3. принять КП: код из письма → «Предложение принято», договор готов', async () => {
     await open('/quotes');
     await client.getByRole('link', { name: /КП-\d{4}-\d+/ }).first().click();
     await client.getByRole('button', { name: 'Принять' }).click();
@@ -402,13 +402,13 @@ test.describe('C. КП: «Требует вашего решения», прин
     await expect(dialog.getByLabel('Код подтверждения')).toBeVisible();
     // неверный код — ошибка в диалоге, диалог остаётся
     await dialog.getByLabel('Код подтверждения').fill('000000');
-    await dialog.getByRole('button', { name: 'Принять КП' }).click();
+    await dialog.getByRole('button', { name: 'Принять предложение' }).click();
     await expect(dialog.getByRole('alert').or(dialog.getByText(/неверен|не запрошен/i)).first()).toBeVisible();
     await snap(client, 'quote-accept-dialog-wrong-code');
     await expect.poll(() => latestQuoteCode(email), { timeout: 30_000, intervals: [2000] }).not.toBeNull();
     await dialog.getByLabel('Код подтверждения').fill(latestQuoteCode(email)!);
-    await dialog.getByRole('button', { name: 'Принять КП' }).click();
-    await expect(client.getByText('КП принято').first()).toBeVisible();
+    await dialog.getByRole('button', { name: 'Принять предложение' }).click();
+    await expect(client.getByText('Предложение принято').first()).toBeVisible();
     await snap(client, 'quote-accepted');
   });
 });
@@ -444,7 +444,7 @@ test.describe('D. Договор → счёт', () => {
 
   step('D3. договор «подписан сторонами» и счёт с остатком', async () => {
     await open('/contracts');
-    await expect(client.getByText('Подписан сторонами').first()).toBeVisible();
+    await expect(client.getByText('Подписан', { exact: true }).first()).toBeVisible();
     await snap(client, 'contracts-signed-both');
     await open('/invoices');
     await expect(client.getByText('Оплачен частично')).toBeVisible();
@@ -666,12 +666,12 @@ test.describe('G. Новый запрос из каталога → отказ �
     await client.getByRole('link', { name: /версия 1/ }).first().click();
     await client.getByRole('button', { name: 'Отклонить' }).click();
     const dialog = client.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Отклонить КП' }).click(); // без причины — нельзя
+    await dialog.getByRole('button', { name: 'Отклонить предложение' }).click(); // без причины — нельзя
     await expect(dialog).toBeVisible();
     await dialog.getByLabel('Причина').fill('FIX-51b: срок поставки не устраивает, нужен 10 дней');
     await snap(client, 'quote-reject-dialog');
-    await dialog.getByRole('button', { name: 'Отклонить КП' }).click();
-    await expect(client.getByText('КП отклонено').first()).toBeVisible();
+    await dialog.getByRole('button', { name: 'Отклонить предложение' }).click();
+    await expect(client.getByText('Предложение отклонено').first()).toBeVisible();
     await snap(client, 'quote-rejected');
   });
 
@@ -685,8 +685,8 @@ test.describe('G. Новый запрос из каталога → отказ �
     await dialog.getByRole('button', { name: 'Получить код' }).click();
     await expect.poll(() => latestQuoteCode(email, '5m'), { timeout: 30_000, intervals: [2000] }).not.toBeNull();
     await dialog.getByLabel('Код подтверждения').fill(latestQuoteCode(email, '5m')!);
-    await dialog.getByRole('button', { name: 'Принять КП' }).click();
-    await expect(client.getByText('КП принято').first()).toBeVisible();
+    await dialog.getByRole('button', { name: 'Принять предложение' }).click();
+    await expect(client.getByText('Предложение принято').first()).toBeVisible();
     await open('/contracts');
     await client.getByRole('button', { name: /^Подписать/ }).first().click();
     await client.getByRole('dialog').getByRole('button', { name: 'Согласовать договор' }).click();

@@ -92,7 +92,8 @@ def test_buttons_are_localized(language: Language, quote: str, invoice: str, cab
         (cabinet, CABINET),
     )
     assert render("invoice.issued", language).buttons == (
-        (invoice, "https://cabinet.example.com/invoices/7"),
+        # адрес прежних событий `/invoices/7` в кабинете не существует — строка счёта по `?focus=`
+        (invoice, "https://cabinet.example.com/invoices?focus=7"),
         (cabinet, CABINET),
     )
 
@@ -429,3 +430,46 @@ def test_request_created_text_has_no_internal_terms() -> None:
     assert message is not None
     for word in ("лид", "сделк", "crm", "CRM"):
         assert word not in message.text
+
+
+@pytest.mark.parametrize(
+    ("event", "payload", "deal_id", "expected"),
+    [
+        ("invoice.issued", {"erp_invoice_id": 4410}, 905, "/invoices?focus=4410"),
+        ("invoice.paid", {"erp_invoice_id": 4410}, 905, "/invoices?focus=4410"),
+        ("act.issued", {"erp_act_id": 520, "number": "ACT-3"}, 905, "/acts?focus=520"),
+        ("delivery.status_changed", {"status": "shipped"}, 905, "/deals/905"),
+        ("delivery.eta_changed", {"eta": "2026-11-20"}, 905, "/deals/905"),
+        # нет id объекта (прежнее событие) или поставка без сделки — главная, как раньше
+        ("act.issued", {"number": "ACT-3"}, 905, ""),
+        ("delivery.status_changed", {"status": "shipped"}, None, ""),
+    ],
+)
+def test_cabinet_button_opens_the_exact_object_page(
+    event: str, payload: dict[str, Any], deal_id: int | None, expected: str
+) -> None:
+    """Кнопка «Кабинет» ведёт на существующие маршруты кабинета (`routes.tsx`), а не на главную."""
+    message = client_message(
+        event,
+        {"line_summary": "Колёса", "number": "N", **payload},
+        deal_title="Оси",
+        texts=TEXTS,
+        language="ru",
+        cabinet_url=CABINET,
+        erp_deal_id=deal_id,
+    )
+    assert message is not None
+    assert message.buttons[-1] == ("Кабинет", CABINET + expected)
+
+
+def test_staff_alert_names_the_quote_by_number_not_by_database_id() -> None:
+    text = staff_alert(
+        "quote.accepted",
+        {"erp_quote_id": 1203, "number": "QT-2026-115"},
+        client_name="ООО Тест",
+        deal_title="Оси",
+        texts=TEXTS,
+    )
+    assert text is not None
+    assert "QT-2026-115" in text
+    assert "1203" not in text

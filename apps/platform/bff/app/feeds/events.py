@@ -8,14 +8,17 @@
 «Действие в ERP». Сырой код и английский глагол события («Справочник deleted: ZZ») в ленте не
 показываются никогда.
 
-Язык строк пока русский, как у остальных текстов BFF (docs/QUESTIONS.md, Q-PLT-14-5); uz и en —
-хвост P2 вместе с переносом формулировок в SPA.
+Язык строк — язык запроса (`feeds/lang.py`): русские тут, uz и en — `events_i18n.py`. Готовая
+строка ERP (`action`) приходит как есть.
 """
 
 import re
 
-NEUTRAL_TEXT = "Действие в ERP"
-ADMIN_TEXT = "Административное действие в ERP"
+from app.feeds.events_i18n import ADMIN, EVENT_TEXTS_EN, EVENT_TEXTS_UZ, NEUTRAL
+from app.feeds.lang import lang_var, tr
+
+NEUTRAL_TEXT = NEUTRAL[0]
+ADMIN_TEXT = ADMIN[0]
 
 # Служебные события входа, выхода, SSO и токенов: ни по коду, ни по `action` в ленту не идут.
 _SERVICE_PREFIXES = ("sso.", "auth.", "login", "logout", "token.", "session.", "jwt.")
@@ -105,9 +108,9 @@ EVENT_TEXTS: dict[str, str] = {
     "catalog.category_request_approved": "Категория заведена",
     "catalog.category_request_rejected": "Запрос на категорию отклонён",
     "product.hs_code_changed": "Код ТН ВЭД изменён",
-    "company.linked_by_inn": "Компания связана с клиентом CRM по ИНН",
-    "integration.paired_bootstrap": "ERP сопряжена с CRM",
-    "integration.paired_code": "ERP сопряжена с CRM по коду",
+    "company.linked_by_inn": "Компания связана с клиентом по ИНН",
+    "integration.paired_bootstrap": "Системы связаны",
+    "integration.paired_code": "Системы связаны по коду",
     "integration.pairing_code_issued": "Выдан код сопряжения",
     "portal.legal.accepted": "Клиент принял условия или политику кабинета",
     "admin.portal_legal.published": "Опубликована новая редакция документа кабинета",
@@ -145,8 +148,10 @@ def event_text(event_code: str, action: str) -> str:
     code = event_code.strip()
     known = EVENT_TEXTS.get(code)
     if known:
-        return known
+        # текст кода — на языке запроса; нет перевода — русский, а не пусто
+        table = {"uz": EVENT_TEXTS_UZ, "en": EVENT_TEXTS_EN}.get(lang_var.get(), {})
+        return table.get(code, known)
     human = _MARKER.sub("", action).strip()
     if human and not _CODE_LIKE.fullmatch(human) and not _RAW_VERB.search(human):
         return human
-    return ADMIN_TEXT if code.startswith("admin.") else NEUTRAL_TEXT
+    return tr(*ADMIN) if code.startswith("admin.") else tr(*NEUTRAL)

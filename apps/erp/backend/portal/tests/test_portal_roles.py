@@ -318,6 +318,8 @@ CANDIDATE_OPERATIONS = {
     ("GET", "/company/partner-application"),
     ("GET", "/company/partner-application/contract-pdf"),
     ("POST", "/company/partner-application/agree"),
+    ("POST", "/company/partner-application/return"),  # ПД-1
+    ("POST", "/company/partner-application/signed-scan"),
 }
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.

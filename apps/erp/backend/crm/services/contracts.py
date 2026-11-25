@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+from urllib.parse import quote as url_quote
 
 from django.db import transaction
 
@@ -293,7 +294,9 @@ def _render_contract_pdf(contract) -> None:
     )
     # A signed contract's specification (Приложение № 1) is the LEGALLY agreed goods: only
     # billable lines — see the comment on the code path below. Shared by both render paths.
-    items = contract.quote.items.billable().select_related("product", "frozen_currency")
+    from .documents.projection import client_billable_lines
+
+    items = client_billable_lines(contract.quote)
 
     # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
     # правит статьи договора, структурные блоки собирает сервер. Шаблона нет → путь из кода.
@@ -498,9 +501,32 @@ def sign_contract_by_client(
         deal=contract.deal,
         company_id=contract.deal.company_id,
     )
+    _notify_client_agreed(contract, portal_contact)
     _finalize_if_signed(contract)
     _rerender_pdf_after_signature(contract)
     return contract, None
+
+
+def _notify_client_agreed(contract, portal_contact) -> None:
+    """Клиент согласовал договор в Кабинете — автору КП в колокольчик («Решения»: дальше ход за нами — выставить
+    у оператора и приложить скан). Раньше узнавал разве что тот, кто открыл карточку договора."""
+    from notifications.services import notify_user
+
+    recipient = _contract_seller_recipient(contract)
+    if recipient is None:
+        return
+    who = (getattr(portal_contact, "name", "") or "").strip()
+    number = contract.number or f"CT-{contract.id}"
+    notify_user(
+        user=recipient,
+        title=f"Клиент согласовал договор {number}",
+        message=(f"{who}: " if who else "") + f"договор {number} согласован в кабинете — выставьте его у оператора.",
+        link=f"/eds/projects/{url_quote(contract.deal.number or f'D-{contract.deal_id}', safe='')}",
+        deal=contract.deal,
+        type_code="INFO",
+        event_code="contract.signed_client",
+        event_params={"number": number, "contact_name": who},
+    )
 
 
 @transaction.atomic

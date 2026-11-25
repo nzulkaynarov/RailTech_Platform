@@ -32,6 +32,21 @@ function names(): string[] {
 }
 
 describe("Клиенты · Лиды (D1-2b)", () => {
+  it("«Создать · Лид» второй раз при открытой форме начинает её заново (Б-6)", async () => {
+    const { router } = await open("manager@demo.example", "/crm/leads?new=1&panel=open&tab=card");
+    const name = await screen.findByLabelText("Имя");
+    fireEvent.change(name, { target: { value: "Иван Звонивший" } });
+    expect(screen.getByLabelText("Имя")).toHaveValue("Иван Звонивший");
+    // боковое окно меняет адрес без метки «Создать» — введённое остаётся
+    await router.navigate("/crm/leads?new=1&panel=open&tab=card", { replace: true });
+    expect(screen.getByLabelText("Имя")).toHaveValue("Иван Звонивший");
+    // выбор пункта «Создать» — метка `fresh` — форма новая
+    await router.navigate("/crm/leads?new=1&panel=open&tab=card", { state: { fresh: 1 } });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Имя")).toHaveValue("");
+    });
+  });
+
   it("вкладки по статусу, «Мои / Просроченные» и канал сужают список", async () => {
     await open("manager@demo.example");
     await screen.findByRole("table", { name: "Лиды" });
@@ -116,7 +131,8 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     expect(await within(panel).findByRole("heading", { name: "Азиз Демо" })).toBeVisible();
     expect(within(panel).getByText("@aziz_demo")).toBeVisible();
     expect(within(panel).getByText(/дано в боте/)).toBeVisible();
-    expect(within(panel).getAllByText("Рельсы Р65, 40 т").length).toBeGreaterThan(0);
+    // СЦ-7 (N5): запрос — тот же текст, что в сообщении лида; второй раз не печатается
+    expect(within(panel).getAllByText("Рельсы Р65, 40 т")).toHaveLength(1);
     expect(within(panel).getByRole("list", { name: "Последние сообщения" })).toBeVisible();
     expect(within(panel).getByRole("link", { name: "Создать заявку" })).toHaveAttribute(
       "href",

@@ -315,6 +315,12 @@ export const useSubmitCompanyPartnerApplication = () =>
 export const useAgreeCompanyPartnerContract = () =>
   useInvalidatingMutation(portal.agreeCompanyPartnerContract, [keys.partnerApplication]);
 
+export const useReturnCompanyPartnerContract = () =>
+  useInvalidatingMutation(portal.returnCompanyPartnerContract, [keys.partnerApplication]);
+
+export const useUploadCompanyPartnerSignedScan = () =>
+  useInvalidatingMutation(portal.uploadCompanyPartnerSignedScan, [keys.partnerApplication]);
+
 export const useSubmitPartnerApplication = () =>
   useMutation({ mutationFn: portal.submitPartnerApplication });
 

@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { TimeLeft } from '@/components/TimeLeft';
 import { ManagerMenuItem } from '@/components/TelegramLinkButton';
 import { CompactList } from '@/components/list/CompactList';
@@ -111,7 +111,18 @@ export function ContractsPage() {
               ),
             }}
             columns={[
-              { id: 'status', header: t('pages.contracts.columns.status'), cell: (row) => <StatusBadge entity="contract" code={row.status} /> },
+              {
+                id: 'status',
+                header: t('pages.contracts.columns.status'),
+                cell: (row) => (
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBadge entity="contract" code={row.status} />
+                    {row.status === 'signed_by_client' ? (
+                      <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 id: 'client',
                 header: t('pages.contracts.columns.client'),
@@ -286,16 +297,21 @@ export function InvoicesPage() {
               cell: (row) => (
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  {/* проект — под номером, а не отдельной колонкой: таблица помещается на 1280 без прокрутки (СЦ-7, N9) */}
+                  <span className="text-xs font-normal">
+                    <DealLink deal={row.deal} />
+                  </span>
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0',
+              className: 'min-w-0 max-w-52',
             }}
             columns={[
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
-                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} nowrap />,
+                className: 'whitespace-nowrap',
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -313,13 +329,12 @@ export function InvoicesPage() {
                   return (
                     <span className="inline-flex flex-wrap items-center justify-end gap-1">
                       {formatDate(row.due_date)}
-                      {days ? <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: days })}</ToneBadge> : null}
+                      {days ? <span className="text-xs font-medium text-destructive">{t('pages.invoices.lateDays', { count: days })}</span> : null}
                       {!days && invoiceOpen(row) ? <TimeLeft date={row.due_date} now={now} /> : null}
                     </span>
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
               header: t('common.actions'),
@@ -361,10 +376,12 @@ function ProofList({ invoice }: { invoice: Invoice }) {
         items={invoice.proofs.map((proof) => (
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
-              <StatusBadge entity="proof" code={proof.status} />
-              <span className="break-all text-muted-foreground">
-                {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
-              </span>
+              <StatusBadge entity="proof" code={proof.status} nowrap />
+              <span className="text-muted-foreground">{t('pages.invoices.proofLine', { date: formatDateTime(proof.submitted_at) })}</span>
+            </span>
+            {/* имя файла отдельной строкой: слова подписи не рвутся посреди слова, длинное имя обрезается (СЦ-7, N9) */}
+            <span className="block max-w-full truncate text-muted-foreground" title={proof.file_name}>
+              {proof.file_name}
             </span>
             <ProofClaim proof={proof} />
             {proof.status === 'rejected' && proof.reject_reason ? (

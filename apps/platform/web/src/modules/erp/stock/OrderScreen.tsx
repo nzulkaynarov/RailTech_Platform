@@ -213,13 +213,19 @@ function Content({ order }: { order: SupplierOrderDetail }) {
   const a = order.actions;
   const primary = a.send
     ? ("send" as const)
-    : a.request_price
-      ? ("price" as const)
-      : a.confirm
-        ? ("confirm" as const)
-        : a.receive
-          ? ("receive" as const)
-          : null;
+    : a.resend
+      ? // письмо не ушло: «Отправить ещё раз» стоит выше «Партнёр подтвердил» (Б-5)
+        ("resend" as const)
+      : a.request_price
+        ? ("price" as const)
+        : a.confirm
+          ? ("confirm" as const)
+          : a.receive
+            ? ("receive" as const)
+            : // Черновик с ценами, но без даты: главное действие — указать дату (Б-4), а не искать «Изменить»
+              a.edit && order.send_missing?.date
+              ? ("setDate" as const)
+              : null;
   return (
     <div className="pf-calc pf-stock pf-overlay-aware">
       <PageHeader
@@ -234,13 +240,24 @@ function Content({ order }: { order: SupplierOrderDetail }) {
               <Button
                 type="primary"
                 onClick={() => {
-                  setDialog(primary);
+                  setDialog(
+                    primary === "setDate" ? "edit" : primary === "resend" ? "send" : primary,
+                  );
                 }}
               >
                 {t(`order.action.${primary}`)}
               </Button>
             ) : null}
-            {a.edit ? (
+            {primary === "resend" && a.confirm ? (
+              <Button
+                onClick={() => {
+                  setDialog("confirm");
+                }}
+              >
+                {t("order.action.confirm")}
+              </Button>
+            ) : null}
+            {a.edit && primary !== "setDate" ? (
               <Button
                 onClick={() => {
                   setDialog("edit");
@@ -298,7 +315,9 @@ function Content({ order }: { order: SupplierOrderDetail }) {
                       date: activity(order.price_request.requested_at),
                     })
               : null,
-            order.actions.edit ? t("order.missing.hint") : null,
+            order.actions.edit
+              ? t(primary === "setDate" ? "order.missing.hintDate" : "order.missing.hint")
+              : null,
           ]
             .filter(Boolean)
             .join(" ")}

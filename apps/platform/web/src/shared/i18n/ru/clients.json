@@ -108,6 +108,7 @@
   "clientSees": {
     "in_work": "Принято в работу, считаем",
     "awaiting_decision": "Ждёт вашего решения",
+    "contract_preparing": "Готовим договор",
     "contract_review": "Согласуйте редакцию договора",
     "contract_signing": "Договор на подписании",
     "awaiting_payment": "Ожидает оплаты",

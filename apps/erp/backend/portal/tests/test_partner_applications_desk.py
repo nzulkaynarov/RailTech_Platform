@@ -18,6 +18,7 @@ from parties.models import (
     RelationshipStatus,
 )
 from portal.tests.conftest import LOCMEM_BACKEND
+from portal.tests.partner_contract_helpers import prepare, with_scan
 
 from catalog.tests.desk_world import build_world
 
@@ -50,7 +51,10 @@ def _make_app(**kwargs) -> PartnerApplication:
         "status": PartnerApplicationStatus.SUBMITTED,
     }
     defaults.update(kwargs)
-    return PartnerApplication.objects.create(**defaults)
+    app = prepare(PartnerApplication.objects.create(**defaults))  # ПД-1: договор подготовлен
+    if app.status == PartnerApplicationStatus.CANDIDATE_AGREED:
+        with_scan(app)
+    return app
 
 
 class TestPartnerApplicationsRead:
@@ -121,13 +125,9 @@ class TestPartnerApplicationsAccessControl:
 
 class TestSendContract:
     def test_supply_can_send_contract(self, world):
-        app = _make_app()
+        app = _make_app(contract_number="DOG-2026-001", contract_date="2026-11-06")  # номер и дата — при подготовке
         client = world["clients"]["supply"]
-        resp = client.post(
-            f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/",
-            {"contract_number": "DOG-2026-001", "contract_date": "2026-11-06"},
-            format="json",
-        )
+        resp = client.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "contract_sent"
@@ -140,7 +140,7 @@ class TestSendContract:
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.CONTRACT_SENT
         assert app.contract_number == "DOG-2026-001"
-        assert app.contract_pdf
+        assert app.contract_file
         assert app.contract_draft_sent_at is not None
 
 
@@ -196,7 +196,7 @@ class TestApproveApplicationClientCabinet:
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
-        assert app.contract_pdf
+        assert app.contract_file
 
         rel = CompanyRelationship.objects.get(company=client_company, role=RelationshipRole.PARTNER)
         assert rel.status == RelationshipStatus.ACTIVE
@@ -232,7 +232,7 @@ class TestApproveApplicationPublic:
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
-        assert app.contract_pdf
+        assert app.contract_file
         assert app.company is not None
         assert app.company.name == "Новый Завод Стрелка"
         assert app.company.inn == "5001234567"
@@ -316,3 +316,80 @@ class TestCreateFromLetter:
         )
         assert bad.status_code == 400
         assert PartnerApplication.objects.count() == 0
+
+
+class TestLeadApplicationFullPath:
+    """ЛП-1: заявка из карточки лида CRM проходит тот же договорный шлюз, что внешний вход: договор → приглашение
+    кандидата по почте → согласие → одобрение."""
+
+    def test_lead_to_send_contract_invites_candidate_then_approve(self, world, settings):
+        import uuid
+
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = ["lead-path-token"]
+        service = APIClient()
+        service.credentials(HTTP_AUTHORIZATION="Bearer lead-path-token")
+        created = service.post(
+            "/api/integration/v1/partner-applications",
+            {
+                "crm_lead_id": 41,
+                "lead_number": "L-0041",
+                "company_name": "ООО Лид Партнёр",
+                "country": "UZ",
+                "inn": "301234599",
+                "categories_description": "Крепёж",
+                "contact_name": "Олим Лидов",
+                "email": "Olim@Partner-Lead.example",
+                "phone": "+998901110000",
+            },
+            format="json",
+            HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+        )
+        assert created.status_code == 201, created.content
+        app = PartnerApplication.objects.get(pk=created.json()["erp_application_id"])
+        assert (app.source, app.consent) == (PartnerApplicationSource.LEAD, False)
+
+        supply = world["clients"]["supply"]
+        listed = supply.get("/api/v1/catalog/partner-applications/").json()["items"][0]
+        # перечень `source` в контракте не растёт: лид — «письмо» с признаком, номер лида — в `source_ref`
+        assert (listed["source"], listed["from_lead"], listed["source_ref"]) == ("letter", True, "L-0041")
+        # ПД-1: без подготовленного договора отправлять нечего
+        blocked = supply.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
+        assert blocked.json()["detail"] == "CONTRACT_NOT_PREPARED"
+        prepare(app)
+        app.contract_number, app.contract_date = "DOG-LEAD-1", "2026-11-25"
+        app.save()
+        sent = supply.post(f"/api/v1/catalog/partner-applications/{app.pk}/send-contract/", {}, format="json")
+        assert sent.status_code == 200, sent.content
+        app.refresh_from_db()
+        # кандидат приглашён по почте и может прочитать договор: контакт заведён, отношение — «приглашён»
+        assert app.status == PartnerApplicationStatus.CONTRACT_SENT
+        assert app.applicant_contact is not None
+        assert app.applicant_contact.email == "olim@partner-lead.example"
+        assert [m.to for m in mail.outbox] == [["olim@partner-lead.example"]]
+        rel = CompanyRelationship.objects.get(company=app.company, role=RelationshipRole.PARTNER)
+        assert rel.status == RelationshipStatus.INVITED
+
+        app.status = PartnerApplicationStatus.CANDIDATE_AGREED
+        app.candidate_agreed_at = timezone.now()
+        app.save()
+        with_scan(app)
+        approved = supply.post(
+            f"/api/v1/catalog/partner-applications/{app.pk}/approve/",
+            {"contract_number": "DOG-LEAD-1", "contract_date": "2026-11-25"},
+            format="json",
+        )
+        assert approved.status_code == 200, approved.content
+        app.refresh_from_db()
+        assert app.status == PartnerApplicationStatus.APPROVED
+        assert app.company.name == "ООО Лид Партнёр"
+
+    def test_empty_email_does_not_match_a_contact_without_email(self, world):
+        from portal.desk.service_partner_applications import _applicant_contact
+
+        company = world["supplier"]
+        stranger = Contact.objects.create(company=company, name="Без почты", email="")
+        app = _make_app(source=PartnerApplicationSource.LEAD, email="", contact_name="Новый")
+        contact = _applicant_contact(app, company, world["users"]["supply"] if "users" in world else None)
+        assert contact.pk != stranger.pk

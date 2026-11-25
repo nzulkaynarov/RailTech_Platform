@@ -165,6 +165,7 @@ import type {
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
   DownloadEdsProjectFileParams,
+  DownloadPartnerApplicationDocumentParams,
   EdsAddressee,
   EdsAddresseeIn,
   EdsAddresseeList,
@@ -394,6 +395,12 @@ import type {
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
   PartnerApplicationSendContractRequest,
+  PartnerContractDecisionRequest,
+  PartnerContractFileUpload,
+  PartnerContractOptions,
+  PartnerContractPrepareRequest,
+  PartnerHandoffIn,
+  PartnerHandoffView,
   PartnerRequestDecision,
   PasswordConfirm,
   PaymentBoard,
@@ -417,6 +424,7 @@ import type {
   PriceRequestAnswerIn,
   PriceRequestIn,
   PriceRequestList,
+  PriceRequestPreview,
   Profile,
   ProfileUpdate,
   ProjectActActionIn,
@@ -53166,6 +53174,138 @@ export const useCreateCalcPriceRequest = <
   return useMutation(getCreateCalcPriceRequestMutationOptions(options), queryClient);
 };
 
+export const getPreviewCalcPriceRequestUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/price-requests/preview`;
+};
+
+/**
+ * ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Предпросмотр запроса цены партнёру
+ */
+export const previewCalcPriceRequest = async (
+  number: string,
+  priceRequestIn: PriceRequestIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequestPreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceRequestPreview>(getPreviewCalcPriceRequestUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceRequestIn),
+  });
+};
+
+export const getPreviewCalcPriceRequestMutationKey = () => ["previewCalcPriceRequest"] as const;
+
+export const getPreviewCalcPriceRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+    TError,
+    PreviewCalcPriceRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+  TError,
+  PreviewCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewCalcPriceRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+    PreviewCalcPriceRequestMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return previewCalcPriceRequest(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewCalcPriceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>
+>;
+export type PreviewCalcPriceRequestMutationBody = PriceRequestIn;
+export type PreviewCalcPriceRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type PreviewCalcPriceRequestMutationVariables = { number: string; data: PriceRequestIn };
+
+/**
+ * @summary Расчёт · Предпросмотр запроса цены партнёру
+ */
+export const usePreviewCalcPriceRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+      TError,
+      PreviewCalcPriceRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+  TError,
+  PreviewCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewCalcPriceRequestMutationOptions(options), queryClient);
+};
+
 export const getAnswerPriceRequestUrl = (requestId: string) => {
   return `/api/v1/erp/price-requests/${requestId}/answer`;
 };
@@ -57720,6 +57860,138 @@ export const useCreateCrmRequest = <
   TContext
 > => {
   return useMutation(getCreateCrmRequestMutationOptions(options), queryClient);
+};
+
+export const getHandOverCrmLeadAsPartnerUrl = (lead: string) => {
+  return `/api/v1/crm/leads/${lead}/partner`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент): CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки. Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой, второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM — `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+ * @summary «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+ */
+export const handOverCrmLeadAsPartner = async (
+  lead: string,
+  partnerHandoffIn: PartnerHandoffIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerHandoffView> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerHandoffView>(getHandOverCrmLeadAsPartnerUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerHandoffIn),
+  });
+};
+
+export const getHandOverCrmLeadAsPartnerMutationKey = () => ["handOverCrmLeadAsPartner"] as const;
+
+export const getHandOverCrmLeadAsPartnerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+    TError,
+    HandOverCrmLeadAsPartnerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+  TError,
+  HandOverCrmLeadAsPartnerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHandOverCrmLeadAsPartnerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+    HandOverCrmLeadAsPartnerMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return handOverCrmLeadAsPartner(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandOverCrmLeadAsPartnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>
+>;
+export type HandOverCrmLeadAsPartnerMutationBody = PartnerHandoffIn;
+export type HandOverCrmLeadAsPartnerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type HandOverCrmLeadAsPartnerMutationVariables = { lead: string; data: PartnerHandoffIn };
+
+/**
+ * @summary «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+ */
+export const useHandOverCrmLeadAsPartner = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+      TError,
+      HandOverCrmLeadAsPartnerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+  TError,
+  HandOverCrmLeadAsPartnerMutationVariables,
+  TContext
+> => {
+  return useMutation(getHandOverCrmLeadAsPartnerMutationOptions(options), queryClient);
 };
 
 export const getRetryCrmRequestUrl = (deal: number) => {
@@ -66165,6 +66437,709 @@ export const useRejectPartnerApplication = <
 > => {
   return useMutation(getRejectPartnerApplicationMutationOptions(options), queryClient);
 };
+
+export const getGetPartnerContractOptionsUrl = () => {
+  return `/api/v1/erp/catalog/partner-applications/contract-options`;
+};
+
+/**
+ * ERP `GET catalog/partner-applications/contract-options/`. Утверждённые партнёрские шаблоны библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает (держатели зоны «Право»). Пустой список шаблонов — договор готовится только своим файлом, а ссылка на библиотеку названа в интерфейсе.
+ * @summary Расчёт · Заявка в партнёры: из чего готовить договор
+ */
+export const getPartnerContractOptions = async (
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerContractOptions> => {
+  return http<PartnerContractOptions>(getGetPartnerContractOptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPartnerContractOptionsQueryKey = () => {
+  return [`/api/v1/erp/catalog/partner-applications/contract-options`] as const;
+};
+
+export const getGetPartnerContractOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPartnerContractOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getPartnerContractOptions>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPartnerContractOptionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPartnerContractOptions>>> = ({
+    signal,
+  }) => getPartnerContractOptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPartnerContractOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPartnerContractOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPartnerContractOptions>>
+>;
+export type GetPartnerContractOptionsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetPartnerContractOptions<
+  TData = Awaited<ReturnType<typeof getPartnerContractOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPartnerContractOptions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPartnerContractOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getPartnerContractOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPartnerContractOptions<
+  TData = Awaited<ReturnType<typeof getPartnerContractOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPartnerContractOptions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPartnerContractOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getPartnerContractOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPartnerContractOptions<
+  TData = Awaited<ReturnType<typeof getPartnerContractOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPartnerContractOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Заявка в партнёры: из чего готовить договор
+ */
+
+export function useGetPartnerContractOptions<
+  TData = Awaited<ReturnType<typeof getPartnerContractOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPartnerContractOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPartnerContractOptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPreparePartnerContractUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/prepare-contract`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/prepare-contract/` — право `supply.manage`. Договор по утверждённому шаблону библиотеки (`template_id` или умолчание настроек) на языке договора. Без отступлений — готов к отправке; с текстом отступления — запрос держателю «Право». Нет утверждённых шаблонов — 422 `no_approved_partner_template`, встроенного образца нет.
+ * @summary Расчёт · Заявка в партнёры: подготовить договор из шаблона
+ */
+export const preparePartnerContract = async (
+  id: CompanyItemRef,
+  partnerContractPrepareRequest: PartnerContractPrepareRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getPreparePartnerContractUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerContractPrepareRequest),
+  });
+};
+
+export const getPreparePartnerContractMutationKey = () => ["preparePartnerContract"] as const;
+
+export const getPreparePartnerContractMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof preparePartnerContract>>,
+    TError,
+    PreparePartnerContractMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof preparePartnerContract>>,
+  TError,
+  PreparePartnerContractMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreparePartnerContractMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof preparePartnerContract>>,
+    PreparePartnerContractMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return preparePartnerContract(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreparePartnerContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof preparePartnerContract>>
+>;
+export type PreparePartnerContractMutationBody = PartnerContractPrepareRequest;
+export type PreparePartnerContractMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type PreparePartnerContractMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerContractPrepareRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: подготовить договор из шаблона
+ */
+export const usePreparePartnerContract = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof preparePartnerContract>>,
+      TError,
+      PreparePartnerContractMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof preparePartnerContract>>,
+  TError,
+  PreparePartnerContractMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreparePartnerContractMutationOptions(options), queryClient);
+};
+
+export const getUploadPartnerContractFileUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/prepare-contract-file`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/prepare-contract/` (multipart) — право `supply.manage`. BFF читает тело до 21 МБ и передаёт ERP как есть; файл — PDF или DOCX до 20 МБ, содержимое сверяется с расширением. Свой файл всегда идёт на решение держателя «Право».
+ * @summary Расчёт · Заявка в партнёры: загрузить свой файл договора
+ */
+export const uploadPartnerContractFile = async (
+  id: CompanyItemRef,
+  partnerContractFileUpload: PartnerContractFileUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const formData = new FormData();
+  formData.append(`file`, partnerContractFileUpload.file);
+  if (partnerContractFileUpload.language !== undefined) {
+    formData.append(`language`, partnerContractFileUpload.language);
+  }
+  if (partnerContractFileUpload.deviation_text !== undefined) {
+    formData.append(`deviation_text`, partnerContractFileUpload.deviation_text);
+  }
+  if (partnerContractFileUpload.contract_number !== undefined) {
+    formData.append(`contract_number`, partnerContractFileUpload.contract_number);
+  }
+  if (partnerContractFileUpload.contract_date !== undefined) {
+    formData.append(`contract_date`, partnerContractFileUpload.contract_date);
+  }
+
+  return http<PartnerApplicationItem>(getUploadPartnerContractFileUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadPartnerContractFileMutationKey = () => ["uploadPartnerContractFile"] as const;
+
+export const getUploadPartnerContractFileMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPartnerContractFile>>,
+    TError,
+    UploadPartnerContractFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPartnerContractFile>>,
+  TError,
+  UploadPartnerContractFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadPartnerContractFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPartnerContractFile>>,
+    UploadPartnerContractFileMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadPartnerContractFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPartnerContractFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPartnerContractFile>>
+>;
+export type UploadPartnerContractFileMutationBody = PartnerContractFileUpload;
+export type UploadPartnerContractFileMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | BackendUnavailableResponse
+>;
+export type UploadPartnerContractFileMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerContractFileUpload;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: загрузить свой файл договора
+ */
+export const useUploadPartnerContractFile = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadPartnerContractFile>>,
+      TError,
+      UploadPartnerContractFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPartnerContractFile>>,
+  TError,
+  UploadPartnerContractFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadPartnerContractFileMutationOptions(options), queryClient);
+};
+
+export const getDecidePartnerContractUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/contract-decision`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+ * @summary Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
+ */
+export const decidePartnerContract = async (
+  id: CompanyItemRef,
+  partnerContractDecisionRequest: PartnerContractDecisionRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getDecidePartnerContractUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerContractDecisionRequest),
+  });
+};
+
+export const getDecidePartnerContractMutationKey = () => ["decidePartnerContract"] as const;
+
+export const getDecidePartnerContractMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decidePartnerContract>>,
+    TError,
+    DecidePartnerContractMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decidePartnerContract>>,
+  TError,
+  DecidePartnerContractMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecidePartnerContractMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decidePartnerContract>>,
+    DecidePartnerContractMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decidePartnerContract(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecidePartnerContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decidePartnerContract>>
+>;
+export type DecidePartnerContractMutationBody = PartnerContractDecisionRequest;
+export type DecidePartnerContractMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type DecidePartnerContractMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerContractDecisionRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
+ */
+export const useDecidePartnerContract = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decidePartnerContract>>,
+      TError,
+      DecidePartnerContractMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decidePartnerContract>>,
+  TError,
+  DecidePartnerContractMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecidePartnerContractMutationOptions(options), queryClient);
+};
+
+export const getDownloadPartnerApplicationDocumentUrl = (
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/partner-applications/${id}/document?${stringifiedParams}`
+    : `/api/v1/erp/catalog/partner-applications/${id}/document`;
+};
+
+/**
+ * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+ * @summary Расчёт · Заявка в партнёры: договор или скан подписанного
+ */
+export const downloadPartnerApplicationDocument = async (
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadPartnerApplicationDocumentUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadPartnerApplicationDocumentQueryKey = (
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+) => {
+  return [
+    `/api/v1/erp/catalog/partner-applications/${id}/document`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getDownloadPartnerApplicationDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getDownloadPartnerApplicationDocumentQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>> = ({
+    signal,
+  }) => downloadPartnerApplicationDocument(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadPartnerApplicationDocumentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>
+>;
+export type DownloadPartnerApplicationDocumentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadPartnerApplicationDocument<
+  TData = Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params: undefined | DownloadPartnerApplicationDocumentParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPartnerApplicationDocument<
+  TData = Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPartnerApplicationDocument<
+  TData = Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Заявка в партнёры: договор или скан подписанного
+ */
+
+export function useDownloadPartnerApplicationDocument<
+  TData = Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  params?: DownloadPartnerApplicationDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPartnerApplicationDocument>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadPartnerApplicationDocumentQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {
   return `/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}`;

@@ -294,6 +294,11 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
             <p className="rounded-md bg-muted px-3 py-2 text-sm" role="status">
               {t(`docLink.state.${doc.state}`, { context: kind })}
             </p>
+          ) : noContact ? (
+            // В-1: адрес получателя не контакт компании — гость одного документа: ни действий, ни входа
+            <p className="text-sm text-muted-foreground" role="status">
+              {t('docLink.guestNote')}
+            </p>
           ) : buttons.length === 0 ? null : (
             <div className="flex flex-col gap-2">
               {buttons.map(({ action, variant }) => (
@@ -327,12 +332,16 @@ function DocLinkBody({ token, doc }: { token: string; doc: DocLinkView }) {
             </p>
           ) : null}
 
-          <Button type="button" variant="ghost" disabled={other || noContact} onClick={() => start({ action: 'open' })}>
-            {t('docLink.actions.open')}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            {member ? t('docLink.memberNote', { name }) : t('docLink.codeNote', { email: doc.recipient_hint })}
-          </p>
+          {noContact ? null : (
+            <>
+              <Button type="button" variant="ghost" disabled={other} onClick={() => start({ action: 'open' })}>
+                {t('docLink.actions.open')}
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                {member ? t('docLink.memberNote', { name }) : t('docLink.codeNote', { email: doc.recipient_hint })}
+              </p>
+            </>
+          )}
           <p className="text-sm text-muted-foreground">{t('docLink.linkUntil', { date: formatDate(doc.link_expires_at) })}</p>
         </section>
       </div>

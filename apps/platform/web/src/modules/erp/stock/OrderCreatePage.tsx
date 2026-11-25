@@ -78,7 +78,7 @@ function ProductSelect({
 
 /** Адрес страницы нового заказа: объект `new` раздела «Склад» (номер заказа так не называется) */
 export const NEW_ORDER_PATH = "/erp/stock/new";
-const ORDERS_PATH = "/erp/stock?tab=orders";
+const ORDERS_PATH = "/erp/stock?view=orders";
 
 type SectionKey = "supplier" | "lines";
 
@@ -279,7 +279,11 @@ export function OrderCreatePage() {
                       content: (
                         <>
                           <div className="pf-calc-add-row">
-                            <Form.Item name="expected_date" label={t("create.expected")}>
+                            <Form.Item
+                              name="expected_date"
+                              label={t("create.expected")}
+                              extra={t("create.expectedHint")}
+                            >
                               <DateField />
                             </Form.Item>
                           </div>

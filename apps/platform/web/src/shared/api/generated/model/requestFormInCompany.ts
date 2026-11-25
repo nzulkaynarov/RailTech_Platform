@@ -14,4 +14,10 @@ export type RequestFormInCompany = {
    * @nullable
    */
   inn?: string | null;
+  /**
+   * Страна — вместе с названием ищет уже заведённую компанию (ЛП-1)
+   * @nullable
+   * @pattern ^[A-Za-z]{2}$
+   */
+  country?: string | null;
 } | null;

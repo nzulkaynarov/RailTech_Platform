@@ -1766,9 +1766,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Скачать проект или подписанный партнёрский договор
-         * @description Отдаёт PDF-файл проекта договора или подписанного партнёрского договора компании сессии для ознакомления и
-         *     согласования. Открыт любой сессии (FX-1). Документ не собрался — 503 `DOCUMENT_PENDING`, заглушка не отдаётся.
+         * Скачать партнёрский договор, отправленный кандидату
+         * @description Отдаёт файл договора, который сотрудник отправил кандидату (ПД-1): PDF по утверждённому шаблону либо свой файл
+         *     компании (PDF или DOCX; тип — в `Content-Type`, вид — `PartnerApplication.contract_file_kind`). Открыт любой
+         *     сессии (FX-1). До отправки файла для кандидата нет — 404. Документ не собирается на лету: встроенного образца нет.
          */
         get: operations["getCompanyPartnerContractPdf"];
         put?: never;
@@ -1794,6 +1795,50 @@ export interface paths {
          *     `candidate_agreed`. Открыт любой сессии (FX-1), требует права действовать `can_act`.
          */
         post: operations["agreeCompanyPartnerContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/company/partner-application/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вернуть партнёрский договор с замечанием
+         * @description Кандидат не согласен с договором и возвращает его с замечанием (ПД-1). Статус остаётся `contract_sent`,
+         *     `candidate_returned_at` заполняется, замечание — в `candidate_notes`; сотрудник готовит новую версию.
+         *     Открыт любой сессии (FX-1), требует права действовать `can_act`. Замечание обязательно (`RETURN_NOTE_REQUIRED`).
+         */
+        post: operations["returnCompanyPartnerContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/company/partner-application/signed-scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Загрузить скан подписанного партнёрского договора
+         * @description После согласования (`candidate_agreed`) кандидат загружает скан подписанного договора (ПД-1): PDF, JPG, PNG или
+         *     WebP до 20 МБ; повторная загрузка заменяет скан. Единственное исключение из «только JSON» помимо `/uploads`.
+         *     Открыт любой сессии (FX-1), требует права действовать `can_act`.
+         */
+        post: operations["uploadCompanyPartnerSignedScan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1991,8 +2036,22 @@ export interface components {
             candidate_agreed_at?: string | null;
             /** @description Примечания/комментарии кандидата при согласовании */
             candidate_notes?: string | null;
-            /** @description Наличие прикреплённого PDF-файла договора */
+            /** @description Договор отправлен кандидату и его можно открыть (PDF по шаблону или свой файл) */
             has_contract_pdf?: boolean;
+            /**
+             * @description Вид файла договора (ПД-1); null — файла нет
+             * @enum {string|null}
+             */
+            contract_file_kind?: "pdf" | "docx" | null;
+            /**
+             * Format: date-time
+             * @description Когда кандидат вернул договор с замечанием; сбрасывается при повторной отправке
+             */
+            candidate_returned_at?: string | null;
+            /** @description Кандидат загрузил скан подписанного договора */
+            has_signed_scan?: boolean;
+            /** Format: date-time */
+            signed_scan_at?: string | null;
             /** @description Причина отклонения заявки */
             rejected_reason?: string | null;
             /** Format: date-time */
@@ -2955,7 +3014,7 @@ export interface components {
             /**
              * @description Значения (список открыт, клиент неизвестное показывает как «нельзя»): `accepted`, `rejected`, `expired`, `paid` — документ уже решён, срок вышел или счёт оплачен; `no_actions` — у этого вида документа
              *     нет действий (счёт: реквизиты и справка); `other_company` — вошёл контакт другой
-             *     компании; `no_contact`, `no_access` — у получателя нет контакта или модуля в кабинете; `no_right` — у контакта нет права действовать
+             *     компании; `no_contact` — адрес получателя не контакт компании (гость: один документ и PDF, без кода и входа; контакт заводит сотрудник); `no_access` — у контакта нет модуля в кабинете; `no_right` — у контакта нет права действовать
              */
             reason: string | null;
         };
@@ -7238,28 +7297,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description PDF-файл договора */
+            /** @description Файл договора */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/pdf": string;
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
                 };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
-            /** @description Документ не собрался (`DOCUMENT_PENDING`), повторите позже */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
         };
     };
     agreeCompanyPartnerContract: {
@@ -7300,8 +7351,35 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
-            /** @description Документ не собрался (`DOCUMENT_PENDING`), повторите позже */
-            503: {
+        };
+    };
+    returnCompanyPartnerContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Замечание кандидата к договору */
+                    notes: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Замечание принято */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplication"];
+                };
+            };
+            /** @description Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет замечания (`RETURN_NOTE_REQUIRED`) */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7309,6 +7387,50 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    uploadCompanyPartnerSignedScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Скан принят */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplication"];
+                };
+            };
+            /** @description Скан сейчас не ждут (`SCAN_NOT_EXPECTED`) или файл не подходит (`SCAN_INVALID`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listTeam: {

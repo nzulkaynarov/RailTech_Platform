@@ -197,7 +197,8 @@
       "supplier": "Partner and method",
       "lines": "Lines"
     },
-    "linesSummary": "Lines: {{count}}"
+    "linesSummary": "Lines: {{count}}",
+    "expectedHint": "Without a date and prices the order will not go to the partner: add them later in “Edit”."
   },
   "order": {
     "title": "Partner order {{number}}",
@@ -208,7 +209,9 @@
       "receive": "Receive goods",
       "edit": "Edit",
       "cancel": "Cancel order",
-      "price": "Request a price"
+      "price": "Request a price",
+      "setDate": "Set date",
+      "resend": "Send again"
     },
     "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the partner and update the expected date.",
     "cancelledBanner": "The order is cancelled. Reason: {{reason}}",
@@ -260,13 +263,15 @@
       "email": "Email address",
       "emailKnown": "Address from the partner card; you can enter another.",
       "emailMissing": "The partner has no email: enter an address for the letter.",
-      "submit": "Send letter"
+      "submit": "Send letter",
+      "reason": "Enter the partner's address — the email cannot go without it."
     },
     "confirm": {
       "title": "Partner confirmed order {{number}}",
       "date": "Confirmed delivery date",
       "dateHint": "The expected date is needed to track delays.",
-      "submit": "Confirm"
+      "submit": "Confirm",
+      "reason": "Enter the confirmed delivery date."
     },
     "cancel": {
       "title": "Cancel order {{number}}",
@@ -322,7 +327,8 @@
       "prices_many": "No price: {{count}} lines",
       "prices_other": "No price: {{count}} lines",
       "date": "No expected date",
-      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date."
+      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date.",
+      "hintDate": "Set the date — the order will not go to the partner without it."
     },
     "price": {
       "title": "Request a price · {{number}}",
@@ -393,7 +399,8 @@
     "empty": {
       "title": "No shipments yet",
       "text": "A shipment is made from project reservations after the contract is signed."
-    }
+    },
+    "reason": "Set a quantity for at least one item."
   },
   "priceRequest": {
     "title": "Request a partner price · {{number}}",
@@ -406,6 +413,15 @@
     "submit": "Send request",
     "sent": "Request sent to {{email}}",
     "failed": "The letter to “{{name}}” was not sent: the request stays in the log as “not sent”.",
+    "preview": {
+      "title": "What the partner will see",
+      "subject": "Subject",
+      "to": "To",
+      "note": "Comment to the partner",
+      "partnerName": "Name for the partner, line {{n}}",
+      "clientWords": "In the request: “{{name}}”. These words are not sent to the partner.",
+      "missing": "Enter a name: the line has no catalogue card."
+    },
     "logTitle": "Partner price requests",
     "logEmpty": "No requests yet.",
     "status": {
@@ -416,7 +432,12 @@
     "entryMeta": "{{when}} · {{who}} → {{email}}",
     "answerNote": "Reply: {{note}}",
     "answer": "Reply received",
-    "answerLabel": "Reply received: partner “{{name}}”"
+    "answerLabel": "Reply received: partner “{{name}}”",
+    "reason": {
+      "supplier": "Choose a partner.",
+      "lines": "Tick at least one line.",
+      "email": "Enter the partner's email address."
+    }
   },
   "trace": {
     "title": "Traceability: where from and where to",

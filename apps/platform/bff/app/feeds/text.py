@@ -1,6 +1,6 @@
 """Тексты и время для строк Dashboard: «вчера», «3 ч назад», суммы, сроки по календарю компании.
 
-Язык ответов BFF пока русский, как у ошибок (`app/errors.py`); перевод на uz и en — хвост фазы P2.
+Язык текстов — язык запроса (`app/feeds/lang.py`: ru, uz, en); ошибки пока русские.
 """
 
 from datetime import UTC, datetime, timedelta, timezone
@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 from app import session
+from app.feeds.lang import lang_var, tr
 from app.feeds.models import DueLabel
 
 # Часовой пояс компании (docs/architecture/platform-frontend.md §8): Asia/Tashkent — UTC+5
@@ -67,15 +68,17 @@ def ago(then: datetime | None, now: datetime) -> str:
         return ""
     seconds = (now - then).total_seconds()
     if seconds < 60:
-        return "только что"
+        return tr("только что", "hozirgina", "just now")
     if seconds < 3600:
-        return f"{int(seconds // 60)} мин назад"
+        n = int(seconds // 60)
+        return tr(f"{n} мин назад", f"{n} daq. oldin", f"{n} min ago")
     if seconds < 86400:
-        return f"{int(seconds // 3600)} ч назад"
+        n = int(seconds // 3600)
+        return tr(f"{n} ч назад", f"{n} soat oldin", f"{n} h ago")
     days = company_day(now) - company_day(then)
     if days <= 1:
-        return "вчера"
-    return f"{days} дн. назад"
+        return tr("вчера", "keça", "yesterday")
+    return tr(f"{days} дн. назад", f"{days} kun oldin", f"{days} d ago")
 
 
 def ago_value(raw: Any, now: datetime) -> str:
@@ -90,9 +93,9 @@ def ago_value(raw: Any, now: datetime) -> str:
             return ""
         days = company_day(now) - day.toordinal()
         if days <= 0:
-            return "сегодня"
+            return tr("сегодня", "bugun", "today")
         if days == 1:
-            return "вчера"
+            return tr("вчера", "keça", "yesterday")
         return day.strftime("%d.%m.%Y")
     return ago(parse_dt(raw), now)
 
@@ -104,9 +107,10 @@ def money(amount: Any, currency: str | None) -> str | None:
     except (InvalidOperation, ValueError):
         return None
     shown = f"{value:,.2f}" if value != value.to_integral_value() else f"{int(value):,}"
-    shown = shown.replace(",", NBSP).replace(".", ",")
+    if lang_var.get() != "en":  # en: «1,234,567.50», остальные — «1 234 567,50»
+        shown = shown.replace(",", NBSP).replace(".", ",")
     code = (currency or "UZS").upper()
-    return f"{shown}{NBSP}{'сум' if code == 'UZS' else code}"
+    return f"{shown}{NBSP}{tr('сум', 'söm', 'UZS') if code == 'UZS' else code}"
 
 
 def short(text: Any, limit: int = 90) -> str:

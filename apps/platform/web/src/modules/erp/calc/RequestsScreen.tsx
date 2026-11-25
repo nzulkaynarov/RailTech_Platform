@@ -197,7 +197,7 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
       cell: (row) => (
         <>
           <RowOpenLink
-            to={calcPath(row.number)}
+            to={openPath(params, row.number)}
             label={t("list.openLabel", { number: row.number })}
             title={t("list.open")}
           />
@@ -275,7 +275,11 @@ export function RequestsScreen() {
                 text={t(mine ? "calc:list.empty.mineText" : "calc:list.empty.text")}
                 action={
                   mine ? (
-                    <LinkButton to="/erp/requests">{t("calc:list.empty.mineAction")}</LinkButton>
+                    <LinkButton
+                      to={params.get("new") === "calc" ? "/erp/requests?new=calc" : "/erp/requests"}
+                    >
+                      {t("calc:list.empty.mineAction")}
+                    </LinkButton>
                   ) : (
                     <Button
                       onClick={() => {

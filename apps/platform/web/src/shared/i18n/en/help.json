@@ -41,7 +41,6 @@
   },
   "start": {
     "intro": "In the morning open “Tasks”: each row is one job for your role. The bell tells you about news, search (Ctrl K) finds a letter, request, client or invoice by number.",
-    "yours": "Your role: {{role}}",
     "others": "For other roles",
     "kinds": {
       "director": {
@@ -460,7 +459,7 @@
   },
   "welcome": {
     "title": "Welcome, {{name}}",
-    "role": "Your role is {{role}}.",
+    "telegram": "Connect phone notifications",
     "lead": "Here is what you will be doing in the morning:",
     "tour": "Show me around",
     "skip": "Skip",

@@ -113,7 +113,9 @@
       "skipped": "не отправлялось",
       "channel": "канал: {{channel}}"
     },
-    "none": "—"
+    "none": "—",
+    "partner": "Передан как партнёр",
+    "partnerOpen": "Заявка партнёра"
   },
   "newLead": {
     "title": "Новый лид",

@@ -121,6 +121,7 @@ export const setupHandlers = [
         access: { crm: true, erp: true },
         status: "active",
         telegram_linked: false,
+        telegram: "not_linked",
         erp_sync: "ok",
       },
     ]);

@@ -185,7 +185,8 @@
       "web_request": "Saytdan takroriy sörov",
       "merge": "Lid kartoçkalarini birlaştirdi",
       "updated": "Lidni özgartirdi",
-      "hand_over": "Lidni izoh bilan menejerga topşirdi"
+      "hand_over": "Lidni izoh bilan menejerga topşirdi",
+      "hand_over_partner": "Lidni hamkor sifatida topşirdi"
     },
     "deal": {
       "create": "Bitim yaratdi",

@@ -314,6 +314,8 @@ def publish_quote_outcome(
         "erp_quote_id": quote.id,
         "version": quote.version,
     }
+    if getattr(quote, "number", None):
+        payload["number"] = quote.number  # сотруднику в уведомлении — номер КП, не внутренний id
     if reason:
         payload["reason"] = reason
     if contact is not None:
@@ -437,7 +439,7 @@ def publish_invoice_event(
 
     due_date_str = invoice.due_date.isoformat() if invoice.due_date else timezone.localdate().isoformat()
     if not link:
-        link = f"{_cabinet_url()}/invoices/{invoice.id}"
+        link = f"{_cabinet_url()}/invoices?focus={invoice.id}"  # маршрут Cabinet: список, строка выделена
 
     payload: Dict[str, Any] = {
         "erp_invoice_id": invoice.id,

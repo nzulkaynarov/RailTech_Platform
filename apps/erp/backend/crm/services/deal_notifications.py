@@ -45,6 +45,30 @@ def seller_team_user_ids(deal) -> List[int]:
     )
 
 
+def permission_holder_user_ids(permission: str) -> List[int]:
+    """Активные сотрудники своей компании с правом `permission` в ролях (СОТР-1): кому адресовано действие, а не
+    «всем продавцам». Суперпользователи не берутся: у администратора есть все права, но задача — не его."""
+    from accounts.models import CompanyMember
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    if not company_id:
+        return []
+    members = CompanyMember.objects.filter(
+        company_id=company_id, is_active=True, user__is_active=True, user__is_superuser=False
+    ).prefetch_related("company_roles")
+    return [m.user_id for m in members if any(permission in (role.permissions or []) for role in m.company_roles.all())]
+
+
+def responsible_seller_ids(deal) -> List[int]:
+    """Ответственный продавец сделки — взявший её из очереди (`assigned_to`), иначе прежний `manager`;
+    только если он ещё сотрудник своей компании."""
+    responsible = getattr(deal, "assigned_to_id", None) or getattr(deal, "manager_id", None)
+    if not responsible:
+        return []
+    return [uid for uid in seller_team_user_ids(deal) if uid == responsible]
+
+
 def notify_deal_users(
     user_ids: Iterable[int],
     *,
@@ -144,7 +168,8 @@ def notify_act_rejected(act, actor, reason: str) -> int:
     узнавал бы об этом, только зайдя в реестр.
     """
     deal = act.deal
-    recipients = set(seller_team_user_ids(deal))
+    # Акт возвращён на доработку: его дорабатывает тот, кто ведёт исполнение (`fulfillment.act`), и ответственный продавец
+    recipients = set(permission_holder_user_ids("fulfillment.act")) | set(responsible_seller_ids(deal))
     recipients.discard(getattr(actor, "id", None))
     return notify_deal_users(
         recipients,
@@ -223,7 +248,14 @@ def notify_delivery_overdue(fulfillment) -> int:
     покупатель/продавец почти всегда пустое, так что задача считала обработанные строки, но
     де-факто не извещала никого.
     """
+    from notifications.models import Notification
+
     deal = fulfillment.deal
+    # Один раз на поставку и срок: задача идёт каждый день, а просрочка — одно событие. Новый
+    # ожидаемый срок (перенесли и снова просрочили) — новое уведомление.
+    marker = {"fulfillment_id": fulfillment.pk, "expected": str(fulfillment.expected_delivery_date or "")}
+    if Notification.objects.filter(event_code="fulfillment.overdue", event_params__contains=marker).exists():
+        return 0
     recipients = set(buyer_team_user_ids(deal)) | set(seller_team_user_ids(deal))
     return notify_deal_users(
         recipients,
@@ -238,6 +270,7 @@ def notify_delivery_overdue(fulfillment) -> int:
         event_code="fulfillment.overdue",
         event_params={
             "deal_id": deal.pk,
+            "fulfillment_id": fulfillment.pk,
             "expected": str(fulfillment.expected_delivery_date or ""),
             "status_code": fulfillment.status.code if fulfillment.status_id else "",
         },

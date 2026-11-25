@@ -7483,6 +7483,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/price-requests/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Предпросмотр запроса цены партнёру
+     * @description ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+     */
+    post: operations["previewCalcPriceRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/price-requests/{request_id}/answer": {
     parameters: {
       query?: never;
@@ -8097,6 +8117,26 @@ export interface paths {
      * @description CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
      */
     post: operations["createCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/leads/{lead}/partner": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+     * @description CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент): CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки. Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой, второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM — `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+     */
+    post: operations["handOverCrmLeadAsPartner"];
     delete?: never;
     options?: never;
     head?: never;
@@ -9153,6 +9193,106 @@ export interface paths {
      * @description ERP `POST catalog/partner-applications/{id}/reject/` — право `supply.manage`. Отклоняет заявку с указанием причины.
      */
     post: operations["rejectPartnerApplication"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/contract-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Заявка в партнёры: из чего готовить договор
+     * @description ERP `GET catalog/partner-applications/contract-options/`. Утверждённые партнёрские шаблоны библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает (держатели зоны «Право»). Пустой список шаблонов — договор готовится только своим файлом, а ссылка на библиотеку названа в интерфейсе.
+     */
+    get: operations["getPartnerContractOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/prepare-contract": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: подготовить договор из шаблона
+     * @description ERP `POST catalog/partner-applications/{id}/prepare-contract/` — право `supply.manage`. Договор по утверждённому шаблону библиотеки (`template_id` или умолчание настроек) на языке договора. Без отступлений — готов к отправке; с текстом отступления — запрос держателю «Право». Нет утверждённых шаблонов — 422 `no_approved_partner_template`, встроенного образца нет.
+     */
+    post: operations["preparePartnerContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/prepare-contract-file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: загрузить свой файл договора
+     * @description ERP `POST catalog/partner-applications/{id}/prepare-contract/` (multipart) — право `supply.manage`. BFF читает тело до 21 МБ и передаёт ERP как есть; файл — PDF или DOCX до 20 МБ, содержимое сверяется с расширением. Свой файл всегда идёт на решение держателя «Право».
+     */
+    post: operations["uploadPartnerContractFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/contract-decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
+     * @description ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+     */
+    post: operations["decidePartnerContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/document": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Заявка в партнёры: договор или скан подписанного
+     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+     */
+    get: operations["downloadPartnerApplicationDocument"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -10358,6 +10498,8 @@ export interface components {
     };
     /** @description Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`. */
     TelegramConnector: {
+      /** @description Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно. */
+      channel_can_invite?: boolean | null;
       channel_id: number | null;
       channel_title: string | null;
       configured: boolean;
@@ -11323,8 +11465,15 @@ export interface components {
         erp: boolean;
       };
       status: components["schemas"]["EmployeeStatus"];
-      /** @description Привязан Telegram для уведомлений сотруднику */
+      /** @description Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`) */
       telegram_linked: boolean;
+      /**
+       * @description `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+       * @enum {string}
+       */
+      telegram: "linked" | "not_linked" | "blocked";
+      /** @description Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет */
+      deputy?: components["schemas"]["DeputyPeriod"];
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
@@ -11447,6 +11596,8 @@ export interface components {
       is_active?: boolean;
       /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
       transfer_to_user_id?: string;
+      /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */
+      deputy?: components["schemas"]["DeputyUpdate"] | null;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
@@ -11917,6 +12068,7 @@ export interface components {
        * @enum {string}
        */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12201,6 +12353,7 @@ export interface components {
       step: "CONTRACT" | "PAYMENT" | "DONE";
       /** @enum {string} */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12434,6 +12587,11 @@ export interface components {
       amount: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["EdsFile"][];
       /** @description Связь с проектом */
       deal: components["schemas"]["EdsDealRef"] | null;
@@ -12703,6 +12861,11 @@ export interface components {
        * @description «Нужно до» — не в прошлом
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       /** @description Связь с проектом (`GET /eds/deal-options`) */
       erp_deal_id?: number | null;
@@ -12737,6 +12900,11 @@ export interface components {
       amount?: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       erp_deal_id?: number | null;
       /** @description Только `letter_out`; не передан — прежний */
@@ -13372,6 +13540,11 @@ export interface components {
       amount: components["schemas"]["PaymentMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       deal: components["schemas"]["EdsDealRef"] | null;
       files: components["schemas"]["EdsFile"][];
       document_status: string;
@@ -13865,6 +14038,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -13945,6 +14120,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -14963,6 +15140,13 @@ export interface components {
     LetterIntakeIn: {
       /** Format: uuid */
       file_id: string;
+      /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
+      received_at?: string | null;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока)
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {
@@ -15008,6 +15192,8 @@ export interface components {
       fields: components["schemas"]["LetterIntakeFields"];
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */
@@ -17174,6 +17360,8 @@ export interface components {
       send: boolean;
       /** @description В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
       request_price: boolean;
+      /** @description Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа */
+      resend?: boolean;
       confirm: boolean;
       receive: boolean;
       cancel: boolean;
@@ -17668,6 +17856,38 @@ export interface components {
        * @description Адрес письма, если у поставщика почты нет или нужен другой
        */
       to_email?: string;
+      /** @description Подтверждённые сотрудником названия для партнёра. Строка без карточки каталога без названия не уходит (409 `PARTNER_NAME_REQUIRED`); слова клиента сами партнёру не попадают. */
+      partner_names?: components["schemas"]["PartnerNameIn"][];
+    };
+    PartnerNameIn: {
+      line_id: string;
+      name: string;
+      article?: string;
+    };
+    PriceRequestPreviewLine: {
+      line_id: string;
+      /** @description Как увидит партнёр; null — не названа, отправить нельзя */
+      name: string | null;
+      article: string;
+      /**
+       * @description card — карточка каталога; staff — подтверждено сотрудником; missing — названия нет
+       * @enum {string}
+       */
+      source: "card" | "staff" | "missing";
+      /** @description Слова клиента из заявки — только сотруднику, партнёру не уходят */
+      client_name: string;
+      quantity: number;
+      unit: string;
+    };
+    PriceRequestPreview: {
+      subject: string;
+      supplier: components["schemas"]["StockSupplierRef"];
+      to_email: string;
+      /** @description Заметка партнёру ровно так, как уйдёт */
+      note: string | null;
+      /** @description У каждой строки есть название для партнёра */
+      ready: boolean;
+      lines: components["schemas"]["PriceRequestPreviewLine"][];
     };
     PriceRequestAnswerIn: {
       /** @description Что ответил поставщик (цена и срок вносятся в строку расчёта) */
@@ -17845,6 +18065,8 @@ export interface components {
       discarded?: ("spam" | "test" | "duplicate") | null;
       /** @description Номер оставшегося лида, если `discarded = duplicate` */
       duplicate_of?: string | null;
+      /** @description Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
+      partner_application?: number | null;
     };
     /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
     LeadOrigin: {
@@ -17955,6 +18177,7 @@ export interface components {
     ClientSees:
       | "in_work"
       | "awaiting_decision"
+      | "contract_preparing"
       | "contract_review"
       | "contract_signing"
       | "awaiting_payment"
@@ -18080,6 +18303,8 @@ export interface components {
       company?: {
         name: string;
         inn?: string | null;
+        /** @description Страна — вместе с названием ищет уже заведённую компанию (ЛП-1) */
+        country?: string | null;
       } | null;
       contact: components["schemas"]["RequestContactFormIn"];
       summary: string;
@@ -18095,6 +18320,30 @@ export interface components {
         method: "phone" | "email" | "paper";
         comment?: string | null;
       } | null;
+    };
+    /** @description Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
+    PartnerHandoffIn: {
+      company_name: string;
+      /**
+       * @description ISO 3166-1 alpha-2
+       * @default UZ
+       */
+      country: string;
+      /** @default  */
+      inn: string;
+      /** @description Что предлагает кандидат (из запроса лида) */
+      offer: string;
+      contact_name: string;
+      email: string;
+      /** @default  */
+      phone: string;
+    };
+    PartnerHandoffView: {
+      lead: string;
+      /** @description Заявка кандидата в ERP */
+      application: number;
+      /** @description `false` — лид уже был передан как партнёр: возвращена первая заявка */
+      created: boolean;
     };
     RequestCreatedView: {
       client_id: number;
@@ -19043,10 +19292,10 @@ export interface components {
       can_act?: boolean;
     };
     /**
-     * @description Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+     * @description Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
      * @enum {string}
      */
-    PartnerApplicationSource: "public" | "client_cabinet" | "letter";
+    PartnerApplicationSource: "public" | "client_cabinet" | "letter" | "lead";
     /** @enum {string} */
     PartnerApplicationStatus:
       | "submitted"
@@ -19091,6 +19340,104 @@ export interface components {
        * @enum {string|null}
        */
       invite_delivery: "queued" | "sent" | "failed" | null;
+      /**
+       * @description Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен (ПД-1)
+       * @enum {string}
+       */
+      contract_source: "" | "template" | "upload";
+      contract_template_id: string | null;
+      contract_template_name: string | null;
+      contract_template_edition: number | null;
+      /** @description ru, en или uz; пусто — не подготовлен */
+      contract_language: string;
+      /** @description Чем договор отличается от шаблона; пусто — без отступлений */
+      contract_deviation_text: string;
+      /**
+       * @description Решение держателя «Право»; пусто — согласование не нужно (шаблон без отступлений)
+       * @enum {string}
+       */
+      contract_approval: "" | "requested" | "approved" | "returned";
+      contract_approval_requested_by: string | null;
+      contract_approval_decided_by: string | null;
+      contract_approval_note: string;
+      /**
+       * @description Что мешает отправить договор (пока заявка подана); null — можно отправлять
+       * @enum {string|null}
+       */
+      contract_blocker:
+        | "CONTRACT_NOT_PREPARED"
+        | "CONTRACT_APPROVAL_PENDING"
+        | "CONTRACT_APPROVAL_RETURNED"
+        | null;
+      /** @description Кто решает, пока согласование ждёт решения */
+      contract_approvers: string[];
+      /** @description Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя */
+      can_decide_contract: boolean;
+      /** @description Зритель — единственный держатель и сам подготовил договор: решение с подтверждением */
+      decision_needs_confirmation: boolean;
+      /** @description Замечание кандидата к договору */
+      candidate_notes: string;
+      /**
+       * Format: date-time
+       * @description Когда кандидат вернул договор с замечанием
+       */
+      candidate_returned_at: string | null;
+      /** @description Кандидат загрузил скан подписанного договора */
+      has_signed_scan: boolean;
+      /** Format: date-time */
+      signed_scan_at: string | null;
+    };
+    PartnerContractPrepareRequest: {
+      /** @description Шаблон библиотеки; пусто — умолчание из настроек компании */
+      template_id?: string | null;
+      /**
+       * @description Язык договора; пусто — язык кандидата
+       * @enum {string}
+       */
+      language?: "ru" | "uz" | "en";
+      /** @description Чем договор отличается от шаблона; текст идёт на решение «Право» и после одобрения входит в договор */
+      deviation_text?: string | null;
+      contract_number?: string | null;
+      /** Format: date */
+      contract_date?: string | null;
+    };
+    PartnerContractFileUpload: {
+      /**
+       * Format: binary
+       * @description До 20 МБ: PDF или DOCX
+       */
+      file: string;
+      /** @enum {string} */
+      language?: "ru" | "uz" | "en";
+      deviation_text?: string;
+      contract_number?: string;
+      /** Format: date */
+      contract_date?: string;
+    };
+    PartnerContractDecisionRequest: {
+      /** @enum {string} */
+      decision: "approve" | "return";
+      /** @description Подтверждение самостоятельного решения единственным держателем */
+      confirm_self?: boolean | null;
+      /** @description Замечание; при `return` обязательно */
+      note?: string | null;
+    };
+    PartnerContractOptions: {
+      templates: components["schemas"]["PartnerContractTemplateOption"][];
+      default_template_id: string | null;
+      /** @description Правило компании: свой файл и отступления допустимы */
+      deviations_allowed: boolean;
+      /** @description Держатели зоны «Право» по имени */
+      approvers: string[];
+      can_decide: boolean;
+    };
+    PartnerContractTemplateOption: {
+      id: string;
+      name: string;
+      edition: number;
+      /** @description Языки, на которых у шаблона есть текст; русский есть всегда */
+      languages: ("ru" | "uz" | "en")[];
+      is_default: boolean;
     };
     PartnerApplicationListResponse: {
       items: components["schemas"]["PartnerApplicationItem"][];
@@ -33207,6 +33554,42 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  previewCalcPriceRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PriceRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт · Предпросмотр запроса цены партнёру */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequestPreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   answerPriceRequest: {
     parameters: {
       query?: never;
@@ -34273,6 +34656,51 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  handOverCrmLeadAsPartner: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида */
+        lead: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerHandoffIn"];
+      };
+    };
+    responses: {
+      /** @description Лид уже передан как партнёр — та же заявка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
+        };
+      };
+      /** @description Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр» */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
         };
       };
       401: components["responses"]["SessionExpired"];
@@ -36336,6 +36764,172 @@ export interface operations {
         };
       };
       400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getPartnerContractOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Параметры подготовки договора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerContractOptions"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  preparePartnerContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerContractPrepareRequest"];
+      };
+    };
+    responses: {
+      /** @description Договор подготовлен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadPartnerContractFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PartnerContractFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл принят, договор ждёт решения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decidePartnerContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerContractDecisionRequest"];
+      };
+    };
+    responses: {
+      /** @description Решение записано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadPartnerApplicationDocument: {
+    parameters: {
+      query?: {
+        which?: "contract" | "scan";
+      };
+      header?: never;
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];

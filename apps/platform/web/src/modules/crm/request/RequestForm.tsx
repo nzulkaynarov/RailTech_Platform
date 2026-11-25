@@ -17,6 +17,8 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { DocNumber } from "../../../shared/ui/DocNumber";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type RemainingItem,
@@ -126,6 +128,61 @@ export interface RequestFormProps {
 }
 
 /**
+ * После «Создать заявку»: номер (когда учёт его выдал), что дальше — «Ждёт резолюции», и «Открыть заявку» (карточка
+ * клиента, где заявка стоит на своём шаге). Номер и шаг берутся из карточки клиента по номеру сделки (Б-7).
+ */
+function Created({
+  done,
+  mobile,
+  onClose,
+}: {
+  done: RequestCreatedView;
+  mobile: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation(["request", "clients"]);
+  // Номер выдаёт учёт чуть позже ответа CRM: карточку клиента перечитываем раз в 2 с, не дольше 30 с и только пока
+  // передача идёт (номера нет, сбоя нет).
+  const [startedAt] = useState(() => Date.now());
+  const card = useGetCrmClient(done.client_id, {
+    query: {
+      refetchInterval: (query) => {
+        const found = query.state.data?.requests.find((request) => request.deal === done.deal);
+        const settled = Boolean(found?.number) || found?.transfer === "failed";
+        return settled || Date.now() - startedAt > 30_000 ? false : 2000;
+      },
+    },
+  });
+  const row = card.data?.requests.find((request) => request.deal === done.deal);
+  const transfer = row?.transfer ?? done.transfer;
+  const waits = transfer === "done" && Boolean(row?.number);
+  return (
+    <div className="pf-fp-stack" role="status">
+      <h3 className="pf-fp-title">{t("request:done.title")}</h3>
+      {row?.number ? (
+        <p className="pf-fp-sub">
+          <DocNumber number={row.number} />
+        </p>
+      ) : null}
+      {transfer === "failed" ? (
+        <p className="pf-fp-sub">{t("request:done.failed")}</p>
+      ) : !done.created ? (
+        <p className="pf-fp-sub">{t("request:done.repeated")}</p>
+      ) : !row?.number ? (
+        <p className="pf-fp-sub">{t("request:done.text")}</p>
+      ) : null}
+      {waits ? <p className="pf-fp-sub">{t("request:done.waits")}</p> : null}
+      <div className="pf-crm-actions" data-sheet={mobile}>
+        <LinkButton type="primary" to={clientPath(done.client_id)}>
+          {t("request:done.open")}
+        </LinkButton>
+        <Button onClick={onClose}>{t("clients:card.close")}</Button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * «+ Создать заявку» (SPEC-v3 §3.1 шаг 2): клиент (выбрать или новая компания с ИНН), контакт хотя бы с одним каналом,
  * суть запроса, письмо на имя директора (файл — в EDS до отправки формы), срочность, согласие на данные. Ключ формы —
  * один на открытие: повтор после сбоя или двойной клик не создаёт вторую заявку (CRM вернёт ту же). Ошибка оставляет
@@ -193,7 +250,8 @@ export function RequestForm({
   const [personId, setPersonId] = useState("");
 
   const client = useGetCrmClient(state.clientId ?? 0, {
-    query: { enabled: state.clientId !== null },
+    // отметка «Не работать» могла появиться, пока карточка клиента лежала в кэше: форму открываем со свежей
+    query: { enabled: state.clientId !== null, refetchOnMount: "always" },
   });
   const contacts = state.clientId !== null ? (client.data?.contacts ?? []) : [];
   // Пока сотрудник не выбрал контакт сам — основной контакт клиента (Telegram лида уже привязан к нему).
@@ -238,6 +296,7 @@ export function RequestForm({
     leadTelegram: lead?.channel === "telegram" ? (lead.contacts.telegram ?? null) : null,
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
+    doNotWork: Boolean(client.data?.do_not_work),
   };
   // Основание по звонку (СЦ-6): лид со звонка — записка собирается сама при входе на шаг «Запрос», когда согласие уже есть
   // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
@@ -356,20 +415,7 @@ export function RequestForm({
       .join(" ") || undefined;
 
   if (done) {
-    return (
-      <div className="pf-fp-stack" role="status">
-        <h3 className="pf-fp-title">{t("request:done.title")}</h3>
-        <p className="pf-fp-sub">
-          {done.created ? t("request:done.text") : t("request:done.repeated")}
-        </p>
-        <div className="pf-crm-actions" data-sheet={mobile}>
-          <LinkButton type="primary" to={clientPath(done.client_id)}>
-            {t("request:done.openClient")}
-          </LinkButton>
-          <Button onClick={onCancel}>{t("clients:card.close")}</Button>
-        </div>
-      </div>
-    );
+    return <Created done={done} mobile={mobile} onClose={onCancel} />;
   }
 
   const cancel = () => {
@@ -461,6 +507,8 @@ export function RequestForm({
         />
       ) : null}
 
+      {/* над шагами: свёрнутый шаг «Клиент» полосу бы спрятал */}
+      <DoNotWorkStrip mark={client.data?.do_not_work} />
       <StepSections
         headingLevel={4}
         active={active}

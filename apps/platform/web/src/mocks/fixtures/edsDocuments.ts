@@ -38,6 +38,8 @@ export interface MockDocument {
   ownerId: string;
   amount: EdsMoney | null;
   due_date: string | null;
+  /** Б-9: служебка с суммой без счёта — автор отметил, что счёт придёт позже */
+  invoice_later?: boolean;
   file_ids: string[];
   erp_deal_id: number | null;
   recipient: EdsRecipient | null;

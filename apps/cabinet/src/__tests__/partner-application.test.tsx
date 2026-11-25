@@ -262,7 +262,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       expect(await screen.findByText('Договор отправлен')).toBeInTheDocument();
       expect(screen.getByText('Партнёрский договор подготовлен и направлен на согласование вашей компании.')).toBeInTheDocument();
       expect(screen.getByText('№ PRT-2026-088 от 5 нояб. 2026 г.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Скачать проект договора/ })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Открыть договор/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Согласовать проект договора/ })).toBeInTheDocument();
     });
 
@@ -300,7 +300,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       // После согласования статус меняется на «Согласован вами»
       expect(await screen.findByText('Согласован вами')).toBeInTheDocument();
-      expect(screen.getByText(/Ждёт нашей подписи/)).toBeInTheDocument();
+      expect(screen.getByText(/Договор будет выставлен на подписание/)).toBeInTheDocument();
     });
 
     it('компания уже имеет активный договор партнёра: карточка со ссылкой на «Мои товары»', async () => {
@@ -326,6 +326,66 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       expect(await screen.findByText('Партнёрский договор')).toBeInTheDocument();
       expect(screen.getByText('Подать заявку может только представитель с правом подтверждать действия.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Подать заявку в партнёры' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Договор партнёра: замечание и скан подписанного (ПД-1)', () => {
+    const base = {
+      kind: 'supplier' as const,
+      categories_description: 'Крепёж',
+      company_name: 'ООО Кандидат',
+      inn: '123456789',
+      contact_name: 'Иван',
+      email: 'ivan@example.uz',
+      phone: null,
+      contract_number: 'PA-2026-0007',
+      contract_date: '2026-11-25',
+      rejected_reason: null,
+      created_at: '2026-11-25T12:00:00Z',
+      updated_at: '2026-11-25T12:00:00Z',
+      has_contract_pdf: true,
+      contract_file_kind: 'pdf' as const,
+    };
+
+    it('кандидат возвращает договор с замечанием; замечание обязательно', async () => {
+      signedIn('actor');
+      setMockPartnerApplication({ id: 601, status: 'contract_sent', ...base });
+      const user = userEvent.setup();
+      const body = captureBody('/company/partner-application/return');
+      renderApp('/company');
+      await heading('Компания');
+
+      await user.click(await screen.findByRole('button', { name: 'Вернуть с замечанием' }));
+      const dialog = await screen.findByRole('dialog');
+      const submit = within(dialog).getByRole('button', { name: 'Вернуть договор' });
+      expect(submit).toBeDisabled();
+      await user.type(within(dialog).getByLabelText('Замечание к договору'), 'Срок оплаты 60 дней');
+      await expectNoAxeViolations();
+      await user.click(submit);
+
+      await waitFor(() => expect(body.current).toEqual({ notes: 'Срок оплаты 60 дней' }));
+      expect(await screen.findByText(/Вы вернули договор с замечанием/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Согласовать проект договора/ })).toBeNull();
+    });
+
+    it('после согласия кандидат загружает скан подписанного', async () => {
+      signedIn('actor');
+      setMockPartnerApplication({
+        id: 602,
+        status: 'candidate_agreed',
+        candidate_agreed_at: '2026-11-25T13:00:00Z',
+        ...base,
+      });
+      const user = userEvent.setup();
+      renderApp('/company');
+      await heading('Компания');
+
+      expect(await screen.findByText('Подпишите договор и загрузите скан подписанного.')).toBeInTheDocument();
+      const input = screen.getByLabelText('Скан подписанного договора');
+      await user.upload(input, new File(['%PDF-1.4'], 'signed.pdf', { type: 'application/pdf' }));
+
+      expect(await screen.findByText(/Скан получен\. Мы подтвердим договор/)).toBeInTheDocument();
+      await expectNoAxeViolations();
     });
   });
 });

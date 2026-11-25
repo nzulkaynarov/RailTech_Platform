@@ -42,6 +42,7 @@ describe("Расчёт · клиент отклонил КП (D26G-3)", () => {
     const dialog = await screen.findByRole("dialog", { name: `Отказ по заявке ${REJECTED}` });
     const submit = within(dialog).getByRole("button", { name: "Закрыть заявку отказом" });
     expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription("Напишите причину — без неё заявку не закрыть.");
     fireEvent.change(within(dialog).getByLabelText("Причина отказа"), {
       target: { value: "Клиент купил у конкурента" },
     });

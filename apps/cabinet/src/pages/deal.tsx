@@ -13,13 +13,16 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { QuoteStatusBadge, RequestStatusBadge, StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
 import { aboutDealKey, dealLabelKey, dealProgress, type DealProgress } from '@/lib/dealStage';
 import { invoiceView } from '@/lib/invoice';
+import { quoteAwaitsDecision } from '@/lib/quotes';
+import { contractAwaitsClient } from '@/lib/status';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
+import { useCanAct } from '@/session/useMe';
 import { dealContext } from '@/lib/messages';
 
 /**
@@ -152,6 +155,7 @@ export function DealPage() {
               to={`/quotes/${item.id}`}
               title={t('pages.quotes.numberVersion', { number: item.number, version: item.version })}
               meta={formatMoney(item.total)}
+              action={quoteAwaitsDecision(item, now) ? t('pages.deal.decide') : undefined}
             >
               <QuoteStatusBadge quote={item} now={now} />
             </DealRow>
@@ -159,14 +163,30 @@ export function DealPage() {
         </DealSection>
         <DealSection title={t('pages.deal.contracts')} count={dealContracts.length}>
           {dealContracts.map((item) => (
-            <DealRow key={item.id} to="/contracts" title={item.number}>
-              <StatusBadge entity="contract" code={item.status} />
+            <DealRow
+              key={item.id}
+              to="/contracts"
+              title={item.number}
+              action={contractAwaitsClient(item.status) && !item.signed_by_client_at ? t('pages.contracts.sign') : undefined}
+            >
+              <div className="flex flex-col items-start gap-1">
+                <StatusBadge entity="contract" code={item.status} />
+                {item.status === 'signed_by_client' ? (
+                  <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                ) : null}
+              </div>
             </DealRow>
           ))}
         </DealSection>
         <DealSection title={t('pages.deal.invoices')} count={dealInvoices.length}>
           {dealInvoices.map((item) => (
-            <DealRow key={item.id} to="/invoices" title={item.number} meta={formatMoney(item.total)}>
+            <DealRow
+              key={item.id}
+              to="/invoices"
+              title={item.number}
+              meta={formatMoney(item.total)}
+              action={invoiceView(item, now).overdueDays ? t('pages.invoices.payButton') : undefined}
+            >
               <StatusBadge entity="invoice" code={invoiceView(item, now).displayStatus} />
             </DealRow>
           ))}
@@ -224,6 +244,7 @@ function DealRow({
   title,
   item,
   meta,
+  action,
   children,
 }: {
   to: string;
@@ -231,8 +252,11 @@ function DealRow({
   /** Позиция каталога строки (ЕД-4): миниатюра и наш артикул рядом с названием */
   item?: ItemRef | null;
   meta?: string;
+  /** Что сделать в строке, если ждут клиента: тот же переход на экран документа, где действие уже есть (без нового сценария). */
+  action?: string;
   children: ReactNode;
 }) {
+  const canAct = useCanAct();
   return (
     <li>
       <Link
@@ -253,6 +277,7 @@ function DealRow({
         <span className="flex flex-wrap items-center gap-2">
           {meta ? <span className="text-muted-foreground tabular-nums">{meta}</span> : null}
           {children}
+          {action && canAct ? <span className={buttonVariants({ size: 'sm', variant: 'outline' })}>{action}</span> : null}
         </span>
       </Link>
     </li>

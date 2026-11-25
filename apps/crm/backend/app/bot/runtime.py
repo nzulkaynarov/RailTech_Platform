@@ -21,6 +21,7 @@ from app.bot.errors import ErrorReplier
 from app.bot.maintenance import MaintenanceMiddleware, Paused
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.bot.profile import ProfilePublish, publish_profile
+from app.bot.staff_channel import router as staff_channel_router
 from app.bot.staff_link import router as staff_link_router
 from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
@@ -33,6 +34,7 @@ from app.services.client_bot import ClientBotService
 from app.services.conversation import ConversationService
 from app.services.leads import LeadService
 from app.services.settings import SettingsService
+from app.services.staff_channel import StaffChannelService
 from app.services.staff_telegram_link import StaffTelegramLinkService
 from app.services.start_links import StartLinkService
 from app.services.telegram_groups import TelegramGroupService
@@ -53,6 +55,7 @@ def build_dispatcher(
     start_links: StartLinkService | None = None,
     staff_link: StaffTelegramLinkService | None = None,
     client_groups: TelegramGroupService | None = None,
+    staff_channel: StaffChannelService | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
         conversation=conversation,
@@ -66,6 +69,7 @@ def build_dispatcher(
         start_links=start_links,
         staff_link=staff_link,
         groups=client_groups,
+        staff_channel=staff_channel,
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
@@ -81,6 +85,7 @@ def build_dispatcher(
         dispatcher.include_router(channel.router)
     # Привязка Telegram сотрудником (W15-H6) — раньше клиентских: свой префикс аргумента `/start`.
     dispatcher.include_router(staff_link_router)
+    dispatcher.include_router(staff_channel_router)
     dispatcher.include_router(client_handlers.router)
     dispatcher.include_router(chat_member.router)
     dispatcher.include_router(groups.router)

@@ -24,6 +24,8 @@ test.describe("Х-18: остаток СЦ-6", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "manager@demo.example");
       await spaGoto(page, "/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
+      // лид с «партнёрской» формы сайта начинает с ответа «Партнёр» (ЛП-1) — здесь нужна заявка клиента
+      await page.getByRole("radio", { name: "Клиент" }).check();
       const form = page.getByRole("form", { name: "Создать заявку" });
       await expect(form).toBeVisible();
       await form.getByRole("button", { name: /^Запрос/ }).click();

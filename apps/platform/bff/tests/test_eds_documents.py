@@ -468,11 +468,26 @@ async def test_create_saves_a_draft(web: Web, eds: EdsFake, check: ContractCheck
         "text": FORM["text"],
         "amount": FORM["amount"],
         "due_date": "2999-11-05",
+        "invoice_later": False,
         "file_ids": [FILE_ID],
         "erp_deal_id": 905,
     }
     assert eds.requests("POST", f"documents/{DOC_ID}/submit") == []
     assert eds.last("POST", "documents").headers["authorization"].startswith(f"Bearer {TOKEN}")
+
+
+async def test_invoice_later_goes_to_eds_and_comes_back(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """Б-9: отметка «счёт придёт позже» уходит в EDS вместе с формой."""
+    await web.login(["MANAGER"])
+    form = {**FORM, "file_ids": [], "invoice_later": True}
+
+    response = await web.send("POST", f"{BASE}/documents", json=form)
+
+    assert response.status_code == 201, response.text
+    check(response, "/eds/documents", "post")
+    assert eds.body("POST", "documents")["invoice_later"] is True
 
 
 async def test_idempotency_key_goes_to_eds_only_when_given(web: Web, eds: EdsFake) -> None:
@@ -731,7 +746,11 @@ async def test_update_saves_the_whole_form_and_clears_empty_fields(
     assert response.status_code == 200, response.text
     check(response, "/eds/documents/{id}", "put")
     assert response.json()["subject"] == "Новая тема"
-    assert eds.body("PATCH", f"documents/{DOC_ID}") == {**form, "file_ids": []}
+    assert eds.body("PATCH", f"documents/{DOC_ID}") == {
+        **form,
+        "file_ids": [],
+        "invoice_later": False,
+    }
     assert eds.requests("POST", f"documents/{DOC_ID}/submit") == []
 
 

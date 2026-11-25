@@ -178,7 +178,7 @@ describe('Профиль → «Уведомления»', () => {
     await user.click(await within(card).findByRole('button', { name: 'Отвязать' }));
 
     const confirm = within(card).getByRole('region', { name: 'Отключить Telegram?' });
-    expect(within(confirm).getByRole('note')).toHaveTextContent('Вход в кабинет из Telegram закроется');
+    expect(within(confirm).getByRole('note')).toHaveTextContent('вход в кабинет из Telegram закроется');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await expectNoAxeViolations();
     expect(calls).not.toContain('DELETE /me/telegram');

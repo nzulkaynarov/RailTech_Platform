@@ -92,12 +92,16 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
+    // Б-2: у неактивной кнопки названа причина
+    expect(submit).toHaveAccessibleDescription("Выберите партнёра.");
     await pickCompany(
       within(modal).getByRole("combobox", { name: "Партнёр" }),
       "Сталь",
       "ООО «Вымышленная Сталь»",
     );
-    expect(submit).toBeEnabled();
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
     fireEvent.click(submit);
     expect(await screen.findByText("Запрос ушёл на sales@steel.example")).toBeVisible();
 
@@ -120,6 +124,23 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     expect(within(log).getByText("Ответ получен")).toBeVisible();
   });
 
+  it("ни одна строка не отмечена: «Отправить запрос» неактивна, причина названа (Б-2)", async () => {
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
+    );
+    for (const box of within(modal).getAllByRole("checkbox")) {
+      if ((box as HTMLInputElement).checked) fireEvent.click(box);
+    }
+    const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAccessibleDescription("Отметьте хотя бы одну строку.");
+  });
+
   it("ДК-5: под запросом — «Ссылка партнёра в Кабинете»; отзыв гасит её после одного подтверждения", async () => {
     await openCalc("supply@demo.example");
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
@@ -129,7 +150,12 @@ describe("Расчёт · «Запросить цену у партнёра»", 
       "Сталь",
       "ООО «Вымышленная Сталь»",
     );
-    fireEvent.click(within(modal).getByRole("button", { name: "Отправить запрос" }));
+    // письмо готово к отправке, когда предпросмотр показал, что увидит партнёр
+    const send = within(modal).getByRole("button", { name: "Отправить запрос" });
+    await waitFor(() => {
+      expect(send).toBeEnabled();
+    });
+    fireEvent.click(send);
     const log = await screen.findByRole("list", { name: "Запросы цены у партнёров" });
 
     const block = (
@@ -163,10 +189,15 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     );
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
+    await waitFor(() => {
+      expect(submit).toHaveAccessibleDescription("Укажите адрес партнёра для письма.");
+    });
     fireEvent.change(await within(modal).findByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
-    expect(submit).toBeEnabled();
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
     fireEvent.click(submit);
     expect(await screen.findByText("Запрос ушёл на orders@lumber.example")).toBeVisible();
   });
@@ -327,5 +358,86 @@ describe("Расчёт · похожая позиция каталога (СЦ-1
       expect(screen.queryByText(`Похоже: ${DRIVE}`)).toBeNull();
     });
     expect(within(lineRow("Привод СП-6М")).getByText("Черновик")).toBeVisible();
+  });
+});
+
+describe("Расчёт · «Запросить цену у партнёра» только пока расчёт открыт (Б-2)", () => {
+  it("у КП на одобрении кнопки запроса цены нет", async () => {
+    signIn("supply@demo.example");
+    renderAt(`/erp/calc/${encodeURIComponent("ЗВ-2026-101")}`);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Расчёт по заявке ЗВ-2026-101" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Запросить цену у партнёра" })).toBeNull();
+  });
+});
+
+describe("Расчёт · «Запросить цену» · слова клиента партнёру не уходят (В-2)", () => {
+  async function openRequestWithoutCard(name: string) {
+    await openCalc("supply@demo.example");
+    // строка без карточки каталога: слова клиента из заявки
+    fireEvent.click(screen.getByRole("button", { name: "Добавить строку" }));
+    const form = await screen.findByRole("region", { name: "Новая строка расчёта" });
+    fireEvent.change(within(form).getByLabelText("Наименование"), { target: { value: name } });
+    fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Новая строка расчёта" })).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
+    );
+    return modal;
+  }
+
+  it("строка без карточки не уходит, пока сотрудник не назвал её; письмо несёт только подтверждённое название", async () => {
+    const sent: { partner_names?: { line_id: string; name: string }[] }[] = [];
+    server.use(
+      http.post("*/erp/calc/*/price-requests", async ({ request }) => {
+        sent.push((await request.clone().json()) as (typeof sent)[number]);
+        return undefined;
+      }),
+    );
+    const words = "Стрелка для ст. Чиланзар, ООО МетроСтрой";
+    const modal = await openRequestWithoutCard(words);
+    const send = within(modal).getByRole("button", { name: "Отправить запрос" });
+    await within(modal).findAllByLabelText(/^Как назвать партнёру, строка \d+$/);
+    const input = within(modal)
+      .getAllByLabelText(/^Как назвать партнёру, строка \d+$/)
+      .find((field) => (field as HTMLInputElement).value === "");
+    if (!input) throw new Error("нет поля строки без названия");
+    // слова клиента показаны сотруднику, но поле пустое и отправить нельзя
+    expect(within(modal).getByText(/Партнёру эти слова не уходят/)).toBeVisible();
+    expect(input).toHaveValue("");
+    expect(send).toBeDisabled();
+    fireEvent.change(input, { target: { value: "Стрелочный перевод" } });
+    await waitFor(() => {
+      expect(send).toBeEnabled();
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(sent).toHaveLength(1);
+    });
+    expect(sent[0]?.partner_names?.map((row) => row.name)).toEqual(["Стрелочный перевод"]);
+    expect(JSON.stringify(sent[0])).not.toContain("Чиланзар");
+  });
+
+  it("комментарий партнёру виден в предпросмотре до отправки", async () => {
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
+    await pickCompany(
+      within(modal).getByRole("combobox", { name: "Партнёр" }),
+      "Сталь",
+      "ООО «Вымышленная Сталь»",
+    );
+    fireEvent.change(within(modal).getByLabelText("Комментарий партнёру"), {
+      target: { value: "Нужны сертификаты" },
+    });
+    const preview = await within(modal).findByRole("region", { name: "Что увидит партнёр" });
+    expect(await within(preview).findByText(/Нужны сертификаты/)).toBeVisible();
   });
 });

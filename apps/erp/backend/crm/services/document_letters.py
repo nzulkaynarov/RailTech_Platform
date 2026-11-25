@@ -87,6 +87,7 @@ def deliver_document_letter(kind: str, doc_id: int, email: str, name: str, remin
         channel="transactional",
         language=link.contact.language if link.contact is not None else None,
         attachments=attachments,
+        ref=(kind, doc_id),  # отказ почты вернётся отправителю документа (notifications.mail_failure)
         fail_silently=True,
     )
     if getattr(log, "status", "") == EmailLog.STATUS_FAILED:

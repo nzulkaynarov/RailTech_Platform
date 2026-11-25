@@ -30,7 +30,7 @@ const thumb = (page: Page) => page.locator('img[src*="/thumbnail?v="]').first();
 test('КП: строки с миниатюрой и артикулом', async ({ page }) => {
   await signIn(page);
   await page.goto('/quotes/301');
-  await expect(page.getByRole('heading', { level: 1, name: 'КП KP-2026-0042' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Коммерческое предложение KP-2026-0042' })).toBeVisible();
   await expect(thumb(page)).toBeVisible();
   await snap(page, 'cabinet-quote', { widths: WIDTHS });
 });

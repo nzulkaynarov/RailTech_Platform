@@ -94,6 +94,31 @@ def test_sign_goes_through_the_service_and_waits_for_the_company_signature(
     assert contract.deal.stage.code == stage_before  # сделку двигает сервис по двусторонней подписи, не портал
 
 
+def test_client_agreement_notifies_the_quote_author_and_only_once(contract_world, portal_client, client_contact):
+    """Раньше о согласии клиента в кабинете сотрудник не узнавал: код `contract.signed_client` ждала вкладка
+    «Решения», но его никто не выпускал."""
+    from accounts.models import CustomUser
+    from notifications.models import Notification
+
+    contract = contract_world["contracts"]["sent"]
+    author = CustomUser.objects.create_user(email="author@notify.test", username="author@notify.test", password="x")
+    quote = contract.quote
+    quote.prepared_by = author
+    quote.save(update_fields=["prepared_by"])
+
+    response = post(portal_client, f"/contracts/{contract.pk}/sign")
+    assert response.status_code == 200
+
+    rows = Notification.objects.filter(event_code="contract.signed_client")
+    assert [(n.user_id, n.deal_id) for n in rows] == [(author.pk, contract.deal_id)]
+    note = rows.get()
+    assert contract.number in note.title and note.event_params["number"] == contract.number
+    assert note.link.startswith("/eds/projects/")
+    # повторный клик — 409, второго уведомления нет
+    assert post(portal_client, f"/contracts/{contract.pk}/sign").status_code == 409
+    assert Notification.objects.filter(event_code="contract.signed_client").count() == 1
+
+
 def test_sign_after_the_company_does_not_sign_around_the_operator_and_the_scan(contract_world, portal_client):
     """D2-5: согласие клиента не даёт «Подписан» даже при проставленной подписи продавца: нужны оператор и скан."""
     contract = contract_world["contracts"]["signed_by_company"]

@@ -142,7 +142,28 @@
       "partner_suspended": "The partner is suspended. Lift the suspension in the partner card.",
       "inn_too_long": "The tax ID in the application is longer than 20 characters. Reject it or ask to re-apply.",
       "contract_render_failed": "Could not build the contract. Nothing was saved, try again later.",
-      "company_mismatch": "The application is already linked to another organization. Refresh the list."
+      "company_mismatch": "The application is already linked to another organization. Refresh the list.",
+      "no_approved_partner_template": "No approved partner contract template. Approve one in contract templates or upload your own file.",
+      "contract_template_required": "Choose a contract template.",
+      "contract_template_not_offered": "This template is not approved or not for partners. Refresh the list.",
+      "contract_template_unfilled": "The template has places left without data. Fix the template in the library.",
+      "contract_not_prepared": "Prepare the contract first.",
+      "contract_approval_pending": "The contract is waiting for the Legal zone holder.",
+      "contract_approval_returned": "The contract was returned for revision: prepare a new version.",
+      "contract_file_invalid": "The file was not accepted: PDF or DOCX up to 20 MB.",
+      "contract_deviations_disabled": "The company rule does not allow own files or deviations from the template.",
+      "contract_already_sent": "The contract has already been sent to the candidate.",
+      "contract_language_invalid": "Choose the contract language from the list.",
+      "deviation_text_too_long": "The deviation text is too long: up to 4000 characters.",
+      "contract_decision_forbidden": "The Legal zone holder decides.",
+      "contract_approval_not_requested": "No decision is expected on the contract now. Refresh the list.",
+      "contract_return_note_required": "Write a remark: what to fix.",
+      "contract_decision_invalid": "Choose Approve or Return.",
+      "candidate_email_required": "The candidate has no e-mail: nowhere to send the sign-in.",
+      "signed_scan_required": "The signed scan has not been received. Give a reason to confirm without it.",
+      "contract_date_invalid": "The contract date is invalid.",
+      "self_approval_not_allowed": "Another holder of the Legal zone decides. The name is in the application row.",
+      "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders."
     }
   },
   "items": {
@@ -1085,7 +1106,9 @@
     },
     "source": {
       "public": "Public form",
-      "client_cabinet": "Client cabinet"
+      "client_cabinet": "Client cabinet",
+      "letter": "Incoming letter",
+      "lead": "Lead"
     },
     "inn": "TIN: {{inn}}",
     "matchFound": "Database match: {{name}}",
@@ -1113,21 +1136,25 @@
       "resendContract": "Send contract again",
       "approve": "Approve and open cabinet",
       "approveWithoutAgreement": "Approve without agreement",
-      "reject": "Reject"
+      "reject": "Reject",
+      "prepare": "Prepare contract",
+      "prepareAgain": "Prepare again",
+      "decide": "Decide on contract"
     },
     "empty": {
       "title": "No partner applications",
       "hint": "Nothing here yet."
     },
     "sendContractModal": {
-      "title": "Sending contract draft: {{name}}",
-      "hint": "Specify the contract number (if assigned) and record that the draft was sent to the candidate.",
-      "ok": "Mark contract as sent",
+      "title": "Send contract: {{name}}",
+      "hint": "The contract goes to the candidate, and {{email}} gets an email with cabinet sign-in.",
+      "ok": "Send contract",
       "steps": [
         "Application status will change to “Contract sent”",
         "The candidate will receive the partner contract draft",
         "The candidate contact will receive an email with cabinet sign-in"
-      ]
+      ],
+      "noEmail": "The candidate has no e-mail: nowhere to send the sign-in."
     },
     "approveModal": {
       "title": "Approve application and open cabinet: {{name}}",
@@ -1143,7 +1170,8 @@
         "Contract number and date will be recorded in partner profile",
         "Contact person will receive invitation code",
         "Counterparty will be added to the clients"
-      ]
+      ],
+      "hintNoScan": "The signed scan has not been received. You can confirm only with a reason, which goes to the journal."
     },
     "rejectModal": {
       "title": "Reject application: {{name}}",
@@ -1151,6 +1179,62 @@
       "reasonLabel": "Rejection reason",
       "reasonPlaceholder": "e.g.: we do not supply this kind of product / no certificates",
       "ok": "Reject application"
+    },
+    "noApprovers": "no holder of the Legal zone is assigned",
+    "contractLine": {
+      "requested": "Waiting for: {{who}}",
+      "approved": "Approved: {{who}}",
+      "returned": "Returned: {{note}}",
+      "template": "Template “{{name}}”, ed. {{edition}}, {{language}}",
+      "upload": "Own file",
+      "notPrepared": "Contract is not prepared.",
+      "library": "Contract templates",
+      "ready": "Ready to send",
+      "candidateReturned": "Candidate returned: {{note}}",
+      "waitingCandidate": "Waiting for the candidate",
+      "waitingScan": "Waiting for the signed scan",
+      "scanReady": "Scan received {{date}}",
+      "openContract": "Contract",
+      "openScan": "Scan"
+    },
+    "prepareModal": {
+      "title": "Contract for the candidate: {{name}}",
+      "ok": "Prepare contract",
+      "loading": "Loading templates…",
+      "noTemplate": "No approved partner contract template. Upload your own file or approve a template.",
+      "openLibrary": "Open contract templates",
+      "mode": "Contract source",
+      "fromTemplate": "From template",
+      "ownFile": "Own file",
+      "template": "Template",
+      "templatePlaceholder": "Choose a template",
+      "templateOption": "{{name}} · ed. {{edition}}",
+      "file": "Contract file",
+      "fileHint": "PDF or DOCX, up to 20 MB",
+      "language": "Contract language",
+      "languages": {
+        "ru": "Russian",
+        "en": "English",
+        "uz": "Oʻzbekcha"
+      },
+      "deviation": "How it differs from the template",
+      "deviationHint": "Optional. A deviation goes to the Legal zone holder and becomes part of the contract once approved.",
+      "needsApproval": "To be decided by: {{who}}. You can send it after approval.",
+      "readyToSend": "No approval needed: approved template without deviations."
+    },
+    "decisionModal": {
+      "title": "Decision on the contract: {{name}}",
+      "hintFile": "An employee uploaded their own contract file.",
+      "hintDeviation": "A deviation from the template was requested.",
+      "decision": "Decision",
+      "approve": "Approve",
+      "return": "Return",
+      "note": "Remark",
+      "ok": {
+        "approve": "Approve contract",
+        "return": "Return for revision"
+      },
+      "selfConfirm": "There are no other holders — the decision will be recorded as self-made"
     }
   },
   "backToItems": "Back to items"

@@ -315,6 +315,17 @@ def suggest_card(item, owner_company):
     return best
 
 
+def is_unconfirmed_card(product) -> bool:
+    """Карточка заведена из слов клиента строкой сделки (есть `source_deal`) и не опубликована человеком.
+
+    Подтверждена только опубликованная карточка (`PUBLISHED`) либо созданная человеком в каталоге (без `source_deal`);
+    черновик и архивная карточка из строки КП — нет. Название такой карточки — слова клиента: партнёру оно уходит только
+    после публикации или названия от сотрудника (аудит конфиденциальности 2026-11-25, В-2)."""
+    if product is None or product.source_deal_id is None:
+        return False
+    return getattr(getattr(product, "status", None), "code", None) != "PUBLISHED"
+
+
 def is_own_draft(item) -> bool:
     """Карточка строки — черновик, который эта строка сама создала: спрос 1, та же сделка (ADR-0027 п. 5)."""
     product = item.product if item.product_id else None

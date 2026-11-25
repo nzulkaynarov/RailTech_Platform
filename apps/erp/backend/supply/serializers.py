@@ -32,6 +32,10 @@ class OrderActionsSerializer(serializers.Serializer):
     request_price = serializers.BooleanField(
         help_text="Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)"
     )
+    resend = serializers.BooleanField(
+        required=False,
+        help_text="Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send/ (Б-5)",
+    )
     confirm = serializers.BooleanField()
     receive = serializers.BooleanField()
     cancel = serializers.BooleanField()
@@ -400,6 +404,14 @@ class ReceiptInSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
 
 
+class PartnerNameInSerializer(serializers.Serializer):
+    """«Как назвать партнёру» — название (и артикул), подтверждённые сотрудником вместо слов клиента (В-2)."""
+
+    line_id = serializers.IntegerField(min_value=1, help_text="Строка расчёта")
+    name = serializers.CharField(max_length=500, help_text="Название для партнёра; слова клиента — только после правки")
+    article = serializers.CharField(required=False, allow_blank=True, max_length=120, default="")
+
+
 class PriceRequestInSerializer(serializers.Serializer):
     deal_id = serializers.IntegerField(min_value=1)
     supplier_id = serializers.IntegerField(min_value=1)
@@ -408,6 +420,35 @@ class PriceRequestInSerializer(serializers.Serializer):
     )
     note = serializers.CharField(required=False, allow_blank=True, max_length=1000, default="")
     to_email = serializers.EmailField(required=False, allow_blank=True, default="")
+    partner_names = PartnerNameInSerializer(
+        many=True,
+        required=False,
+        max_length=100,
+        help_text="Подтверждённые названия для партнёра; строка без карточки каталога без названия не уходит (409 `PARTNER_NAME_REQUIRED`)",
+    )
+
+
+class PriceRequestPreviewLineSerializer(serializers.Serializer):
+    quote_item_id = serializers.IntegerField()
+    name = serializers.CharField(allow_null=True, help_text="Как увидит партнёр; null — не названа, отправить нельзя")
+    article = serializers.CharField(allow_blank=True)
+    source = serializers.ChoiceField(
+        choices=("card", "staff", "missing"), help_text="card — карточка каталога; staff — подтверждено сотрудником"
+    )
+    client_name = serializers.CharField(
+        allow_blank=True, help_text="Слова клиента из заявки — только сотруднику, партнёру не уходят"
+    )
+    quantity = QuantityField()
+    unit = serializers.CharField(allow_blank=True)
+
+
+class PriceRequestPreviewSerializer(serializers.Serializer):
+    subject = serializers.CharField()
+    supplier = OrderSupplierSerializer()
+    to_email = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_null=True, help_text="Заметка партнёру ровно так, как уйдёт")
+    ready = serializers.BooleanField(help_text="У каждой строки есть название для партнёра")
+    lines = PriceRequestPreviewLineSerializer(many=True)
 
 
 class PriceRequestAnswerInSerializer(serializers.Serializer):

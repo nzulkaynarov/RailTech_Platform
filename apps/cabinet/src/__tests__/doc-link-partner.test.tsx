@@ -189,7 +189,7 @@ describe('заказ поставщику по ссылке', () => {
     open('order-cancelled-0123456789');
     await heading('Заказ ЗП-2026-031');
 
-    expect(screen.getByText('Заказ отменён отправителем.')).toBeInTheDocument();
+    expect(screen.getByText('Заказ отменён нами.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Подтвердить заказ' })).not.toBeInTheDocument();
   });
 });

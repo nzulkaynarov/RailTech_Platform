@@ -197,7 +197,8 @@
       "supplier": "Hamkor va usul",
       "lines": "Qatorlar"
     },
-    "linesSummary": "Qatorlar: {{count}}"
+    "linesSummary": "Qatorlar: {{count}}",
+    "expectedHint": "Sana va narxsiz buyurtma hamkorga ketmaydi: ularni keyinroq «Özgartiriş»da kiritiş mumkin."
   },
   "order": {
     "title": "Hamkorga buyurtma {{number}}",
@@ -208,7 +209,9 @@
       "receive": "Tovarni qabul qiliş",
       "edit": "Özgartiriş",
       "cancel": "Buyurtmani bekor qiliş",
-      "price": "Narx söraş"
+      "price": "Narx söraş",
+      "setDate": "Sanani kiritiş",
+      "resend": "Qayta yuboriş"
     },
     "overdueBanner": "{{date}} gaça kutilgan, tovar olinmagan — {{count}} kun keçikiş. Hamkor bilan boğlaning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
@@ -260,13 +263,15 @@
       "email": "Xat manzili",
       "emailKnown": "Manzil hamkor kartoçkasidan; boşqasini kiritiş mumkin.",
       "emailMissing": "Hamkorda poçta yöq: xat uçun manzil kiriting.",
-      "submit": "Xatni yuboriş"
+      "submit": "Xatni yuboriş",
+      "reason": "Hamkorning manzilini kiriting — usiz xat ketmaydi."
     },
     "confirm": {
       "title": "Hamkor {{number}} buyurtmasini tasdiqladi",
       "date": "Tasdiqlangan yetkazib beriş sanasi",
       "dateHint": "Keçikişni kuzatiş uçun kutilayotgan sana kerak.",
-      "submit": "Tasdiqlaş"
+      "submit": "Tasdiqlaş",
+      "reason": "Tasdiqlangan yetkazib beriş sanasini kiriting."
     },
     "cancel": {
       "title": "{{number}} buyurtmasini bekor qiliş",
@@ -322,7 +327,8 @@
       "prices_many": "Narxsiz: {{count}} qator",
       "prices_other": "Narxsiz: {{count}} qator",
       "date": "Kutilgan sana yöq",
-      "hint": "«Özgartiriş»da kiriting — narx va sanasiz buyurtma hamkorga yuborilmaydi."
+      "hint": "«Özgartiriş»da kiriting — narx va sanasiz buyurtma hamkorga yuborilmaydi.",
+      "hintDate": "Sanani kiriting — usiz buyurtma hamkorga ketmaydi."
     },
     "price": {
       "title": "Narx söraş · {{number}}",
@@ -393,7 +399,8 @@
     "empty": {
       "title": "Jönatmalar hali bölmagan",
       "text": "Jönatma şartnoma imzolangandan keyin loyiha zaxiralari böyiça rasmiylaştiriladi."
-    }
+    },
+    "reason": "Kamida bitta pozitsiya uçun miqdorni kiriting."
   },
   "priceRequest": {
     "title": "Hamkordan narx söraş · {{number}}",
@@ -406,6 +413,15 @@
     "submit": "Sörovni yuboriş",
     "sent": "Sörov {{email}} manziliga yuborildi",
     "failed": "«{{name}}» ga xat ketmadi: sörov jurnalda «yuborilmagan» holatida qoldi.",
+    "preview": {
+      "title": "Hamkor nimani köradi",
+      "subject": "Mavzu",
+      "to": "Kimga",
+      "note": "Hamkorga izoh",
+      "partnerName": "Hamkorga qanday ataş, {{n}}-qator",
+      "clientWords": "Sörovda: «{{name}}». Bu sözlar hamkorga yuborilmaydi.",
+      "missing": "Nomni kiriting: qatorda katalog kartasi yöq."
+    },
     "logTitle": "Hamkorlardan narx sörovlari",
     "logEmpty": "Sörovlar hali bölmagan.",
     "status": {
@@ -416,7 +432,12 @@
     "entryMeta": "{{when}} · {{who}} → {{email}}",
     "answerNote": "Javob: {{note}}",
     "answer": "Javob olindi",
-    "answerLabel": "Javob olindi: hamkor «{{name}}»"
+    "answerLabel": "Javob olindi: hamkor «{{name}}»",
+    "reason": {
+      "supplier": "Hamkorni tanlang.",
+      "lines": "Kamida bitta qatorni belgilang.",
+      "email": "Hamkorning xat manzilini kiriting."
+    }
   },
   "trace": {
     "title": "Kuzatuv: qayerdan va qayerga",

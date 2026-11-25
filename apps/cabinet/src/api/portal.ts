@@ -709,6 +709,18 @@ export const getPartnerContractPdfUrl = () => portalUrl('/company/partner-applic
 export const agreeCompanyPartnerContract = (body?: { notes?: string }) =>
   portalRequest<PartnerApplication>('/company/partner-application/agree', { method: 'POST', body: body ?? {} });
 
+/** Кандидат не согласен с договором: возвращает с замечанием (ПД-1). */
+export const returnCompanyPartnerContract = (body: { notes: string }) =>
+  portalRequest<PartnerApplication>('/company/partner-application/return', { method: 'POST', body });
+
+/** Скан подписанного договора после согласия кандидата (ПД-1): файл multipart, повторная загрузка заменяет. */
+export async function uploadCompanyPartnerSignedScan(file: File): Promise<PartnerApplication> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await postForm('/company/partner-application/signed-scan', formData);
+  return (await response.json()) as PartnerApplication;
+}
+
 // --- заказы партнёра и запросы цен (K2-orders) ----------------------------------------------------
 
 export type PartnerOrderStatus = Schemas['PartnerOrderStatus'];

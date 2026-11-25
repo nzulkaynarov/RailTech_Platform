@@ -51,6 +51,7 @@ from supply.models import (
 )
 from supply.services import shortage
 
+from catalog.candidates import is_unconfirmed_card
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
 from core.person_ref import person_ref
@@ -100,6 +101,34 @@ def supplier_email(company) -> str:
         return company.email
     contact = company.contacts.exclude(email="").order_by("-is_primary", "id").first()
     return contact.email if contact is not None else ""
+
+
+def unconfirmed_lines(lines) -> list:
+    """Строки заказа, чьё название — слова клиента: карточка заведена расчётом и не подтверждена (`is_unconfirmed_card`),
+    а название строки не задавал сотрудник. Такой заказ партнёру не уходит, пока карточку не опубликуют или строку не
+    назовут (В-2): переименование карточки в каталоге без публикации ничего не подтверждает."""
+    return [
+        line
+        for line in lines
+        if line.product_id and is_unconfirmed_card(line.product) and not getattr(line, "name_by_staff", False)
+    ]
+
+
+def refresh_partner_names(lines) -> None:
+    """Перед тем как строки уйдут партнёру: строка без названия от сотрудника берёт ТЕКУЩИЕ название и артикул своей
+    подтверждённой карточки, а не сохранённую копию — копия могла быть словами клиента, пока карточка была черновиком
+    (она потом переименована и опубликована). Обновлённое значение записывается в строку. Неподтверждённые карточки сюда
+    не доходят: `unconfirmed_lines` отказывает раньше."""
+    for line in lines:
+        product = line.product if line.product_id else None
+        if product is None or line.name_by_staff or is_unconfirmed_card(product):
+            continue
+        name = product.name[:500]
+        # артикул в строке мог задать сотрудник (отдельного признака нет): подставляем наш, только если он пуст
+        article = line.article or (product.manufacturer_part_number or product.sku or "")[:120]
+        if (line.name, line.article) != (name, article):
+            line.name, line.article = name, article
+            type(line).objects.filter(pk=line.pk).update(name=name, article=article)
 
 
 def get_supplier(supplier_id: int):
@@ -174,7 +203,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
         raise StockError("TOO_MANY_LINES", 400)
     products = {
         p.pk: p
-        for p in Product.objects.select_related("uom", "domain_type").filter(
+        for p in Product.objects.select_related("uom", "domain_type", "status").filter(
             pk__in=[row.product_id for row in lines if row.product_id]
         )
     }
@@ -213,7 +242,14 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "id": line.id,
                 "product": product,
                 "name": (line.name or product.name)[:500],
-                "article": (line.article or product.manufacturer_part_number or product.sku or "")[:120],
+                "name_by_staff": bool((line.name or "").strip()),
+                # артикул изготовителя карточки-черновика — из заявки клиента: партнёру он не уходит, пока карточку не подтвердили
+                "article": (
+                    line.article
+                    or ("" if is_unconfirmed_card(product) else product.manufacturer_part_number)
+                    or product.sku
+                    or ""
+                )[:120],
                 # Plan 0.6 (FR-15): the unit the calculation line carries («компл.»), not the card default («шт.»).
                 "unit": (
                     line.unit
@@ -262,6 +298,7 @@ def _write_lines(order: SupplierOrder, rows: list[dict], user) -> None:
             position=position,
             product=row["product"],
             name=row["name"],
+            name_by_staff=row["name_by_staff"],
             article=row["article"],
             unit=row["unit"],
             quantity=row["quantity"],
@@ -462,6 +499,12 @@ def _mail_state(order: SupplierOrder) -> Optional[dict]:
     return {"state": state, "reason": reason or None}
 
 
+def mail_failed(order: SupplierOrder) -> bool:
+    """Письмо партнёру отправленного заказа не ушло (Б-5): только тогда доступно «Отправить ещё раз»."""
+    state = _mail_state(order)
+    return state is not None and state["state"] == "failed"
+
+
 _NOTICE_MAIL_STATES = (NoticeEmailState.SENT, NoticeEmailState.PENDING, NoticeEmailState.FAILED)
 
 
@@ -539,10 +582,16 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
 
     require_supply(user)
     order = _order_or_404(order_id, lock=True)
-    _transition(order, OrderStatus.SENT)
-    lines = list(order.lines.select_related("product"))
+    # Б-5: повтор письма — только у отправленного заказа, письмо которого не ушло; статус остаётся «Отправлен».
+    resend = order.status == OrderStatus.SENT and mail_failed(order)
+    if not resend:
+        _transition(order, OrderStatus.SENT)
+    lines = list(order.lines.select_related("product__status"))
     if not lines:
         raise StockError("LINES_REQUIRED", 409)
+    if unconfirmed_lines(lines):
+        raise StockError("PARTNER_NAME_REQUIRED", 409)
+    refresh_partner_names(lines)
     # СЦ-10: без цены и даты это запрос цены, а не заказ — партнёру не уходит.
     missing_prices, missing_date = send_gaps(order, lines)
     if missing_prices or missing_date:
@@ -595,6 +644,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
                 user=None,
                 language=order.supplier.language or None,
                 reply_to=[user.email] if getattr(user, "email", "") else None,
+                ref=("supplier_order", order.pk),  # отказ почты — тому, кто отправил заказ
             )
         except EmailDeliveryError as exc:
             logger.warning("Заказ %s не отправлен: %s", order.number, exc)
@@ -849,6 +899,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             "edit": manage and status == OrderStatus.DRAFT,
             "send": manage and status == OrderStatus.DRAFT and complete,
             "request_price": manage and status == OrderStatus.DRAFT and missing_prices > 0,
+            "resend": bool(detail and manage and status == OrderStatus.SENT and mail_failed(order)),
             "confirm": manage and status == OrderStatus.SENT and not partner_confirms_in_cabinet(order.supplier),
             "receive": manage and status == OrderStatus.CONFIRMED,
             "cancel": manage

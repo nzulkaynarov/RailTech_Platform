@@ -3,6 +3,8 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
+import { canSee } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { CalcSheet } from "../../../shared/api/generated/model";
@@ -47,6 +49,19 @@ function stateLabel(sheet: CalcSheet): string {
   return stateOf(sheet);
 }
 
+/** Ссылка на КП расчёта (`/eds/drafts/<номер>`); без права на «Документы» и до появления номера её нет. */
+function QuoteLink({ sheet }: { sheet: CalcSheet }) {
+  const { t } = useTranslation("calc");
+  const { me } = useAuth();
+  const number = sheet.quote?.number;
+  if (!number || !canSee(me, { resource: "eds.drafts" })) return null;
+  return (
+    <LinkButton size="small" to={`/eds/drafts/${encodeURIComponent(number)}`}>
+      {t("sheet.openQuote", { number })}
+    </LinkButton>
+  );
+}
+
 function Banner({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const quote = sheet.quote;
@@ -56,6 +71,7 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
       <Alert
         type="info"
         showIcon
+        action={<QuoteLink sheet={sheet} />}
         message={
           quote.version > 1
             ? t("sheet.atDirectorVersion", { number: quote.number ?? "", version: quote.version })
@@ -79,6 +95,7 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
       <Alert
         type="error"
         showIcon
+        action={<QuoteLink sheet={sheet} />}
         message={
           quote.reject_reason
             ? t("sheet.rejectedComment", { comment: quote.reject_reason })
@@ -88,7 +105,14 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
     );
   }
   if (quote.state === "approved")
-    return <Alert type="success" showIcon message={t("sheet.approved")} />;
+    return (
+      <Alert
+        type="success"
+        showIcon
+        action={<QuoteLink sheet={sheet} />}
+        message={t("sheet.approved")}
+      />
+    );
   if (!sheet.rights.goods && !sheet.rights.services) {
     return <Alert type="info" showIcon message={t("sheet.readOnly")} />;
   }
@@ -145,6 +169,42 @@ function NotStarted({ sheet }: { sheet: CalcSheet }) {
   );
 }
 
+type ClosedKind = "approved" | "rejected" | "not_in_calculation";
+
+/** Расчёт закрыт: КП одобрено, отклонено директором или заявка вне расчёта — кнопка «Расчёт готов» не нужна. */
+function closedKind(sheet: CalcSheet): ClosedKind | null {
+  const quote = sheet.quote;
+  if (quote?.state === "approved") return "approved";
+  if (quote?.state === "rejected" && quote.rejected_by !== "client") return "rejected";
+  if (sheet.ready.blocker === "not_in_calculation") return "not_in_calculation";
+  return null;
+}
+
+function Closed({ sheet, kind }: { sheet: CalcSheet; kind: ClosedKind }) {
+  const { t } = useTranslation("calc");
+  const { me } = useAuth();
+  const number = sheet.quote?.number;
+  return (
+    <div className="pf-calc-ready">
+      <p className="pf-calc-ready-hint">
+        {t(`ready.closed.${kind}`)}
+        {kind === "approved" && number && canSee(me, { resource: "eds.projects" }) ? (
+          <>
+            {" · "}
+            <LinkButton
+              type="link"
+              size="small"
+              to={`/eds/projects?q=${encodeURIComponent(number)}`}
+            >
+              {t("sheet.openProject")}
+            </LinkButton>
+          </>
+        ) : null}
+      </p>
+    </div>
+  );
+}
+
 function Ready({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const { message } = App.useApp();
@@ -171,6 +231,8 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
       </div>
     );
   }
+  const closed = closedKind(sheet);
+  if (closed) return <Closed sheet={sheet} kind={closed} />;
   if (!sheet.rights.build) return null;
   const blocker = sheet.ready.blocker;
   const waiting = GROUPS.filter((g) => sheet.visas[g].state === "waiting").map((g) =>
@@ -209,8 +271,10 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { mobile } = useViewport();
   const [params, setParams] = useSearchParams();
   // План 1.1: «Создать → Расчёт» открывает расчёт сразу с разбором файла заявки (`?parse=1`)
+  // Разбор открывается только там, где строки ещё правятся: у КП на одобрении и в закрытом расчёте он кончился бы ошибкой (Б-6)
+  const parseOpen = ["not_started", "in_progress", "returned"].includes(stateOf(sheet));
   const [dialog, setDialog] = useState<"add" | "parse" | "previous" | "price" | "terms" | null>(
-    () => (params.get("parse") === "1" && sheet.rights.build ? "parse" : null),
+    () => (params.get("parse") === "1" && sheet.rights.build && parseOpen ? "parse" : null),
   );
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
   const openForm = (kind: "add" | "price" | "terms") => {
@@ -253,7 +317,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
             <StatusTag kind="quote" status={state}>
               {t(`state.${stateLabel(sheet)}`)}
             </StatusTag>
-            {sheet.quote !== null && sheet.rights.stock === true ? (
+            {editable && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
                   openForm("price");

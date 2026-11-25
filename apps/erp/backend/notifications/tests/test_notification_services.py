@@ -104,6 +104,21 @@ def test_user_notification_is_not_shown_to_a_platform_operator(people):
     assert personal.id not in _ids(_api(people["operator"]).get(NOTIFICATIONS_URL))
 
 
+def test_platform_admin_sees_notifications_addressed_to_him_but_not_to_others(people):
+    """Админ CRM заведён в ERP суперпользователем: адресованные ему (назначение, визы) — его, чужие — нет."""
+    mine = notify_user(user=people["operator"], title="Вам назначена сделка", message="D-1", push=False)
+    theirs = notify_user(user=people["member"], title="Инвойс выставлен", message="INV-1", push=False)
+    alert = notify_platform_admins("Celery завис", "Очередь не разбирается")
+
+    seen = _ids(_api(people["operator"]).get(NOTIFICATIONS_URL))
+
+    assert {mine.id, alert.id} <= seen
+    assert theirs.id not in seen
+    # и отметка «прочитано» работает для его собственного уведомления
+    resp = _api(people["operator"]).patch(f"{NOTIFICATIONS_URL}{mine.id}/mark_read/")
+    assert resp.status_code == 200
+
+
 # ── notify_user ──────────────────────────────────────────────────────────────
 
 

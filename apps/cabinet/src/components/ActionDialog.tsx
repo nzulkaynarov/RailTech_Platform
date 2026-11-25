@@ -27,6 +27,7 @@ export function ActionDialog({
   description,
   confirmLabel,
   confirmVariant = 'default',
+  confirmDisabled = false,
   cancelLabel,
   pending,
   error,
@@ -40,6 +41,8 @@ export function ActionDialog({
   description: ReactNode;
   confirmLabel: string;
   confirmVariant?: 'default' | 'destructive';
+  /** Подтвердить пока нельзя (обязательное поле диалога пусто). */
+  confirmDisabled?: boolean;
   /** Подпись отказа; по умолчанию «Отмена» («Остаться», «Продолжить правку» — в вопросах о несохранённом). */
   cancelLabel?: string;
   pending: boolean;
@@ -79,7 +82,7 @@ export function ActionDialog({
                 {cancelLabel ?? t('common.cancel')}
               </Button>
             </DialogClose>
-            <Button type="submit" variant={confirmVariant} disabled={pending}>
+            <Button type="submit" variant={confirmVariant} disabled={pending || confirmDisabled}>
               {pending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : null}
               {confirmLabel}
             </Button>
