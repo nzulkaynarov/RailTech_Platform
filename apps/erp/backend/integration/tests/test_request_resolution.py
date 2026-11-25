@@ -229,7 +229,7 @@ FILE = "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69"
 def eds_file(monkeypatch):
     """EDS отдаёт файл письма клиента; сервисный вызов подменён, задача идёт сразу после коммита."""
     from integration.services import eds_files
-    from integration.tasks import fetch_request_letter_file
+    from crm.tasks import fetch_request_letter_file
 
     calls = []
 
@@ -288,7 +288,7 @@ def _gave_up(deal, reason):
 
 def test_missing_letter_file_stops_waiting_and_leaves_a_journal_note(api, own, monkeypatch):  # noqa: F811
     from integration.services import eds_files
-    from integration.tasks import fetch_request_letter_file
+    from crm.tasks import fetch_request_letter_file
 
     monkeypatch.setattr(eds_files, "fetch_request_file", lambda *a: None)
     deal = _pending_deal(api, own)
@@ -299,7 +299,7 @@ def test_missing_letter_file_stops_waiting_and_leaves_a_journal_note(api, own, m
 
 def test_eds_down_retries_then_gives_up_without_waiting_forever(api, own, monkeypatch):  # noqa: F811
     from integration.services import eds_files
-    from integration.tasks import MAX_RETRIES, fetch_request_letter_file
+    from crm.tasks import LETTER_FILE_MAX_RETRIES, fetch_request_letter_file
 
     def down(*args):
         raise eds_files.EdsFileUnavailable("down")
@@ -307,7 +307,7 @@ def test_eds_down_retries_then_gives_up_without_waiting_forever(api, own, monkey
     monkeypatch.setattr(eds_files, "fetch_request_file", down)
     deal = _pending_deal(api, own)
 
-    assert fetch_request_letter_file.apply(args=(deal.pk, FILE, 101), retries=MAX_RETRIES).result is False
+    assert fetch_request_letter_file.apply(args=(deal.pk, FILE, 101), retries=LETTER_FILE_MAX_RETRIES).result is False
     _gave_up(deal, "eds_unavailable")
 
 
@@ -315,7 +315,7 @@ def test_broker_down_clears_the_wait_and_leaves_a_journal_note(
     api, own, monkeypatch, django_capture_on_commit_callbacks  # noqa: F811
 ):
     """Задача не поставилась (брокер недоступен): флаг снят, запись в журнале — расчёт не ждёт файл вечно."""
-    from integration.tasks import fetch_request_letter_file
+    from crm.tasks import fetch_request_letter_file
 
     def broken(*args):
         raise ConnectionError("broker is down")
@@ -331,7 +331,7 @@ def test_broker_down_clears_the_wait_and_leaves_a_journal_note(
 
 
 def test_storage_error_clears_the_wait_and_leaves_a_journal_note(api, own, eds_file, monkeypatch):  # noqa: F811
-    from integration.tasks import fetch_request_letter_file
+    from crm.tasks import fetch_request_letter_file
 
     from sourcing.models import Attachment
 
@@ -347,7 +347,7 @@ def test_storage_error_clears_the_wait_and_leaves_a_journal_note(api, own, eds_f
 
 
 def test_deal_gone_before_the_file_arrives_ends_quietly(api, own, eds_file):  # noqa: F811
-    from integration.tasks import fetch_request_letter_file
+    from crm.tasks import fetch_request_letter_file
 
     assert fetch_request_letter_file.apply(args=(987654, FILE, 101)).result is False
     assert eds_file == []
@@ -356,7 +356,7 @@ def test_deal_gone_before_the_file_arrives_ends_quietly(api, own, eds_file):  # 
 def test_soft_time_limit_clears_the_wait(api, own, monkeypatch):  # noqa: F811
     from celery.exceptions import SoftTimeLimitExceeded
     from integration.services import eds_files
-    from integration.tasks import SOFT_TIME_LIMIT, TIME_LIMIT, fetch_request_letter_file
+    from crm.tasks import LETTER_FILE_SOFT_TIME_LIMIT, LETTER_FILE_TIME_LIMIT, fetch_request_letter_file
 
     def slow(*args):
         raise SoftTimeLimitExceeded()
@@ -367,8 +367,8 @@ def test_soft_time_limit_clears_the_wait(api, own, monkeypatch):  # noqa: F811
     assert fetch_request_letter_file.apply(args=(deal.pk, FILE, 101)).result is False
     _gave_up(deal, "timeout")
     assert (fetch_request_letter_file.soft_time_limit, fetch_request_letter_file.time_limit) == (
-        SOFT_TIME_LIMIT,
-        TIME_LIMIT,
+        LETTER_FILE_SOFT_TIME_LIMIT,
+        LETTER_FILE_TIME_LIMIT,
     )
 
 

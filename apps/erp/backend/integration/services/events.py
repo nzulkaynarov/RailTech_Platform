@@ -180,7 +180,7 @@ def publish_request_created(
         request_resolution.start_direct_calculation(deal, direct_to, file_pending=wants_file)
         if wants_file:
             from django.db import transaction as _tx
-            from integration.tasks import enqueue_request_letter_file
+            from crm.tasks import enqueue_request_letter_file
 
             args = (deal.pk, str(letter_file_id), direct_to)
             _tx.on_commit(lambda: enqueue_request_letter_file(*args), robust=True)
