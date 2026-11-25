@@ -174,9 +174,14 @@ class TestMint:
         rows = doc_links.auto_created_document_contacts()
         assert [row["contact_id"] for row in rows] == [auto.pk]
         assert not [row for row in rows if row["email"] == quote.deal.contact.email]  # контакт заявки — не авто
+        before = list(Contact.objects.order_by("pk").values())
+        links_before = list(DocumentLink.objects.order_by("pk").values())
         out = StringIO()
         call_command("list_auto_document_contacts", stdout=out)
-        assert "a@x.example" in out.getvalue() and Contact.objects.filter(pk=auto.pk).exists()
+        assert "a@x.example" in out.getvalue()
+        # только чтение: ни контакты, ни ссылки не изменены, ничего не добавлено и не удалено
+        assert list(Contact.objects.order_by("pk").values()) == before
+        assert list(DocumentLink.objects.order_by("pk").values()) == links_before
 
     def test_a_guest_link_opens_no_other_part_of_the_cabinet(self, quote):
         """Гость по ссылке без контакта не листает ни КП, ни счета, ни документы, ни команду, ни чат."""

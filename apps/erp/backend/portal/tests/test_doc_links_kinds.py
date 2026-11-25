@@ -424,10 +424,23 @@ class TestLetters:
             email_invoice_issued(invoice)
         assert [item[2] for item in sent] == [client_contact.email]
 
-    def test_recipients_are_the_deal_contact_and_those_who_got_a_document(self, deal, invoice, client_contact):
+    def test_recipients_are_the_deal_contact_and_contacts_who_got_a_document(
+        self, deal, invoice, client_contact, client_company
+    ):
+        from parties.models import Contact
+
+        Contact.objects.create(company=client_company, name="Финансы", email="finance@new.example.uz")
         mint("invoice", invoice, email="finance@new.example.uz", name="Финансы")
         emails = [email for email, _ in doc_links.deal_recipients(deal)]
         assert emails == [client_contact.email, "finance@new.example.uz"]
+
+    def test_a_typo_or_forwarded_address_does_not_receive_the_next_documents(self, deal, invoice, client_contact):
+        """В-1: ссылка без контакта живёт, но адрес получателем следующих документов и писем сделки не становится."""
+        link, _ = mint("invoice", invoice, email="typo@stranger.example", name="Опечатка")
+        assert link.contact is None
+        emails = [email for email, _ in doc_links.deal_recipients(deal)]
+        assert emails == [client_contact.email]
+        assert "typo@stranger.example" not in emails
 
     def test_a_deal_without_a_chosen_contact_falls_back_to_the_primary_contact(self, deal, client_contact):
         deal.contact = None

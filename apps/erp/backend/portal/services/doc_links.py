@@ -128,7 +128,7 @@ def mint_document_link(kind: str, doc, email: str, name: str, *, created_by=None
 def deal_recipients(deal) -> list[tuple[str, str]]:
     """Кому уходят документы и письма сделки: `(адрес, имя)` без повторов (ДК-3, ADR-0030 п. 8).
 
-    Контакт сделки и каждый, кому уже уходил документ сделки (получатель КП, договора, счёта, акта); если таких нет —
+    Контакт сделки и каждый контакт компании, кому уже уходил документ сделки (получатель КП, договора, счёта, акта); адрес без контакта сюда не входит; если таких нет —
     основной контакт компании, затем зарегистрированный покупатель. Прежние участники компании в ERP письма о документах
     не получают.
     """
@@ -143,9 +143,10 @@ def deal_recipients(deal) -> list[tuple[str, str]]:
     if contact is not None and not contact.is_archived:
         add(contact.email, contact.name)
     for link in document_links_of_deal(deal).select_related("contact"):
-        if link.contact is not None and link.contact.is_archived:
+        # Адрес без контакта (опечатка, пересылка) следующих документов сделки не получает (В-1, ADR-0030 п. 4)
+        if link.contact is None or link.contact.is_archived:
             continue
-        add(link.recipient_email, link.contact.name if link.contact is not None else "")
+        add(link.recipient_email, link.contact.name)
     if not found and deal.company_id is not None:
         primary = (
             Contact.objects.filter(active_contact_q(), company_id=deal.company_id)

@@ -1919,6 +1919,7 @@
       "answer": "Answer the request",
       "confirm": "Confirm the order"
     },
+    "guestNote": "To respond to this document, write to the sender",
     "codeNote": "Any action needs the code we send to {{email}}. No other documents or sections open by this link.",
     "memberNote": "You are signed in as {{name}} — no code needed.",
     "linkUntil": "The link works until {{date}} — the sender can revoke it.",
