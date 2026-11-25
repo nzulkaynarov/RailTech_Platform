@@ -319,7 +319,13 @@
       "attachment_foreign_host": "The attachment link does not point to the platform storage",
       "content_unreadable": "The email text could not be decrypted (system link key)",
       "body_expired": "The email text has already been deleted",
-      "queue": "The email could not be queued"
+      "queue": "The email could not be queued",
+      "smtp_unavailable": "The mail server is not responding",
+      "smtp_tls_failed": "Could not establish a secure connection",
+      "smtp_auth_failed": "The mail server did not accept the login or password",
+      "smtp_rejected": "The mail server rejected the email",
+      "detail": "server reply {{code}}",
+      "other": "The email was not delivered"
     },
     "purpose": {
       "quote_sent": "Quote to client",
@@ -343,7 +349,12 @@
       "telegram_linked": "Telegram linked",
       "test": "Sending check",
       "outgoing_letter": "Outgoing letter",
-      "erp_mail": "ERP email"
+      "erp_mail": "ERP email",
+      "web_confirmation": "Request confirmation",
+      "supplier_order": "Supplier order",
+      "price_request": "Price request",
+      "document_link_code": "Document access code",
+      "other": "Email"
     },
     "inbound": {
       "title": "Receiving: shared mailbox (IMAP)",

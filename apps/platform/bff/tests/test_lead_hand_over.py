@@ -103,7 +103,7 @@ async def test_manager_gets_the_handed_lead_with_the_note_and_others_do_not(
     row = items[0]
     assert row["title"] == "Новый лид от делопроизводителя L-2045"
     assert NOTE[:40] in row["subtitle"]
-    assert "передал(а) Камила Делопроизводитель" in row["subtitle"]
+    assert "передано: Камила Делопроизводитель" in row["subtitle"]
     assert row["object"]["path"] == "/crm/leads?scope=waiting&lead=L-2045"
 
 

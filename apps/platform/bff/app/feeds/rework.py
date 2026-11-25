@@ -17,6 +17,7 @@ from typing import Any
 
 from app.errors import PlatformError
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.lang import tr
 from app.feeds.models import ObjectRef, QueueItem
 from app.feeds.text import ago, due_label, join, parse_deadline, parse_dt, short
 from app.rbac import View
@@ -115,7 +116,11 @@ def rework_item(
     document = entry.document
     subject = short(document.get("subject"), 90)
     number = document.get("number")
-    number = number if isinstance(number, str) and number else subject or "документ"
+    number = (
+        number
+        if isinstance(number, str) and number
+        else subject or tr("документ", "hujjat", "document")
+    )
     decision = entry.decision or {}
     by = decision.get("by")
     name = by.get("full_name") if isinstance(by, dict) else None
@@ -123,14 +128,33 @@ def rework_item(
     comment = short(decision.get("comment"), 140)
     returned_at = parse_dt(decision.get("at"))
     due_at = parse_deadline(document.get("due_date"))
-    remark = f"Вернул {who}: {comment}" if who and comment else None
-    remark = remark or (f"Вернул {who}" if who else "Возвращён на доработку")
+    remark = (
+        tr(
+            f"Вернул {who}: {comment}",
+            f"{who} qaytardi: {comment}",
+            f"Returned by {who}: {comment}",
+        )
+        if who and comment
+        else None
+    )
+    remark = remark or (
+        tr(f"Вернул {who}", f"{who} qaytardi", f"Returned by {who}")
+        if who
+        else tr("Возвращён на доработку", "Qayta işlaşga qaytarildi", "Returned for rework")
+    )
     item = QueueItem(
         id=f"rework:{document['id']}",
         role_id=role_id,
         kind="rework_document",
-        reason=remark if who else "вам вернули документ на доработку",
-        title=f"Доработать: {number}" + (f" · {subject}" if subject and subject != number else ""),
+        reason=remark
+        if who
+        else tr(
+            "вам вернули документ на доработку",
+            "hujjat sizga qayta işlaşga qaytarildi",
+            "a document was returned to you for rework",
+        ),
+        title=tr(f"Доработать: {number}", f"Qayta işlaş: {number}", f"Rework: {number}")
+        + (f" · {subject}" if subject and subject != number else ""),
         subtitle=join(remark, ago(returned_at, now)),
         due_label=due_label(due_at, now),
         due_at=due_at,

@@ -66,6 +66,7 @@ from supply.views import (
     PriceRequestAnswerView,
     PriceRequestListView,
     PriceRequestPartnerLinksView,
+    PriceRequestPreviewView,
     PriceRequestRevokePartnerLinksView,
     ReceiptListView,
     SupplyTaskListView,
@@ -426,6 +427,11 @@ urlpatterns = (
         path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
         path("api/v1/stock/tasks/", SupplyTaskListView.as_view(), name="stock-tasks"),
         path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),
+        path(
+            "api/v1/stock/price-requests/preview/",
+            PriceRequestPreviewView.as_view(),
+            name="stock-price-request-preview",
+        ),
         path(
             "api/v1/stock/price-requests/<int:request_id>/answer/",
             PriceRequestAnswerView.as_view(),

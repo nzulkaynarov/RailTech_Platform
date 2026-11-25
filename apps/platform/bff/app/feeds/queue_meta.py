@@ -7,6 +7,7 @@
 резолюция от даты, «за {имя}», мой клиент, шаг маршрута), а если факта нет — здесь нейтральная
 фраза по виду."""
 
+from app.feeds.lang import tr
 from app.feeds.models import DueLabel, QueueCategory, QueueGroup, QueueItem, QueueItemKind
 
 _GROUP: dict[DueLabel, QueueGroup] = {
@@ -55,67 +56,179 @@ CATEGORY: dict[QueueItemKind, QueueCategory] = {
 }
 
 # Глагол кнопки: «Подписать», а не «Открыть». Строка, которой здесь нет, получает «Открыть».
-ACTION: dict[QueueItemKind, str] = {
-    "sign_document": "Подписать",
-    "approve_quote": "Одобрить",
-    "approve_memo": "Согласовать",
-    "pay_memo": "Принять к оплате",
-    "resolve_letter": "Наложить резолюцию",
-    "instruction": "Исполнить",
-    "instruction_extension": "Решить",
-    "acquaint": "Ознакомлен",
-    "rework_document": "Доработать",
-    "answer_lead": "Ответить",
-    "take_lead": "Взять",
-    "triage_lead": "Разобрать",
-    "inbound_mail": "Разобрать",
-    "inbound_mail_mine": "Довести",
-    "ticket": "Ответить",
-    "calc_task": "Рассчитать",
-    "confirm_payment": "Подтвердить",
-    "issue_invoice": "Выставить",
-    "issue_contract": "Оформить",
-    "attach_scan": "Приложить скан",
-    "issue_act": "Выпустить акт",
-    "supplier_overdue": "Выяснить",
-    "send_supplier_order": "Отправить",
-    "partner_date_change": "Решить",
-    "receive_goods": "Принять",
-    "partner_application": "Рассмотреть",
-    "order_shortage": "Заказать",
-    "ship_project": "Отгрузить",
+ACTION: dict[QueueItemKind, tuple[str, str, str]] = {
+    "sign_document": ("Подписать", "Imzolaş", "Sign"),
+    "approve_quote": ("Одобрить", "Maqullaş", "Approve"),
+    "approve_memo": ("Согласовать", "Kelişiş", "Approve"),
+    "pay_memo": ("Принять к оплате", "Tölovga qabul qiliş", "Accept for payment"),
+    "resolve_letter": ("Наложить резолюцию", "Rezolyusiya qöyiş", "Add a resolution"),
+    "instruction": ("Исполнить", "Bajariş", "Carry out"),
+    "instruction_extension": ("Решить", "Hal qiliş", "Decide"),
+    "acquaint": ("Ознакомлен", "Tanişdim", "Acknowledged"),
+    "rework_document": ("Доработать", "Qayta işlaş", "Rework"),
+    "answer_lead": ("Ответить", "Javob beriş", "Reply"),
+    "take_lead": ("Взять", "Oliş", "Take"),
+    "triage_lead": ("Разобрать", "Saralaş", "Sort"),
+    "inbound_mail": ("Разобрать", "Saralaş", "Sort"),
+    "inbound_mail_mine": ("Довести", "Yakunlaş", "Finish"),
+    "ticket": ("Ответить", "Javob beriş", "Reply"),
+    "calc_task": ("Рассчитать", "Hisoblaş", "Cost"),
+    "confirm_payment": ("Подтвердить", "Tasdiqlaş", "Confirm"),
+    "issue_invoice": ("Выставить", "Hisob yoziş", "Issue"),
+    "issue_contract": ("Оформить", "Rasmiylaştiriş", "Draw up"),
+    "attach_scan": ("Приложить скан", "Skan biriktiriş", "Attach a scan"),
+    "issue_act": ("Выпустить акт", "Akt çiqariş", "Issue the act"),
+    "supplier_overdue": ("Выяснить", "Aniqlaş", "Find out"),
+    "send_supplier_order": ("Отправить", "Yuboriş", "Send"),
+    "partner_date_change": ("Решить", "Hal qiliş", "Decide"),
+    "receive_goods": ("Принять", "Qabul qiliş", "Receive"),
+    "partner_application": ("Рассмотреть", "Körib çiqiş", "Review"),
+    "order_shortage": ("Заказать", "Buyurtma beriş", "Order"),
+    "ship_project": ("Отгрузить", "Jönatiş", "Ship"),
 }
 
 # Нейтральное «почему у вас», когда источник своего факта не дал (вид работы даёт роль).
-DEFAULT_REASON: dict[QueueItemKind, str] = {
-    "sign_document": "вы подписант по реестру полномочий",
-    "approve_quote": "ваш шаг одобрения КП",
-    "approve_memo": "вы согласующий по маршруту",
-    "pay_memo": "ваш шаг: принять к оплате",
-    "resolve_letter": "входящее без резолюции",
-    "instruction": "поручено вам резолюцией",
-    "instruction_extension": "вы автор резолюции",
-    "acquaint": "вас просят ознакомиться",
-    "rework_document": "вам вернули документ",
-    "answer_lead": "ваш клиент ждёт ответа",
-    "take_lead": "лид без менеджера",
-    "triage_lead": "вы первая линия по лидам",
-    "inbound_mail": "общий ящик разбираете вы",
-    "inbound_mail_mine": "письмо в вашей работе",
-    "ticket": "обращение сотрудника — вы администратор",
-    "calc_task": "расчёт поручен вам",
-    "confirm_payment": "платёжка клиента ждёт подтверждения",
-    "issue_invoice": "счёт ждёт выставления",
-    "issue_contract": "проект ждёт договор",
-    "attach_scan": "договор подписан — нужен скан",
-    "issue_act": "счета оплачены — нужен акт",
-    "supplier_overdue": "заказ поставщику просрочен",
-    "send_supplier_order": "заказ ждёт отправки партнёру",
-    "partner_date_change": "партнёр просит перенести заказ",
-    "receive_goods": "заказ ждёт приёмки",
-    "partner_application": "заявка на партнёрство",
-    "order_shortage": "по проекту не заказано всё нужное",
-    "ship_project": "товар проекта в резерве",
+DEFAULT_REASON: dict[QueueItemKind, tuple[str, str, str]] = {
+    "sign_document": (
+        "вы подписант по реестру полномочий",
+        "siz vakolatlar reyestri böyiça imzolovçisiz",
+        "you are a signatory per the authority register",
+    ),
+    "approve_quote": (
+        "ваш шаг одобрения КП",
+        "TTni maqullaş böyiça sizning qadamingiz",
+        "your quote approval step",
+    ),
+    "approve_memo": (
+        "вы согласующий по маршруту",
+        "siz marşrut böyiça kelişuvçisiz",
+        "you are an approver on the route",
+    ),
+    "pay_memo": (
+        "ваш шаг: принять к оплате",
+        "sizning qadamingiz: tölovga qabul qiliş",
+        "your step: accept for payment",
+    ),
+    "resolve_letter": (
+        "входящее без резолюции",
+        "rezolyusiyasiz kiruvçi xat",
+        "incoming letter without a resolution",
+    ),
+    "instruction": (
+        "поручено вам резолюцией",
+        "rezolyusiya bilan sizga topşirilgan",
+        "assigned to you by a resolution",
+    ),
+    "instruction_extension": (
+        "вы автор резолюции",
+        "siz rezolyusiya muallifisiz",
+        "you wrote the resolution",
+    ),
+    "acquaint": (
+        "вас просят ознакомиться",
+        "sizdan tanişiş söralmoqda",
+        "you are asked to read it",
+    ),
+    "rework_document": (
+        "вам вернули документ",
+        "sizga hujjat qaytarildi",
+        "a document was returned to you",
+    ),
+    "answer_lead": (
+        "ваш клиент ждёт ответа",
+        "sizning mijozingiz javob kutmoqda",
+        "your client is waiting for a reply",
+    ),
+    "take_lead": (
+        "лид без менеджера",
+        "menejersiz lid",
+        "lead without a manager",
+    ),
+    "triage_lead": (
+        "вы первая линия по лидам",
+        "lidlar böyiça siz birinçi liniyasiz",
+        "you are the first line for leads",
+    ),
+    "inbound_mail": (
+        "общий ящик разбираете вы",
+        "umumiy qutini siz saralaysiz",
+        "you sort the shared mailbox",
+    ),
+    "inbound_mail_mine": (
+        "письмо в вашей работе",
+        "xat sizning işingizda",
+        "the email is in your work",
+    ),
+    "ticket": (
+        "обращение сотрудника — вы администратор",
+        "xodim murojaati — siz administratorsiz",
+        "a staff request — you are the administrator",
+    ),
+    "calc_task": (
+        "расчёт поручен вам",
+        "hisob-kitob sizga topşirilgan",
+        "the costing is assigned to you",
+    ),
+    "confirm_payment": (
+        "платёжка клиента ждёт подтверждения",
+        "mijozning tölov topşiriqnomasi tasdiq kutmoqda",
+        "the client's payment order awaits confirmation",
+    ),
+    "issue_invoice": (
+        "счёт ждёт выставления",
+        "hisob çiqarilişini kutmoqda",
+        "the invoice awaits issuing",
+    ),
+    "issue_contract": (
+        "проект ждёт договор",
+        "loyiha şartnomani kutmoqda",
+        "the project awaits a contract",
+    ),
+    "attach_scan": (
+        "договор подписан — нужен скан",
+        "şartnoma imzolangan — skan kerak",
+        "the contract is signed — a scan is needed",
+    ),
+    "issue_act": (
+        "счета оплачены — нужен акт",
+        "hisoblar tölangan — akt kerak",
+        "invoices are paid — an act is needed",
+    ),
+    "supplier_overdue": (
+        "заказ поставщику просрочен",
+        "yetkazib beruvçiga buyurtmaning muddati ötgan",
+        "the supplier order is overdue",
+    ),
+    "send_supplier_order": (
+        "заказ ждёт отправки партнёру",
+        "buyurtma hamkorga yuborilişini kutmoqda",
+        "the order awaits sending to the partner",
+    ),
+    "partner_date_change": (
+        "партнёр просит перенести заказ",
+        "hamkor buyurtmani köçiriş söramoqda",
+        "the partner asks to move the order",
+    ),
+    "receive_goods": (
+        "заказ ждёт приёмки",
+        "buyurtma qabul qilinişini kutmoqda",
+        "the order awaits receiving",
+    ),
+    "partner_application": (
+        "заявка на партнёрство",
+        "hamkorlik arizasi",
+        "partnership application",
+    ),
+    "order_shortage": (
+        "по проекту не заказано всё нужное",
+        "loyiha böyiça kerakli narsalar töliq buyurtma qilinmagan",
+        "not everything needed for the project is ordered",
+    ),
+    "ship_project": (
+        "товар проекта в резерве",
+        "loyiha tovari zaxirada",
+        "the project goods are in reserve",
+    ),
 }
 
 
@@ -136,7 +249,9 @@ def finish(item: QueueItem) -> QueueItem:
     if item.category is None:
         update["category"] = CATEGORY.get(item.kind, "other")
     if item.action_label is None:
-        update["action_label"] = ACTION.get(item.kind, "Открыть")
+        update["action_label"] = tr(*ACTION.get(item.kind, ("Открыть", "Oçiş", "Open")))
     if item.reason is None:
-        update["reason"] = DEFAULT_REASON.get(item.kind, "по вашей роли")
+        update["reason"] = tr(
+            *DEFAULT_REASON.get(item.kind, ("по вашей роли", "rolingiz böyiça", "per your role"))
+        )
     return item.model_copy(update=update) if update else item

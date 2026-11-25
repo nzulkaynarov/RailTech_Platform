@@ -40,25 +40,26 @@ const SECURITY = ["starttls", "ssl", "none"] as const;
 const TEST_POLL_MS = 2000;
 const TEST_WAIT_MS = 60_000;
 
-/** Код причины из журнала (`rejected: SMTP 550`) → словами; неизвестный код — как есть. */
+/** Код причины из журнала (`rejected: SMTP 550`) → словами; неизвестный код — общая формулировка, а не сырой код. */
 function useReason() {
   const { t, i18n } = useTranslation("integrations");
   return (error: string) => {
     const [code = "", ...rest] = error.split(":");
     const key = `mail.reason.${code.trim()}`;
-    if (!i18n.exists(key, { ns: "integrations" })) return error;
-    const detail = rest.join(":").trim();
-    return detail ? `${t(key)} (${detail})` : t(key);
+    if (!i18n.exists(key, { ns: "integrations" })) return t("mail.reason.other");
+    // «SMTP 550» → «ответ сервера 550»: код ответа остаётся, технического слова нет
+    const reply = /\b(\d{3})\b/.exec(rest.join(":"))?.[1];
+    return reply ? `${t(key)} (${t("mail.reason.detail", { code: reply })})` : t(key);
   };
 }
 
-/** Назначение письма: код шаблона системы-источника → словами; неизвестный — код. */
+/** Назначение письма: код шаблона системы-источника → словами; неизвестный — «Письмо», не код. */
 function usePurpose() {
   const { t, i18n } = useTranslation("integrations");
   return (row: MailLogItem) => {
     const code = row.purpose ?? row.template;
     const key = `mail.purpose.${code}`;
-    return i18n.exists(key, { ns: "integrations" }) ? t(key) : code;
+    return i18n.exists(key, { ns: "integrations" }) ? t(key) : t("mail.purpose.other");
   };
 }
 

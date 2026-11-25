@@ -266,8 +266,10 @@ describe("карточка «Почта»", () => {
     // W18A-P1: письма ERP — в том же журнале, с источником и назначением словами
     const log = within(side).getByRole("list", { name: "Журнал доставки" });
     expect(within(log).getByText("ERP · КП клиенту · вложение: 1")).toBeVisible();
+    // код шаблона `web_confirmation` — словами, не сырым кодом (СЦ-7, N22)
+    expect(within(log).getByText("CRM · Подтверждение запроса")).toBeVisible();
     expect(
-      within(log).getByText("Причина: Почтовый сервер отклонил письмо (SMTP 550)"),
+      within(log).getByText("Причина: Почтовый сервер отклонил письмо (ответ сервера 550)"),
     ).toBeVisible();
 
     // фильтр: только ошибки
@@ -278,7 +280,7 @@ describe("карточка «Почта»", () => {
       expect(within(filtered).queryByText("Тестовое письмо")).not.toBeInTheDocument();
       expect(within(filtered).getByText("Оповещение о сбое сервиса")).toBeVisible();
     });
-    expect(within(side).getByText("Причина: smtp_unavailable")).toBeVisible();
+    expect(within(side).getByText("Причина: Почтовый сервер не отвечает")).toBeVisible();
   });
 
   it("настройки SMTP: пароль SMTP и пароль администратора, ошибка поля, сохранение", async () => {

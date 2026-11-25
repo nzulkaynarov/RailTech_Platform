@@ -665,7 +665,7 @@
       "payButton": "I have paid",
       "payNamed": "I have paid: invoice {{number}}",
       "proofsLabel": "Payment orders for invoice {{number}}",
-      "proofLine": "Payment order {{name}} of {{date}}",
+      "proofLine": "Payment order of {{date}}",
       "proofClaimed": "You entered: {{amount}}",
       "proofClaimedDate": "You entered: {{amount}}, paid on {{date}}",
       "proofPaidOn": "Paid on {{date}}",

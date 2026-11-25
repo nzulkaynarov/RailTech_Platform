@@ -10,7 +10,9 @@ import asyncio
 from typing import Any
 
 from app.feeds.events import EVENT_TEXTS, event_text, is_service_event
+from app.feeds.events_i18n import SYSTEM
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.lang import tr
 from app.feeds.models import ActivityFeed, ActivityItem, PersonRef
 from app.feeds.numbers import deal_number, deal_ref
 from app.feeds.snapshot import Snapshot
@@ -30,7 +32,7 @@ def _item(entry: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ActivityIt
     if at is None or not isinstance(entry.get("id"), int):
         return None
     deal = deals.get(entry["deal_id"]) if isinstance(entry.get("deal_id"), int) else None
-    name = str(entry.get("user_name") or "").strip() or "Система"
+    name = str(entry.get("user_name") or "").strip() or tr(*SYSTEM)
     code = str(entry.get("event_code") or "").strip()
     action = str(entry.get("action") or "").strip()
     if is_service_event(code, action):
