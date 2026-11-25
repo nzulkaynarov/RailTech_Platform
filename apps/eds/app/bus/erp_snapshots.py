@@ -36,6 +36,8 @@ class RequestPayload(_Tolerant):
     urgency: Literal["normal", "urgent"] | None = None
     letter_file_id: uuid.UUID | None = None
     request_number: str | None = None
+    # РЕЗ-1: false — резолюция не нужна (настройка компании), ERP сам поставил расчёт; нет поля — нужна, как раньше.
+    resolution_required: bool = True
 
 
 class RequestCreated(_Tolerant):

@@ -22,6 +22,7 @@ from typing import Iterable, Optional
 from uuid import UUID
 
 from django.db import transaction
+from django.utils import timezone
 
 from notifications.text_format import deal_ref, text_date
 
@@ -135,7 +136,7 @@ def _users_by_crm_id(crm_user_ids: Iterable[int]) -> dict[int, int]:
     return dict(rows.values_list("crm_user_id", "user_id"))
 
 
-def _notify_assignee(user_id: int, deal: Deal, task: CalcTask) -> None:
+def _notify_assignee(user_id: int, deal: Deal, task: CalcTask, *, resolution: bool = True) -> None:
     from notifications.models import Notification, NotificationType
     from notifications.services import push_notification_ws
 
@@ -143,7 +144,11 @@ def _notify_assignee(user_id: int, deal: Deal, task: CalcTask) -> None:
         user_id=user_id,
         type=NotificationType.objects.filter(code="INFO").first(),
         title="Задание на расчёт",
-        message=f"Резолюция по {task.letter_number}: расчёт по заявке {deal_ref(deal)} до {text_date(task.due)}.",
+        message=(
+            f"Резолюция по {task.letter_number}: расчёт по заявке {deal_ref(deal)} до {text_date(task.due)}."
+            if resolution
+            else f"Расчёт по заявке {deal_ref(deal)} до {text_date(task.due)}."
+        ),
         link=f"#deal/{deal.id}",
         event_code="deal.calc_assigned",
         event_params={"deal_id": deal.id, "letter_number": task.letter_number, "due": task.due.isoformat()},
@@ -151,7 +156,7 @@ def _notify_assignee(user_id: int, deal: Deal, task: CalcTask) -> None:
     push_notification_ws(notification)
 
 
-def _move_to_calculation(deal: Deal, letter_number: str) -> None:
+def _move_to_calculation(deal: Deal, letter_number: str, reason: Optional[str] = None) -> None:
     """Сделка → «Расчёт». Уже там — ничего; ушла дальше (КП отправлено, договор, выиграна) — запись в журнал."""
     from .deals import transition_deal_stage
 
@@ -168,7 +173,7 @@ def _move_to_calculation(deal: Deal, letter_number: str) -> None:
             level="WARNING",
         )
         return
-    reason = f"Резолюция {letter_number}"
+    reason = reason or f"Резолюция {letter_number}"
     error = None
     if current in (DealStageCode.DRAFT, DealStageCode.KYC_PENDING):
         # FSM ведёт заявку в «Расчёт» через «Подбор» (как отправка КП из RFQ_OPEN): своего перехода в обход матрицы нет.
@@ -283,6 +288,51 @@ def apply_resolution(
         )
     _move_to_calculation(deal, letter_number)
     return ResolutionOutcome(task=task, created=created, changed=True, unknown_crm_user_ids=unknown)
+
+
+@transaction.atomic
+def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date) -> CalcTask:
+    """РЕЗ-1: настройка компании «резолюция не нужна» — задание расчёта ответственному без письма директору.
+
+    Одно такое задание на сделку (повтор возвращает его); ответственный — исполнитель обеих зон виз; сотрудник CRM без
+    пользователя ERP — строка без пользователя и предупреждение в журнале, как у резолюции."""
+    deal = Deal.objects.select_for_update(of=("self",)).select_related("stage").get(pk=deal.pk)
+    existing = CalcTask.objects.filter(deal=deal, eds_letter_id__isnull=True).first()
+    if existing is not None:
+        return existing
+    number = deal.number or f"D-{deal.pk}"
+    task = CalcTask.objects.create(
+        deal=deal,
+        eds_letter_id=None,
+        letter_number=number[:32],
+        letter_subject=(deal.title or "")[:300],
+        resolution_text="",
+        due=due,
+        decided_at=timezone.now(),
+    )
+    user_id = _users_by_crm_id({crm_user_id}).get(crm_user_id)
+    for zone in (Zone.GOODS, Zone.SERVICES):
+        CalcTaskAssignee.objects.create(task=task, crm_user_id=crm_user_id, zone=zone, user_id=user_id)
+    if user_id:
+        _notify_assignee(user_id, deal, task, resolution=False)
+    deal_log(
+        deal,
+        "Расчёт без резолюции: задание ответственному",
+        f"{number}: по настройке компании резолюция не нужна, расчёт до {text_date(due)}",
+        event_code="deal.calc_task_direct",
+        event_params={"due": due.isoformat(), "crm_user_id": crm_user_id},
+    )
+    if user_id is None:
+        deal_log(
+            deal,
+            "Исполнитель расчёта не найден в ERP",
+            f"Сотрудник CRM #{crm_user_id} не заведён в ERP: задание без пользователя, назначьте исполнителя",
+            event_code="deal.calc_assignee_unknown",
+            event_params={"letter_number": number, "crm_user_id": crm_user_id},
+            level="WARNING",
+        )
+    _move_to_calculation(deal, number, reason=f"Расчёт без резолюции {number}")
+    return task
 
 
 @transaction.atomic

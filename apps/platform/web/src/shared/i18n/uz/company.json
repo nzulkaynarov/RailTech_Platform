@@ -308,6 +308,13 @@
     "contract_sign_before_sendHint": "Öçirilsa — şartnoma tayyor bölişi bilan ketadi.",
     "contract_deviations_allowed": "Şablondan çetlaniş — «Huquq» egasiga ariza bilan",
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
+    "request_resolution": "Hisob-kitobdan oldin rezolyusiya",
+    "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
+    "resolution": {
+      "always": "Har bir arizada",
+      "cabinet_letters": "Faqat Kabinet va xatlardan kelgan arizalarda",
+      "never": "Kerak emas"
+    },
     "defaultClientTemplate": "Standart şablon: mijoz",
     "defaultPartnerTemplate": "Standart şablon: hamkor",
     "edition": "{{n}}-tahrir",

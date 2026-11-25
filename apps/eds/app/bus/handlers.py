@@ -140,6 +140,9 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
         async def request_created(event: Event, session: AsyncSession) -> None:
             data = RequestCreated.model_validate(event.data)
             payload = data.payload
+            if not payload.resolution_required:  # РЕЗ-1: расчёт поставлен в ERP по настройке компании, письма нет
+                log.info("letter_for_request_skipped", erp_request_id=payload.erp_request_id, event_id=event.id)
+                return
             letter = await letters.register_from_request(
                 session,
                 get_bus(),

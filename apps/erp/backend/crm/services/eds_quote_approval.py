@@ -126,7 +126,7 @@ def build_ready_payload(quote: Quote, *, ready_at: datetime, line_visas: bool = 
         "due": task.due.isoformat() if task else None,
         "ready_at": _iso(ready_at),
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
-        "eds_letter_id": str(task.eds_letter_id) if task else None,
+        "eds_letter_id": str(task.eds_letter_id) if task and task.eds_letter_id else None,
     }
     signed = _line_visas(quote) if line_visas else None
     if signed is not None:

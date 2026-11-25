@@ -522,6 +522,7 @@ class QuoteDefaults(BaseModel):
     contract_auto_send: bool = True
     contract_sign_before_send: bool = True
     contract_deviations_allowed: bool = True
+    request_resolution: Literal["always", "cabinet_letters", "never"] = "always"
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
 
@@ -563,6 +564,7 @@ class QuoteDefaultsUpdate(Patch):
     contract_auto_send: bool | None = None
     contract_sign_before_send: bool | None = None
     contract_deviations_allowed: bool | None = None
+    request_resolution: Literal["always", "cabinet_letters", "never"] | None = None
     default_client_contract_template: int | None = None
     default_partner_contract_template: int | None = None
 
@@ -590,6 +592,11 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "contract_auto_send": raw.get("contract_auto_send") is not False,
         "contract_sign_before_send": raw.get("contract_sign_before_send") is not False,
         "contract_deviations_allowed": raw.get("contract_deviations_allowed") is not False,
+        "request_resolution": (
+            raw.get("request_resolution")
+            if raw.get("request_resolution") in ("cabinet_letters", "never")
+            else "always"
+        ),
         "default_client_contract_template": maybe_int(raw.get("default_client_contract_template")),
         "default_partner_contract_template": maybe_int(
             raw.get("default_partner_contract_template")

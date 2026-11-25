@@ -154,7 +154,17 @@ def publish_request_created(
     if crm_request_id:
         payload["crm_request_id"] = int(crm_request_id)
 
-    return publish_event(
+    # РЕЗ-1: резолюция директора — настройка компании; не нужна и есть кому считать — расчёт сразу, без письма в EDS.
+    direct_to: Optional[int] = None
+    if not isinstance(deal, dict):
+        from crm.services import request_resolution
+
+        if not request_resolution.required(source):
+            direct_to = request_resolution.responsible_crm_user_id(deal, payload.get("manager_crm_user_id"))
+            if direct_to is not None:
+                payload["resolution_required"] = False
+
+    event = publish_event(
         "request.created",
         erp_company_id=company_id,
         payload=payload,
@@ -162,6 +172,9 @@ def publish_request_created(
         actor=actor,
         crm_client_id=crm_client_id,
     )
+    if direct_to is not None and event is not None:
+        request_resolution.start_direct_calculation(deal, direct_to)
+    return event
 
 
 def _held_for_verification(company_id: int) -> bool:

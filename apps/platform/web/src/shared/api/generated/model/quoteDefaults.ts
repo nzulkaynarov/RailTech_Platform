@@ -4,6 +4,7 @@
  */
 import type { DecimalString } from "./decimalString";
 import type { QuoteDefaultsCatalogPriceVisibility } from "./quoteDefaultsCatalogPriceVisibility";
+import type { QuoteDefaultsRequestResolution } from "./quoteDefaultsRequestResolution";
 
 /**
  * Условия КП по умолчанию (ERP `companies/{id}/settings`). Поля маржи вырезаются без права на `cost_margin`.
@@ -91,6 +92,8 @@ export interface QuoteDefaults {
   contract_sign_before_send?: boolean;
   /** ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
   contract_deviations_allowed?: boolean;
+  /** РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never) */
+  request_resolution?: QuoteDefaultsRequestResolution;
   /**
    * ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый
    * @nullable

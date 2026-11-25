@@ -37,6 +37,7 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "payment_terms_days",
     "default_warranty_months",
     "default_payment_terms",
+    "request_resolution", // РЕЗ-1: резолюция перед расчётом — настройка, не зашитый шаг
   ],
   // ДОК-10: правила договора по утверждённому шаблону — данные компании, не код
   contracts: [
@@ -290,6 +291,21 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             className="pf-co-wide"
           >
             <Input maxLength={255} />
+          </Form.Item>
+        ) : null}
+        {shows("request_resolution") ? (
+          <Form.Item
+            name="request_resolution"
+            label={t("quote.request_resolution")}
+            extra={t("quote.request_resolutionHint")}
+            className="pf-co-wide"
+          >
+            <Select
+              options={(["always", "cabinet_letters", "never"] as const).map((value) => ({
+                value,
+                label: t(`quote.resolution.${value}`),
+              }))}
+            />
           </Form.Item>
         ) : null}
         {shows("catalog_price_visibility") ? (

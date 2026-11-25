@@ -1163,6 +1163,33 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
     assert "min_margin_percent" not in response.json()
 
 
+async def test_quote_defaults_request_resolution_default_and_patch(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """РЕЗ-1: «Резолюция перед расчётом» — по умолчанию у каждой заявки; выбор уходит в ERP."""
+    await web.login(["ADMIN"])
+    erp.get(f"{COMPANY}/settings/").mock(return_value=httpx.Response(200, json=settings_json()))
+    assert (await web.client.get("/api/v1/admin/company/quote-defaults")).json()[
+        "request_resolution"
+    ] == "always"
+    route = erp.patch(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(200, json=settings_json(request_resolution="never"))
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/quote-defaults", json={"request_resolution": "never"}
+    )
+
+    assert response.status_code == 200
+    check(response, "/admin/company/quote-defaults", "patch")
+    assert sent(route) == {"request_resolution": "never"}
+    assert response.json()["request_resolution"] == "never"
+    bad = await web.send(
+        "PATCH", "/api/v1/admin/company/quote-defaults", json={"request_resolution": "sometimes"}
+    )
+    assert bad.status_code == 422
+
+
 async def test_quote_defaults_overdue_reminders_switch(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:

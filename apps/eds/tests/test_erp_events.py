@@ -65,6 +65,23 @@ async def test_request_created_registers_letter_with_links_and_event(
     }
 
 
+async def test_request_without_resolution_registers_no_letter(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """РЕЗ-1: `resolution_required=false` — расчёт уже поставлен в ERP, письма нет (событие принято)."""
+    assert await deliver_erp(client, container, request_created(resolution_required=False)) == "processed"
+    assert await letters_count(container) == 0
+    assert await outbox(container, "letter.registered") == []
+
+
+async def test_request_with_resolution_required_true_or_absent_registers_letter(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """РЕЗ-1: `true` и событие без поля — прежнее поведение, письмо на резолюцию."""
+    assert await deliver_erp(client, container, request_created(resolution_required=True)) == "processed"
+    assert await letters_count(container) == 1
+
+
 async def test_old_event_without_sender_and_manager_is_still_accepted(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:

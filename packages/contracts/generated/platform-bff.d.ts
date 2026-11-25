@@ -13819,6 +13819,11 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /**
+       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @enum {string}
+       */
+      request_resolution?: "always" | "cabinet_letters" | "never";
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -13873,6 +13878,11 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /**
+       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @enum {string}
+       */
+      request_resolution?: "always" | "cabinet_letters" | "never";
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */

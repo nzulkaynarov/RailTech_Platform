@@ -35,8 +35,10 @@ class CalcTask(models.Model):
     )
     eds_letter_id = models.UUIDField(
         unique=True,
+        null=True,
+        blank=True,
         verbose_name=_("Письмо EDS"),
-        help_text=_("Входящее письмо EDS, на которое наложена резолюция (одно задание на письмо)"),
+        help_text=_("Входящее письмо EDS, на которое наложена резолюция (одно задание на письмо); пусто — расчёт поставлен без резолюции (РЕЗ-1)"),
     )
     letter_number = models.CharField(
         max_length=32, verbose_name=_("Номер письма"), help_text=_("Номер входящего письма в EDS (IN-001/26)")

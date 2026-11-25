@@ -43037,6 +43037,15 @@
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
                     },
+                    "request_resolution": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                            }
+                        ],
+                        "title": "Резолюция перед расчётом",
+                        "description": "always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
+                    },
                     "default_client_contract_template": {
                         "type": "integer",
                         "nullable": true,
@@ -54742,6 +54751,15 @@
                         "title": "Отступления от шаблона по заявке",
                         "description": "Выключено — «Запросить отступление» недоступно."
                     },
+                    "request_resolution": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RequestResolutionEnum"
+                            }
+                        ],
+                        "title": "Резолюция перед расчётом",
+                        "description": "always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
+                    },
                     "default_client_contract_template": {
                         "type": "integer",
                         "nullable": true,
@@ -61004,6 +61022,15 @@
                     "name",
                     "uploaded_at"
                 ]
+            },
+            "RequestResolutionEnum": {
+                "enum": [
+                    "always",
+                    "cabinet_letters",
+                    "never"
+                ],
+                "type": "string",
+                "description": "* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
             },
             "ResetPasswordRequest": {
                 "type": "object",

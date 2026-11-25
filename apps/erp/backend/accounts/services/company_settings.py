@@ -165,6 +165,13 @@ def update_company_settings(
                 setattr(settings_row, field, found)
             changed.append(field)
 
+    # РЕЗ-1: резолюция директора перед расчётом — always | cabinet_letters | never.
+    if "request_resolution" in data:
+        if data.get("request_resolution") not in ("always", "cabinet_letters", "never"):
+            return None, "BAD_REQUEST_RESOLUTION"
+        settings_row.request_resolution = data["request_resolution"]
+        changed.append("request_resolution")
+
     # Политики каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации.
     if "catalog_price_visibility" in data:
         from catalog.constants import PriceVisibility

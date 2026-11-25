@@ -17943,6 +17943,10 @@ export const getGetQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  request_resolution: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["always", "cabinet_letters", "never"] as const),
+    undefined,
+  ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
@@ -17991,6 +17995,10 @@ export const getUpdateQuoteDefaultsResponseMock = (
   contract_auto_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  request_resolution: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["always", "cabinet_letters", "never"] as const),
+    undefined,
+  ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   default_partner_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,

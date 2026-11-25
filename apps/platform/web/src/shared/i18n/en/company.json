@@ -308,6 +308,13 @@
     "contract_sign_before_sendHint": "Off — the contract goes out as soon as it is assembled.",
     "contract_deviations_allowed": "Deviations from the template — by request to the Legal holder",
     "contract_deviations_allowedHint": "A contract with a deviation follows the visa route and does not go to the client before it.",
+    "request_resolution": "Resolution before calculation",
+    "request_resolutionHint": "If a resolution is not needed, the request goes straight to the responsible person for calculation. The resolution is given by holders of the «Resolution» permission (Roles & permissions).",
+    "resolution": {
+      "always": "Every request",
+      "cabinet_letters": "Only requests from the Cabinet and letters",
+      "never": "Not needed"
+    },
     "defaultClientTemplate": "Default template: client",
     "defaultPartnerTemplate": "Default template: partner",
     "edition": "ed. {{n}}",

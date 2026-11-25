@@ -25662,6 +25662,16 @@ components:
           type: boolean
           title: Отступления от шаблона по заявке
           description: Выключено — «Запросить отступление» недоступно.
+        request_resolution:
+          allOf:
+          - $ref: '#/components/schemas/RequestResolutionEnum'
+          title: Резолюция перед расчётом
+          description: |-
+            always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.
+
+            * `always` - always
+            * `cabinet_letters` - cabinet_letters
+            * `never` - never
         default_client_contract_template:
           type: integer
           nullable: true
@@ -34718,6 +34728,16 @@ components:
           type: boolean
           title: Отступления от шаблона по заявке
           description: Выключено — «Запросить отступление» недоступно.
+        request_resolution:
+          allOf:
+          - $ref: '#/components/schemas/RequestResolutionEnum'
+          title: Резолюция перед расчётом
+          description: |-
+            always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.
+
+            * `always` - always
+            * `cabinet_letters` - cabinet_letters
+            * `never` - never
         default_client_contract_template:
           type: integer
           nullable: true
@@ -39569,6 +39589,16 @@ components:
       - id
       - name
       - uploaded_at
+    RequestResolutionEnum:
+      enum:
+      - always
+      - cabinet_letters
+      - never
+      type: string
+      description: |-
+        * `always` - always
+        * `cabinet_letters` - cabinet_letters
+        * `never` - never
     ResetPasswordRequest:
       type: object
       properties:
