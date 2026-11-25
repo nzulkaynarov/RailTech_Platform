@@ -3,7 +3,7 @@
 Инвариант: всегда есть хотя бы один активный admin — нарушение → `LastAdminError` (409).
 """
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
@@ -76,10 +76,12 @@ class UserService:
         sessions: async_sessionmaker[AsyncSession],
         lockout: reauth.LockoutPolicy | None = None,
         erp_sync: ErpSyncEnqueue | None = None,
+        on_telegram_released: Callable[[int, int], Awaitable[None]] | None = None,
     ) -> None:
         self._sessions = sessions
         self._lockout = lockout or reauth.LockoutPolicy()
         self._erp_sync = erp_sync
+        self._on_telegram_released = on_telegram_released
 
     async def list_all(self) -> list[UserView]:
         async with self._sessions() as session:
@@ -203,7 +205,14 @@ class UserService:
             )
             if loses_admin and await repo.count_active_admins(session, excluding=user_id) == 0:
                 raise LastAdminError("the last active admin cannot lose the admin role")
+            tg_before, was_active = user.tg_user_id, user.is_active
             _apply(user, patch)
+            released_tg = (
+                tg_before
+                if tg_before is not None
+                and ((was_active and not user.is_active) or user.tg_user_id != tg_before)
+                else None
+            )
             if requested is not None:
                 await prepo.set_user_roles(
                     session, user_id, [r.id for r in requested], actor.user_id
@@ -248,6 +257,8 @@ class UserService:
             await _publish_change(session, actor, user, before, after, changed)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
+        if released_tg is not None and self._on_telegram_released is not None:
+            await self._on_telegram_released(user_id, released_tg)
         # Status comes from the fact and the real queue, not from the pre-commit snapshot.
         return await self.get(user_id)
 

@@ -65,6 +65,7 @@ def get_service(request: Request, container: ContainerDep) -> TelegramIntegratio
         container.telegram_bot,
         mode=container.settings.telegram_mode,
         restart_wait_s=container.settings.bot_restart_wait_s,
+        invite_check=container.staff_channel.can_invite,
         lockout=LockoutPolicy(
             container.settings.login_max_failures, container.settings.login_lockout_minutes
         ),

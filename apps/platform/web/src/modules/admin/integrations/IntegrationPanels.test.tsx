@@ -191,6 +191,25 @@ describe("карточка Telegram", () => {
     expect(document.body.textContent).not.toContain(token);
   });
 
+  it("боту без права приглашать — строка «нужно право»", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, telegram: { ...state.telegram, channel_can_invite: false } });
+    const side = await openBotConnection();
+    expect(
+      await within(side).findByText("Боту нужно право приглашать пользователей в канал."),
+    ).toBeVisible();
+  });
+
+  it("с правом приглашать строки «нужно право» нет", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, telegram: { ...state.telegram, channel_can_invite: true } });
+    const side = await openBotConnection();
+    expect(await within(side).findByText("Канал команды")).toBeVisible();
+    expect(
+      within(side).queryByText("Боту нужно право приглашать пользователей в канал."),
+    ).toBeNull();
+  });
+
   it("канал команды: список чатов, подключить, тестовое сообщение", async () => {
     const side = await openBotConnection();
     expect(await within(side).findByText("Подключён: Команда RailTech (демо)")).toBeVisible();

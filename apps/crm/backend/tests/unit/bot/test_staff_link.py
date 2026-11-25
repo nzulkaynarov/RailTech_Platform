@@ -31,9 +31,11 @@ class FakeMessage:
     def __init__(self, language_code: str | None = None) -> None:
         self.from_user = SimpleNamespace(id=501, username="aziz", language_code=language_code)
         self.answers: list[str] = []
+        self.markups: list[Any] = []
 
-    async def answer(self, text: str) -> None:
+    async def answer(self, text: str, reply_markup: Any = None) -> None:
         self.answers.append(text)
+        self.markups.append(reply_markup)
 
 
 @pytest.mark.parametrize("args", [None, "", "ref_site", "promo42", "staff_", "staff_short"])
@@ -81,3 +83,43 @@ def test_staff_router_is_included_ahead_of_the_client_routers() -> None:
     staff = source.index("include_router(staff_link_router)")
     assert staff < source.index("include_router(client_handlers.router)")
     assert staff < source.index("include_router(handlers.router)")
+
+
+class FakeChannel:
+    def __init__(self, url: str | None) -> None:
+        self.url = url
+        self.asked: list[int] = []
+
+    async def invite_url(self, tg_user_id: int) -> str | None:
+        self.asked.append(tg_user_id)
+        return self.url
+
+
+async def test_linking_sends_the_join_request_link_to_the_team_channel() -> None:
+    message = FakeMessage("ru")
+    channel: Any = FakeChannel("https://t.me/+join")
+    await staff_link.on_staff_start(message, CODE, FakeLinks(LinkOutcome("linked", "ru")), channel)
+    assert channel.asked == [501]
+    assert message.answers == [rules.LINKED["ru"], rules.JOIN_CHANNEL["ru"]]
+    button = message.markups[1].inline_keyboard[0][0]
+    assert (button.text, button.url) == (rules.JOIN_BUTTON["ru"], "https://t.me/+join")
+
+
+@pytest.mark.parametrize("outcome", [LinkOutcome("invalid"), LinkOutcome("taken")])
+async def test_no_channel_link_unless_linked(outcome: LinkOutcome) -> None:
+    channel: Any = FakeChannel("https://t.me/+join")
+    message = FakeMessage()
+    await staff_link.on_staff_start(message, CODE, FakeLinks(outcome), channel)
+    assert channel.asked == []
+    assert len(message.answers) == 1
+
+
+async def test_no_second_message_without_a_link() -> None:
+    message = FakeMessage()
+    await staff_link.on_staff_start(
+        message,
+        CODE,
+        FakeLinks(LinkOutcome("linked")),
+        FakeChannel(None),  # type: ignore[arg-type]
+    )
+    assert len(message.answers) == 1

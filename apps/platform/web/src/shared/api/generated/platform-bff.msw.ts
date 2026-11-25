@@ -14278,6 +14278,7 @@ export const getRotateErpKeysResponseMock = (
 export const getGetTelegramConnectorResponseMock = (
   overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
 ): TelegramConnector => ({
+  channel_can_invite: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
   channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
   channel_title: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -14306,6 +14307,7 @@ export const getGetTelegramConnectorResponseMock = (
 export const getSetTelegramTokenResponseMock = (
   overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
 ): TelegramConnector => ({
+  channel_can_invite: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
   channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
   channel_title: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),

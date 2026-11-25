@@ -2354,6 +2354,7 @@ class TelegramStatusOut(BaseModel):
     Значение токена сюда не попадает никогда — только `configured` и `last4`.
     """
 
+    channel_can_invite: Annotated[bool | None, Field(title="Channel Can Invite")] = None
     channel_id: Annotated[int | None, Field(title="Channel Id")]
     channel_title: Annotated[str | None, Field(title="Channel Title")]
     configured: Annotated[bool, Field(title="Configured")]

@@ -19190,6 +19190,7 @@ components:
     TelegramConnector:
       description: 'Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.'
       properties:
+        channel_can_invite: {description: 'Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно.', type: [boolean, 'null']}
         channel_id: {type: [integer, 'null']}
         channel_title: {type: [string, 'null']}
         configured: {type: boolean}
