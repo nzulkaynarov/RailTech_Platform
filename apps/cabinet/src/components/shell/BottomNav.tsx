@@ -62,7 +62,7 @@ export function BottomNav() {
               >
                 <item.icon className="size-5" aria-hidden="true" />
                 <UnreadBadge count={badgeOf(item)} className="absolute top-1 right-1/4" />
-                <span className="max-w-full truncate">{t(item.labelKey)}</span>
+                <span className="max-w-full truncate">{item.to === '/quotes' ? t('nav.quotesShort') : t(item.labelKey)}</span>
               </NavLink>
               {isMessages && badgeOf(item) > 0 ? <UnreadNote id={tabNoteId} text={unreadText} /> : null}
             </li>

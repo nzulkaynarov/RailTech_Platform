@@ -33,7 +33,7 @@ describe('Сделка (deep-link бота)', () => {
     for (const section of ['Заявка', 'Договор', 'Счета', 'Акты', 'Поставка', 'Документы']) {
       expect(await screen.findByRole('region', { name: section })).toBeInTheDocument();
     }
-    expect(screen.queryByRole('region', { name: 'КП' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Предложения' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Счета' })).getByText('S-2026-0118')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Документы' })).getAllByRole('listitem')).toHaveLength(5);
     await expectNoAxeViolations();
@@ -80,14 +80,14 @@ describe('Сделка (deep-link бота)', () => {
     signedIn();
     renderApp('/deals/57');
     await heading(/ПР-2026-057/);
-    expect(within(await screen.findByRole('region', { name: 'КП' })).getByText('Ответить')).toBeInTheDocument();
+    expect(within(await screen.findByRole('region', { name: 'Предложения' })).getByText('Ответить')).toBeInTheDocument();
   });
 
   it('СЦ-8: истёкшее КП — без кнопки «Ответить»', async () => {
     signedIn();
     renderApp('/deals/33');
     await heading(/ПР-2026-033/);
-    const quotes = await screen.findByRole('region', { name: 'КП' });
+    const quotes = await screen.findByRole('region', { name: 'Предложения' });
     expect(within(quotes).getByText('KP-2026-0033', { exact: false })).toBeInTheDocument();
     expect(within(quotes).queryByText('Ответить')).toBeNull();
   });
@@ -122,7 +122,7 @@ describe('Адаптивный список на десктопе', () => {
     const { router } = renderApp('/quotes');
     const table = await screen.findByRole('table', { name: 'Коммерческие предложения' });
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual([
-      'КП',
+      'Предложение',
       'Статус',
       'Сумма',
       'Действует до',
@@ -134,7 +134,7 @@ describe('Адаптивный список на десктопе', () => {
 
     // Клик по ячейке суммы — открывает КП; клик по ссылке «Сделка» — ведёт в сделку, а не в КП.
     await user.click(within(rows[1]).getByText('54 432 000 сум'));
-    expect(await heading('КП KP-2026-0042')).toBeInTheDocument();
+    expect(await heading('Коммерческое предложение KP-2026-0042')).toBeInTheDocument();
     await router.navigate('/quotes');
     const again = await screen.findByRole('table', { name: 'Коммерческие предложения' });
     await user.click(within(again).getAllByRole('link', { name: 'Заявка ЗВ-2026-042' })[0]);
@@ -158,7 +158,7 @@ describe('Адаптивный список на десктопе', () => {
       },
       { timeout: 12_000 },
     );
-    expect(await heading('КП KP-2026-0057')).toBeInTheDocument();
+    expect(await heading('Коммерческое предложение KP-2026-0057')).toBeInTheDocument();
   });
 
   it('axe: таблицы счетов и строк КП', async () => {

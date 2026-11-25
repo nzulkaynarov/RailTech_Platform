@@ -13,7 +13,7 @@ describe('Письма (ЛИД-8, ADR-0026)', () => {
     expect(await screen.findAllByText('OUT-031/26')).not.toHaveLength(0);
     expect(screen.getAllByText('Ответ: OUT-031/26').length).toBeGreaterThan(0);
     expect(screen.getAllByText('На ваше IN-104/26').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Зарегистрировано').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Получено').length).toBeGreaterThan(0);
     // Скачать можно только наше исходящее.
     expect(screen.getAllByRole('button', { name: /^Скачать/ })).toHaveLength(1);
     await expectNoAxeViolations();

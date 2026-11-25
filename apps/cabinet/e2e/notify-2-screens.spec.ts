@@ -41,7 +41,7 @@ test('лента в шторке: объект, действие, время; н
   await h1(page, 'Заявки');
   await bell(page).click();
   const panel = page.getByRole('dialog', { name: 'Уведомления' });
-  await expect(panel.getByText('Новое КП KP-2026-0042 ждёт вашего решения')).toBeVisible();
+  await expect(panel.getByText('Новое предложение KP-2026-0042 ждёт вашего решения')).toBeVisible();
   await snap(page, 'bell-panel');
   await panel.getByRole('button', { name: 'Прочитать все' }).click();
   await expect(panel.getByText('Не прочитано')).toHaveCount(0);

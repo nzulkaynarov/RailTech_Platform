@@ -21,6 +21,7 @@
   "nav": {
     "requests": "Requests",
     "quotes": "Quotes",
+    "quotesShort": "Quotes",
     "contracts": "Contracts",
     "invoices": "Invoices",
     "acts": "Acts",
@@ -115,13 +116,13 @@
     "request": {
       "new": "New",
       "in_progress": "In progress",
-      "quoted": "Quoted",
+      "quoted": "Quote ready",
       "closed": "Closed",
-      "outcome_won": "Fulfilled",
-      "outcome_cancelled": "Cancelled"
+      "outcome_won": "Became a project",
+      "outcome_cancelled": "Closed"
     },
     "quote": {
-      "sent": "Awaiting decision",
+      "sent": "Awaiting your decision",
       "viewed": "Viewed",
       "accepted": "Accepted",
       "rejected": "Rejected",
@@ -129,9 +130,9 @@
     },
     "contract": {
       "sent": "Awaiting your agreement",
-      "signed_by_client": "You agreed, awaiting signing",
+      "signed_by_client": "Agreed",
       "signed_by_company": "Awaiting your agreement",
-      "signed": "Signed by both parties",
+      "signed": "Signed",
       "cancelled": "Cancelled"
     },
     "invoice": {
@@ -144,16 +145,16 @@
     "act": {
       "issued": "Awaiting acceptance",
       "accepted": "Accepted",
-      "returned": "Returned"
+      "returned": "Returned with remarks"
     },
     "delivery": {
       "assembling": "Being assembled",
-      "in_transit": "In transit",
+      "in_transit": "On the way to our warehouse",
       "ready_to_ship": "Ready to ship",
       "shipped": "Shipped",
       "delivered": "Delivered",
       "accepted": "Accepted",
-      "disputed": "Disputed"
+      "disputed": "Has remarks"
     },
     "availability": {
       "in_stock": "In stock",
@@ -163,7 +164,7 @@
     "proof": {
       "pending": "Under review",
       "confirmed": "Payment confirmed",
-      "rejected": "Rejected"
+      "rejected": "Not confirmed"
     },
     "partner": {
       "draft": "Draft",
@@ -287,7 +288,7 @@
     "innTj": "TIN",
     "vatDe": "VAT / HRB",
     "trnAe": "TRN (Tax ID)",
-    "taxIdOther": "Reg. Number / Tax ID"
+    "taxIdOther": "Reg. or tax number"
   },
   "newClient": {
     "title": "I am a new client",
@@ -393,7 +394,7 @@
       "done": "Done, Telegram is connected",
       "unavailable": "You can connect Telegram once your manager gives you access — write to them.",
       "confirmTitle": "Disconnect Telegram?",
-      "consequence": "Notifications will stop arriving in Telegram — email and the account remain. Signing in to your account from Telegram will be closed. You can connect again right here.",
+      "consequence": "Notifications will stop arriving in Telegram, and signing in from Telegram will be closed. You can connect again right here.",
       "confirm": "Disconnect Telegram",
       "disconnecting": "Disconnecting…",
       "disconnected": "Telegram disconnected",
@@ -585,7 +586,7 @@
       "expiredTitle": "The quote has expired",
       "expiredText": "It can no longer be accepted. Ask your manager to update the offer.",
       "backToList": "Back to quotes",
-      "requestCodeText": "Total {{total}}. Press “Get code” — we will send a confirmation code to your Telegram or e-mail. Once you accept, we prepare the contract — it will appear under Contracts.",
+      "requestCodeText": "Total {{total}}. Press “Get code” — we will send it to your Telegram or e-mail. The contract will appear under Contracts.",
       "requestCode": "Get code",
       "codeSent": {
         "telegram": "The code was sent to Telegram. Valid for {{minutes}} min.",
@@ -631,12 +632,13 @@
         "deal": "Project"
       },
       "notSigned": "Not yet",
+      "willBeSent": "The contract will be sent for signing",
       "sign": "Agree",
       "signNamed": "Agree contract {{number}}",
       "signTitle": "Agree contract {{number}}",
-      "signText": "You confirm, on behalf of your company, that you agree with the contract text. Signing is a separate step: the contract comes to you via e-document exchange, and we will tell you when it is signed.",
+      "signText": "You confirm, on behalf of your company, that you agree with the contract text. We will send the contract for signing and tell you when it is signed.",
       "signConfirm": "Agree contract",
-      "signedClient": "You agreed contract {{number}}. Awaiting signing.",
+      "signedClient": "Contract {{number}} is agreed. It will be sent for signing.",
       "signedBoth": "Contract {{number}} is signed by both parties."
     },
     "invoices": {
@@ -805,8 +807,8 @@
         "deal": "Project"
       },
       "state": {
-        "registered": "Registered",
-        "answered": "Answered",
+        "registered": "Received",
+        "answered": "Replied",
         "sent": "Sent"
       },
       "answeredBy": "Reply: {{number}}",
@@ -855,7 +857,7 @@
       "photos": "Photos",
       "photoAlt": "{{name}}, photo {{n}} of {{total}}",
       "unit": "Unit: {{unit}}",
-      "priceOnRequestHint": "Send a request — the manager will reply with a quote with price and lead time.",
+      "priceOnRequestHint": "Send a request — the manager will reply with a quote with price and delivery time.",
       "request": "Request",
       "backToList": "Back to catalog",
       "photoOf": "Photo {{n}} of {{total}}",
@@ -886,7 +888,7 @@
         "name": "Name",
         "inn": "Tax ID (INN)",
         "country": "Country",
-        "registrationNumber": "Registration Number / Tax ID",
+        "registrationNumber": "Registration or tax number",
         "legalAddress": "Legal address",
         "bankDetails": "Bank details",
         "bankAdminOnlyBadge": "Admin only",
@@ -934,7 +936,7 @@
         "applicationPendingDesc": "The application for partner status has been submitted and is under review by {{operator}}.",
         "contractValue": "No. {{number}} dated {{date}}",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
-        "contractAgreedDesc": "You agreed the draft contract. It now awaits our signature.",
+        "contractAgreedDesc": "You agreed the contract. The contract will be sent for signing.",
         "status": {
           "submitted": "Under review",
           "contract_sent": "Contract sent",
@@ -950,7 +952,7 @@
         "agreeDialogDesc": "By confirming, you accept the partner contract terms.",
         "agreeNotesLabel": "Notes or comments for agreement (optional)",
         "agreeSubmit": "Confirm agreement",
-        "agreeSuccess": "Draft contract agreed. We will tell you when the contract is signed.",
+        "agreeSuccess": "Contract agreed. We will tell you when it is signed.",
         "steps": {
           "application": "Application",
           "draft": "Draft contract",
@@ -1192,7 +1194,7 @@
       "responder": "{{name}}, your manager, replies here",
       "responderTeam": "Our team replies here",
       "visibleToCompany": "Everyone from your company in your account can see this conversation",
-      "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
+      "attachHint": "Attach files to a request.",
       "attachLink": "Go to requests",
       "deletedUser": "Deleted user",
       "deletedText": "Message deleted at the author’s request"
@@ -1201,7 +1203,7 @@
       "title": "Purchase orders",
       "viewsLabel": "Sections",
       "posShort": "items",
-      "tabsLabel": "Order and RFQ statuses",
+      "tabsLabel": "Order and price request statuses",
       "ordersListLabel": "Purchase orders list",
       "rfqListLabel": "Price requests list",
       "searchPlaceholder": "Search by number or subject…",
@@ -1275,8 +1277,8 @@
       },
       "rfqStatus": {
         "sent": "Awaiting reply",
-        "answered": "Answered",
-        "failed": "Delivery failed"
+        "answered": "You replied",
+        "failed": "Not sent"
       },
       "columns": {
         "number": "Order number",
@@ -1447,7 +1449,7 @@
       "partnerOrderBadge": "Order",
       "confirmPartnerOrder": "Confirm order",
       "partnerRfqBadge": "Price request",
-      "respondPartnerRfq": "Respond to RFQ",
+      "respondPartnerRfq": "Reply to price request",
       "productRemarkBadge": "Product",
       "fixProductRemarks": "Address supply remarks",
       "remarks": "Remarks",
@@ -1771,9 +1773,9 @@
       "delivery_eta_changed": "Delivery date for project {{deal}} changed: now {{eta}}",
       "manager_replied": "Your manager replied in Messages",
       "partner_card_returned": "Product card «{{number}}» was returned for revision",
-      "partner_order_sent": "New purchase order #{{number}} has been sent",
+      "partner_order_sent": "New purchase order {{number}} has been sent",
       "partner_rfq_sent": "New price request: {{number}}",
-      "partner_goods_received": "Warehouse received goods for order #{{number}}",
+      "partner_goods_received": "Warehouse received goods for order {{number}}",
       "fallback": "New notification {{number}}",
       "partner_card_published": "Product card «{{number}}» has been published",
       "security_bank_requisites_changed": "User {{actor}} changed company bank details",
@@ -1858,7 +1860,7 @@
   },
   "legal": {
     "title": "Terms for using the account",
-    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the account (the offer). You do this once — we ask again only when a new edition is published.",
+    "intro": "To continue, read and accept the personal data processing policy and the terms of use of the account. You do this once — we ask again only when a new edition is published.",
     "documents": "Documents",
     "tabs": {
       "terms": "Terms of use",
@@ -1928,22 +1930,22 @@
     "linkUntil": "The link works until {{date}} — the sender can revoke it.",
     "state": {
       "accepted": "The quote is accepted. The contract will appear in your account.",
-      "rejected": "The quote was returned with remarks.",
+      "rejected": "The quote was declined with remarks.",
       "expired": "The quote has expired. Ask your manager to update it.",
-      "accepted_contract": "You agreed the contract. We will sign it via e-document exchange and let you know.",
+      "accepted_contract": "The contract is agreed. It will be sent for signing — we will let you know.",
       "accepted_act": "The act is accepted.",
       "rejected_act": "The act was returned with remarks.",
       "paid": "The invoice is paid.",
       "answered": "Answer sent. Thank you!",
       "confirmed": "You confirmed the order.",
-      "cancelled": "The order was cancelled by the sender."
+      "cancelled": "The order was cancelled by us."
     },
     "reason": {
       "no_right": "You can't make this decision — ask your company administrator.",
       "no_access": "Your access has no Quotes section.",
       "other_company": "You are signed in to another company's account.",
       "no_contact": "The recipient address is not connected to an account — contact the sender.",
-      "no_access_partner": "Your cabinet access has no “My products” section."
+      "no_access_partner": "Your access has no “My products” section."
     },
     "otherCompany": {
       "title": "You are in another account",
@@ -2024,7 +2026,7 @@
     },
     "about": {
       "title_contract": "About the document",
-      "text_contract": "Contract with {{from}}. Read the PDF and sign when you are ready.",
+      "text_contract": "Contract with {{from}}. Read the PDF and agree when you are ready.",
       "title_act": "About the document",
       "text_act": "Act from {{from}}. Check the PDF, then accept the act or return it with remarks.",
       "title": "About the document",

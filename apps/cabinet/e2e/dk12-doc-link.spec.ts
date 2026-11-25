@@ -17,7 +17,7 @@ async function language(page: Page, lang: 'ru' | 'uz') {
 test('гость по ссылке: один документ, никаких разделов кабинета', async ({ page }) => {
   await language(page, 'ru');
   await page.goto(LIVE);
-  await expect(page.getByRole('heading', { level: 1, name: 'КП QT-0118' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Коммерческое предложение QT-0118' })).toBeVisible();
   await expect(page.getByRole('navigation')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Принять предложение' })).toBeEnabled();
   await snap(page, 'guest-document');

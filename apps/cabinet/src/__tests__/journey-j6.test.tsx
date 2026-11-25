@@ -136,16 +136,16 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await heading('Заявки');
 
       const list = await screen.findByRole('list', { name: 'Заявки' });
-      // Запрос 506 закрыт с outcome: 'won' (акт принят, счёт оплачен); 504 в исполнении — «Исполнена» не показывает
+      // Запрос 506 закрыт с outcome: 'won' (акт принят, счёт оплачен); 504 в исполнении — «Стала проектом» не показывает
       const item506 = within(list).getByText('ПР-2026-036').closest('li')!;
-      expect(within(item506).getByText('Исполнена')).toBeInTheDocument();
+      expect(within(item506).getByText('Стала проектом')).toBeInTheDocument();
       const item504 = within(list).getByText('ПР-2026-035').closest('li')!;
-      expect(within(item504).queryByText('Исполнена')).not.toBeInTheDocument();
+      expect(within(item504).queryByText('Стала проектом')).not.toBeInTheDocument();
 
       // Открываем детальную страницу
       await router.navigate('/requests/506');
       await heading('Заявка ПР-2026-036');
-      expect(screen.getByText('Исполнена')).toBeInTheDocument();
+      expect(screen.getByText('Стала проектом')).toBeInTheDocument();
     });
 
     it('закрытый запрос с outcome=cancelled отображает статус «Отменён»', async () => {
@@ -163,7 +163,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
 
       renderApp('/requests/599');
       await heading('Заявка ЗВ-2026-099');
-      expect(screen.getByText('Отменена')).toBeInTheDocument();
+      expect(screen.getByText('Закрыта')).toBeInTheDocument();
     });
   });
 });

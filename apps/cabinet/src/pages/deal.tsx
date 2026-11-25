@@ -169,7 +169,12 @@ export function DealPage() {
               title={item.number}
               action={contractAwaitsClient(item.status) && !item.signed_by_client_at ? t('pages.contracts.sign') : undefined}
             >
-              <StatusBadge entity="contract" code={item.status} />
+              <div className="flex flex-col items-start gap-1">
+                <StatusBadge entity="contract" code={item.status} />
+                {item.status === 'signed_by_client' ? (
+                  <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                ) : null}
+              </div>
             </DealRow>
           ))}
         </DealSection>

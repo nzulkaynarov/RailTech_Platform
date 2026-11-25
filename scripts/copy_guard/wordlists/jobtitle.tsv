@@ -1,0 +1,10 @@
+# class: jobtitle — job titles as role words in instructions (minimal-interface-copy, ui-standard §13 «Должностей на экране нет»).
+# skipped for ctx=roles (role catalog), and «менеджер» is allowed for clients (D3: «Менеджер ответит в рабочее время»).
+\b(директор\w*|гендиректор\w*|руководител\w*|руководств\w*)	M	ru	*	«на утверждение» / «согласующий» / (убрать)	D8
+\b(глав\w* бухгалтер\w*|главбух\w*|бухгалтер\w*|бухгалтери\w*)	M	ru	*	«оплата» / «учёт» / (убрать)
+\b(юрист\w*|юридическ\w+ отдел\w*)	M	ru	*	«проверка договора» / (убрать)
+\b(кладовщик\w*|снабженц\w*|снабженец|логист(а|у|ом|е|ы|ов)?\b|секретар\w*|экспедитор\w*)	M	ru	*	(убрать; назвать действие или раздел)
+\bменеджер\w*	L	ru	staff	ответственный / (убрать)	в текстах клиенту разрешено (D3)
+\b(администратор\w*|админ\w*)	L	ru	staff	«тот, кто ведёт настройки» / (убрать)	ui-standard §13
+\b(director|accountant|lawyer|storekeeper)\b	M	en	*	(remove)
+\b(direktor\w*|buxgalter\w*|yurist\w*|rahbar\w*)	M	uz	*	(olib taşlaş)

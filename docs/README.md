@@ -63,6 +63,7 @@
 | Продукт: кабинет контрагента — отношения, шаблоны ролей, подключаемые модули (концепция) | [`product/COUNTERPARTY-CABINET.md`](product/COUNTERPARTY-CABINET.md), бенчмарк [`research/2026-11-01-counterparty-cabinet`](research/2026-11-01-counterparty-cabinet/README.md), карта пути [`research/2026-11-04-counterparty-journey`](research/2026-11-04-counterparty-journey/README.md) | утверждено 2026-11-01; ADR и волны K0–K5 — по §9 | владелец |
 | Контракты доменов: API, события шины, MCP, портал | [`architecture/CONTRACTS.md`](architecture/CONTRACTS.md) (машиночитаемо — `packages/contracts/`) | действует | архитектор |
 | Шина `rt_bus`: публикация, подписки, доставка, приёмник (пакет `rt-bus`) | [`architecture/rt-bus.md`](architecture/rt-bus.md), решение — [ADR-0014](adr/0014-integration-bus-rt-bus.md) | действует | архитектор |
+| Статусы объектов: одно слово на состояние, ru · uz · en, для всех поверхностей | [`architecture/status-dictionary.md`](architecture/status-dictionary.md), проверка текстов — `scripts/copy_guard/` | действует (Кабинет приведён, остальное — по PR ТЕКСТ) | архитектор |
 | SSO-токен сотрудника | [`architecture/sso-token.md`](architecture/sso-token.md) | действует | архитектор |
 | Платформа: BFF, вход, события, развёртывание | [`architecture/platform-bff.md`](architecture/platform-bff.md) | действует | архитектор |
 | Платформа: фронтенд, каркас, размеры, тема | [`architecture/platform-frontend.md`](architecture/platform-frontend.md) | действует | архитектор |

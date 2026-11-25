@@ -53,7 +53,7 @@ describe('Договоры', () => {
     expect(await screen.findByText('2 договора ждут вашего согласования')).toBeInTheDocument();
 
     const signed = card('Договоры', 'D-2026-0035');
-    expect(within(signed).getByText('Подписан сторонами')).toBeInTheDocument();
+    expect(within(signed).getByText('Подписан')).toBeInTheDocument();
     expect(within(signed).getByText('20 авг. 2026 г., 15:30')).toBeInTheDocument();
     expect(within(signed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
 
@@ -64,15 +64,16 @@ describe('Договоры', () => {
     await user.keyboard('{Escape}');
     await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
     const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
-    expect(within(dialog).getByText(/Подписание — отдельный шаг/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/выставим договор на подписание/)).toBeInTheDocument();
     await expectNoAxeViolations();
     await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
 
-    // согласие клиента не делает договор подписанным: честный статус «ждём подписания», кнопки «согласовать» больше нет
-    expect(await screen.findByText('Вы согласовали договор D-2026-0029. Ждём подписания.')).toBeInTheDocument();
+    // согласие клиента не делает договор подписанным: честный статус «будет выставлен на подписание», кнопки «согласовать» больше нет
+    expect(await screen.findByText('Договор D-2026-0029 согласован. Он будет выставлен на подписание.')).toBeInTheDocument();
     const agreed = card('Договоры', 'D-2026-0029');
-    expect(within(agreed).getByText('Вы согласовали, ждём подписания')).toBeInTheDocument();
-    expect(within(agreed).queryByText('Подписан сторонами')).not.toBeInTheDocument();
+    expect(within(agreed).getByText('Согласован')).toBeInTheDocument();
+    expect(within(agreed).getByText('Договор будет выставлен на подписание')).toBeInTheDocument();
+    expect(within(agreed).queryByText('Подписан')).not.toBeInTheDocument();
     expect(within(agreed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
     expect(await screen.findByText('1 договор ждёт вашего согласования')).toBeInTheDocument();
   });

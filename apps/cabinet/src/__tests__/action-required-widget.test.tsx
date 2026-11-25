@@ -107,7 +107,7 @@ describe('виджет «Требует вашего решения»', () => {
     renderApp('/requests');
     const region = await showAllDecisions(await screen.findByRole('region', { name: 'Ждут решения компании' }));
     expect(within(region).queryByText('Оплатить')).not.toBeInTheDocument();
-    expect(within(region).queryByText('Посмотреть КП')).not.toBeInTheDocument();
+    expect(within(region).queryByText('Посмотреть предложение')).not.toBeInTheDocument();
     expect(within(region).getAllByText('Решает коллега с правом подтверждать').length).toBeGreaterThan(0);
     expect(screen.queryByRole('region', { name: 'Требует вашего решения' })).not.toBeInTheDocument();
   });
