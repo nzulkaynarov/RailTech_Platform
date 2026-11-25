@@ -29,7 +29,7 @@ test('договор: диалог кода и подпись', async ({ page })
   await snap(page, 'contract-code-dialog');
   await dialog.getByLabel('Код из письма').fill('123456');
   await dialog.getByRole('button', { name: 'Согласовать договор' }).click();
-  await expect(page.getByText('Вы согласовали договор. Подпишем его в ЭДО и сообщим.')).toBeVisible();
+  await expect(page.getByText('Договор согласован. Он будет выставлен на подписание — сообщим.')).toBeVisible();
   await snap(page, 'contract-signed');
 });
 

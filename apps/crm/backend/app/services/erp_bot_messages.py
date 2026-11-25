@@ -5,6 +5,7 @@ payload, настройки приходят параметром. Иденти�
 получателя определяет код обработчика.
 """
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Final
@@ -110,6 +111,40 @@ def request_accepted(
     return BotMessage(text, buttons)
 
 
+# Страницы кабинета (`apps/cabinet/src/app/routes.tsx`) по событию: счёт и акт — раздел со строкой
+# объекта (`?focus=`), поставка — проект.
+_CABINET_FOCUS: Final = {
+    "invoice.issued": ("/invoices", "erp_invoice_id"),
+    "invoice.paid": ("/invoices", "erp_invoice_id"),
+    "act.issued": ("/acts", "erp_act_id"),
+}
+_DELIVERY_EVENTS: Final = frozenset({"delivery.status_changed", "delivery.eta_changed"})
+_LEGACY_INVOICE_LINK: Final = re.compile(r"^(https?://[^?#]+)/invoices/(\d+)$")
+
+
+def cabinet_target(
+    event: str, payload: Mapping[str, Any], cabinet_url: str, erp_deal_id: int | None
+) -> str:
+    """Куда ведёт кнопка «Открыть кабинет»: страница самого объекта события, а не главная.
+
+    Адрес кабинета берётся из настроек компании; нет id объекта (старое событие) — главная."""
+    if not is_http_url(cabinet_url):
+        return cabinet_url
+    base = cabinet_url.rstrip("/")
+    focus = _CABINET_FOCUS.get(event)
+    if focus is not None and isinstance(payload.get(focus[1]), int):
+        return f"{base}{focus[0]}?focus={payload[focus[1]]}"
+    if event in _DELIVERY_EVENTS and erp_deal_id:
+        return f"{base}/deals/{erp_deal_id}"
+    return cabinet_url
+
+
+def _invoice_link(url: object) -> str:
+    """`…/invoices/<id>` (адрес прежних событий) в кабинете нет — это `/invoices?focus=<id>`."""
+    match = _LEGACY_INVOICE_LINK.match(str(url))
+    return f"{match.group(1)}/invoices?focus={match.group(2)}" if match else str(url)
+
+
 def client_message(
     event: str,
     payload: Mapping[str, Any],
@@ -119,6 +154,7 @@ def client_message(
     language: Language,
     cabinet_url: str,
     deal_number: str = "",
+    erp_deal_id: int | None = None,
 ) -> BotMessage | None:
     """Сообщение клиенту по событию ERP или `None`, если по этому событию бот молчит."""
     p = payload
@@ -144,7 +180,7 @@ def client_message(
         )
         url = p.get("link")
         if is_http_url(url):
-            doc_button = (_text(texts, "erp_btn_invoice", language), str(url))
+            doc_button = (_text(texts, "erp_btn_invoice", language), _invoice_link(url))
     elif event == "invoice.paid":
         text = _text(
             texts,
@@ -178,7 +214,8 @@ def client_message(
         return None
     buttons = [doc_button] if doc_button else []
     if is_http_url(cabinet_url):
-        buttons.append((_text(texts, "erp_btn_cabinet", language), cabinet_url))
+        target = cabinet_target(event, p, cabinet_url, erp_deal_id)
+        buttons.append((_text(texts, "erp_btn_cabinet", language), target))
     return BotMessage(text, tuple(buttons))
 
 
@@ -198,7 +235,8 @@ def staff_alert(
             "erp_staff_quote_accepted",
             "ru",
             client=client_name,
-            quote=_s(p.get("erp_quote_id")),
+            # Сотруднику — номер КП (КП-ГГГГ/NNN); id из базы — только у событий без номера.
+            quote=_s(p.get("number") or p.get("erp_quote_id")),
             deal=deal_title,
         )
     if event == "act.returned":

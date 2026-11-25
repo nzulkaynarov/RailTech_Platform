@@ -9,6 +9,7 @@
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed
+from app.feeds.lang import tr
 from app.feeds.models import ObjectRef, WaitingRow
 from app.feeds.numbers import letter_ref, memo_ref, outgoing_document_path
 from app.feeds.text import join, parse_deadline, parse_dt, short
@@ -25,13 +26,13 @@ def _object(kind: str, object_id: str, number: str | None, title: str | None) ->
     if kind == "letter_signature":
         return ObjectRef(
             kind="memo",
-            number=number or title or "Исходящее",
+            number=number or title or tr("Исходящее", "Çiquvçi xat", "Outgoing"),
             title=title,
             path=outgoing_document_path(object_id),
         )
     if kind == "instruction" and number:
         return letter_ref(number, title)
-    return memo_ref(number or title or "Документ", title)
+    return memo_ref(number or title or tr("Документ", "Hujjat", "Document"), title)
 
 
 def _row(entry: dict[str, Any]) -> WaitingRow | None:
@@ -52,7 +53,9 @@ def _row(entry: dict[str, Any]) -> WaitingRow | None:
         id=f"{kind}:{object_id}",
         kind=kind,
         object_id=object_id,
-        title=join(number, title) if kind != "letter_signature" else title or number or "Письмо",
+        title=join(number, title)
+        if kind != "letter_signature"
+        else title or number or tr("Письмо", "Xat", "Letter"),
         waiting_on=waiting_on,
         waiting_label=_text(entry.get("waiting_label")),
         since=since,

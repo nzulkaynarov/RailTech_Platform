@@ -28,7 +28,16 @@ def _api(user):
 def test_catalog_lists_the_kinds_with_fields(operator):  # noqa: F811
     body = _api(operator).get(BASE).json()
     kinds = {d["kind"]: d for d in body["items"]}
-    assert list(kinds) == ["countries", "currencies", "units", "banks", "delivery-basis", "categories", "manufacturers"]
+    assert list(kinds) == [
+        "countries",
+        "currencies",
+        "units",
+        "banks",
+        "delivery-basis",
+        "categories",
+        "manufacturers",
+        "request-close-reasons",
+    ]
     assert kinds["currencies"]["codes"] == "given"
     assert [a["key"] for a in kinds["countries"]["attrs"]] == ["alpha3", "iso_numeric", "vat_rate"]
     assert {a["type"] for a in kinds["delivery-basis"]["attrs"]} == {"text", "boolean"}

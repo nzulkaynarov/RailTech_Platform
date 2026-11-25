@@ -198,7 +198,7 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     )
     world.update(new_deal=new_deal, in_progress=in_progress, closed=closed, main=main)
 
-    # ── КП: sent / viewed / accepted / rejected / expired ────────────────────────────────────
+    # ── КП: sent / viewed / accepted / rejected / expired / closed ────────────────────────────────────
     past = TODAY - datetime.timedelta(days=3)
     future = TODAY + datetime.timedelta(days=10)
     # Позиция из каталога (`product`) — путь, на котором `GET /quotes/{id}` падал 500 (P-7): единица берётся из карточки.
@@ -210,6 +210,8 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         "expired": make_quote(main, 5, QuoteStatusCode.SENT, uzs=uzs, valid_until=past, product=product),
         # Статус EXPIRED ставит ночная задача `crm.expire_stale_quotes`: КП не должно пропадать у клиента на следующий день.
         "expired_status": make_quote(main, 11, "EXPIRED", uzs=uzs, valid_until=past, product=product),
+        # КП закрыто вместе с заявкой (ЛХ-2): клиенту оно «закрыто», не «отклонено»
+        "closed": make_quote(main, 12, QuoteStatusCode.CLOSED, uzs=uzs, product=product),
     }
     # КП до отправки клиенту не видны вовсе (404): у них нет публичной ссылки, а `Quote.public_url` в контракте обязателен.
     hidden_quotes = {

@@ -15,7 +15,7 @@ import { renderApp, signedIn } from '@/test/render';
 
 const CLIENT_LINKS = [
   'Заявки',
-  'КП',
+  'Предложения',
   'Каталог',
   'Поставки',
   'Договоры',
@@ -52,7 +52,7 @@ describe('меню по блокам «Покупаю · Продаю · Док�
     expect(within(side).getAllByRole('heading').map((h) => h.textContent)).toEqual(['Покупаю', 'Продаю', 'Документы', 'Компания']);
     const groups = within(side).getAllByRole('group');
     expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.replace(/\d+/g, '').trim()))).toEqual([
-      ['Заявки', 'КП', 'Каталог', 'Поставки'],
+      ['Заявки', 'Предложения', 'Каталог', 'Поставки'],
       ['Мои товары', 'Заказы на поставку'],
       ['Договоры', 'Счета', 'Акты', 'Письма', 'Все документы'],
       // «Сообщения» (CHAT-1) — в «Компании»: беседа компании с нами одна и о покупках, и о поставках
@@ -71,7 +71,7 @@ describe('меню по блокам «Покупаю · Продаю · Док�
       within(bottom)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Заявки', 'КП', 'Каталог', 'Мои товары']);
+    ).toEqual(['Заявки', 'Цены', 'Каталог', 'Мои товары']);
     await user.click(within(bottom).getByRole('button', { name: 'Ещё' }));
     const sheet = await screen.findByRole('dialog');
     expect(within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Покупаю', 'Продаю', 'Документы', 'Компания']);
@@ -131,7 +131,7 @@ describe('меню из /me.modules', () => {
       within(bottom)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Заявки', 'КП', 'Каталог', 'Все документы']);
+    ).toEqual(['Заявки', 'Цены', 'Каталог', 'Все документы']);
     expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
   });
 
@@ -329,6 +329,14 @@ describe('меню из /me.modules', () => {
       const { container } = renderApp('/');
       expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
       expect((await axe(container)).violations).toEqual([]);
+    });
+
+    it('с разделом «Письма» в модулях кандидат всё равно попадает на карточку договора (ПД-1)', async () => {
+      signedIn('actor', 'demo', { ...CANDIDATE, modules: ['messages', 'profile', 'letters'] });
+      setMockPartnerApplication(CONTRACT_SENT);
+      const { router } = renderApp('/');
+      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/');
     });
 
     it('раздел «Компания» приводит к той же карточке', async () => {

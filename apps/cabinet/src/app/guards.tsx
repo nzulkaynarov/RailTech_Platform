@@ -98,7 +98,7 @@ export function HomeRedirect() {
   const { work } = useNav();
   const roles = useMe().data?.roles ?? [];
   // Кандидат в партнёры (`invited`, модули — только обязательные): его рабочее место — заявка и договор (FX-1)
-  const onlyChat = work.length > 0 && work.every((item) => item.module === 'messages');
+  const onlyChat = work.length > 0 && work.every((item) => item.module === 'messages' || item.module === 'letters');
   const application = useCompanyPartnerApplication({ enabled: onlyChat });
   // Адрес, с которого отправили на вход (`RequireSession`), — один раз; потом обычный первый раздел.
   const [back] = useState(() => readReturnTo());

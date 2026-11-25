@@ -43,7 +43,7 @@ describe('договор по ссылке', () => {
     await user.type(await within(dialog).findByLabelText('Код из письма'), '123456');
     await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
 
-    expect(await screen.findByText('Вы согласовали договор. Подпишем его в ЭДО и сообщим.')).toBeInTheDocument();
+    expect(await screen.findByText('Договор согласован. Он будет выставлен на подписание — сообщим.')).toBeInTheDocument();
     expect(calls.filter((path) => path === 'act')).toHaveLength(1);
   });
 

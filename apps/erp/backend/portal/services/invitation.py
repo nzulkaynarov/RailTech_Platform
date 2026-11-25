@@ -107,6 +107,7 @@ def _send_email(
             channel="transactional",
             language=language or contact.language or "ru",
             reply_to=[reply_to] if reply_to else None,
+            ref=("invitation", f"{contact.pk}:{getattr(actor, 'pk', None) or ''}"),  # отказ почты — отправителю
             redact=(issued.code,),
         )
     except Exception as exc:  # noqa: BLE001 — письмо не передано почтовому сервису CRM: «отправлено» писать нельзя

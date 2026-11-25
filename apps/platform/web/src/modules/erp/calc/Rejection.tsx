@@ -1,81 +1,10 @@
-import { Alert, App, Button, Input } from "antd";
-import { Dialog } from "../../../shared/ui/Dialog";
-import { useId, useState } from "react";
+import { Alert, App, Button } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { CalcSheet } from "../../../shared/api/generated/model";
-import {
-  useLoseCalcRequest,
-  useNewCalcQuoteVersion,
-} from "../../../shared/api/generated/platform-bff";
-import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
+import { useNewCalcQuoteVersion } from "../../../shared/api/generated/platform-bff";
 import { calcRef, useApplySheet, useErrorText } from "./api";
-
-/** «Отказ по заявке» с обязательной причиной: заявка — стадия «Отказ», резерв снимается (D26G-3). */
-function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
-  const { t } = useTranslation("calc");
-  const { message } = App.useApp();
-  const apply = useApplySheet();
-  const errorText = useErrorText();
-  const reasonId = useId();
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const lose = useLoseCalcRequest({
-    mutation: {
-      onSuccess: (next) => {
-        apply(next);
-        void message.success(t("rejection.lost.done"));
-        onClose();
-      },
-      onError: (e) => {
-        setError(errorText(e));
-      },
-    },
-  });
-  const text = reason.trim();
-  return (
-    <Dialog
-      open
-      title={t("rejection.lost.title", { number: sheet.number })}
-      onCancel={onClose}
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          {t("rejection.cancel")}
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          danger
-          loading={lose.isPending}
-          disabled={!text}
-          onClick={() => {
-            setError(null);
-            lose.mutate({ number: calcRef(sheet.number), data: { reason: text } });
-          }}
-        >
-          {t("rejection.lost.submit")}
-        </Button>,
-      ]}
-    >
-      <div className="pf-calc-stack">
-        <FormField id={reasonId} label={t("rejection.lost.reason")} hint={t("rejection.lost.hint")}>
-          <Input.TextArea
-            id={reasonId}
-            value={reason}
-            maxLength={1000}
-            rows={3}
-            aria-required
-            aria-describedby={`${reasonId}-hint`}
-            onChange={(event) => {
-              setReason(event.target.value);
-            }}
-          />
-        </FormField>
-        <ErrorNote message={error} />
-      </div>
-    </Dialog>
-  );
-}
+import { CloseRequestButton } from "./CloseRequest";
 
 /**
  * Клиент отклонил КП (SPEC-v3 §3.3, D26G-3): причина клиента и решение менеджера — «Новая версия КП» (расчёт снова
@@ -86,7 +15,6 @@ export function ClientRejection({ sheet }: { sheet: CalcSheet }) {
   const { message } = App.useApp();
   const apply = useApplySheet();
   const errorText = useErrorText();
-  const [lost, setLost] = useState(false);
   const revise = useNewCalcQuoteVersion({
     mutation: {
       onSuccess: (next) => {
@@ -129,23 +57,8 @@ export function ClientRejection({ sheet }: { sheet: CalcSheet }) {
               >
                 {t("rejection.newVersion.button")}
               </Button>
-              <Button
-                danger
-                onClick={() => {
-                  setLost(true);
-                }}
-              >
-                {t("rejection.lost.button")}
-              </Button>
+              <CloseRequestButton target={sheet} afterClientRejection />
             </div>
-            {lost ? (
-              <LostModal
-                sheet={sheet}
-                onClose={() => {
-                  setLost(false);
-                }}
-              />
-            ) : null}
           </div>
         ) : (
           t("rejection.noRights")

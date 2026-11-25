@@ -20,6 +20,7 @@ from pydantic import ValidationError
 
 from app.eds_payments import project_number as invoice_project_number
 from app.eds_projects import project_number
+from app.feeds.lang import tr
 from app.feeds.models import QueueItem, QueueItemKind
 from app.feeds.numbers import (
     calc_ref,
@@ -55,19 +56,35 @@ def _calc_action(task: dict[str, Any], mine: set[str]) -> str | None:
     (расчёт у директора, одобрен или отклонён)."""
     state = task.get("state")
     if state == "not_started":
-        return "Начать расчёт по заявке"
+        return tr(
+            "Начать расчёт по заявке",
+            "Ariza böyiça hisob-kitobni boşlaş",
+            "Start the costing for request",
+        )
     if state == "returned":
-        return "Доработать расчёт по заявке"
+        return tr(
+            "Доработать расчёт по заявке",
+            "Ariza böyiça hisob-kitobni qayta işlaş",
+            "Rework the costing for request",
+        )
     if state != "in_progress":
         return None
     raw_visas = task.get("visas")
     visas: dict[str, Any] = raw_visas if isinstance(raw_visas, dict) else {}
     if any(visas.get(group) == "waiting" for group in mine):
-        return "Завизировать строки расчёта по заявке"
+        return tr(
+            "Завизировать строки расчёта по заявке",
+            "Ariza böyiça hisob-kitob qatorlarini vizalaş",
+            "Visa the costing lines for request",
+        )
     states = [visas.get(group) for group in ("stock", "supply", "engineer")]
     if "done" in states and all(s in ("none", "done") for s in states):
-        return "Отправить директору расчёт по заявке"
-    return "Рассчитать заявку"
+        return tr(
+            "Отправить на утверждение расчёт по заявке",
+            "Ariza böyiça hisob-kitobni tasdiqlaşga yuboriş",
+            "Send the costing for approval for request",
+        )
+    return tr("Рассчитать заявку", "Arizani hisoblaş", "Cost request")
 
 
 def _client_rejected(task: dict[str, Any]) -> bool:
@@ -92,7 +109,15 @@ def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> lis
         rejected = _client_rejected(task)
         if rejected and not decides:
             continue
-        action = "Клиент отклонил КП по заявке" if rejected else _calc_action(task, mine)
+        action = (
+            tr(
+                "Клиент отклонил КП по заявке",
+                "Mijoz ariza böyiça TTni rad etdi",
+                "The client declined the quote for request",
+            )
+            if rejected
+            else _calc_action(task, mine)
+        )
         if action is None:
             continue
         number = deal_number(deal)
@@ -106,10 +131,18 @@ def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> lis
             kind="calc_task",
             title=f"{action} {number}",
             subtitle=join(
-                (f"Причина: {reason}" if reason else "Причина не указана") if rejected else None,
+                (
+                    tr(f"Причина: {reason}", f"Sabab: {reason}", f"Reason: {reason}")
+                    if reason
+                    else tr("Причина не указана", "Sabab körsatilmagan", "No reason given")
+                )
+                if rejected
+                else None,
                 str(deal.get("client_name") or "") or None,
                 short(deal.get("title"), 70) or None,
-                f"по письму {letter}" if isinstance(letter, str) and letter else None,
+                tr(f"по письму {letter}", f"{letter} xati böyiça", f"on letter {letter}")
+                if isinstance(letter, str) and letter
+                else None,
             ),
             due_label=due_label(due_at, now),
             due_at=due_at,
@@ -148,12 +181,24 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
                 id=f"invoice:{invoice_id}:confirm",
                 role_id=role_id,
                 kind="confirm_payment",
-                title=f"Подтвердить оплату по счёту {number}",
+                title=tr(
+                    f"Подтвердить оплату по счёту {number}",
+                    f"{number} hisob böyiça tölovni tasdiqlaş",
+                    f"Confirm payment for invoice {number}",
+                ),
                 subtitle=join(
                     client,
                     money(raw.get("balance_due"), raw.get("currency")),
                     project,
-                    f"платёжка {ago(received, now)}" if received else "платёжка получена",
+                    tr(
+                        f"платёжка {ago(received, now)}",
+                        f"tölov topşiriqnomasi {ago(received, now)}",
+                        f"payment order {ago(received, now)}",
+                    )
+                    if received
+                    else tr(
+                        "платёжка получена", "tölov topşiriqnomasi olindi", "payment order received"
+                    ),
                 ),
                 due_label="later",
                 object=invoice_ref(invoice_id, number, client),
@@ -170,7 +215,11 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
                 id=f"invoice:{invoice_id}:issue",
                 role_id=role_id,
                 kind="issue_invoice",
-                title=f"Выставить счёт {number}",
+                title=tr(
+                    f"Выставить счёт {number}",
+                    f"{number} hisobni çiqariş",
+                    f"Issue invoice {number}",
+                ),
                 subtitle=join(
                     client, money(raw.get("total_incl_vat"), raw.get("currency")), project
                 ),
@@ -184,11 +233,19 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
 #: Х-1: причины, при которых шаг за сотрудником — отправить договор «На подпись».
 _VISAS_TO_REQUEST = {"visas_not_requested", "visas_declined", "visas_returned", "no_visa_holder"}
 _BLOCKER_WHY = {
-    "visas_not_requested": "визы не запрошены",
-    "visas_declined": "договор не принят на визы",
-    "visas_returned": "виза возвращена",
-    "no_visa_holder": "некому поставить визу",
-    "visas_pending": "визы собираются",
+    "visas_not_requested": ("визы не запрошены", "vizalar söralmagan", "visas not requested"),
+    "visas_declined": (
+        "договор не принят на визы",
+        "şartnoma vizaga qabul qilinmadi",
+        "the contract was not accepted for visas",
+    ),
+    "visas_returned": ("виза возвращена", "viza qaytarilgan", "a visa was returned"),
+    "no_visa_holder": (
+        "некому поставить визу",
+        "viza qöyadigan kişi yöq",
+        "nobody can give a visa",
+    ),
+    "visas_pending": ("визы собираются", "vizalar yiğilmoqda", "visas are being collected"),
 }
 
 
@@ -199,7 +256,15 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
     if contract is None:
         if "no_contract" not in row.problems:
             return None
-        return "issue_contract", "Сформировать проект договора по", "КП принято клиентом"
+        return (
+            "issue_contract",
+            tr(
+                "Сформировать проект договора по",
+                "Şartnoma loyihasini tayyorlaş:",
+                "Prepare the draft contract for",
+            ),
+            tr("КП принято клиентом", "Mijoz TTni qabul qildi", "the client accepted the quote"),
+        )
     if contract.status == "project" and not contract.sent_to_client:
         # Х-1 и ДОК-10: шаг по факту единой проверки ERP (`send_blocker_code`), не по статусу.
         code = contract.send_blocker_code
@@ -208,38 +273,82 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
         if code == "CONTRACT_NEEDS_OUR_SIGNATURE":
             return (
                 "issue_contract",
-                f"Подписать от компании договор {contract.number} по",
-                "до отправки клиенту нужна наша подпись",
+                tr(
+                    f"Подписать от компании договор {contract.number} по",
+                    f"{contract.number} şartnomani kompaniya nomidan imzolaş:",
+                    f"Sign contract {contract.number} for the company —",
+                ),
+                tr(
+                    "до отправки клиенту нужна наша подпись",
+                    "mijozga yuborişdan oldin bizning imzo kerak",
+                    "our signature is needed before it goes to the client",
+                ),
             )
         if code is not None:
             return (
                 "issue_contract",
                 (
-                    f"Отправить на визы договор {contract.number} по"
+                    tr(
+                        f"Отправить на визы договор {contract.number} по",
+                        f"{contract.number} şartnomani vizaga yuboriş:",
+                        f"Send contract {contract.number} for visas —",
+                    )
                     if code in _VISAS_TO_REQUEST
-                    else f"Ждёт виз договор {contract.number} по"
+                    else tr(
+                        f"Ждёт виз договор {contract.number} по",
+                        f"{contract.number} şartnoma vizalarni kutmoqda:",
+                        f"Contract {contract.number} awaits visas —",
+                    )
                 ),
-                _BLOCKER_WHY[code],
+                tr(*_BLOCKER_WHY[code]),
             )
         return (
             "issue_contract",
-            f"Отправить клиенту проект договора {contract.number} по",
-            ("проект не отправлен"),
+            tr(
+                f"Отправить клиенту проект договора {contract.number} по",
+                f"{contract.number} şartnoma loyihasini mijozga yuboriş:",
+                f"Send the draft of contract {contract.number} to the client —",
+            ),
+            tr("проект не отправлен", "loyiha yuborilmagan", "the draft has not been sent"),
         )
     if contract.status == "client_agreed":
         return (
             "issue_contract",
-            f"Выставить у оператора договор {contract.number} по",
-            ("клиент согласовал редакцию"),
+            tr(
+                f"Выставить в ЭДО договор {contract.number} по",
+                f"{contract.number} şartnomani EHTda rasmiylaştiriş:",
+                f"Issue contract {contract.number} in EDI —",
+            ),
+            tr(
+                "клиент согласовал редакцию",
+                "mijoz tahririni kelişdi",
+                "the client agreed to the wording",
+            ),
         )
     if contract.status == "issued_at_operator":
         return (
             "attach_scan",
-            f"Прикрепить скан подписанного договора {contract.number} по",
-            ("договор выставлен у оператора"),
+            tr(
+                f"Прикрепить скан подписанного договора {contract.number} по",
+                f"{contract.number} imzolangan şartnoma skanini biriktiriş:",
+                f"Attach the scan of signed contract {contract.number} —",
+            ),
+            tr(
+                "договор выставлен в ЭДО",
+                "şartnoma EHTda rasmiylaştirilgan",
+                "the contract is issued in EDI",
+            ),
         )
     if contract.status == "rejected":
-        return "issue_contract", f"Доработать договор {contract.number} по", "клиент отклонил"
+        return (
+            "issue_contract",
+            tr(
+                f"Доработать договор {contract.number} по",
+                f"{contract.number} şartnomani qayta işlaş:",
+                f"Rework contract {contract.number} —",
+            ),
+            tr("клиент отклонил", "mijoz rad etdi", "the client declined"),
+        )
     return None
 
 
@@ -248,11 +357,25 @@ def _act_step(row: RawRow) -> tuple[str, str] | None:
     (выпуск по выставленному счёту и право решает ERP)."""
     act, invoice = row.documents.act, row.documents.invoice
     if act is not None and act.status == "returned":
-        return f"Выпустить заново акт {act.number} по", "заказчик вернул акт"
+        return (
+            tr(
+                f"Выпустить заново акт {act.number} по",
+                f"{act.number} aktni qaytadan çiqariş:",
+                f"Reissue act {act.number} —",
+            ),
+            tr("заказчик вернул акт", "buyurtmaçi aktni qaytardi", "the customer returned the act"),
+        )
     # Акт — после доставки: блокер считает ERP (`not_delivered`), своего правила у очереди нет.
     paid = row.client_status == "fulfilling" and invoice is not None and invoice.status == "paid"
     if act is None and paid and row.act_blocker is None:
-        return "Выпустить акт по", "товар доставлен, счета оплачены"
+        return (
+            tr("Выпустить акт по", "Aktni çiqariş:", "Issue the act for"),
+            tr(
+                "товар доставлен, счета оплачены",
+                "tovar yetkazildi, hisoblar tölangan",
+                "goods delivered, invoices paid",
+            ),
+        )
     return None
 
 
@@ -267,7 +390,7 @@ def _rows(raw: list[dict[str, Any]]) -> list[RawRow]:
 
 
 def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
-    """Договор (сформировать, отправить, выставить у оператора, скан, доработать) и акт к выпуску:
+    """Договор (сформировать, отправить, выставить в ЭДО, скан, доработать) и акт к выпуску:
     строка открывает проект на вкладке «Договор» или «Акт»."""
     del now
     out: list[Work] = []

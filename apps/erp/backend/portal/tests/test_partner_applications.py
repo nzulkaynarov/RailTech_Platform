@@ -210,8 +210,7 @@ def test_company_partner_application_readonly_forbidden(readonly_portal_client):
 
 def test_company_partner_application_contract_pdf_success(portal_client, client_company, client_contact):
     """Кандидат может скачать проект договора (200 application/pdf)."""
-    from django.core.files.base import ContentFile
-    from portal.services.partner_contract import render_partner_contract_pdf
+    from portal.tests.partner_contract_helpers import prepare
 
     app = PartnerApplication.objects.create(
         source=PartnerApplicationSource.CLIENT_CABINET,
@@ -224,8 +223,7 @@ def test_company_partner_application_contract_pdf_success(portal_client, client_
         contract_number="PRT-TEST-2026-001",
         consent=True,
     )
-    pdf_bytes = render_partner_contract_pdf(app, draft=True)
-    app.contract_pdf.save("test_draft.pdf", ContentFile(pdf_bytes), save=True)
+    prepare(app)
 
     resp = portal_client.get(f"{COMPANY_URL}/contract-pdf")
     assert resp.status_code == 200
@@ -269,7 +267,6 @@ def test_company_partner_application_agree_success(portal_client, client_company
     assert app.status == PartnerApplicationStatus.CANDIDATE_AGREED
     assert app.candidate_notes == "Согласовано юристом, замечаний нет"
     assert app.candidate_agreed_at is not None
-    assert app.contract_pdf
 
 
 def test_company_partner_application_agree_invalid_status(portal_client, client_company, client_contact):

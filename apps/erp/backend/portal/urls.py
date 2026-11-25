@@ -18,10 +18,14 @@ from portal.views import (
     CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
     CompanyPartnerContractPdfView,
+    CompanyPartnerContractReturnView,
+    CompanyPartnerSignedScanView,
     CompanySecurityEventEndSessionView,
     CompanySecurityLogView,
     CompanyView,
+    ContractDeclineRenewalView,
     ContractListView,
+    ContractRestoreRenewalView,
     ContractSignView,
     CountriesView,
     DeliveryAcceptView,
@@ -189,6 +193,26 @@ urlpatterns = [
     path("contracts/", ContractListView.as_view(), name="portal-contracts-slash"),
     path("contracts/<int:pk>/sign", ContractSignView.as_view(), name="portal-contract-sign"),
     path("contracts/<int:pk>/sign/", ContractSignView.as_view(), name="portal-contract-sign-slash"),
+    path(
+        "contracts/<int:pk>/restore-renewal",
+        ContractRestoreRenewalView.as_view(),
+        name="portal-contract-restore-renewal",
+    ),
+    path(
+        "contracts/<int:pk>/restore-renewal/",
+        ContractRestoreRenewalView.as_view(),
+        name="portal-contract-restore-renewal-slash",
+    ),
+    path(
+        "contracts/<int:pk>/decline-renewal",
+        ContractDeclineRenewalView.as_view(),
+        name="portal-contract-decline-renewal",
+    ),
+    path(
+        "contracts/<int:pk>/decline-renewal/",
+        ContractDeclineRenewalView.as_view(),
+        name="portal-contract-decline-renewal-slash",
+    ),
     # Invoices (Счета на оплату)
     path("invoices", InvoiceListView.as_view(), name="portal-invoices"),
     path("invoices/", InvoiceListView.as_view(), name="portal-invoices-slash"),
@@ -384,6 +408,26 @@ urlpatterns = [
         "company/partner-application/agree/",
         CompanyPartnerApplicationAgreeView.as_view(),
         name="portal-company-partner-application-agree-slash",
+    ),
+    path(
+        "company/partner-application/return",
+        CompanyPartnerContractReturnView.as_view(),
+        name="portal-company-partner-application-return",
+    ),
+    path(
+        "company/partner-application/return/",
+        CompanyPartnerContractReturnView.as_view(),
+        name="portal-company-partner-application-return-slash",
+    ),
+    path(
+        "company/partner-application/signed-scan",
+        CompanyPartnerSignedScanView.as_view(),
+        name="portal-company-partner-application-signed-scan",
+    ),
+    path(
+        "company/partner-application/signed-scan/",
+        CompanyPartnerSignedScanView.as_view(),
+        name="portal-company-partner-application-signed-scan-slash",
     ),
     # Team (Команда клиента)
     path("team", TeamListView.as_view(), name="portal-team"),

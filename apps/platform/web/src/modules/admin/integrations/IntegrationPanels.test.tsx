@@ -191,6 +191,25 @@ describe("карточка Telegram", () => {
     expect(document.body.textContent).not.toContain(token);
   });
 
+  it("боту без права приглашать — строка «нужно право»", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, telegram: { ...state.telegram, channel_can_invite: false } });
+    const side = await openBotConnection();
+    expect(
+      await within(side).findByText("Боту нужно право приглашать пользователей в канал."),
+    ).toBeVisible();
+  });
+
+  it("с правом приглашать строки «нужно право» нет", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, telegram: { ...state.telegram, channel_can_invite: true } });
+    const side = await openBotConnection();
+    expect(await within(side).findByText("Канал команды")).toBeVisible();
+    expect(
+      within(side).queryByText("Боту нужно право приглашать пользователей в канал."),
+    ).toBeNull();
+  });
+
   it("канал команды: список чатов, подключить, тестовое сообщение", async () => {
     const side = await openBotConnection();
     expect(await within(side).findByText("Подключён: Команда RailTech (демо)")).toBeVisible();
@@ -247,8 +266,10 @@ describe("карточка «Почта»", () => {
     // W18A-P1: письма ERP — в том же журнале, с источником и назначением словами
     const log = within(side).getByRole("list", { name: "Журнал доставки" });
     expect(within(log).getByText("ERP · КП клиенту · вложение: 1")).toBeVisible();
+    // код шаблона `web_confirmation` — словами, не сырым кодом (СЦ-7, N22)
+    expect(within(log).getByText("CRM · Подтверждение запроса")).toBeVisible();
     expect(
-      within(log).getByText("Причина: Почтовый сервер отклонил письмо (SMTP 550)"),
+      within(log).getByText("Причина: Почтовый сервер отклонил письмо (ответ сервера 550)"),
     ).toBeVisible();
 
     // фильтр: только ошибки
@@ -259,7 +280,7 @@ describe("карточка «Почта»", () => {
       expect(within(filtered).queryByText("Тестовое письмо")).not.toBeInTheDocument();
       expect(within(filtered).getByText("Оповещение о сбое сервиса")).toBeVisible();
     });
-    expect(within(side).getByText("Причина: smtp_unavailable")).toBeVisible();
+    expect(within(side).getByText("Причина: Почтовый сервер не отвечает")).toBeVisible();
   });
 
   it("настройки SMTP: пароль SMTP и пароль администратора, ошибка поля, сохранение", async () => {

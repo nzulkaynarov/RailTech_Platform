@@ -8,6 +8,7 @@ ERP — на respx; ответы BFF сверяются со схемами plat
 
 import json
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -227,8 +228,17 @@ async def test_without_calc_section_everything_is_403_and_erp_is_untouched(
         ("POST", f"/erp/calc/{NUMBER}/ready"),
         ("POST", f"/erp/calc/{NUMBER}/lines/7/visa"),
         ("PATCH", f"/erp/calc/{NUMBER}/lines/7"),
+        ("GET", f"/erp/calc-request/{NUMBER}"),
+        ("POST", f"/erp/calc/{NUMBER}/close"),
     ):
-        response = await call(web, method, path, {"quantity": 2} if method == "PATCH" else None)
+        body = (
+            {"quantity": 2}
+            if method == "PATCH"
+            else {"reason": "TEST"}
+            if path.endswith("/close")
+            else None
+        )
+        response = await call(web, method, path, body)
         assert response.status_code == 403, (method, path)
     assert erp_data_calls(erp) == []
 
@@ -553,6 +563,70 @@ async def test_lost_needs_a_reason_and_is_proxied(
     assert ok.status_code == 200
     check(ok, "/erp/calc/{number}/lost", "post")
     assert json.loads(route.calls[0].request.content) == {"reason": "Ушёл к конкуренту"}
+
+
+async def test_close_reasons_and_close_request_are_proxied_with_erp_refusals(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER_ALL"])
+    erp.get(f"{CALC}/close-reasons/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    {
+                        "code": "OTHER",
+                        "name": {
+                            "ru": "Другое — комментарий",
+                            "uz": "Boshqa — izoh",
+                            "en": "Other",
+                        },
+                        "requires_comment": True,
+                        "allowed_after_quote_sent": True,
+                        "preselect_after_client_rejection": False,
+                    }
+                ]
+            },
+        )
+    )
+    listed = await web.client.get("/api/v1/erp/calc-close-reasons")
+    assert listed.status_code == 200
+    check(listed, "/erp/calc-close-reasons", "get")
+    assert listed.json()["items"][0]["code"] == "OTHER"
+
+    closed = {
+        "deal": {**deal(), "stage_code": "CLOSED_LOST"},
+        "has_task": True,
+        "request": {"text": "Нужны 2 стрелочных перевода", "lines": 0},
+        "close": {"allowed": False, "quote_sent": False, "reason": "OTHER", "comment": "Передали"},
+    }
+    route = erp.post(f"{CALC}/104/close/").mock(
+        side_effect=[
+            httpx.Response(200, json=closed),
+            httpx.Response(409, json={"detail": "REASON_NOT_ALLOWED_AFTER_QUOTE"}),
+            httpx.Response(400, json={"detail": "COMMENT_REQUIRED"}),
+            httpx.Response(403, json={"detail": "ROLE_NOT_PERMITTED"}),
+        ]
+    )
+    ok = await call(
+        web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "OTHER", "comment": " Передали "}
+    )
+    assert ok.status_code == 200
+    check(ok, "/erp/calc/{number}/close", "post")
+    assert ok.json()["step"] == "LOST"
+    assert ok.json()["close"]["reason"] == "OTHER"
+    assert route.calls[0].request.url.path.endswith("/104/close/")
+    assert json.loads(route.calls[0].request.content) == {"reason": "OTHER", "comment": "Передали"}
+
+    conflict = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert conflict.status_code == 409
+    assert conflict.json()["details"]["reason"] == "reason_not_allowed_after_quote"
+    check(conflict, "/erp/calc/{number}/close", "post")
+    invalid = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "OTHER"})
+    assert invalid.status_code == 422
+    assert invalid.json()["details"]["fields"] == ["comment"]
+    forbidden = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert forbidden.status_code == 403
 
 
 async def test_markup_without_cost_margin_is_refused_and_with_it_is_proxied(
@@ -1095,3 +1169,84 @@ async def test_sign_before_the_catalog_decision_is_409(
     body = response.json()
     assert body["details"]["reason"] == "catalog_match_pending"
     assert body["message"] == "Сначала выберите позицию каталога или «Новая позиция»."
+
+
+async def test_a_draft_request_without_a_calc_task_opens_a_card_and_is_closed(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    """ЛХ-2: черновик без задания расчёта ищется среди всех заявок (`any=1`) и закрывается."""
+    await web.login(["MANAGER_ALL"])
+    draft = deal(id=777, number="ЗВ-2026-120", stage_code="DRAFT")
+    refs_route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(draft))
+    )
+    card = {
+        "deal": draft,
+        "has_task": False,
+        "request": {"text": "Передача из CRM", "lines": 0},
+        "close": {"allowed": True, "quote_sent": False, "reason": None, "comment": None},
+    }
+    be.router.get(f"{CALC}/777/request/").mock(return_value=httpx.Response(200, json=card))
+    shut = be.router.post(f"{CALC}/777/close/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                **card,
+                "deal": {**draft, "stage_code": "CLOSED_LOST"},
+                "close": {"allowed": False, "quote_sent": False, "reason": "TEST", "comment": None},
+            },
+        )
+    )
+    number = "ЗВ-2026-120"
+    got = await web.client.get(f"/api/v1/erp/calc-request/{quote(number, safe='')}")
+    assert got.status_code == 200
+    check(got, "/erp/calc-request/{number}", "get")
+    assert got.json()["has_task"] is False
+    assert got.json()["close"]["allowed"] is True
+    assert refs_route.calls.last.request.url.params["any"] == "1"
+
+    done = await call(web, "POST", f"/erp/calc/{quote(number, safe='')}/close", {"reason": "TEST"})
+    assert done.status_code == 200
+    check(done, "/erp/calc/{number}/close", "post")
+    assert done.json()["step"] == "LOST"
+    assert shut.called
+
+
+async def test_close_is_for_the_full_calc_section_only_and_read_only_roles_get_403(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """Бухгалтер читает расчёт, но заявку закрыть не может: 403, ERP не вызывается."""
+    await web.login(["ACCOUNTANT"])
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet()))
+    assert (await web.client.get(f"/api/v1/erp/calc/{ENCODED}")).status_code == 200
+    before = len(erp_data_calls(erp))
+    refused = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert refused.status_code == 403
+    assert len(erp_data_calls(erp)) == before
+
+
+async def test_request_file_of_a_draft_without_a_calc_task_is_streamed(
+    web: Web, be: Backends
+) -> None:
+    """ЛХ-2: файл черновика без задания расчёта: номер ищется среди всех заявок (`any=1`)."""
+    await web.login(["SUPPLY"])
+    draft = deal(id=777, number="ЗВ-2026-120", stage_code="DRAFT")
+    refs_route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(draft))
+    )
+    file_route = be.router.get(f"{API}/crm/deals/777/request-files/9/").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"draft file",
+            headers={"content-disposition": "attachment; filename*=utf-8''zayavka.pdf"},
+        )
+    )
+
+    response = await web.client.get(
+        f"/api/v1/erp/calc/{quote('ЗВ-2026-120', safe='')}/request-files/9"
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"draft file"
+    assert file_route.called
+    assert refs_route.calls.last.request.url.params["any"] == "1"

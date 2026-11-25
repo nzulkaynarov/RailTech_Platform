@@ -248,6 +248,45 @@ class CalcRightsSerializer(serializers.Serializer):
     stock = serializers.BooleanField(help_text="Резервы и запросы цены у поставщиков (`supply.manage`, D2-2)")
 
 
+class CalcCloseStateSerializer(serializers.Serializer):
+    allowed = serializers.BooleanField(
+        help_text="Заявку можно закрыть: до проекта и по праву ответственного или `deal.manage`"
+    )
+    quote_sent = serializers.BooleanField(
+        help_text="КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`"
+    )
+    reason = serializers.CharField(
+        allow_null=True, help_text="Код причины закрытия, если заявка закрыта через «Закрыть заявку»"
+    )
+    comment = serializers.CharField(allow_null=True)
+
+
+class CalcRequestCardSerializer(serializers.Serializer):
+    deal = CalcDealSerializer()
+    has_task = serializers.BooleanField(help_text="У заявки есть задание расчёта (иначе — черновик из передачи лида)")
+    request = CalcRequestSerializer()
+    close = CalcCloseStateSerializer()
+
+
+class CalcCloseInSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=50, help_text="Код причины из справочника `request-close-reasons`")
+    comment = serializers.CharField(max_length=2000, allow_blank=True, required=False, default="")
+
+
+class CalcCloseReasonSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    name = serializers.DictField(child=serializers.CharField(allow_blank=True), help_text="Названия ru, uz, en")
+    requires_comment = serializers.BooleanField()
+    allowed_after_quote_sent = serializers.BooleanField()
+    preselect_after_client_rejection = serializers.BooleanField(
+        help_text="Выбрана заранее в «Закрыть заявку» после отказа клиента от КП"
+    )
+
+
+class CalcCloseReasonListSerializer(serializers.Serializer):
+    results = CalcCloseReasonSerializer(many=True)
+
+
 class CalcSheetSerializer(serializers.Serializer):
     deal = CalcDealSerializer()
     task = CalcTaskBriefSerializer()
@@ -257,6 +296,7 @@ class CalcSheetSerializer(serializers.Serializer):
     totals = CalcTotalsSerializer()
     visas = CalcVisaGroupsSerializer()
     ready = CalcReadySerializer()
+    close = CalcCloseStateSerializer()
     rights = CalcRightsSerializer()
 
 

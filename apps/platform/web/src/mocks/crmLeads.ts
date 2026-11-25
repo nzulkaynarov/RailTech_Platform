@@ -10,6 +10,8 @@ import type {
   LeadCreated,
   LeadIn,
   LeadPage,
+  PartnerHandoffIn,
+  PartnerHandoffView,
   PeopleLead,
   PeopleLeadContacts,
   RequestCallNoteIn,
@@ -177,7 +179,7 @@ export const crmLeadsHandlers = [
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const me = currentActor()?.id;
     const rows = readLeads()
-      .leads.filter((l) => !l.card.discarded)
+      .leads.filter((l) => !l.card.discarded && l.card.partner_application == null)
       .map((l) => l.row)
       .filter((row) => tab === "all" || row.status === tab)
       .filter((row) => scope !== "mine" || (me !== undefined && row.assigned?.id === me))
@@ -499,6 +501,44 @@ export const crmLeadsHandlers = [
       created: true,
       transfer: erpDown ? "failed" : "done",
     };
+    return HttpResponse.json(created, { status: 201 });
+  }),
+
+  // ЛП-1: «Кто это?» → «Партнёр». Как CRM: повтор по лиду — первая заявка (200), лид закрыт исходом «передан как партнёр»;
+  // «учёт не отвечает» (тот же флаг, что у заявки клиента) — 503, лид не тронут.
+  http.post("*/api/v1/crm/leads/:lead/partner", async ({ request, params }) => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    const body = (await request.json()) as PartnerHandoffIn;
+    const state = readLeads();
+    const lead = findLead(state, String(params["lead"]));
+    if (!lead) return leadNotFound();
+    const key = `partner:${lead.row.lead}`;
+    const known = state.keys[key];
+    if (known !== undefined) {
+      const again: PartnerHandoffView = { lead: lead.row.lead, application: known, created: false };
+      return HttpResponse.json(again);
+    }
+    if (lead.row.status === "lost") {
+      return rejected(409, "request_not_allowed", "Лид уже закрыт.");
+    }
+    if (mockFlag(MOCK_ERP_DOWN_KEY)) {
+      return failure(503, "BACKEND_UNAVAILABLE", "Учёт не отвечает.", "erp", {
+        reason: "erp_unavailable",
+      });
+    }
+    // Почта обязательна и проверяется как в ERP (Django): без неё и с чужим форматом заявка не уходит
+    if (!/^[^@\s]+@[^@\s]+\.[a-z0-9-]{2,}$/i.test(body.email)) {
+      return rejected(422, "invalid_email", "Проверьте адрес почты.", ["email"]);
+    }
+    const application =
+      7000 + Object.keys(state.keys).filter((k) => k.startsWith("partner:")).length + 1;
+    state.keys[key] = application;
+    lead.row.status = "lost";
+    lead.card.status = "lost";
+    lead.card.partner_application = application;
+    writeLeads(state);
+    const created: PartnerHandoffView = { lead: lead.row.lead, application, created: true };
     return HttpResponse.json(created, { status: 201 });
   }),
 

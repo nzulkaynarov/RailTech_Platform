@@ -12,6 +12,8 @@ from app.schemas.common import Strict
 
 class LetterIntakeIn(Strict):
     file_id: uuid.UUID
+    received_at: dt.date | None = None  # дата поступления: от неё код считает срок «в течение N дней»
+    rules_only: bool = False  # только правила кода, без модели («Пересчитать срок»): платного вызова нет
 
 
 class IntakeSource(StrEnum):
@@ -36,6 +38,8 @@ class LetterIntakeSuggestion(BaseModel):
     fields: LetterIntakeFields
     alias: str
     prompt_version: str
+    # поля, которые посчитал код, а не модель (срок по обороту «в течение N дней», ИНН): экран метит их отдельно
+    by_code: list[str] = Field(default_factory=list)
 
 
 class LetterAssistIn(Strict):

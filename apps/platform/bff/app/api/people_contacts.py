@@ -205,6 +205,19 @@ class CounterpartyAccount(BaseModel):
     is_default: bool
 
 
+class CounterpartyContractTerm(BaseModel):
+    """Срок договора с контрагентом (ДС-1): действующий или последний подписанный договор."""
+
+    model_config = ConfigDict(extra="forbid")
+    contract_id: int
+    number: str
+    state: Literal["open", "renews", "ends", "expired"]
+    valid_until: date | None
+    last_notice_date: date | None
+    foreign: bool
+    blocks_new_work: bool
+
+
 class CounterpartyCard(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str
@@ -220,6 +233,7 @@ class CounterpartyCard(BaseModel):
     accounts_masked: bool
     brands: list[CounterpartyRef]
     do_not_work: DoNotWork | None = None
+    contract_term: CounterpartyContractTerm | None = None
     # ЕД-5: логотип только через BFF, `?v=` — версия; `None` — буквы названия
     logo_url: str | None = None
 
@@ -232,6 +246,23 @@ class CounterpartyRoleIn(BaseModel):
 
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+
+def to_contract_term(raw: Any) -> CounterpartyContractTerm | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return CounterpartyContractTerm(
+            contract_id=raw["contract_id"],
+            number=str(raw.get("number") or ""),
+            state=raw.get("state"),
+            valid_until=raw.get("valid_until"),
+            last_notice_date=raw.get("last_notice_date"),
+            foreign=bool(raw.get("foreign")),
+            blocks_new_work=bool(raw.get("blocks_new_work")),
+        )
+    except (KeyError, ValueError):
+        return None
 
 
 def to_do_not_work(raw: Any) -> DoNotWork | None:
@@ -290,6 +321,7 @@ def to_card(raw: Any) -> CounterpartyCard:
             for brand in _rows(row.get("brands"))
         ],
         do_not_work=to_do_not_work(row.get("do_not_work")),
+        contract_term=to_contract_term(row.get("contract_term")),
     )
 
 

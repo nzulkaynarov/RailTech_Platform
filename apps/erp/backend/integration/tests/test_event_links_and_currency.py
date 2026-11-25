@@ -68,7 +68,7 @@ def test_invoice_link_comes_from_cabinet_url_setting(deal, settings):
     invoice = Invoice.objects.create(deal=deal, number="INV-F54", status=status, due_date=datetime.date(2026, 11, 5))
     publish_invoice_event("invoice.issued", invoice)
     link = bus_support.only("invoice.issued")["data"]["payload"]["link"]
-    assert link == f"http://cabinet.test.localhost/invoices/{invoice.id}"
+    assert link == f"http://cabinet.test.localhost/invoices?focus={invoice.id}"
     assert "railtech.uz" not in link
 
 

@@ -144,7 +144,7 @@ export const COUNTRIES: readonly CountryInfo[] = [
     phoneMask: '',
     phonePlaceholder: '+...',
     taxLabelKey: 'countryMask.taxIdOther',
-    taxLabelDefault: 'Рег. номер / Tax ID',
+    taxLabelDefault: 'Рег. или налоговый номер',
     taxPlaceholder: 'Регистрационный или налоговый номер',
     isUzbekistan: false,
   },
@@ -162,7 +162,7 @@ export function findCountry(code: string | null | undefined): CountryInfo {
     phoneMask: '',
     phonePlaceholder: '+...',
     taxLabelKey: 'countryMask.taxIdOther',
-    taxLabelDefault: 'Рег. номер / Tax ID',
+    taxLabelDefault: 'Рег. или налоговый номер',
     taxPlaceholder: 'Регистрационный или налоговый номер',
     isUzbekistan: false,
   };

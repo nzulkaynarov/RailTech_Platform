@@ -66,6 +66,7 @@ from supply.views import (
     PriceRequestAnswerView,
     PriceRequestListView,
     PriceRequestPartnerLinksView,
+    PriceRequestPreviewView,
     PriceRequestRevokePartnerLinksView,
     ReceiptListView,
     SupplyTaskListView,
@@ -156,6 +157,8 @@ from crm.views import (
 )
 from crm.views.calc import (
     CalcCatalogView,
+    CalcCloseReasonsView,
+    CalcCloseView,
     CalcCopyView,
     CalcDealRefsView,
     CalcLinesView,
@@ -166,6 +169,7 @@ from crm.views.calc import (
     CalcParseView,
     CalcPreviousView,
     CalcReadyView,
+    CalcRequestCardView,
     CalcSheetView,
     CalcStartView,
     CalcTaskListView,
@@ -372,6 +376,9 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/terms/", CalcTermsView.as_view(), name="calc-terms"),
         path("api/v1/calc/<int:deal_id>/new-version/", CalcNewVersionView.as_view(), name="calc-new-version"),
         path("api/v1/calc/<int:deal_id>/lost/", CalcLostView.as_view(), name="calc-lost"),
+        path("api/v1/calc/<int:deal_id>/request/", CalcRequestCardView.as_view(), name="calc-request-card"),
+        path("api/v1/calc/<int:deal_id>/close/", CalcCloseView.as_view(), name="calc-close"),
+        path("api/v1/calc/close-reasons/", CalcCloseReasonsView.as_view(), name="calc-close-reasons"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
         path("api/v1/calc/<int:deal_id>/previous/", CalcPreviousView.as_view(), name="calc-previous"),
         path("api/v1/calc/<int:deal_id>/copy/", CalcCopyView.as_view(), name="calc-copy"),
@@ -428,6 +435,11 @@ urlpatterns = (
         path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
         path("api/v1/stock/tasks/", SupplyTaskListView.as_view(), name="stock-tasks"),
         path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),
+        path(
+            "api/v1/stock/price-requests/preview/",
+            PriceRequestPreviewView.as_view(),
+            name="stock-price-request-preview",
+        ),
         path(
             "api/v1/stock/price-requests/<int:request_id>/answer/",
             PriceRequestAnswerView.as_view(),

@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CalendarX2, CheckCircle2, ClipboardCheck, Download, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useRestoreContractRenewal, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { TimeLeft } from '@/components/TimeLeft';
 import { ManagerMenuItem } from '@/components/TelegramLinkButton';
 import { CompactList } from '@/components/list/CompactList';
@@ -56,11 +56,27 @@ function RowDocumentItem({ documentId, number }: { documentId: number | null | u
 
 // --- договоры ------------------------------------------------------------------------------------
 
+/** Срок договора (ДС-1) второй строкой под номером: «до 31.12.2026 · продлится сам»; без срока — ничего. Считает ERP. */
+function ContractTermLine({ term }: { term: Contract['term'] }) {
+  const { t } = useTranslation();
+  if (!term) return null;
+  return (
+    <span className="text-xs font-normal text-muted-foreground">
+      {term.valid_until ? t('pages.contracts.term.until', { date: formatDate(term.valid_until) }) : t('pages.contracts.term.open')}
+      {' · '}
+      {t(`pages.contracts.term.state.${term.state}`)}
+    </span>
+  );
+}
+
 export function ContractsPage() {
   const { t } = useTranslation();
   const contracts = useContracts();
   const sign = useSignContract();
+  const decline = useDeclineContractRenewal();
+  const restore = useRestoreContractRenewal();
   const [target, setTarget] = useState<Contract | null>(null);
+  const [declining, setDeclining] = useState<Contract | null>(null);
   const awaiting = (contracts.data ?? []).filter((item) => contractAwaitsClient(item.status)).length;
 
   const close = () => {
@@ -85,9 +101,28 @@ export function ContractsPage() {
             label={t('pages.contracts.title')}
             rows={contracts.data}
             getRowId={(row) => row.id}
-            title={{ header: t('pages.contracts.columns.contract'), cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span> }}
+            title={{
+              header: t('pages.contracts.columns.contract'),
+              cell: (row) => (
+                <span className="flex flex-col">
+                  <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  <ContractTermLine term={row.term} />
+                </span>
+              ),
+            }}
             columns={[
-              { id: 'status', header: t('pages.contracts.columns.status'), cell: (row) => <StatusBadge entity="contract" code={row.status} /> },
+              {
+                id: 'status',
+                header: t('pages.contracts.columns.status'),
+                cell: (row) => (
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBadge entity="contract" code={row.status} />
+                    {row.status === 'signed_by_client' ? (
+                      <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 id: 'client',
                 header: t('pages.contracts.columns.client'),
@@ -114,6 +149,27 @@ export function ContractsPage() {
                   ) : null}
                   <RowMenu name={row.number}>
                     <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    {row.term?.can_decline ? (
+                      <CanAct>
+                        <RowMenuAction icon={CalendarX2} onSelect={() => setDeclining(row)}>
+                          {t('pages.contracts.term.decline')}
+                        </RowMenuAction>
+                      </CanAct>
+                    ) : null}
+                    {row.term?.can_restore ? (
+                      <CanAct>
+                        <RowMenuAction
+                          icon={CalendarCheck}
+                          onSelect={() =>
+                            restore.mutate(row.id, {
+                              onSuccess: (next) => toast.success(t('pages.contracts.term.restored', { number: next.number })),
+                            })
+                          }
+                        >
+                          {t('pages.contracts.term.restore')}
+                        </RowMenuAction>
+                      </CanAct>
+                    ) : null}
                     <ManagerMenuItem context={dealContext(row.deal)} label={t('manager.aboutContract', { number: row.number })} />
                   </RowMenu>
                 </>
@@ -122,6 +178,32 @@ export function ContractsPage() {
           />
         </>
       )}
+      <ActionDialog
+        open={declining !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeclining(null);
+            decline.reset();
+          }
+        }}
+        title={t('pages.contracts.term.declineTitle', { number: declining?.number ?? '' })}
+        description={t('pages.contracts.term.declineText', {
+          until: declining?.term?.valid_until ? formatDate(declining.term.valid_until) : '',
+          notice: declining?.term?.last_notice_date ? formatDate(declining.term.last_notice_date) : '',
+        })}
+        confirmLabel={t('pages.contracts.term.decline')}
+        pending={decline.isPending}
+        error={decline.error}
+        onSubmit={() =>
+          declining &&
+          decline.mutate(declining.id, {
+            onSuccess: (next) => {
+              toast.success(t('pages.contracts.term.declined', { number: next.number }));
+              setDeclining(null);
+            },
+          })
+        }
+      />
       <ActionDialog
         open={target !== null}
         onOpenChange={(open) => !open && close()}
@@ -215,16 +297,21 @@ export function InvoicesPage() {
               cell: (row) => (
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  {/* проект — под номером, а не отдельной колонкой: таблица помещается на 1280 без прокрутки (СЦ-7, N9) */}
+                  <span className="text-xs font-normal">
+                    <DealLink deal={row.deal} />
+                  </span>
                   <ProofList invoice={row} />
                 </span>
               ),
-              className: 'min-w-0',
+              className: 'min-w-0 max-w-52',
             }}
             columns={[
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
-                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
+                cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} nowrap />,
+                className: 'whitespace-nowrap',
               },
               { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
@@ -242,13 +329,12 @@ export function InvoicesPage() {
                   return (
                     <span className="inline-flex flex-wrap items-center justify-end gap-1">
                       {formatDate(row.due_date)}
-                      {days ? <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: days })}</ToneBadge> : null}
+                      {days ? <span className="text-xs font-medium text-destructive">{t('pages.invoices.lateDays', { count: days })}</span> : null}
                       {!days && invoiceOpen(row) ? <TimeLeft date={row.due_date} now={now} /> : null}
                     </span>
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
               header: t('common.actions'),
@@ -290,10 +376,12 @@ function ProofList({ invoice }: { invoice: Invoice }) {
         items={invoice.proofs.map((proof) => (
           <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
             <span className="flex flex-wrap items-center gap-1.5">
-              <StatusBadge entity="proof" code={proof.status} />
-              <span className="break-all text-muted-foreground">
-                {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
-              </span>
+              <StatusBadge entity="proof" code={proof.status} nowrap />
+              <span className="text-muted-foreground">{t('pages.invoices.proofLine', { date: formatDateTime(proof.submitted_at) })}</span>
+            </span>
+            {/* имя файла отдельной строкой: слова подписи не рвутся посреди слова, длинное имя обрезается (СЦ-7, N9) */}
+            <span className="block max-w-full truncate text-muted-foreground" title={proof.file_name}>
+              {proof.file_name}
             </span>
             <ProofClaim proof={proof} />
             {proof.status === 'rejected' && proof.reject_reason ? (

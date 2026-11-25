@@ -1,4 +1,4 @@
-import { Button, Skeleton } from "antd";
+import { Button, Skeleton, Tag } from "antd";
 import { useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { LongText } from "../../../shared/ui/LongText";
 import { CloseMenu } from "../messages/CloseMenu";
 import { HandOverButton } from "../messages/HandOver";
 import { useRefreshMessages } from "../messages/actions";
@@ -78,6 +79,13 @@ function consentText(t: TFunction, fmt: Format, card: LeadCard): string {
   });
 }
 
+/** Запрос лида — тот же текст, что уже есть в его сообщениях (письмо: запрос = тело письма). */
+function repeatsMessage(need: string, messages: readonly { text: string }[]): boolean {
+  const squash = (value: string) => value.replace(/\s+/g, " ").trim();
+  const wanted = squash(need);
+  return wanted.length > 0 && messages.some((message) => squash(message.text).includes(wanted));
+}
+
 function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClose: () => void }) {
   const { t } = useTranslation(["leads", "messages", "clients"]);
   const fmt = useFormat();
@@ -106,13 +114,19 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const noChannel = card.reply_via === null;
   const callOnly = noChannel ? card.contacts.phone : null;
   const facts = factRows(t, card.facts);
+  // Запрос из письма уже напечатан сообщением ниже: второй раз целиком не показываем (СЦ-7, N5)
+  const need = card.need && !repeatsMessage(card.need, card.last_messages) ? card.need : null;
   return (
     <div className="pf-fp-stack">
       <div className="pf-fp-stack" style={{ gap: 4 }}>
         <h3 className="pf-fp-title">{card.name}</h3>
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           <span className="pf-hint">{card.lead}</span>
-          <StatusTag kind="lead" status={card.status} />
+          {card.partner_application != null ? (
+            <Tag>{t("leads:card.partner")}</Tag>
+          ) : (
+            <StatusTag kind="lead" status={card.status} />
+          )}
           {card.discarded ? (
             <span className="pf-hint">
               {t(`leads:discarded.${card.discarded}`)}
@@ -162,6 +176,25 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
                 </LinkButton>
               ) : null,
             },
+            ...(card.partner_application != null
+              ? [
+                  {
+                    label: t("leads:card.partnerOpen"),
+                    value: canEdit(me, "erp.stock") ? (
+                      <LinkButton
+                        type="link"
+                        size="small"
+                        style={{ padding: 0 }}
+                        to="/crm/clients?kind=applications"
+                      >
+                        {`№ ${String(card.partner_application)}`}
+                      </LinkButton>
+                    ) : (
+                      `№ ${String(card.partner_application)}`
+                    ),
+                  },
+                ]
+              : []),
             ...(card.first_response.due_at
               ? [
                   {
@@ -191,17 +224,21 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         />
       </div>
 
-      <div className="pf-fp-block">
-        <h4>{t(card.channel === "telegram" ? "leads:card.facts" : "leads:card.factsOther")}</h4>
-        {card.need ? (
-          <DefinitionList items={[{ label: t("leads:card.need"), value: card.need }]} />
-        ) : null}
-        {facts.length ? (
-          <DefinitionList items={facts} />
-        ) : card.need ? null : (
-          <p className="pf-fp-sub">{t("leads:card.none")}</p>
-        )}
-      </div>
+      {need || facts.length > 0 || !card.need ? (
+        <div className="pf-fp-block">
+          <h4>{t(card.channel === "telegram" ? "leads:card.facts" : "leads:card.factsOther")}</h4>
+          {need ? (
+            <DefinitionList
+              items={[{ label: t("leads:card.need"), value: <LongText text={need} /> }]}
+            />
+          ) : null}
+          {facts.length ? (
+            <DefinitionList items={facts} />
+          ) : need ? null : (
+            <p className="pf-fp-sub">{t("leads:card.none")}</p>
+          )}
+        </div>
+      ) : null}
 
       <div className="pf-fp-block">
         <h4>{t("leads:card.messages")}</h4>
@@ -212,7 +249,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
                 <span className="pf-hint">
                   {t(`leads:card.authors.${message.author}`)} · {fmt.date(message.at, "datetime")}
                 </span>
-                <span className="pf-crm-message-text">{message.text}</span>
+                <LongText className="pf-crm-message-text" text={message.text} />
               </li>
             ))}
           </ol>
@@ -247,7 +284,13 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
             {t("leads:actions.reopen")}
           </Button>
         ) : null}
-        <CloseMenu lead={card.lead} name={card.name} close={rules.close} discard={rules.discard} />
+        <CloseMenu
+          lead={card.lead}
+          name={card.name}
+          close={rules.close}
+          discard={rules.discard}
+          inline
+        />
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}
       </div>
       <ErrorNote message={reopenFailure} />

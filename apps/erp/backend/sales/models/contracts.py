@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.contract_term import ContractRenewalMode, ContractTermRule, DeclinedBy
 from core.models import Currency
 from core.storage import contract_pdf_path, contract_signed_path, get_private_storage
 
@@ -170,6 +171,35 @@ class Contract(models.Model):
 
     valid_from = models.DateField(null=True, blank=True)
     valid_until = models.DateField(null=True, blank=True)
+    # ДС-1: срок считается из правила при подписании (`crm/services/contract_term.py`) и хранится вместе с редакцией шаблона.
+    term_rule = models.CharField(
+        max_length=16, choices=ContractTermRule.choices, blank=True, default="", verbose_name=_("Правило срока")
+    )
+    renewal_mode = models.CharField(
+        max_length=16, choices=ContractRenewalMode.choices, blank=True, default="", verbose_name=_("Продление")
+    )
+    notice_days = models.PositiveSmallIntegerField(default=0, verbose_name=_("Дней на отказ от продления"))
+    last_notice_date = models.DateField(
+        null=True, blank=True, db_index=True, verbose_name=_("Последний день отказа от продления")
+    )
+    term_foreign = models.BooleanField(default=False, verbose_name=_("Иностранный контрагент"))
+    renewals_count = models.PositiveSmallIntegerField(default=0, verbose_name=_("Продлений"))
+    renewal_declined_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Отказ от продления"))
+    renewal_declined_by = models.CharField(
+        max_length=8, choices=DeclinedBy.choices, blank=True, default="", verbose_name=_("Кто отказался от продления")
+    )
+    term_reminders = models.JSONField(
+        default=list, blank=True, verbose_name=_("Отправленные напоминания"), help_text=_("Метки вида `30:2026-12-01`")
+    )
+    supersedes = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="superseded_by",
+        verbose_name=_("Заменяет договор"),
+        help_text=_("Новая редакция шаблона на подпись: прежний договор действует до её подписания."),
+    )
     notes = models.TextField(blank=True)
 
     created_by = models.ForeignKey(

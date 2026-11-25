@@ -23,3 +23,19 @@ body,
     min-width: min(100%, 160px);
   }
 }
+
+/* LongText: длинный текст свёрнут до шести строк (СЦ-7, N5) */
+.pf-long-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pf-long-text[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+.pf-long-text-toggle {
+  padding-inline: 0;
+  height: auto;
+}

@@ -21,31 +21,69 @@ export interface HelpArticle {
 
 export const HELP_ARTICLES: HelpArticle[] = [
   {
+    id: 'partner-contract',
+    category: 'general',
+    routePatterns: ['/company'],
+    title: {
+      ru: 'Партнёрский договор: прочитать, согласовать, вернуть, загрузить скан',
+      uz: 'Hamkorlik şartnomasi: öqiş, kelişiş, qaytariş, skan yuklaş',
+      en: 'Partner contract: read, agree, return, upload the scan',
+    },
+    summary: {
+      ru: 'Что делать, когда мы отправили вам партнёрский договор.',
+      uz: 'Sizga hamkorlik şartnomasi yuborilganda nima qiliş kerak.',
+      en: 'What to do when we have sent you a partner contract.',
+    },
+    content: {
+      ru: [
+        'Откройте «Компания» — карточка «Партнёрский договор». Кнопка «Открыть договор» показывает файл, который мы отправили.',
+        'Если всё устраивает, нажмите «Согласовать проект договора». Если нет — «Вернуть с замечанием» и напишите, что изменить: мы подготовим новую версию.',
+        'После согласия подпишите договор и загрузите скан: «Загрузить скан» (PDF или изображение). Скан можно заменить.',
+        'Когда мы подтвердим договор, в меню откроются разделы партнёра.',
+        'Согласовать, вернуть и загрузить скан может представитель с правом подтверждать действия.',
+      ],
+      uz: [
+        '«Kompaniya» böliminda «Hamkorlik şartnomasi» kartasini oçing. «Şartnomani oçiş» tugmasi biz yuborgan faylni körsatadi.',
+        'Hammasi mos bölsa, «Şartnoma loyihasini kelişiş»ni bosing. Aks holda «Izoh bilan qaytariş» orqali nimani özgartiriş kerakligini yozing: yangi versiyani tayyorlaymiz.',
+        'Kelişgaçdan keyin şartnomani imzolang va skanni yuklang: «Skanni yuklaş» (PDF yoki rasm). Skanni almaştiriş mumkin.',
+        'Şartnomani tasdiqlaganimizda, menyuda hamkor bölimlari oçiladi.',
+        'Kelişiş, qaytariş va skan yuklaşni harakatlarni tasdiqlaş huquqi bor vakil bajaradi.',
+      ],
+      en: [
+        'Open “Company” and find the “Partner contract” card. “Open contract” shows the file we sent.',
+        'If it suits you, press “Agree the draft contract”. If not, use “Return with a remark” and write what to change: we will prepare a new version.',
+        'After you agree, sign the contract and upload the scan with “Upload scan” (PDF or image). You can replace the scan.',
+        'Once we confirm the contract, the partner sections open in the menu.',
+        'Agreeing, returning and uploading the scan is done by a representative who may confirm actions.',
+      ],
+    },
+  },
+  {
     id: 'quotes-accept',
     category: 'quotes',
     routePatterns: ['/', '/quotes'],
     title: {
-      ru: 'Как принять или отклонить КП',
-      uz: 'TTni qanday qabul qiliş yoki rad etiş',
+      ru: 'Как принять или отклонить предложение',
+      uz: 'Tijorat taklifini qanday qabul qiliş yoki rad etiş',
       en: 'How to accept or reject a quote',
     },
     summary: {
-      ru: 'Порядок подтверждения КП одноразовым кодом из письма (или из Telegram, если он подключён).',
+      ru: 'Порядок подтверждения предложения одноразовым кодом из письма (или из Telegram, если он подключён).',
       uz: 'Bir martalik kod orqali tijorat taklifini tasdiqlaş tartibi.',
       en: 'Procedure for confirming a quote via one-time code.',
     },
     content: {
       ru: [
-        'Откройте карточку нужного коммерческого предложения в разделе «КП».',
-        'Если у вас есть право подтверждать, на КП есть кнопки «Принять» и «Отклонить».',
+        'Откройте нужное коммерческое предложение в разделе «Предложения».',
+        'Если у вас есть право подтверждать, у предложения есть кнопки «Принять» и «Отклонить».',
         'При нажатии «Принять» вам будет направлен одноразовый 6-значный код (в Telegram или на почту). Введите его в поле подтверждения.',
-        'После кода КП принято — договор появится в «Договорах».',
+        'После кода предложение принято — договор появится в «Договорах».',
       ],
       uz: [
-        '«TT» bölimida kerakli tijorat taklifi kartoçkasini oçing.',
-        'Agar sizda tasdiqlaş huquqi bö‘lsa, TTda «Qabul qiliş» va «Rad etiş» tugmalari bö‘ladi.',
-        '«TTni qabul qiliş» tugmasi bosilganda Telegram yoki poçtangizga 6 xonali tasdiqlaş kodi yuboriladi.',
-        'Kod kiritilgaç TT qabul qilinadi — şartnoma «Şartnomalar» bölimida paydo bö‘ladi.',
+        '«Takliflar» bölimida kerakli tijorat taklifini oçing.',
+        'Agar sizda tasdiqlaş huquqi bölsa, takliflarda «Qabul qiliş» va «Rad etiş» tugmalari böladi.',
+        '«Taklifni qabul qiliş» tugmasi bosilganda Telegram yoki poçtangizga 6 xonali tasdiqlaş kodi yuboriladi.',
+        'Kod kiritilgaç taklif qabul qilinadi — şartnoma «Şartnomalar» bölimida paydo böladi.',
       ],
       en: [
         'Open the commercial quote in the "Quotes" section.',
@@ -106,24 +144,24 @@ export const HELP_ARTICLES: HelpArticle[] = [
       en: 'How to agree a contract and accept an act',
     },
     summary: {
-      ru: 'Договор согласуют в кабинете, подписывают в ЭДО.',
-      uz: 'Şartnoma kabinetda kelişiladi, EHTda imzolanadi.',
-      en: 'You agree the contract in your account; it is signed in e-document exchange.',
+      ru: 'Договор согласуют в кабинете, затем выставляют на подписание.',
+      uz: 'Şartnoma kabinetda kelişiladi, söngra imzolaşga qöyiladi.',
+      en: 'You agree the contract in your account; then it is sent for signing.',
     },
     content: {
       ru: [
         'Откройте «Договоры»: у договора «Ждёт вашего согласования» нажмите «Согласовать».',
-        'Согласование подтверждает текст договора. Подписание — отдельный шаг: договор придёт вам в ЭДО, мы сообщим, когда он подписан.',
+        'Согласование подтверждает текст договора. Подписание — отдельный шаг: мы выставим договор на подписание и сообщим, когда он подписан.',
         'Акт — в «Актах»: нажмите «Принять», если всё в порядке, или «Вернуть» и опишите причину.',
       ],
       uz: [
         '«Şartnomalar» bölimini oçing: «Kelişişingizni kutmoqda» holatidagi şartnomada «Kelişiş» tugmasini bosing.',
-        'Kelişiş şartnoma matnini tasdiqlaydi. Imzolaş — alohida qadam: şartnoma sizga EHTda keladi, imzolanganda xabar beramiz.',
+        'Kelişiş şartnoma matnini tasdiqlaydi. Imzolaş — alohida qadam: biz şartnomani imzolaşga qöyamiz va imzolanganda xabar beramiz.',
         'Dalolatnoma «Dalolatnomalar» bölimida: hammasi joyida bölsa «Qabul qiliş», aks holda «Qaytariş» tugmasini bosing va sababini yozing.',
       ],
       en: [
         'Open “Contracts”: for a contract marked “Awaiting your agreement” press “Agree”.',
-        'Agreeing confirms the text of the contract. Signing is a separate step: the contract comes to you via e-document exchange, and we will tell you when it is signed.',
+        'Agreeing confirms the text of the contract. Signing is a separate step: we will send the contract for signing and tell you when it is signed.',
         'An act is under “Acts”: press “Accept” if everything is fine, or “Return” and describe the reason.',
       ],
     },
@@ -165,7 +203,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: 'deliveries',
     routePatterns: ['/deliveries'],
     title: {
-      ru: 'Отслеживание доставки и отгрузок',
+      ru: 'Отслеживание поставок и отгрузок',
       uz: 'Yetkazib beriş va jönatmalarni kuzatiş',
       en: 'Shipment and delivery tracking',
     },
@@ -178,7 +216,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       ru: [
         'Раздел «Поставки» содержит подробную информацию обо всех отгрузках по вашим проектам.',
         'Для каждой поставки отображаются текущий статус, ориентировочная дата прибытия и список позиций.',
-        'При изменении статуса доставки (отправлено, прибыло) вам поступит уведомление в выбранные каналы связи.',
+        'При изменении статуса поставки (отправлено, прибыло) вам поступит уведомление в выбранные каналы связи.',
       ],
       uz: [
         '«Yetkazib beriş» bölimida barça jönatmalar böyiça töliq maʼlumot mavjud.',
@@ -244,7 +282,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     content: {
       ru: [
         'В разделе «Профиль» подключите наш Telegram-бот: уведомления будут приходить в него, а кабинет откроется прямо в боте.',
-        'В таблице «Каналы уведомлений» вы можете настроить, какие категории событий (документы, финансы, доставка, сообщения) отправлять на почту или в Telegram.',
+        'В таблице «Каналы уведомлений» вы можете настроить, какие категории событий (документы, финансы, поставки, сообщения) отправлять на почту или в Telegram.',
         'Оповещения безопасности (вход с нового устройства, изменение реквизитов) обязательны и доставляются во все доступные каналы.',
       ],
       uz: [
@@ -280,7 +318,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Документы к своей карточке (сертификат, паспорт) сначала проверяет сотрудник: пока документ «На проверке», клиенты его не видят. Удалить можно только присланный вами документ.',
       ],
       uz: [
-        'Prays şablon bö‘yiça yuklang — kartoçkalar qoralama bölib çiqadi.',
+        'Prays şablon böyiça yuklang — kartoçkalar qoralama bölib çiqadi.',
         'Ularni tekşiruvga yuboring: tekşiruvdan keyin katalogda eʼlon qilamiz.',
         'Kartoçkaga yuklangan hujjatlarni (sertifikat, pasport) avval xodim tekşiradi: «Tekşiruvda» holatida mijozlar ularni körmaydi. Faqat özingiz yuborgan hujjatni öçiriş mumkin.',
       ],
@@ -302,7 +340,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     summary: {
       ru: 'Вопросы по заявкам, поставкам и документам.',
-      uz: 'Arizalar, yetkazib beriş va hujjatlar bö‘yiça savollar.',
+      uz: 'Arizalar, yetkazib beriş va hujjatlar böyiça savollar.',
       en: 'Questions about requests, deliveries and documents.',
     },
     content: {

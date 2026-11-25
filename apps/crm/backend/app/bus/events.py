@@ -347,11 +347,15 @@ async def user_deactivated(
     await _publish(session, USER_DEACTIVATED, data, f"user/{user_id}")
 
 
-async def mail_result(session: AsyncSession, row: EmailLog) -> None:
+async def mail_result(
+    session: AsyncSession, row: EmailLog, *, bounce_reason: str | None = None
+) -> None:
     """Итог письма другой системы (W18A-P1): `sent` или `failed` — в транзакции смены статуса.
 
     Только для запросов по шине с `notify`; свои письма CRM итогов не публикуют. Ни текста, ни
-    адресов — ключ запроса, назначение и объект отправителя.
+    адресов — ключ запроса, назначение и объект отправителя. `bounce_reason` — отчёт о недоставке
+    пришёл уже после «отправлено» (почта приняла и вернула): итог `failed` с кодом причины отчёта,
+    отправитель узнаёт, что письмо до адресата не дошло.
     """
     if row.source == "crm" or not row.notify or row.request_key is None:
         return
@@ -365,11 +369,11 @@ async def mail_result(session: AsyncSession, row: EmailLog) -> None:
     }
     if row.ref_kind and row.ref_id:
         data["ref"] = {"kind": row.ref_kind, "id": row.ref_id}
-    if row.status == "sent":
+    if row.status == "sent" and bounce_reason is None:
         data["sent_at"] = snapshots.utc(row.sent_at or datetime.now(UTC))
         event_type = MAIL_SENT
     else:
-        reason, _, detail = (row.error or "failed").partition(":")
+        reason, _, detail = (bounce_reason or row.error or "failed").partition(":")
         data["failed_at"] = snapshots.utc(datetime.now(UTC))
         data["reason"] = _reason_code(reason)
         detail = _ADDRESS.sub("<адрес>", detail).strip()

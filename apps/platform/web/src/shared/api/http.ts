@@ -5,6 +5,7 @@
  * экран входа появится в фазе P1.
  */
 import { ApiError, toApiError } from "./errors";
+import i18n from "../i18n";
 import { freshStepUp } from "./stepUp";
 
 const CSRF_COOKIE = "rt_pf_csrf";
@@ -34,6 +35,10 @@ function withSession(options: RequestInit): RequestInit {
   // ДВ-4б: свежий код второго фактора идёт с изменяющими запросами, пока токен действует
   const stepUp = SAFE_METHODS.has(method) ? null : freshStepUp();
   if (stepUp && !headers.has("X-Step-Up-Token")) headers.set("X-Step-Up-Token", stepUp);
+  // Тексты, которые BFF собирает сам (строки «Главной»), — на языке интерфейса (СЦ-7, N1)
+  if (!headers.has("Accept-Language") && i18n.language) {
+    headers.set("Accept-Language", i18n.language.slice(0, 2));
+  }
   return { ...options, headers, credentials: "same-origin" };
 }
 

@@ -90,7 +90,7 @@ describe("Проект: карточка", () => {
     const execution = screen.getByRole("heading", { name: "Исполнение" }).closest(".ant-card");
     expect(execution).toHaveTextContent("Отгружено");
     expect(execution).toHaveTextContent("TRK-4471");
-    expect(execution).toHaveTextContent("Здесь отмечают, что товар в пути и доставлен");
+    expect(execution).not.toHaveTextContent("Склад · Отгрузки"); // без пересказа процесса (СЦ-8)
     // у бухгалтера раздел «Склад» только для чтения — отметок доставки нет (L0-1)
     expect(
       within(execution as HTMLElement).queryByRole("button", { name: "Доставлено" }),
@@ -121,6 +121,31 @@ describe("Проект: карточка", () => {
     expect(screen.queryByRole("list", { name: "История акта" })).toBeNull();
     // колонки справа внутри страницы больше нет
     expect(document.querySelector(".pf-dec-side")).toBeNull();
+  });
+
+  it("СЦ-8: в шапке один статус — проблема, если она есть; без договора клиенту не предлагают его согласовать", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(104));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    // проекта договора нет: слово для клиента — «Готовим договор», но при проблеме в шапке только она
+    expect(screen.getAllByText("Проекта договора нет")).toHaveLength(1);
+    expect(screen.queryByText(ruProjects.clientStatus.contract_preparing)).toBeNull();
+    expect(screen.queryByText(ruProjects.clientStatus.contract_review)).toBeNull();
+  });
+
+  it("СЦ-8: без проблем в шапке — слово для клиента по факту: договор отправлен — «Согласуйте редакцию»", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(105));
+    await screen.findByRole("region", { name: "Документы проекта" });
+    expect(screen.getAllByText(ruProjects.clientStatus.contract_review)).toHaveLength(1);
+  });
+
+  it("СЦ-8: у проекта без договора в строке «Акт» — «Акта ещё нет.», без просьбы выставить счёт", async () => {
+    signIn("director@demo.example");
+    renderAt(PR(104));
+    const docs = await screen.findByRole("region", { name: "Документы проекта" });
+    expect(within(docs).getByText("Акта ещё нет.")).toBeVisible();
+    expect(docs).not.toHaveTextContent("выставьте его");
   });
 
   it("«История»: журнал проекта один, договор/акт — фильтры; пустые вкладки не показываются", async () => {

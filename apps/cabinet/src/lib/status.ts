@@ -29,7 +29,7 @@ export type StatusCode<E extends StatusEntity> = StatusMaps[E];
 
 const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
   request: { new: 'info', in_progress: 'info', quoted: 'warning', closed: 'neutral' },
-  quote: { sent: 'warning', viewed: 'warning', accepted: 'success', rejected: 'danger', expired: 'neutral' },
+  quote: { sent: 'warning', viewed: 'warning', accepted: 'success', rejected: 'danger', expired: 'neutral', closed: 'neutral' },
   contract: {
     sent: 'warning',
     signed_by_client: 'info',

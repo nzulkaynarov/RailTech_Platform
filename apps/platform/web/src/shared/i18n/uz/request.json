@@ -89,7 +89,9 @@
     "title": "Ariza yaratildi",
     "text": "Ariza hisobga olinmoqda; ariza raqami mijoz kartasida paydo böladi.",
     "repeated": "Bu ariza allaqaçon yaratilgan — uni körsatamiz.",
-    "openClient": "Mijoz kartasini oçiş"
+    "waits": "Rezolyutsiya kutilmoqda.",
+    "failed": "Hisobga uzatilmadi: mijoz kartoçkasida qayta yuboring.",
+    "open": "Arizani oçiş"
   },
   "errors": {
     "company": "Kompaniyani tanlang",
@@ -114,7 +116,8 @@
     "request_not_retryable": "Qayta yuboriş yordam bermaydi: yuborilgandan keyin ariza maʼlumotlari özgardi — arizani qayta yarating",
     "enqueue_failed": "Yuborişni navbatga qöyib bölmadi — birozdan keyin qayta urinib köring",
     "generic": "Ariza yaratib bölmadi. Şakl maʼlumotlari saqlandi — qayta urinib köring",
-    "letter_uploading": "Fayl yuklanişini kuting"
+    "letter_uploading": "Fayl yuklanişini kuting",
+    "do_not_work": "Bu kompaniya bilan işlamaymiz: ariza yaratib bölmaydi"
   },
   "sections": {
     "request": "Sörov",
@@ -132,6 +135,46 @@
     "fallback": {
       "no_crm_mapping": "Darhol hisob-kitobga boʼlmaydi: siz hisob-kitobga ulanmagansiz. Ariza rezolyusiyaga ketadi{{urgent}}.",
       "inactive": "Darhol hisob-kitobga boʼlmaydi: hisobingiz oʼchirilgan. Ariza rezolyusiyaga ketadi{{urgent}}."
+    }
+  },
+  "who": {
+    "legend": "Bu kim?",
+    "client": "Mijoz",
+    "partner": "Hamkor"
+  },
+  "partner": {
+    "title": "Hamkor",
+    "intro": "Ariza “Hamkor arizalari”ga ketadi. Lid mijoz bölmaydi.",
+    "company": "Kompaniya",
+    "country": "Davlat",
+    "inn": "STIR",
+    "contact": "Aloqa şaxsi",
+    "email": "Poçta",
+    "phone": "Telefon",
+    "offer": "Nima taklif qiladi",
+    "channelsHint": "Poçta kerak: şartnoma şu manzilga keladi",
+    "submit": "Hamkor sifatida topşiriş",
+    "submitting": "Topşirilmoqda…",
+    "cancel": "Bekor qiliş",
+    "done": {
+      "title": "Lid hamkor sifatida topşirildi",
+      "text": "Ariza yaratildi, lid yopildi.",
+      "repeated": "Lid avval topşirilgan — bu öşa ariza.",
+      "open": "Hamkor arizalarini oçiş",
+      "close": "Yopiş"
+    },
+    "errors": {
+      "company": "Kompaniyani kiriting",
+      "contact": "Aloqa şaxsini kiriting",
+      "offer": "Hamkor nima taklif qilişini yozing",
+      "email": "Poçtani kiriting",
+      "request_not_allowed": "Lid allaqaçon yopilgan",
+      "erp_not_configured": "Hisob ulanmagan",
+      "not_lead_owner": "Bu lidni boşqa xodim yuritadi",
+      "erp_unavailable": "Hisob javob bermayapti — maʼlumotlar saqlandi, birozdan keyin qayta urinib köring",
+      "generic": "Topşirib bölmadi. Maʼlumotlar saqlandi — qayta urinib köring",
+      "invalid_email": "Poçta manzilini tekşiring",
+      "VALIDATION_FAILED": "Kiritilganni tekşiring"
     }
   }
 }

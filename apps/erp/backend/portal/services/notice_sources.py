@@ -338,3 +338,40 @@ def partner_goods_received(receipt) -> int:
         bot_reaches=False,
     )
     return len(rows)
+
+
+def contract_renewed(contracts, company, *, until: str) -> None:
+    """ДС-1: срок договора продлён (сам или по соглашению). Одно уведомление на компанию и новую дату окончания: в нём
+    номера всех продлённых договоров; ключ повтора — те же договоры и дата (повторная отправка строк не добавляет)."""
+    first = contracts[0]
+    template = first.template
+    text = ((template.renewal_notice or {}) if template is not None else {}).get("ru", "")
+    ids = "-".join(str(c.pk) for c in contracts)
+    notify(
+        "contract_renewed",
+        company=company,
+        object_id=first.pk,
+        object_number=first.number,
+        params={
+            "number": ", ".join(c.number for c in contracts),
+            "until": until,
+            "count": len(contracts),
+            "note": text,
+        },
+        link="/contracts",
+        dedup=f"{company.pk}:{until}:{ids}",
+    )
+
+
+def contract_renewal_declined(contract) -> None:
+    """ДС-1: компания отказалась от продления — договор закончится в конце срока."""
+    until = contract.valid_until.isoformat() if contract.valid_until else ""
+    notify(
+        "contract_renewal_declined",
+        company=contract.deal.company,
+        object_id=contract.pk,
+        object_number=contract.number,
+        params={"number": contract.number, "until": until},
+        link="/contracts",
+        dedup=f"{contract.pk}:{until}",
+    )

@@ -281,8 +281,44 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
     )
 
 
+def _clean_term_fields(data: dict) -> dict:
+    """ДС-1: поля срока шаблона договора; неверное значение — `TEMPLATE_TERM_INVALID`. Пусто — «как у компании»."""
+    from core.contract_term import ContractRenewalMode, ContractTermRule
+
+    out: dict = {}
+    if "term_rule" in data:
+        if data["term_rule"] not in ("", None, *ContractTermRule.values):
+            raise ValidationError("TEMPLATE_TERM_INVALID")
+        out["term_rule"] = data["term_rule"] or ""
+    if "renewal_mode" in data:
+        if data["renewal_mode"] not in ("", None, *ContractRenewalMode.values):
+            raise ValidationError("TEMPLATE_TERM_INVALID")
+        out["renewal_mode"] = data["renewal_mode"] or ""
+    for key, top in (("notice_days", 365), ("confidentiality_years", 50)):
+        if key in data:
+            raw = data[key]
+            if raw in ("", None):
+                out[key] = None
+                continue
+            if isinstance(raw, bool) or not isinstance(raw, int) or not 0 <= raw <= top:
+                raise ValidationError("TEMPLATE_TERM_INVALID")
+            out[key] = raw
+    if "trade_secret_indefinite" in data:
+        if not isinstance(data["trade_secret_indefinite"], bool):
+            raise ValidationError("TEMPLATE_TERM_INVALID")
+        out["trade_secret_indefinite"] = data["trade_secret_indefinite"]
+    if "renewal_notice" in data:
+        notice = data["renewal_notice"] or {}
+        if not isinstance(notice, dict) or any(
+            k not in ("ru", "uz", "en") or not isinstance(v, str) or len(v) > 300 for k, v in notice.items()
+        ):
+            raise ValidationError("TEMPLATE_TERM_INVALID")
+        out["renewal_notice"] = {k: v.strip() for k, v in notice.items() if v.strip()}
+    return out
+
+
 @transaction.atomic
-def update_template(template, *, name=None, kind_code=None, body_html=None, is_active=None):
+def update_template(template, *, name=None, kind_code=None, body_html=None, is_active=None, term=None):
     """Update a template. Re-sanitises + re-derives placeholders when the body changes."""
     from .contract_templates import is_locked
 
@@ -296,7 +332,13 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
         or (is_active is not None and bool(is_active) != template.is_active)
     ):
         raise ValidationError("TEMPLATE_LOCKED")
+    clean_term = _clean_term_fields(term or {})
+    if is_locked(template) and any(getattr(template, key) != value for key, value in clean_term.items()):
+        raise ValidationError("TEMPLATE_LOCKED")  # срок договора — часть редакции: меняется новой редакцией
     fields = ["updated_at"]
+    for key, value in clean_term.items():
+        setattr(template, key, value)
+        fields.append(key)
     if name is not None:
         if not name.strip():
             raise ValidationError("TEMPLATE_NAME_REQUIRED")

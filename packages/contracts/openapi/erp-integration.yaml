@@ -69,6 +69,8 @@ tags:
   - name: users
     description: Провижининг сотрудников и отзыв сессий (ADR-0003)
   - name: system
+  - name: partners
+    description: Заявки кандидатов в партнёры из CRM (ЛП-1)
   - name: pairing
     description: Сопряжение CRM ↔ ERP одним кодом и ротация ключей без простоя (M3-ERP-05, M3-CRM-10)
 
@@ -339,6 +341,51 @@ paths:
             `erp_request_conflict`, менеджер создаёт заявку заново. `COMPANY_DO_NOT_WORK` — у компании отметка «Не работать»
             (Х-8): новая заявка не создана; CRM помечает заявку `failed` с причиной `erp_company_do_not_work`, повтор —
             после снятия отметки в ERP.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /partner-applications:
+    post:
+      tags: [partners]
+      operationId: createPartnerApplication
+      summary: Заявка кандидата в партнёры из карточки лида CRM («Партнёр», ЛП-1)
+      description: |
+        Менеджер CRM отвечает на вопрос «Кто это?» в карточке лида словом «Партнёр»: ERP заводит заявку кандидата в
+        очередь «Заявки партнёров» (`source = lead`, `source_ref` = номер лида `lead_number`). Согласия кандидата ещё нет —
+        дальше обычный договорный шлюз; компания создаётся при одобрении, а не здесь. Идемпотентно по `lead_number`:
+        повтор и параллельный повтор (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй строки в очереди;
+        отклонённая заявка повтор не блокирует. Почта обязательна.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationIn'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: 'Заявка по этому лиду уже есть — возвращена она же (`created: false`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationOut'
+        '201':
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: '`IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом'
           content:
             application/json:
               schema:
@@ -1105,6 +1152,71 @@ components:
           type: string
           format: date-time
 
+    PartnerApplicationIn:
+      type: object
+      description: Заявка кандидата в партнёры из карточки лида CRM (ЛП-1)
+      required: [crm_lead_id, lead_number, company_name, categories_description, contact_name, email]
+      properties:
+        crm_lead_id:
+          type: integer
+          format: int64
+          minimum: 1
+        lead_number:
+          type: string
+          maxLength: 32
+          description: Номер лида (`L-0123`) — `source_ref` заявки и ключ идемпотентности
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        country:
+          type: string
+          maxLength: 2
+          default: UZ
+          description: ISO 3166-1 alpha-2
+        inn:
+          type: string
+          maxLength: 32
+          default: ''
+        kind:
+          type: string
+          enum: [manufacturer, supplier, principal, other]
+          default: supplier
+        categories_description:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Что предлагает кандидат (из запроса лида)
+        contact_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Почта кандидата — по ней договорный шлюз ERP приглашает его согласовать договор; обязательна
+        phone:
+          type: string
+          maxLength: 32
+          default: ''
+        language:
+          type: string
+          enum: [ru, uz, en]
+          default: ru
+    PartnerApplicationOut:
+      type: object
+      required: [erp_application_id, status, created]
+      properties:
+        erp_application_id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
+        created:
+          type: boolean
+          description: '`false` — заявка по этому лиду уже была'
     ClientRequestIn:
       type: object
       description: Заявка из «Создать заявку» CRM (CRM-03); лишние поля — 422

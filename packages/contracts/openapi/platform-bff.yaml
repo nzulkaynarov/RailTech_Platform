@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.124.0
+  version: 0.126.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.125.0 (ЛП-1) — ломающее по oasdiff (до 1.0 допустимо): новое значение `PartnerApplicationSource.lead`** (заявка
+    партнёра заведена из карточки лида; очередь «Заявки партнёров» показывает источник «Лид»). Остальное в ЛП-1 аддитивно:
+    `POST /crm/leads/{lead}/partner`, `LeadCard.partner_application`.
 
     **0.122.0 (СЦ-9, подпись — задача подписанта; замещение) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `QueueItemKind.sign_document`.** Строка «Подписать» в «Моих задачах»: исходящее письмо, переданное на подпись (подписанта
@@ -13365,6 +13369,81 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc-close-reasons:
+    get:
+      tags: [calc]
+      operationId: listCalcCloseReasons
+      summary: 'Расчёт · Причины «Закрыть заявку» (справочник)'
+      description: >-
+        ERP `GET /calc/close-reasons/`: действующие причины из справочника `request-close-reasons` (данные, правятся в
+        «Настройки · Справочники») с правилами — нужен ли комментарий и допустима ли причина, когда КП уже у клиента.
+        Раздел `erp.calc` — чтение.
+      responses:
+        '200':
+          description: Причины по порядку справочника
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcCloseReasonList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc-request/{number}:
+    get:
+      tags: [calc]
+      operationId: getCalcRequestCard
+      summary: 'Расчёт · Карточка заявки (с заданием расчёта и без) для «Закрыть заявку»'
+      description: >-
+        ERP `GET /calc/{deal_id}/request/` (ЛХ-2). Заявка ищется по номеру ЗВ среди всех заявок, не только с заданием расчёта:
+        черновик из передачи лида открывается карточкой (номер, клиент, текст и файлы заявки, `close`). Раздел `erp.calc` —
+        чтение. Нет такой заявки — 404.
+      parameters:
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Карточка заявки
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcRequestCard'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/close:
+    post:
+      tags: [calc]
+      operationId: closeCalcRequest
+      summary: 'Расчёт · «Закрыть заявку» на любом шаге до проекта'
+      description: >-
+        ERP `POST /calc/{deal_id}/close/` (ЛХ-2). Причина — код из `GET /erp/calc-close-reasons`, комментарий обязателен у
+        причины с `requires_comment`. Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной, резервы
+        снимаются, из очередей «Заявки в расчёте» заявка уходит. «Оформлена по ошибке» и «Тест» без отправленных клиенту
+        документов скрывают заявку из списков по умолчанию (записи и журнал остаются, удаления нет). КП уже у клиента —
+        только причины, допустимые после отправки (иначе 409 `reason_not_allowed_after_quote`); отправленное КП закрывается.
+        Право — ответственный заявки или держатель зоны продаж (`deal.manage`), иначе 403. Проект (после принятия КП) и уже
+        закрытая заявка — 409 `request_not_closable`. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcCloseIn'}
+      responses:
+        '200':
+          description: Заявка закрыта
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcRequestCard'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/calc/{number}/parse:
     post:
       tags: [calc]
@@ -13683,6 +13762,34 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/PriceRequest'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/price-requests/preview:
+    post:
+      tags: [calc]
+      operationId: previewCalcPriceRequest
+      summary: 'Расчёт · Предпросмотр запроса цены партнёру'
+      description: >-
+        ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PriceRequestIn'}
+      responses:
+        '200':
+          description: 'Расчёт · Предпросмотр запроса цены партнёру'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequestPreview'}
         '401': {$ref: '#/components/responses/SessionExpired'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -14659,6 +14766,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestResolutionView'
+
+  /crm/leads/{lead}/partner:
+    post:
+      tags: [requests]
+      operationId: handOverCrmLeadAsPartner
+      summary: '«Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)'
+      description: >-
+        CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент):
+        CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид
+        исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки.
+        Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой,
+        второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM —
+        `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: lead
+          in: path
+          required: true
+          description: Номер лида
+          schema: {type: string, pattern: '^[Ll]-?\d{1,9}$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerHandoffIn'
+      responses:
+        '200':
+          description: Лид уже передан как партнёр — та же заявка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
+        '201':
+          description: Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerHandoffView'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /crm/requests/{deal}/retry:
     post:
@@ -16651,6 +16809,150 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/contract-options:
+    get:
+      tags: [erp-catalog]
+      operationId: getPartnerContractOptions
+      summary: 'Расчёт · Заявка в партнёры: из чего готовить договор'
+      description: ERP `GET catalog/partner-applications/contract-options/`. Утверждённые партнёрские шаблоны библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает (держатели зоны «Право»). Пустой список шаблонов — договор готовится только своим файлом, а ссылка на библиотеку названа в интерфейсе.
+      responses:
+        '200':
+          description: Параметры подготовки договора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerContractOptions'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/prepare-contract:
+    post:
+      tags: [erp-catalog]
+      operationId: preparePartnerContract
+      summary: 'Расчёт · Заявка в партнёры: подготовить договор из шаблона'
+      description: ERP `POST catalog/partner-applications/{id}/prepare-contract/` — право `supply.manage`. Договор по утверждённому шаблону библиотеки (`template_id` или умолчание настроек) на языке договора. Без отступлений — готов к отправке; с текстом отступления — запрос держателю «Право». Нет утверждённых шаблонов — 422 `no_approved_partner_template`, встроенного образца нет.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerContractPrepareRequest'
+      responses:
+        '200':
+          description: Договор подготовлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/prepare-contract-file:
+    post:
+      tags: [erp-catalog]
+      operationId: uploadPartnerContractFile
+      summary: 'Расчёт · Заявка в партнёры: загрузить свой файл договора'
+      description: ERP `POST catalog/partner-applications/{id}/prepare-contract/` (multipart) — право `supply.manage`. BFF читает тело до 21 МБ и передаёт ERP как есть; файл — PDF или DOCX до 20 МБ, содержимое сверяется с расширением. Свой файл всегда идёт на решение держателя «Право».
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PartnerContractFileUpload'
+      responses:
+        '200':
+          description: Файл принят, договор ждёт решения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 20 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/contract-decision:
+    post:
+      tags: [erp-catalog]
+      operationId: decidePartnerContract
+      summary: 'Расчёт · Заявка в партнёры: решение по договору (зона «Право»)'
+      description: ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerContractDecisionRequest'
+      responses:
+        '200':
+          description: Решение записано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/document:
+    get:
+      tags: [erp-catalog]
+      operationId: downloadPartnerApplicationDocument
+      summary: 'Расчёт · Заявка в партнёры: договор или скан подписанного'
+      description: Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+      parameters:
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: which, in: query, required: false, schema: {type: string, enum: [contract, scan], default: contract}}
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -17966,7 +18268,7 @@ components:
       description: >-
         409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
         (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
-        `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
+        `no_lines`, `quote_below_cost`, `fx_rate_missing`, `request_not_closable`, `reason_not_allowed_after_quote`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
       content:
         application/json:
           schema:
@@ -19210,6 +19512,7 @@ components:
     TelegramConnector:
       description: 'Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.'
       properties:
+        channel_can_invite: {description: 'Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно.', type: [boolean, 'null']}
         channel_id: {type: [integer, 'null']}
         channel_title: {type: [string, 'null']}
         configured: {type: boolean}
@@ -20555,7 +20858,7 @@ components:
     Employee:
       type: object
       additionalProperties: false
-      required: [id, name, initials, email, roles, access, status, telegram_linked, erp_sync]
+      required: [id, name, initials, email, roles, access, status, telegram_linked, telegram, erp_sync]
       properties:
         id:
           type: string
@@ -20588,7 +20891,16 @@ components:
           $ref: '#/components/schemas/EmployeeStatus'
         telegram_linked:
           type: boolean
-          description: Привязан Telegram для уведомлений сотруднику
+          description: Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`)
+        telegram:
+          type: string
+          enum: [linked, not_linked, blocked]
+          description: >-
+            `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не
+            доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+        deputy:
+          $ref: '#/components/schemas/DeputyPeriod'
+          description: 'Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет'
         erp_sync:
           $ref: '#/components/schemas/ErpSyncState'
         erp_sync_error:
@@ -20846,6 +21158,15 @@ components:
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
+        deputy:
+          description: >-
+            Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у
+            `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает
+            замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора.
+            Только отдельным запросом: вместе с другими полями — 422.
+          oneOf:
+            - $ref: '#/components/schemas/DeputyUpdate'
+            - type: 'null'
 
     MeUpdate:
       type: object
@@ -21690,7 +22011,7 @@ components:
           type: string
         client_status:
           description: 'Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу'
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           description: 'Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось'
@@ -21864,6 +22185,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ProjectContractTemplate'
             - type: 'null'
+        term:
+          description: 'ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractTerm'
+            - type: 'null'
         send_blocker:
           description: 'Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP'
           oneOf:
@@ -21875,6 +22201,37 @@ components:
           type: array
       required: [id, number, status, sent_to_client, total, created_at, client_agreed_at, signed_at, has_pdf, has_scan, actions, history]
       additionalProperties: false
+    ProjectContractTerm:
+      type: object
+      additionalProperties: false
+      description: 'Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится'
+      required: [state, rule, renewal, valid_from, valid_until, last_notice_date, notice_days, renewals_count, foreign, declined_by, declined_at, template_edition, newer_edition, confidentiality_years, trade_secret_indefinite, actions]
+      properties:
+        state:
+          enum: [open, renews, ends, expired]
+          type: string
+          description: 'open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired — срок вышел'
+        rule: {type: string, description: 'calendar_year / twelve_months / open'}
+        renewal: {type: string, description: 'auto / by_agreement / none'}
+        valid_from: {type: string, format: date}
+        valid_until: {type: [string, 'null'], format: date}
+        last_notice_date: {type: [string, 'null'], format: date, description: 'Последний день отказа от продления'}
+        notice_days: {type: integer}
+        renewals_count: {type: integer}
+        foreign: {type: boolean, description: 'Иностранный контрагент: продление соглашением, не автоматом'}
+        declined_by:
+          enum: [company, client, null]
+          type: [string, 'null']
+        declined_at: {type: [string, 'null'], format: date-time}
+        template_edition: {type: [integer, 'null'], description: 'Редакция шаблона, на которой подписан договор'}
+        newer_edition: {type: [integer, 'null'], description: 'Есть более новая утверждённая редакция шаблона'}
+        confidentiality_years: {type: [integer, 'null'], description: 'NDA: лет тайны после окончания договора (справка)'}
+        trade_secret_indefinite: {type: boolean, description: 'NDA: коммерческая тайна без срока (справка)'}
+        actions:
+          type: array
+          items:
+            enum: [decline_renewal, restore_renewal, renew, send_new_edition]
+            type: string
     ProjectContractTemplate:
       type: object
       additionalProperties: false
@@ -22089,7 +22446,7 @@ components:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
         client_status:
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           oneOf:
@@ -22167,9 +22524,9 @@ components:
       description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
-          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation]
+          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition]
           type: string
-          description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»'
+          description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись'
         reason:
           maxLength: 1000
           type: [string, 'null']
@@ -22190,6 +22547,10 @@ components:
         approve:
           type: [boolean, 'null']
           description: 'Только `decide_deviation`, обязательно: одобрить или отклонить'
+        agreement_number:
+          maxLength: 64
+          type: [string, 'null']
+          description: 'Только `renew`: номер дополнительного соглашения, если есть'
       required: [action]
     OnBehalfNote:
       type: object
@@ -22370,6 +22731,7 @@ components:
           description: 'Получатели копии (пункт 1.6); не решают'
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         files:
           type: array
           items: {$ref: '#/components/schemas/EdsFile'}
@@ -22669,6 +23031,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Сумма: служебная записка с суммой после директора идёт бухгалтеру'}
         due_date: {type: [string, 'null'], format: date, description: '«Нужно до» — не в прошлом'}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -22710,6 +23073,7 @@ components:
         text: {type: string, minLength: 1, maxLength: 20000}
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         file_ids:
           type: array
           maxItems: 50
@@ -23370,6 +23734,7 @@ components:
         author: {$ref: '#/components/schemas/EdsPerson'}
         amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
+        invoice_later: {type: boolean, default: false, description: 'Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)'}
         deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}]}
         files:
           type: array
@@ -24261,12 +24626,60 @@ components:
           type: string
           enum: [always, never]
           description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному'
+        contract_four_eyes:
+          type: boolean
+          description: 'ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да)'
         default_client_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый'
         default_partner_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый'
+        contract_term_rule:
+          type: string
+          enum: [calendar_year, twelve_months, open]
+          description: 'ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё'
+        contract_auto_renew:
+          type: boolean
+          description: 'ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления'
+        contract_notice_days:
+          type: integer
+          minimum: 0
+          maximum: 365
+          description: 'ДС-1: за сколько дней до конца срока можно отказаться от продления'
+        contract_next_year_from_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: 'ДС-1: с какого числа декабря первый срок идёт до конца следующего года'
+        contract_remind_first_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: первое напоминание — за столько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: второе напоминание — за столько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока'
+        contract_foreign_by_agreement:
+          type: boolean
+          description: 'ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да)'
+        contract_gating_kinds:
+          type: array
+          items:
+            type: string
+            enum: [partner, supply, services]
+          description: 'ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает'
+        contract_expired_action:
+          type: string
+          enum: [block, warn]
+          description: 'ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда'
     QuoteDefaultsUpdate:
       type: object
       additionalProperties: false
@@ -24375,12 +24788,60 @@ components:
           type: string
           enum: [always, never]
           description: 'РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному'
+        contract_four_eyes:
+          type: boolean
+          description: 'ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да)'
         default_client_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый'
         default_partner_contract_template:
           type: [integer, 'null']
           description: 'ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый'
+        contract_term_rule:
+          type: string
+          enum: [calendar_year, twelve_months, open]
+          description: 'ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё'
+        contract_auto_renew:
+          type: boolean
+          description: 'ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления'
+        contract_notice_days:
+          type: integer
+          minimum: 0
+          maximum: 365
+          description: 'ДС-1: за сколько дней до конца срока можно отказаться от продления'
+        contract_next_year_from_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: 'ДС-1: с какого числа декабря первый срок идёт до конца следующего года'
+        contract_remind_first_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: первое напоминание — за столько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: второе напоминание — за столько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: 'ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока'
+        contract_foreign_by_agreement:
+          type: boolean
+          description: 'ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да)'
+        contract_gating_kinds:
+          type: array
+          items:
+            type: string
+            enum: [partner, supply, services]
+          description: 'ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает'
+        contract_expired_action:
+          type: string
+          enum: [block, warn]
+          description: 'ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда'
     ContractTemplate:
       type: object
       additionalProperties: false
@@ -26103,6 +26564,12 @@ components:
       required: [file_id]
       properties:
         file_id: {type: string, format: uuid}
+        received_at:
+          anyOf:
+          - {type: string, format: date}
+          - {type: 'null'}
+          description: Дата поступления письма — от неё считается срок «в течение N дней»
+        rules_only: {type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока)'}
 
     LetterIntakeFields:
       type: object
@@ -26152,7 +26619,10 @@ components:
         fields: {$ref: '#/components/schemas/LetterIntakeFields'}
         alias: {type: string}
         prompt_version: {type: string}
-
+        by_code:
+          type: array
+          items: {type: string, enum: [sender_inn, document_due]}
+          description: Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма»
     AiDecisionIn:
       type: object
       additionalProperties: false
@@ -28742,6 +29212,67 @@ components:
         cost: {type: boolean, description: Видеть себестоимость и наценку по строкам}
         stock: {type: boolean, description: 'Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный)'}
 
+    CalcClose:
+      type: object
+      additionalProperties: false
+      required: [allowed, quote_sent, reason, comment]
+      description: «Закрыть заявку» (ЛХ-2) — что можно и чем заявка закрыта
+      properties:
+        allowed: {type: boolean, description: 'Заявка до проекта, не закрыта, и сотрудник — ответственный или держатель зоны продаж'}
+        quote_sent: {type: boolean, description: 'КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`'}
+        reason: {type: [string, 'null'], description: 'Код причины, если заявка закрыта через «Закрыть заявку»'}
+        comment: {type: [string, 'null']}
+
+    CalcRequestCard:
+      type: object
+      additionalProperties: false
+      required: [number, title, client, step, path, has_task, request, close]
+      description: 'Карточка заявки для «Закрыть заявку» (ЛХ-2): с заданием расчёта и без него'
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: string}
+        client: {type: [string, 'null']}
+        step: {$ref: '#/components/schemas/StepCode'}
+        path: {type: string}
+        has_task: {type: boolean, description: 'У заявки есть задание расчёта; нет — черновик из передачи лида'}
+        request: {$ref: '#/components/schemas/CalcRequestText'}
+        close: {$ref: '#/components/schemas/CalcClose'}
+
+    CalcCloseIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 50, description: Код причины из `GET /erp/calc-close-reasons`}
+        comment: {type: string, maxLength: 2000, description: Комментарий; обязателен у причины с `requires_comment`}
+
+    CalcCloseReason:
+      type: object
+      additionalProperties: false
+      required: [code, name, requires_comment, allowed_after_quote_sent, preselect_after_client_rejection]
+      properties:
+        code: {type: string}
+        name:
+          type: object
+          additionalProperties: false
+          required: [ru, uz, en]
+          properties:
+            ru: {type: string}
+            uz: {type: string}
+            en: {type: string}
+        requires_comment: {type: boolean}
+        allowed_after_quote_sent: {type: boolean}
+        preselect_after_client_rejection: {type: boolean, description: 'Выбрана заранее в «Закрыть заявку» после отказа клиента от КП (флаг справочника)'}
+
+    CalcCloseReasonList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CalcCloseReason'}
+
     CalcSheet:
       type: object
       additionalProperties: false
@@ -28764,6 +29295,7 @@ components:
         totals: {$ref: '#/components/schemas/CalcTotals'}
         visas: {$ref: '#/components/schemas/CalcVisaGroups'}
         ready: {$ref: '#/components/schemas/CalcReady'}
+        close: {$ref: '#/components/schemas/CalcClose'}
         rights: {$ref: '#/components/schemas/CalcRights'}
 
     CalcLineIn:
@@ -29163,6 +29695,7 @@ components:
         edit: {type: boolean}
         send: {type: boolean, description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'}
         request_price: {type: boolean, description: 'В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10)'}
+        resend: {type: boolean, description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа'}
         confirm: {type: boolean}
         receive: {type: boolean}
         cancel: {type: boolean}
@@ -29802,6 +30335,49 @@ components:
           description: Строки-товары расчёта
         note: {type: string, maxLength: 1000}
         to_email: {type: string, format: email, description: 'Адрес письма, если у поставщика почты нет или нужен другой'}
+        partner_names:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/PartnerNameIn'}
+          description: >-
+            Подтверждённые сотрудником названия для партнёра. Строка без карточки каталога без названия не уходит
+            (409 `PARTNER_NAME_REQUIRED`); слова клиента сами партнёру не попадают.
+
+    PartnerNameIn:
+      type: object
+      additionalProperties: false
+      required: [line_id, name]
+      properties:
+        line_id: {type: string, pattern: '^[0-9]+$', maxLength: 12}
+        name: {type: string, minLength: 1, maxLength: 500}
+        article: {type: string, maxLength: 120}
+
+    PriceRequestPreviewLine:
+      type: object
+      additionalProperties: false
+      required: [line_id, name, article, source, client_name, quantity, unit]
+      properties:
+        line_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: [string, 'null'], description: 'Как увидит партнёр; null — не названа, отправить нельзя'}
+        article: {type: string}
+        source: {type: string, enum: [card, staff, missing], description: 'card — карточка каталога; staff — подтверждено сотрудником; missing — названия нет'}
+        client_name: {type: string, description: 'Слова клиента из заявки — только сотруднику, партнёру не уходят'}
+        quantity: {type: number}
+        unit: {type: string}
+
+    PriceRequestPreview:
+      type: object
+      additionalProperties: false
+      required: [subject, supplier, to_email, note, ready, lines]
+      properties:
+        subject: {type: string}
+        supplier: {$ref: '#/components/schemas/StockSupplierRef'}
+        to_email: {type: string}
+        note: {type: [string, 'null'], description: 'Заметка партнёру ровно так, как уйдёт'}
+        ready: {type: boolean, description: 'У каждой строки есть название для партнёра'}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/PriceRequestPreviewLine'}
 
     PriceRequestAnswerIn:
       type: object
@@ -30042,6 +30618,13 @@ components:
             - type: string
               pattern: '^L-\d{4,}$'
             - type: 'null'
+        partner_application:
+          description: >-
+            Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в
+            списках его нет, карточка открывается по номеру.
+          oneOf:
+            - type: integer
+            - type: 'null'
 
     LeadOrigin:
       type: object
@@ -30178,7 +30761,7 @@ components:
 
     ClientSees:
       type: string
-      enum: [in_work, awaiting_decision, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
+      enum: [in_work, awaiting_decision, contract_preparing, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
       description: Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
 
     ClientRequestRow:
@@ -30324,6 +30907,7 @@ components:
               properties:
                 name: {type: string, minLength: 1, maxLength: 255}
                 inn: {type: [string, 'null'], maxLength: 32}
+                country: {type: [string, 'null'], pattern: '^[A-Za-z]{2}$', description: 'Страна — вместе с названием ищет уже заведённую компанию (ЛП-1)'}
             - type: 'null'
         contact: {$ref: '#/components/schemas/RequestContactFormIn'}
         summary: {type: string, minLength: 1, maxLength: 5000}
@@ -30338,6 +30922,29 @@ components:
                 method: {type: string, enum: [phone, email, paper]}
                 comment: {type: [string, 'null'], maxLength: 500}
             - type: 'null'
+
+    PartnerHandoffIn:
+      type: object
+      additionalProperties: false
+      required: [company_name, offer, contact_name, email]
+      description: Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
+      properties:
+        company_name: {type: string, minLength: 1, maxLength: 255}
+        country: {type: string, pattern: '^[A-Za-z]{2}$', default: UZ, description: ISO 3166-1 alpha-2}
+        inn: {type: string, maxLength: 32, default: ''}
+        offer: {type: string, minLength: 1, maxLength: 4000, description: Что предлагает кандидат (из запроса лида)}
+        contact_name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, minLength: 3, maxLength: 254}
+        phone: {type: string, maxLength: 32, default: ''}
+
+    PartnerHandoffView:
+      type: object
+      additionalProperties: false
+      required: [lead, application, created]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        application: {type: integer, description: Заявка кандидата в ERP}
+        created: {type: boolean, description: '`false` — лид уже был передан как партнёр: возвращена первая заявка'}
 
     RequestCreatedView:
       type: object
@@ -31067,6 +31674,23 @@ components:
             - $ref: '#/components/schemas/DoNotWork'
             - type: 'null'
           description: 'Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем'
+        contract_term:
+          oneOf:
+            - $ref: '#/components/schemas/CounterpartyContractTerm'
+            - type: 'null'
+          description: 'ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет'
+    CounterpartyContractTerm:
+      type: object
+      additionalProperties: false
+      required: [contract_id, number, state, valid_until, last_notice_date, foreign, blocks_new_work]
+      properties:
+        contract_id: {type: integer}
+        number: {type: string}
+        state: {enum: [open, renews, ends, expired], type: string}
+        valid_until: {type: [string, 'null'], format: date}
+        last_notice_date: {type: [string, 'null'], format: date}
+        foreign: {type: boolean}
+        blocks_new_work: {type: boolean, description: 'Срок вышел и правило компании не даёт начинать новые КП'}
     DoNotWork:
       type: object
       additionalProperties: false
@@ -31324,8 +31948,8 @@ components:
         can_act: {type: boolean, description: 'Контакт может подтверждать заказы («Может подтверждать» в Платформе и в Кабинете); не указано — право контакта не меняется'}
     PartnerApplicationSource:
       type: string
-      enum: [public, client_cabinet, letter]
-      description: Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+      enum: [public, client_cabinet, letter, lead]
+      description: Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
     PartnerApplicationStatus:
       type: string
       enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
@@ -31335,7 +31959,7 @@ components:
     PartnerApplicationItem:
       type: object
       additionalProperties: false
-      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery]
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, decision_needs_confirmation, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
@@ -31364,6 +31988,75 @@ components:
           type: [string, 'null']
           enum: [queued, sent, failed, null]
           description: 'Итог последнего письма-приглашения кандидату; null — приглашения ещё не было (FX-1)'
+        contract_source: {type: string, enum: ['', template, upload], description: 'Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен (ПД-1)'}
+        contract_template_id: {type: [string, 'null']}
+        contract_template_name: {type: [string, 'null']}
+        contract_template_edition: {type: [integer, 'null']}
+        contract_language: {type: string, description: 'ru, en или uz; пусто — не подготовлен'}
+        contract_deviation_text: {type: string, description: 'Чем договор отличается от шаблона; пусто — без отступлений'}
+        contract_approval: {type: string, enum: ['', requested, approved, returned], description: 'Решение держателя «Право»; пусто — согласование не нужно (шаблон без отступлений)'}
+        contract_approval_requested_by: {type: [string, 'null']}
+        contract_approval_decided_by: {type: [string, 'null']}
+        contract_approval_note: {type: string}
+        contract_blocker:
+          type: [string, 'null']
+          enum: [CONTRACT_NOT_PREPARED, CONTRACT_APPROVAL_PENDING, CONTRACT_APPROVAL_RETURNED, null]
+          description: 'Что мешает отправить договор (пока заявка подана); null — можно отправлять'
+        contract_approvers: {type: array, items: {type: string}, description: 'Кто решает, пока согласование ждёт решения'}
+        can_decide_contract: {type: boolean, description: 'Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя'}
+        decision_needs_confirmation: {type: boolean, description: 'Зритель — единственный держатель и сам подготовил договор: решение с подтверждением'}
+        candidate_notes: {type: string, description: 'Замечание кандидата к договору'}
+        candidate_returned_at: {type: [string, 'null'], format: date-time, description: 'Когда кандидат вернул договор с замечанием'}
+        has_signed_scan: {type: boolean, description: 'Кандидат загрузил скан подписанного договора'}
+        signed_scan_at: {type: [string, 'null'], format: date-time}
+    PartnerContractPrepareRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        template_id: {type: [string, 'null'], description: 'Шаблон библиотеки; пусто — умолчание из настроек компании'}
+        language: {type: string, enum: [ru, uz, en], description: 'Язык договора; пусто — язык кандидата'}
+        deviation_text: {type: [string, 'null'], maxLength: 4000, description: 'Чем договор отличается от шаблона; текст идёт на решение «Право» и после одобрения входит в договор'}
+        contract_number: {type: [string, 'null'], maxLength: 64}
+        contract_date: {type: [string, 'null'], format: date}
+    PartnerContractFileUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, description: 'До 20 МБ: PDF или DOCX'}
+        language: {type: string, enum: [ru, uz, en]}
+        deviation_text: {type: string, maxLength: 4000}
+        contract_number: {type: string, maxLength: 64}
+        contract_date: {type: string, format: date}
+    PartnerContractDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: {type: string, enum: [approve, return]}
+        confirm_self: {type: [boolean, 'null'], description: 'Подтверждение самостоятельного решения единственным держателем'}
+        note: {type: [string, 'null'], maxLength: 1000, description: 'Замечание; при `return` обязательно'}
+    PartnerContractOptions:
+      type: object
+      additionalProperties: false
+      required: [templates, default_template_id, deviations_allowed, approvers, can_decide]
+      properties:
+        templates:
+          type: array
+          items: {$ref: '#/components/schemas/PartnerContractTemplateOption'}
+        default_template_id: {type: [string, 'null']}
+        deviations_allowed: {type: boolean, description: 'Правило компании: свой файл и отступления допустимы'}
+        approvers: {type: array, items: {type: string}, description: 'Держатели зоны «Право» по имени'}
+        can_decide: {type: boolean}
+    PartnerContractTemplateOption:
+      type: object
+      additionalProperties: false
+      required: [id, name, edition, languages, is_default]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        edition: {type: integer}
+        languages: {type: array, items: {type: string, enum: [ru, uz, en]}, description: 'Языки, на которых у шаблона есть текст; русский есть всегда'}
+        is_default: {type: boolean}
     PartnerApplicationListResponse:
       type: object
       additionalProperties: false

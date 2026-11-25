@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { patchBodies } from "../../../mocks/crmLeadActions";
@@ -6,6 +7,7 @@ import { readLeads, resetLeads } from "../../../mocks/fixtures/leads";
 import { readMessages, resetMessages, writeMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { chooseOption } from "../../../test/fields";
+import { server } from "../../../test/server";
 
 setupBotTests();
 
@@ -57,6 +59,21 @@ describe("ручки лида: «Закрыть» (LH-1)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Закрыть лид" }));
     await waitFor(() => {
       expect(leadRow("L-2050")?.row.status).toBe("client");
+    });
+  });
+
+  it("итог из учёта: пункта «Заключено» в меню нет, «Отказ» остаётся (Б-2)", async () => {
+    server.use(
+      http.get("*/api/v1/crm/lead-close-options", () =>
+        HttpResponse.json({ lost_reasons: ["Дорого"], won_by_erp: true }),
+      ),
+    );
+    const element = await panel("manager@demo.example", "L-2050");
+    fireEvent.click(within(element).getByRole("button", { name: /^Закрыть: / }));
+    // меню перерисовывается, когда придут настройки закрытия: ждём итоговое состояние
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: "Отказ" })).not.toBeNull();
+      expect(screen.queryByRole("menuitem", { name: "Заключено" })).toBeNull();
     });
   });
 

@@ -4,6 +4,9 @@
  */
 import type { DecimalString } from "./decimalString";
 import type { QuoteDefaultsUpdateCatalogPriceVisibility } from "./quoteDefaultsUpdateCatalogPriceVisibility";
+import type { QuoteDefaultsUpdateContractExpiredAction } from "./quoteDefaultsUpdateContractExpiredAction";
+import type { QuoteDefaultsUpdateContractGatingKindsItem } from "./quoteDefaultsUpdateContractGatingKindsItem";
+import type { QuoteDefaultsUpdateContractTermRule } from "./quoteDefaultsUpdateContractTermRule";
 import type { QuoteDefaultsUpdateRequestResolution } from "./quoteDefaultsUpdateRequestResolution";
 
 /**
@@ -94,6 +97,8 @@ export interface QuoteDefaultsUpdate {
   contract_deviations_allowed?: boolean;
   /** РЕЗ-1: резолюция перед расчётом — у каждой заявки (always, по умолчанию) или не нужна (never): тогда заявка из любого канала сразу идёт в расчёт ответственному */
   request_resolution?: QuoteDefaultsUpdateRequestResolution;
+  /** ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+  contract_four_eyes?: boolean;
   /**
    * ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый
    * @nullable
@@ -104,4 +109,44 @@ export interface QuoteDefaultsUpdate {
    * @nullable
    */
   default_partner_contract_template?: number | null;
+  /** ДС-1: срок договора по умолчанию — до 31 декабря, 12 месяцев или без срока; шаблон может задать своё */
+  contract_term_rule?: QuoteDefaultsUpdateContractTermRule;
+  /** ДС-1: договор продлевается сам, если никто не отказался до последнего дня уведомления */
+  contract_auto_renew?: boolean;
+  /**
+   * ДС-1: за сколько дней до конца срока можно отказаться от продления
+   * @minimum 0
+   * @maximum 365
+   */
+  contract_notice_days?: number;
+  /**
+   * ДС-1: с какого числа декабря первый срок идёт до конца следующего года
+   * @minimum 1
+   * @maximum 31
+   */
+  contract_next_year_from_day?: number;
+  /**
+   * ДС-1: первое напоминание — за столько дней до последнего дня уведомления
+   * @minimum 1
+   * @maximum 365
+   */
+  contract_remind_first_days?: number;
+  /**
+   * ДС-1: второе напоминание — за столько дней до последнего дня уведомления
+   * @minimum 1
+   * @maximum 365
+   */
+  contract_remind_last_days?: number;
+  /**
+   * ДС-1: иностранный контрагент — напомнить о дополнительном соглашении за столько дней до конца срока
+   * @minimum 1
+   * @maximum 365
+   */
+  contract_foreign_remind_days?: number;
+  /** ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да) */
+  contract_foreign_by_agreement?: boolean;
+  /** ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает */
+  contract_gating_kinds?: QuoteDefaultsUpdateContractGatingKindsItem[];
+  /** ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда */
+  contract_expired_action?: QuoteDefaultsUpdateContractExpiredAction;
 }

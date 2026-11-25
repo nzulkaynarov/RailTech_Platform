@@ -21,6 +21,7 @@ from .views import (
     InviteClientContactView,
     PairingAcceptView,
     PairingRotateView,
+    PartnerApplicationView,
     UserProvisionView,
     UserSessionsRevokeView,
 )
@@ -28,6 +29,7 @@ from .views import (
 urlpatterns = [
     path("clients/handoff", HandoffClientView.as_view(), name="integration-clients-handoff"),
     path("clients/<int:crm_client_id>/requests", ClientRequestView.as_view(), name="integration-client-requests"),
+    path("partner-applications", PartnerApplicationView.as_view(), name="integration-partner-applications"),
     path("clients/<int:crm_client_id>/invite", InviteClientContactView.as_view(), name="integration-clients-invite"),
     path("contacts/<int:crm_contact_id>", ContactDetailView.as_view(), name="integration-contact-detail"),
     path("companies/<int:erp_company_id>/summary", CompanySummaryView.as_view(), name="integration-company-summary"),

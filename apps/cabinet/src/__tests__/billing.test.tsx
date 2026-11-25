@@ -53,7 +53,7 @@ describe('Договоры', () => {
     expect(await screen.findByText('2 договора ждут вашего согласования')).toBeInTheDocument();
 
     const signed = card('Договоры', 'D-2026-0035');
-    expect(within(signed).getByText('Подписан сторонами')).toBeInTheDocument();
+    expect(within(signed).getByText('Подписан')).toBeInTheDocument();
     expect(within(signed).getByText('20 авг. 2026 г., 15:30')).toBeInTheDocument();
     expect(within(signed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
 
@@ -64,15 +64,16 @@ describe('Договоры', () => {
     await user.keyboard('{Escape}');
     await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
     const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
-    expect(within(dialog).getByText(/Подписание — отдельный шаг/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/выставим договор на подписание/)).toBeInTheDocument();
     await expectNoAxeViolations();
     await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
 
-    // согласие клиента не делает договор подписанным: честный статус «ждём подписания», кнопки «согласовать» больше нет
-    expect(await screen.findByText('Вы согласовали договор D-2026-0029. Ждём подписания.')).toBeInTheDocument();
+    // согласие клиента не делает договор подписанным: честный статус «будет выставлен на подписание», кнопки «согласовать» больше нет
+    expect(await screen.findByText('Договор D-2026-0029 согласован. Он будет выставлен на подписание.')).toBeInTheDocument();
     const agreed = card('Договоры', 'D-2026-0029');
-    expect(within(agreed).getByText('Вы согласовали, ждём подписания')).toBeInTheDocument();
-    expect(within(agreed).queryByText('Подписан сторонами')).not.toBeInTheDocument();
+    expect(within(agreed).getByText('Согласован')).toBeInTheDocument();
+    expect(within(agreed).getByText('Договор будет выставлен на подписание')).toBeInTheDocument();
+    expect(within(agreed).queryByText('Подписан')).not.toBeInTheDocument();
     expect(within(agreed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
     expect(await screen.findByText('1 договор ждёт вашего согласования')).toBeInTheDocument();
   });
@@ -118,7 +119,9 @@ describe('Счета', () => {
     const overdue = card('Счета', 'S-2026-0124');
     // Статус ERP — issued, но срок 7 октября прошёл: клиент видит «Просрочен».
     expect(within(overdue).getByText('Просрочен')).toBeInTheDocument();
-    expect(within(overdue).getByText('просрочен на 7 дней')).toBeInTheDocument();
+    // Одно слово о просрочке — статус; во сроке только счёт дней, без второго «просрочен».
+    expect(within(overdue).queryByText(/просрочен на/)).toBeNull();
+    expect(within(overdue).getByText('7 дней')).toBeInTheDocument();
 
     const partial = card('Счета', 'S-2026-0118');
     expect(within(partial).getByText('Оплачен частично')).toBeInTheDocument();
@@ -148,6 +151,9 @@ describe('Счета', () => {
     const pending = within(card('Счета', 'S-2026-0130')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0130' });
     expect(within(pending).getByText('На проверке')).toBeInTheDocument();
     expect(within(pending).getByText('Вы указали: 12 500 USD, оплачено 13 окт. 2026 г.')).toBeInTheDocument();
+    // СЦ-7 (N9): подпись и имя файла — отдельные узлы, слова подписи не режутся именем файла
+    expect(within(pending).getByText(/^Платёжное поручение от /)).toBeInTheDocument();
+    expect(within(pending).getByTitle('platezhka-0130.pdf')).toHaveTextContent('platezhka-0130.pdf');
     const confirmed = within(card('Счета', 'S-2026-0118')).getByRole('list', { name: 'Платёжные поручения по счёту S-2026-0118' });
     expect(within(confirmed).getByText('Оплата подтверждена')).toBeInTheDocument();
     // оплаченному счёту платёжка не нужна — кнопки нет
@@ -395,5 +401,36 @@ describe('Акты', () => {
     signedIn('actor', 'empty');
     renderApp('/acts');
     expect(await screen.findByText('Актов пока нет')).toBeInTheDocument();
+  });
+});
+
+describe('Срок договора (ДС-1)', () => {
+  it('срок виден в списке; отказ от продления — с подтверждением, после него отказать повторно нельзя', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/contracts');
+    await heading('Договоры');
+    await screen.findByRole('list', { name: 'Договоры' });
+    const signed = card('Договоры', 'D-2026-0035');
+    expect(within(signed).getByText('до 31 дек. 2026 г. · продлится сам')).toBeInTheDocument();
+    // без срока (договор не подписан) — прочерк, и меню без отказа
+    const sent = card('Договоры', 'D-2026-0048');
+    await openRowMenu(user, sent, 'D-2026-0048');
+    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await openRowMenu(user, signed, 'D-2026-0035');
+    await user.click(await screen.findByRole('menuitem', { name: 'Отказаться от продления' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Договор действует до 31 дек. 2026 г./)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Отказаться от продления' }));
+    expect(await screen.findByText('Вы отказались от продления договора D-2026-0035.')).toBeInTheDocument();
+    expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · закончится в срок')).toBeInTheDocument();
+    await openRowMenu(user, card('Договоры', 'D-2026-0035'), 'D-2026-0035');
+    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
+    // свой отказ можно вернуть до последнего дня отказа
+    await user.click(await screen.findByRole('menuitem', { name: 'Вернуть продление' }));
+    expect(await screen.findByText('Продление договора D-2026-0035 возвращено.')).toBeInTheDocument();
+    expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · продлится сам')).toBeInTheDocument();
   });
 });

@@ -10,7 +10,7 @@ ERP-09 номер составляет BFF, `app.feeds.numbers`), вырезан
 
 import datetime as dt
 from collections.abc import Collection, Mapping
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -192,6 +192,70 @@ class CalcReady(BaseModel):
     missing: int
 
 
+class CalcClose(BaseModel):
+    allowed: bool
+    quote_sent: bool
+    reason: str | None
+    comment: str | None
+
+
+class CalcRequestCard(BaseModel):
+    """Карточка заявки для «Закрыть заявку» (ЛХ-2): с заданием расчёта и без него."""
+
+    number: str
+    title: str
+    client: str | None
+    step: StepCode
+    path: str
+    has_task: bool
+    request: CalcRequestText
+    close: CalcClose
+
+
+def to_request_card(raw: dict[str, Any]) -> CalcRequestCard:
+    deal = raw["deal"]
+    number = deal_number(deal)
+    return CalcRequestCard(
+        number=number,
+        title=deal_title(deal),
+        client=deal.get("client_name"),
+        step=deal_step(deal),
+        path=calc_path(number),
+        has_task=raw["has_task"] is True,
+        request=CalcRequestText(
+            text=raw["request"]["text"],
+            lines=raw["request"]["lines"],
+            files=parse_request_files(raw["request"].get("files")) or [],
+        ),
+        close=CalcClose(**raw["close"]),
+    )
+
+
+class CalcCloseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Annotated[str, Field(min_length=1, max_length=50)]
+    comment: Annotated[str, Field(max_length=2000)] = ""
+
+
+class CalcCloseReasonName(BaseModel):
+    ru: str
+    uz: str
+    en: str
+
+
+class CalcCloseReason(BaseModel):
+    code: str
+    name: CalcCloseReasonName
+    requires_comment: bool
+    allowed_after_quote_sent: bool
+    preselect_after_client_rejection: bool
+
+
+class CalcCloseReasonList(BaseModel):
+    items: list[CalcCloseReason]
+
+
 class CalcRights(BaseModel):
     goods: bool
     services: bool
@@ -213,6 +277,7 @@ class CalcSheet(BaseModel):
     totals: CalcTotals
     visas: CalcVisaGroups
     ready: CalcReady
+    close: CalcClose | None = None
     rights: CalcRights
 
 
@@ -477,6 +542,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
         visas=CalcVisaGroups(**raw["visas"]),
         ready=CalcReady(**raw["ready"]),
         rights=CalcRights(**{**raw["rights"], "cost": bool(raw["rights"]["cost"]) and cost}),
+        **({"close": CalcClose(**raw["close"])} if isinstance(raw.get("close"), dict) else {}),
     )
 
 

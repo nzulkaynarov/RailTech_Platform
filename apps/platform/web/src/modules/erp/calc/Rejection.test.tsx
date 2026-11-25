@@ -25,7 +25,7 @@ describe("Расчёт · клиент отклонил КП (D26G-3)", () => {
     ).toBeVisible();
     expect(screen.getByText("КП отклонено клиентом")).toBeVisible();
     expect(screen.queryByText(/Директор отклонил КП/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Отказ по заявке" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Закрыть заявку" })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Новая версия КП" }));
 
@@ -36,18 +36,16 @@ describe("Расчёт · клиент отклонил КП (D26G-3)", () => {
     expect(screen.getByRole("button", { name: /Подтвердить строку «Привод/ })).toBeVisible();
   });
 
-  it("«Отказ по заявке» требует причину и закрывает заявку", async () => {
+  it("«Закрыть заявку» после отказа клиента — один путь, причина «Клиент передумал» выбрана заранее", async () => {
     await openCalc("universal@demo.example", REJECTED);
-    fireEvent.click(screen.getByRole("button", { name: "Отказ по заявке" }));
-    const dialog = await screen.findByRole("dialog", { name: `Отказ по заявке ${REJECTED}` });
-    const submit = within(dialog).getByRole("button", { name: "Закрыть заявку отказом" });
-    expect(submit).toBeDisabled();
-    fireEvent.change(within(dialog).getByLabelText("Причина отказа"), {
-      target: { value: "Клиент купил у конкурента" },
-    });
-    fireEvent.click(submit);
+    expect(screen.queryByRole("button", { name: "Отказ по заявке" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть заявку" }));
+    const dialog = await screen.findByRole("dialog", { name: `Закрыть заявку ${REJECTED}` });
+    expect(await within(dialog).findByRole("radio", { name: "Клиент передумал" })).toBeChecked();
+    expect(within(dialog).getByRole("radio", { name: "Тест" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Закрыть заявку" }));
     await waitFor(() => {
-      expect(screen.getByText("Заявка закрыта с отказом. Резерв по ней снят.")).toBeVisible();
+      expect(screen.getByText("Заявка закрыта: Клиент передумал")).toBeVisible();
     });
     expect(screen.queryByRole("button", { name: "Новая версия КП" })).toBeNull();
   });

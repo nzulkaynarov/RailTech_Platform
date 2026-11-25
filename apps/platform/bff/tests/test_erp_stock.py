@@ -189,6 +189,7 @@ ACTIONS: list[tuple[str, str, Any]] = [
     ("PUT", f"/erp/calc/{NUMBER}/lines/7/reserve", {"quantity": 1}),
     ("DELETE", f"/erp/calc/{NUMBER}/lines/7/reserve", None),
     ("POST", f"/erp/calc/{NUMBER}/price-requests", {"supplier_id": "5", "line_ids": ["7"]}),
+    ("POST", f"/erp/calc/{NUMBER}/price-requests/preview", {"supplier_id": "5", "line_ids": ["7"]}),
     ("POST", "/erp/price-requests/3/answer", {}),
     ("POST", "/erp/price-requests/3/partner-links/revoke", None),
     ("POST", f"/erp/stock/orders/{ORDER}/partner-links/revoke", None),
@@ -542,6 +543,57 @@ async def test_price_request_goes_through_erp_and_is_listed(
     assert listed.json()["items"][0]["status"] == "sent"
 
 
+async def test_price_request_preview_and_confirmed_partner_names(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """В-2: предпросмотр — что увидит партнёр; названия сотрудника уходят в ERP."""
+    await web.login(["SUPPLY"])
+    preview = erp.post(f"{STOCK}/price-requests/preview/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "subject": "Запрос цены и срока поставки — Рельс",
+                "supplier": {"id": 5, "name": "ООО Вымышленный Поставщик"},
+                "to_email": "sales@vendor.example",
+                "note": "Срочно",
+                "ready": False,
+                "lines": [
+                    {
+                        "quote_item_id": 7,
+                        "name": None,
+                        "article": "",
+                        "source": "missing",
+                        "client_name": "Рельс для ст. Чиланзар",
+                        "quantity": 2,
+                        "unit": "шт.",
+                    }
+                ],
+            },
+        )
+    )
+    body = {
+        "supplier_id": "5",
+        "line_ids": ["7"],
+        "note": "Срочно",
+        "partner_names": [{"line_id": "7", "name": "Рельс Р65", "article": "Р-65"}],
+    }
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/price-requests/preview", body)
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/calc/{number}/price-requests/preview", "post")
+    assert json.loads(preview.calls.last.request.content)["partner_names"] == [
+        {"line_id": 7, "name": "Рельс Р65", "article": "Р-65"}
+    ]
+    assert response.json()["lines"][0]["source"] == "missing"
+    assert response.json()["ready"] is False
+    erp.post(f"{STOCK}/price-requests/").mock(
+        return_value=httpx.Response(409, json={"detail": "PARTNER_NAME_REQUIRED"})
+    )
+    refused = await call(
+        web, "POST", f"/erp/calc/{ENCODED}/price-requests", {"supplier_id": "5", "line_ids": ["7"]}
+    )
+    assert refused.status_code == 409
+
+
 async def test_price_request_refusals(web: Web, erp: respx.MockRouter) -> None:
     await web.login(["SUPPLY"])
     route = erp.post(f"{STOCK}/price-requests/")
@@ -727,6 +779,28 @@ async def test_order_card_tells_the_real_mail_result(
     erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=draft))
     card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
     assert card.json()["mail"] is None
+
+
+async def test_resend_action_of_an_order_comes_from_erp(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """Б-5: «Отправить ещё раз» — действие карточки от ERP; без него (старый ERP) выключено."""
+    await web.login(["SUPPLY"])
+    actions = {"edit": False, "send": False, "confirm": True, "receive": False, "cancel": True}
+    failed = order_detail(
+        status="sent",
+        mail={"state": "failed", "reason": "smtp_not_configured"},
+        actions={**actions, "resend": True},
+    )
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=failed))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    check(card, "/erp/stock/orders/{order_number}", "get")
+    assert card.json()["actions"]["resend"] is True
+
+    old = order_detail(status="sent", actions=actions)
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=old))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    assert card.json()["actions"]["resend"] is False
 
 
 async def test_unknown_order_number_is_404(web: Web, be: Backends) -> None:

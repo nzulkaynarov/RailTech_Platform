@@ -266,6 +266,12 @@
           "type": "integer",
           "minimum": 1
         },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Номер КП (QT-ГГГГ-NNN), как его видит сотрудник; нет — КП без номера (старые события): CRM пишет id"
+        },
         "reason": {
           "type": "string"
         },

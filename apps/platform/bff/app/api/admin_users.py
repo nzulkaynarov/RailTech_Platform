@@ -7,6 +7,7 @@ BFF не решает: роли Платформы — данные CRM (`platfo
 каталога: чтение — список и карточки, полный — изменения.
 """
 
+import contextlib
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query, Response, status
@@ -57,6 +58,18 @@ def _users(authed: Authed) -> CrmUsers:
     return CrmUsers(authed.call)
 
 
+async def _employee(authed: Authed, user: dict[str, Any]) -> Employee:
+    """Сотрудник для ответа; имя заместителя — одним чтением его карточки."""
+    who = user.get("deputy_user_id")
+    names: dict[str, str] = {}
+    if who:
+        # Имя — подпись: без него экран возьмёт его из списка.
+        with contextlib.suppress(PlatformError):
+            deputy = await _users(authed).get(str(who))
+            names[str(who)] = str(deputy.get("full_name") or "")
+    return to_employee(user, names)
+
+
 def _matches(employee: Employee, q: str) -> bool:
     needle = q.strip().casefold()
     haystack = f"{employee.name} {employee.email} {employee.position or ''}".casefold()
@@ -74,7 +87,9 @@ async def list_employees(
     q: Annotated[str | None, Query(max_length=100)] = None,
     status_filter: Annotated[EmployeeStatus | None, Query(alias="status")] = None,
 ) -> EmployeeList:
-    items = [to_employee(u) for u in await _users(authed).list_all()]
+    users = await _users(authed).list_all()
+    names = {str(u["id"]): str(u.get("full_name") or "") for u in users}
+    items = [to_employee(u, names) for u in users]
     if q and q.strip():
         items = [e for e in items if _matches(e, q)]
     if status_filter is not None:
@@ -155,7 +170,7 @@ async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
         await users.invite(id)
     except PlatformError as exc:
         raise _not_sent(exc, id, RESEND_CRM_UNAVAILABLE) from exc
-    return to_employee(await users.get(id))
+    return await _employee(authed, await users.get(id))
 
 
 @router.post(
@@ -167,7 +182,7 @@ async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
 async def retry_employee_erp_sync(id: EmployeeId, authed: Writer) -> Employee:
     """Повторить выдачу доступа в ERP: CRM снимает прежнюю ошибку и ставит задачу; в ответе —
     карточка со статусом `pending`, итог придёт при следующем чтении."""
-    return to_employee(await _users(authed).erp_sync(id))
+    return await _employee(authed, await _users(authed).erp_sync(id))
 
 
 SELF_RESET_MESSAGE = "Свой пароль здесь не сбросить: выберите «Сменить пароль» в меню аватара."
@@ -202,7 +217,7 @@ async def reset_employee_password_by_email(id: EmployeeId, authed: Writer) -> Ma
     operation_id="getEmployee",
 )
 async def get_employee(id: EmployeeId, authed: Reader) -> Employee:
-    return to_employee(await _users(authed).get(id))
+    return await _employee(authed, await _users(authed).get(id))
 
 
 @router.patch(
@@ -214,7 +229,8 @@ async def get_employee(id: EmployeeId, authed: Reader) -> Employee:
 async def update_employee(
     id: EmployeeId, body: EmployeeUpdate, authed: Writer, step_up: StepUpDep = None
 ) -> Employee:
-    """Роли (`platform_role_ids` в CRM, хотя бы одна), должность, отключение, передача лидов;
+    """Роли (`platform_role_ids` в CRM, хотя бы одна), должность, отключение, передача лидов,
+    замещение;
     инварианты — CRM. Выдача роли требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б).
 
     Роли уходят полным набором id: BFF не читает и не дописывает роли кодами (иначе слетели бы
@@ -230,7 +246,15 @@ async def update_employee(
         payload["position"] = (body.position or "").strip()
     if "is_active" in body.model_fields_set:
         payload["is_active"] = body.is_active
-    employee = to_employee(await _users(authed).update(id, payload, step_up))
+    if "deputy" in body.model_fields_set:
+        # Период и правила — как у профиля; решает CRM (себя нельзя, период не в прошлом).
+        if body.deputy is None:
+            payload["clear_deputy"] = True
+        else:
+            payload["deputy_user_id"] = int(body.deputy.deputy_id)
+            payload["deputy_from"] = body.deputy.date_from
+            payload["deputy_to"] = body.deputy.date_to
+    employee = await _employee(authed, await _users(authed).update(id, payload, step_up))
     if _is_self(id, authed):
         # Свои роли изменены: следующий `/me` перечитывает профиль CRM, а не ждёт конца кэша (60 с).
         await authed.service.store.update(authed.sid, _expire_profile)

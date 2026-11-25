@@ -5,6 +5,7 @@
 import type { CompanyItemRef } from "./companyItemRef";
 import type { CounterpartyAccount } from "./counterpartyAccount";
 import type { CounterpartyCardPerson } from "./counterpartyCardPerson";
+import type { CounterpartyContractTerm } from "./counterpartyContractTerm";
 import type { CounterpartyRef } from "./counterpartyRef";
 import type { CounterpartyRoles } from "./counterpartyRoles";
 import type { DoNotWork } from "./doNotWork";
@@ -42,4 +43,6 @@ export interface CounterpartyCard {
   brands: CounterpartyRef[];
   /** Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
   do_not_work?: DoNotWork | null;
+  /** ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
+  contract_term?: CounterpartyContractTerm | null;
 }

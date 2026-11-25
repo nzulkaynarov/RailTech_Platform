@@ -21,7 +21,7 @@ describe("КП", () => {
     renderApp("/quotes");
     await heading("Коммерческие предложения");
     expect(
-      await screen.findByText("2 КП ждут вашего решения"),
+      await screen.findByText("2 предложения ждут вашего решения"),
     ).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Коммерческие предложения" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(5);
@@ -38,7 +38,7 @@ describe("КП", () => {
   it("карточка: разделы, позиции, заметки, обещанные даты, итог", async () => {
     signedIn();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     const lines = screen.getByRole("list", { name: "Состав предложения" });
     expect(within(lines).getByText("Товары")).toBeInTheDocument();
     expect(within(lines).getByText("Подшипник 6205-2RS")).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("КП", () => {
   it("0.5 (FR-16): условия оплаты и срок поставки — как в PDF; пустые не показываются", async () => {
     signedIn();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     expect(screen.getByText("Условия оплаты")).toBeInTheDocument();
     expect(
       screen.getByText("50% предоплата, 50% по поставке"),
@@ -77,7 +77,7 @@ describe("КП", () => {
   it("0.5: КП без условий — строк «Условия оплаты» и «Срок поставки» нет", async () => {
     signedIn();
     renderApp("/quotes/300");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     expect(screen.queryByText("Условия оплаты")).toBeNull();
     expect(screen.queryByText("Срок поставки")).toBeNull();
   });
@@ -85,7 +85,7 @@ describe("КП", () => {
   it("итоги КП 0.3.0: «Итого без НДС», «НДС», «Итого» (subtotal + vat = total)", async () => {
     signedIn();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     const totals = screen.getByRole("group", { name: "Состав итога" });
     expect(within(totals).getByText("Итого без НДС")).toBeInTheDocument();
     expect(within(totals).getByText("48 600 000 сум")).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("КП", () => {
   it("этапы услуги: КП по этапам с копейками", async () => {
     signedIn();
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     expect(
       screen.getByText("Этап 1. Обследование площадки и проект"),
     ).toBeInTheDocument();
@@ -131,10 +131,10 @@ describe("КП", () => {
     const log = requestLog();
     const body = captureBody("/quotes/301/accept");
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Принять КП KP-2026-0042",
+      name: "Принять предложение KP-2026-0042",
     });
 
     // Шаг 1: кода ещё нет — поля ввода нет, есть «Получить код»; запроса кода ещё не было.
@@ -157,7 +157,7 @@ describe("КП", () => {
 
     await user.type(within(dialog).getByLabelText("Код подтверждения"), "12");
     await user.click(
-      within(dialog).getByRole("button", { name: "Принять КП" }),
+      within(dialog).getByRole("button", { name: "Принять предложение" }),
     );
     expect(
       within(dialog).getByText("Код — не короче 4 символов."),
@@ -169,7 +169,7 @@ describe("КП", () => {
       "000000",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Принять КП" }),
+      within(dialog).getByRole("button", { name: "Принять предложение" }),
     );
     expect(
       await within(dialog).findByText(/Код неверен или не запрошен/),
@@ -186,10 +186,10 @@ describe("КП", () => {
       ` ${MOCK_ACCEPT_CODE.slice(0, 3)} ${MOCK_ACCEPT_CODE.slice(3)} `,
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Принять КП" }),
+      within(dialog).getByRole("button", { name: "Принять предложение" }),
     );
 
-    expect(await screen.findByText("КП принято")).toBeInTheDocument();
+    expect(await screen.findByText("Предложение принято")).toBeInTheDocument();
     expect(body.current).toEqual({ code: MOCK_ACCEPT_CODE });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("Принято")).toBeInTheDocument();
@@ -226,7 +226,7 @@ describe("КП", () => {
     );
     const user = userEvent.setup();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
@@ -262,7 +262,7 @@ describe("КП", () => {
     );
     const user = userEvent.setup();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
@@ -303,7 +303,7 @@ describe("КП", () => {
     const user = userEvent.setup();
     const log = requestLog();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
@@ -325,7 +325,7 @@ describe("КП", () => {
     signedIn();
     const user = userEvent.setup();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
@@ -355,15 +355,15 @@ describe("КП", () => {
       MOCK_ACCEPT_CODE,
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Принять КП" }),
+      within(dialog).getByRole("button", { name: "Принять предложение" }),
     );
-    expect(await screen.findByText("КП принято")).toBeInTheDocument();
+    expect(await screen.findByText("Предложение принято")).toBeInTheDocument();
   });
 
   it.each([
     ["CONTACT_CHANNEL_REQUIRED", 422, /Нам некуда отправить код/],
-    ["QUOTE_EXPIRED", 409, /Срок действия КП истёк/],
-    ["QUOTE_FINALIZED", 409, /КП уже принято или отклонено/],
+    ["QUOTE_EXPIRED", 409, /Срок действия предложения истёк/],
+    ["QUOTE_FINALIZED", 409, /Предложение уже принято или отклонено/],
     ["TOO_MANY_REQUESTS", 429, /Слишком много запросов/],
     ["FORBIDDEN", 403, /нет права на это действие/],
     ["NOT_FOUND", 404, /Не найдено/],
@@ -374,7 +374,7 @@ describe("КП", () => {
       failWith("post", "/quotes/301/request-code", status, code);
       const user = userEvent.setup();
       renderApp("/quotes/301");
-      await heading("КП KP-2026-0042");
+      await heading("Коммерческое предложение KP-2026-0042");
       await user.click(screen.getByRole("button", { name: "Принять" }));
       const dialog = await screen.findByRole("dialog");
       await user.click(
@@ -394,16 +394,16 @@ describe("КП", () => {
     [
       "QUOTE_FINALIZED",
       409,
-      "КП уже принято или отклонено — обновите страницу.",
+      "Предложение уже принято или отклонено — обновите страницу.",
     ],
-    ["QUOTE_EXPIRED", 409, /Срок действия КП истёк/],
+    ["QUOTE_EXPIRED", 409, /Срок действия предложения истёк/],
     ["TOO_MANY_REQUESTS", 429, /Слишком много запросов/],
   ])("accept: %s (%i) — сообщение в диалоге", async (code, status, text) => {
     signedIn();
     failWith("post", "/quotes/301/accept", status, code);
     const user = userEvent.setup();
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     await user.click(screen.getByRole("button", { name: "Принять" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(
@@ -414,7 +414,7 @@ describe("КП", () => {
       MOCK_ACCEPT_CODE,
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Принять КП" }),
+      within(dialog).getByRole("button", { name: "Принять предложение" }),
     );
     expect(await within(dialog).findByText(text)).toBeInTheDocument();
   });
@@ -422,7 +422,7 @@ describe("КП", () => {
   it("КП в статусе «просмотрено» тоже можно принять", async () => {
     signedIn();
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     expect(screen.getByRole("button", { name: "Принять" })).toBeInTheDocument();
   });
 
@@ -431,20 +431,20 @@ describe("КП", () => {
     const user = userEvent.setup();
     const body = captureBody("/quotes/310/reject");
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     await user.click(screen.getByRole("button", { name: "Отклонить" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Отклонить КП KP-2026-0057",
+      name: "Отклонить предложение KP-2026-0057",
     });
     await user.click(
-      within(dialog).getByRole("button", { name: "Отклонить КП" }),
+      within(dialog).getByRole("button", { name: "Отклонить предложение" }),
     );
     expect(within(dialog).getByText(/Укажите причину/)).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText("Причина"), "Дорого");
     await user.click(
-      within(dialog).getByRole("button", { name: "Отклонить КП" }),
+      within(dialog).getByRole("button", { name: "Отклонить предложение" }),
     );
-    expect(await screen.findByText("КП отклонено")).toBeInTheDocument();
+    expect(await screen.findByText("Предложение отклонено")).toBeInTheDocument();
     expect(screen.getByText("Причина: Дорого")).toBeInTheDocument();
     expect(body.current).toEqual({ reason: "Дорого" });
   });
@@ -452,8 +452,8 @@ describe("КП", () => {
   it("истёкшее КП — объяснение вместо кнопок", async () => {
     signedIn();
     renderApp("/quotes/330");
-    await heading("КП KP-2026-0033");
-    expect(screen.getByText("Срок действия КП истёк")).toBeInTheDocument();
+    await heading("Коммерческое предложение KP-2026-0033");
+    expect(screen.getByText("Срок действия предложения истёк")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Принять" }),
     ).not.toBeInTheDocument();
@@ -463,8 +463,8 @@ describe("КП", () => {
     signedIn("viewer");
     window.localStorage.setItem("cabinet.language", "ru");
     renderApp("/quotes/301");
-    await heading("КП KP-2026-0042");
-    expect(screen.getByText("Ждёт решения")).toBeInTheDocument();
+    await heading("Коммерческое предложение KP-2026-0042");
+    expect(screen.getByText("Ждёт вашего решения")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Принять" }),
     ).not.toBeInTheDocument();
@@ -485,7 +485,7 @@ describe("КП", () => {
   it("пусто — пустое состояние", async () => {
     signedIn("actor", "empty");
     renderApp("/quotes");
-    expect(await screen.findByText("КП пока нет")).toBeInTheDocument();
+    expect(await screen.findByText("Предложений нет")).toBeInTheDocument();
   });
 
   it("комментарий к КП: текст обязателен, уходит в ERP, появляется в ленте; КП ждёт решения как прежде", async () => {
@@ -494,13 +494,13 @@ describe("КП", () => {
     const log = requestLog();
     const body = captureBody("/quotes/310/comments");
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     const section = screen.getByRole("region", { name: "Комментарии" });
     expect(
       within(section).getByText("Комментариев пока нет."),
     ).toBeInTheDocument();
     expect(
-      within(section).getByText(/КП при этом не меняется/),
+      within(section).getByText(/Предложение при этом не меняется/),
     ).toBeInTheDocument();
 
     await user.click(
@@ -523,7 +523,7 @@ describe("КП", () => {
     ).toBeInTheDocument();
     expect(body.current).toEqual({ text: "Можно оплату в два этапа?" });
     const feed = await within(section).findByRole("list", {
-      name: "Комментарии к КП KP-2026-0057",
+      name: "Комментарии к предложению KP-2026-0057",
     });
     expect(
       within(feed).getByText("Можно оплату в два этапа?"),
@@ -537,9 +537,9 @@ describe("КП", () => {
   it("решённое КП: лента с ответом менеджера, поля для комментария нет", async () => {
     signedIn();
     renderApp("/quotes/300");
-    await heading("КП KP-2026-0042");
+    await heading("Коммерческое предложение KP-2026-0042");
     const feed = await screen.findByRole("list", {
-      name: "Комментарии к КП KP-2026-0042",
+      name: "Комментарии к предложению KP-2026-0042",
     });
     expect(
       within(feed).getByText("Менеджер · Дилноза Юсупова"),
@@ -555,7 +555,7 @@ describe("КП", () => {
     failWith("post", "/quotes/310/comments", 409, "QUOTE_EXPIRED");
     const user = userEvent.setup();
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     const section = screen.getByRole("region", { name: "Комментарии" });
     await user.type(
       within(section).getByLabelText("Ваш комментарий"),
@@ -565,7 +565,7 @@ describe("КП", () => {
       within(section).getByRole("button", { name: "Отправить комментарий" }),
     );
     expect(
-      await within(section).findByText(/Срок действия КП истёк/),
+      await within(section).findByText(/Срок действия предложения истёк/),
     ).toBeInTheDocument();
   });
 
@@ -573,7 +573,7 @@ describe("КП", () => {
     signedIn("viewer");
     window.localStorage.setItem("cabinet.language", "ru");
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     expect(screen.getByText("Комментариев пока нет.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Ваш комментарий")).not.toBeInTheDocument();
   });
@@ -581,7 +581,7 @@ describe("КП", () => {
   it("axe: карточка КП", async () => {
     signedIn();
     renderApp("/quotes/310");
-    await heading("КП KP-2026-0057");
+    await heading("Коммерческое предложение KP-2026-0057");
     await expectNoAxeViolations();
   });
 });

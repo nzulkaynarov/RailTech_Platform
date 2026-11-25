@@ -260,7 +260,7 @@ export function DocumentsPage() {
       t('pages.documents.csv.title', 'Название документа'),
       t('pages.documents.csv.docNumber', 'Номер документа'),
       t('pages.documents.csv.date', 'Дата'),
-      t('pages.documents.csv.deal', 'Сделка'),
+      t('pages.documents.csv.deal', 'Проект'),
       t('pages.documents.csv.size', 'Размер (байт)'),
     ];
     const rows = filtered.map((doc, idx) => [

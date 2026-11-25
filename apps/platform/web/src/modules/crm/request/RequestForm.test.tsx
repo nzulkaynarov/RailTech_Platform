@@ -3,7 +3,9 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetCompanyMock, updateCompanyMock } from "../../../mocks/fixtures/company";
+import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
+import { MOCK_ERP_DOWN_KEY } from "../../../mocks/feedHandlers";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import {
@@ -41,6 +43,11 @@ async function openForm(path: string, pick = true): Promise<HTMLElement> {
   signIn("manager@demo.example");
   renderAt(path);
   const panel = await panelEl();
+  // Лид с партнёрской формы сайта (L-2044) начинает с «Партнёр» (ЛП-1): здесь нужна заявка клиента.
+  const client = await within(panel)
+    .findByRole("radio", { name: "Клиент" })
+    .catch(() => null);
+  if (client && !(client as HTMLInputElement).checked) fireEvent.click(client);
   await within(panel).findByRole("form", { name: "Создать заявку" });
   const field = within(panel).queryByLabelText("Название компании");
   const suggested = panel.querySelector(".ant-select-selection-placeholder")?.textContent.trim();
@@ -223,7 +230,11 @@ describe("«Создать заявку» из лида и из клиента (
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
     expect(created?.requests[0]?.letter_file_id).toBeTruthy();
     expect(created?.requests[0]?.urgency).toBe("urgent");
-    expect(within(panel).getByRole("link", { name: "Открыть карточку клиента" })).toHaveAttribute(
+    // Б-7: номер заявки, что дальше и «Открыть заявку»
+    expect(await within(panel).findByText("Ждёт резолюции.")).toBeVisible();
+    expect(created?.requests[0]?.number).toBeTruthy();
+    expect(within(panel).getByText(String(created?.requests[0]?.number))).toBeVisible();
+    expect(within(panel).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
       `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
     );
@@ -253,6 +264,48 @@ describe("«Создать заявку» из лида и из клиента (
     window.localStorage.removeItem("rt-pf-mock-intake-not-ready");
     resetCompanyMock();
   });
+
+  it("учёт недоступен: номера нет, вместо «Ждёт резолюции» — «Не передана в учёт» (Б-7)", async () => {
+    window.localStorage.setItem(MOCK_ERP_DOWN_KEY, "1");
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(within(panel).getByText(/Не передана в учёт/)).toBeVisible();
+    expect(within(panel).queryByText("Ждёт резолюции.")).toBeNull();
+    window.localStorage.removeItem(MOCK_ERP_DOWN_KEY);
+  });
+
+  it("передача в учёт ещё идёт: «Ждёт резолюции» не обещаем, карточка перечитывается и номер появляется сам (Б-7)", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/crm/clients/:id", ({ params }) => {
+        calls += 1;
+        const client = readLeads().clients.find((c) => String(c.id) === String(params["id"]));
+        if (!client) return HttpResponse.json({}, { status: 404 });
+        const requests =
+          calls <= 2
+            ? client.requests.map((r, i) =>
+                i === 0 ? { ...r, number: null, transfer: "pending" as const } : r,
+              )
+            : client.requests;
+        return HttpResponse.json({ ...client, requests, do_not_work: null });
+      }),
+    );
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(within(panel).queryByText("Ждёт резолюции.")).toBeNull();
+    expect(within(panel).queryByText(/Не передана в учёт/)).toBeNull();
+    // через 2 с карточка перечитана, номер выдан, передача завершена
+    expect(
+      await within(panel).findByText("Ждёт резолюции.", undefined, { timeout: 8000 }),
+    ).toBeVisible();
+    expect(calls).toBeGreaterThan(2);
+  }, 20000);
 
   it("сбой сервера оставляет введённое; повтор с тем же ключом создаёт одну заявку", async () => {
     const keys: string[] = [];
@@ -391,6 +444,64 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     expect(requestsOf("ООО Рельс-Сервис Демо")).toBe(before + 1);
+  });
+});
+
+describe("«Создать · Заявка» второй раз (Б-6)", () => {
+  it("при открытой форме метка `fresh` начинает форму заново, а смена адреса окном — нет", async () => {
+    signIn("manager@demo.example");
+    const { router } = renderAt("/crm/clients?create=1&panel=open&tab=card");
+    const panel = await panelEl();
+    await within(panel).findByRole("form", { name: "Создать заявку" });
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
+      target: { value: "Накладки рельсовые" },
+    });
+    await router.navigate("/crm/clients?create=1&panel=open&tab=card", { replace: true });
+    expect(within(panel).getByLabelText("Суть запроса")).toHaveValue("Накладки рельсовые");
+    await router.navigate("/crm/clients?create=1&panel=open&tab=card", { state: { fresh: 1 } });
+    await waitFor(() => {
+      expect(within(panel).queryByDisplayValue("Накладки рельсовые")).toBeNull();
+    });
+  });
+});
+
+describe("компания с отметкой «Не работать» (Х-8, Б-6)", () => {
+  const ctx: RequestContext = {
+    lead: null,
+    leadChannel: null,
+    leadTelegram: null,
+    consentGiven: true,
+    contacts: [],
+    doNotWork: true,
+  };
+
+  it("валидатор: отметка закрывает заявку даже у выбранного клиента", () => {
+    const state = { ...emptyRequestForm(), clientId: 3 };
+    expect(validateRequest(state, ctx).company).toBe("do_not_work");
+    expect(validateRequest(state, { ...ctx, doNotWork: false }).company).toBeUndefined();
+  });
+
+  it("форма: полоса «С компанией не работаем», «Создать заявку» недоступна, в «Осталось» названа причина", async () => {
+    resetMarks();
+    setMark("1003", "ООО Рельс-Сервис Демо", {
+      reason: "Спор по оплате",
+      set_by: "Менеджер Демо",
+      set_at: "2026-11-23T09:30:00Z",
+      until: null,
+    });
+    const panel = await openForm("/crm/clients?client=3&create=1&panel=open&tab=card");
+    expect(
+      await within(panel).findByText(/С компанией не работаем: Спор по оплате/),
+    ).toBeInTheDocument();
+    open(panel, "Проверка и отправка");
+    await waitFor(() => {
+      expect(remainingList(panel)).toHaveTextContent(
+        "С компанией не работаем: заявку создать нельзя",
+      );
+    });
+    expect(within(panel).getByRole("button", { name: /Создать заявку/ })).toBeDisabled();
+    resetMarks();
   });
 });
 

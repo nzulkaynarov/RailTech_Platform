@@ -46,6 +46,7 @@
     }
   },
   "clientStatus": {
+    "contract_preparing": "Şartnomani tayyorlayapmiz",
     "contract_review": "Şartnoma matnini kelişib oling",
     "contract_signing": "Şartnoma imzolanmoqda",
     "awaiting_payment": "Tölov kutilmoqda",
@@ -115,10 +116,10 @@
       "invoiceType": "Tölov hisobi",
       "actType": "Bajarilgan iş yoki yetkazib beriş dalolatnomasi",
       "none": "—",
-      "contractMissing": "Şartnoma loyihasi hali yöq: uni buxgalter qabul qilingan TT dan şakllantiradi.",
-      "invoiceMissing": "Hisob şartnoma imzolangandan keyin paydo böladi: qoralama avtomatik yaratiladi.",
+      "contractMissing": "Şartnoma loyihasi hali yöq.",
+      "invoiceMissing": "Hisob hali yöq.",
       "invoiceMissingSigned": "Şartnoma imzolangan, hisob hali yöq: uni «Moliya» bölimida çiqaring.",
-      "actMissing": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi.",
+      "actMissing": "Dalolatnoma hali yöq.",
       "actAfterDelivery": "Dalolatnoma — yetkazilgandan keyin",
       "invoiceDue": "muddat {{date}}",
       "invoiceCount": "hisoblar: {{count}}",
@@ -142,10 +143,9 @@
     },
     "execution": {
       "title": "Bajarilişi",
-      "hint": "Ombordan jönatiş — «Ombor · Jönatmalar»da. Bu yerda tovar yölda va yetkazilgani belgilanadi.",
       "shipment": "Jönatma",
-      "none": "Jönatma hali yöq: u şartnoma imzolangandan keyin yaratiladi.",
-      "awaitingShipment": "Yetkazib beriş belgilari tovar ombordan jönatilgaç paydo böladi.",
+      "none": "Jönatma hali yöq.",
+      "awaitingShipment": "Belgilar jönatişdan keyin paydo böladi.",
       "status": "Holat",
       "expected": "Kutilayotgan sana",
       "shipped": "Jönatilgan",
@@ -307,7 +307,11 @@
       "revise": "Loyiha işga qaytarildi.",
       "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
       "request_deviation": "Ariza «Huquq» egasiga yuborildi.",
-      "decide_deviation": "Qaror yozildi."
+      "decide_deviation": "Qaror yozildi.",
+      "decline_renewal": "Uzaytirişdan boş tortiş yozildi.",
+      "renew": "Şartnoma uzaytirildi.",
+      "send_new_edition": "Yangi tahrir imzoga yuborildi.",
+      "restore_renewal": "Uzaytirişdan boş tortiş bekor qilindi."
     },
     "readOnly": "Faqat köriş.",
     "template": {
@@ -374,13 +378,44 @@
         "visa_finance": "buxgalter",
         "visa_legal": "yurist"
       }
+    },
+    "term": {
+      "title": "Şartnoma muddati",
+      "line": "{{from}}dan {{until}}gaça amal qiladi",
+      "lineOpen": "{{from}}dan amal qiladi, muddatsiz",
+      "state": {
+        "open": "Muddatsiz",
+        "renews": "Özi uzayadi",
+        "ends": "Muddatida tugaydi",
+        "expired": "Muddat tugadi"
+      },
+      "renewsHint": "Uzaytirişdan {{notice}}gaça boş tortiş mümkin.",
+      "declined": {
+        "company": "Biz uzaytirişdan boş tortdik: şartnoma muddatida tugaydi.",
+        "client": "Kontragent uzaytirişdan boş tortdi: şartnoma muddatida tugaydi."
+      },
+      "foreign": "Çet ellik kontragent: qöşimça kelişuv bilan uzaytiriladi.",
+      "renewals": "Uzaytirişlar: {{count}}",
+      "edition": "Şablonning {{edition}}-tahririda imzolangan.",
+      "editionNewer": "{{edition}}-tahrirda imzolangan; yangi {{newer}}-tahrir bor. Kontragent imzolamaguça uzaytiriş eski tahrirda ketadi.",
+      "nda": "Şartnoma tugagaç sir saqlaş: {{years}} yil.",
+      "ndaIndefinite": "Tijorat siri — muddatsiz.",
+      "agreement": "Kelişuv raqami",
+      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Kartada bekor qilib bölmaydi.",
+      "cancel": "Kerak emas",
+      "action": {
+        "decline_renewal": "Uzaytirişdan boş tortiş",
+        "renew": "Uzaytiriş",
+        "send_new_edition": "Yangi tahrirni imzoga yuboriş",
+        "restore_renewal": "Uzaytirişni qaytariş"
+      }
     }
   },
   "act": {
     "number": "{{number}} dalolatnomasi",
     "none": {
       "title": "Dalolatnoma hali yöq",
-      "noInvoice": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi. Hisob hali rasmiylaştirilmagan — uni «Moliya» bölimida rasmiylaştiring.",
+      "noInvoice": "Hisob hali rasmiylaştirilmagan — uni «Moliya» bölimida rasmiylaştiring.",
       "notDelivered": "Dalolatnoma yetkazib berilgandan keyin: tovar mijozga yetkazilgaç çiqariladi.",
       "forbidden": "Ruxsat yetarli emas.",
       "ready": "Hisob rasmiylaştirilgan: dalolatnoma çiqariş mumkin.",

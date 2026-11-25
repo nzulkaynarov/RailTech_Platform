@@ -11,11 +11,12 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.main import create_app
+from app.models.auth import User
 from app.models.leads import Lead, LeadNote
 from app.models.qualification import Escalation
 from app.models.staff_tickets import StaffNotification
@@ -145,6 +146,9 @@ async def test_registrar_hands_the_lead_over_and_the_manager_takes_it(
     assert [(b.kind, b.object_kind, b.object_number) for b in bell] == [
         ("lead_handed_over", "lead", f"L-{lead_id:04d}")
     ]
+    # колокольчик называет того, кто передал (не безликого «делопроизводителя»)
+    assert "clerk" in bell[0].title
+    assert f"L-{lead_id:04d}" in bell[0].title
 
     inbox = client.get("/api/v1/inbox", headers=seller).json()
     (row,) = [r for r in inbox["escalations"] if r["id"] == lead_id]
@@ -192,3 +196,39 @@ async def test_a_lead_without_a_handoff_gets_a_new_one(
         ["handed_over"],
     )
     assert (escalation.handed_by_user_id, escalation.request_type) == (clerk_id, None)
+
+
+@pytest.mark.parametrize(
+    ("language", "title"),
+    [
+        ("ru", "Вам передан лид L-{id} · clerk"),
+        ("en", "Lead L-{id} was handed over to you · clerk"),
+        ("uz", "Sizga L-{id} lidi topşirildi · clerk"),
+    ],
+)
+async def test_handover_bell_is_in_the_language_of_the_recipient(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    language: str,
+    title: str,
+) -> None:
+    lead_id = await escalated_lead(sessions)
+    _, clerk = await _staff(client, sessions, "clerk@railtech.uz", "tpl:REGISTRAR")
+    seller_id, _ = await _staff(client, sessions, "seller@railtech.uz", "tpl:MANAGER_ALL")
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == seller_id).values(language=language))
+
+    done = client.post(
+        f"/api/v1/leads/{lead_id}/actions/hand_over",
+        json={"user_id": seller_id, "note": NOTE},
+        headers=clerk,
+    )
+    assert done.status_code == 200, done.text
+
+    async with sessions() as session:
+        bell = (
+            await session.scalars(
+                select(StaffNotification).where(StaffNotification.user_id == seller_id)
+            )
+        ).one()
+    assert bell.title == title.format(id=f"{lead_id:04d}")

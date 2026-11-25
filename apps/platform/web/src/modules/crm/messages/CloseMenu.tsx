@@ -1,8 +1,9 @@
-import { Button, Dropdown } from "antd";
-import { useState } from "react";
+import { Button, Dropdown, Menu } from "antd";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChevronDownIcon } from "../../../shared/ui/lucide";
+import { useGetCrmCloseOptions } from "../../../shared/api/generated/platform-bff";
 import { CloseDialog, type CloseKind } from "./CloseDialogs";
 
 /**
@@ -15,18 +16,26 @@ export function CloseMenu({
   name,
   close,
   discard,
+  inline = false,
 }: {
   lead: string;
   name: string;
   close: boolean;
   discard: boolean;
+  /** Пункты раскрываются в потоке под кнопкой, а не поверх содержимого (карточка лида: меню не закрывает сообщения). */
+  inline?: boolean;
 }) {
   const { t } = useTranslation("messages");
   const [open, setOpen] = useState<CloseKind | null>(null);
+  // Итог из учёта: «Заключено» ставит сам учёт (сделка в ERP), пункта в меню нет — иначе окно открывалось с мёртвой кнопкой
+  const wonByErp = useGetCrmCloseOptions().data?.won_by_erp === true;
+  const [expanded, setExpanded] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const items = [
     ...(close
       ? [
-          { key: "won", label: t("close.won") },
+          ...(wonByErp ? [] : [{ key: "won", label: t("close.won") }]),
           { key: "lost", label: t("close.lost") },
         ]
       : []),
@@ -40,6 +49,59 @@ export function CloseMenu({
       : []),
   ];
   if (!close && !discard) return null;
+  const dialog = open ? (
+    <CloseDialog
+      lead={lead}
+      kind={open}
+      onClose={() => {
+        setOpen(null);
+        // после окна фокус возвращается на «Закрыть», а не пропадает в начало страницы
+        buttonRef.current?.focus();
+      }}
+    />
+  ) : null;
+  if (inline) {
+    return (
+      <>
+        <Button
+          ref={buttonRef}
+          aria-label={`${t("close.menu")}: ${name}`}
+          aria-expanded={expanded}
+          aria-controls={expanded ? menuId : undefined}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && expanded) {
+              event.stopPropagation();
+              setExpanded(false);
+            }
+          }}
+          onClick={() => {
+            setExpanded((value) => !value);
+          }}
+        >
+          {t("close.menu")} <ChevronDownIcon />
+        </Button>
+        {expanded ? (
+          <Menu
+            id={menuId}
+            className="pf-crm-close-inline"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              setExpanded(false);
+              buttonRef.current?.focus();
+            }}
+            selectable={false}
+            items={items}
+            onClick={({ key }) => {
+              setExpanded(false);
+              setOpen(key as CloseKind);
+            }}
+          />
+        ) : null}
+        {dialog}
+      </>
+    );
+  }
   return (
     <>
       <Dropdown
@@ -55,15 +117,7 @@ export function CloseMenu({
           {t("close.menu")} <ChevronDownIcon />
         </Button>
       </Dropdown>
-      {open ? (
-        <CloseDialog
-          lead={lead}
-          kind={open}
-          onClose={() => {
-            setOpen(null);
-          }}
-        />
-      ) : null}
+      {dialog}
     </>
   );
 }

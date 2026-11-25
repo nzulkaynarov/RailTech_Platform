@@ -88,30 +88,28 @@ def _recipient_contact(quote, email: str, name: str) -> Optional[Contact]:
 
 
 def deal_recipient_contact(deal, email: str, name: str) -> Optional[Contact]:
-    """Контакт кабинета для адреса получателя: назначенный в заявке, найденный в компании по адресу, иначе новый.
+    """Контакт кабинета для адреса получателя: назначенный в заявке или найденный в компании по адресу; иначе `None`.
 
-    Новый контакт заводится без права действовать и без прав администратора (ADR-0030 п. 7): права ему задаёт сотрудник.
-    Заявка без компании — контакта нет, ссылка показывает документ, действий нет.
+    Адрес получателя документа контактом компании НЕ становится (ADR-0030 п. 7, поправка 2026-11-25): одна опечатка
+    или пересылка открыла бы чужому человеку весь кабинет клиента. Ссылка без контакта — гостевая: один документ и
+    его PDF, без кода, сессии и действий (`availability` → `no_contact`). Контакт добавляет сотрудник явно.
     """
     chosen = getattr(deal, "contact", None)
     if chosen is not None and (chosen.email or "").strip().lower() == email.lower():
         return chosen
     if deal.company_id is None:
         return None
-    found = (
+    return (
         Contact.objects.filter(active_contact_q(), company_id=deal.company_id, email__iexact=email)
         .order_by("-is_primary", "pk")
         .first()
     )
-    if found is not None:
-        return found
-    return Contact.objects.create(company_id=deal.company_id, name=(name or email)[:255], email=email, can_act=False)
 
 
 def mint_document_link(kind: str, doc, email: str, name: str, *, created_by=None) -> tuple[DocumentLink, str]:
     """Новая ссылка на договор, счёт или акт для получателя `email`; `(запись, сырой токен)` (ДК-3).
 
-    Получатель — контакт компании сделки по адресу; нет такого — заводится без прав (как у КП).
+    Получатель — контакт компании сделки по адресу; нет такого — гостевая ссылка без контакта (как у КП).
     """
     spec = spec_of(kind)
     raw = generate_token()
@@ -130,7 +128,7 @@ def mint_document_link(kind: str, doc, email: str, name: str, *, created_by=None
 def deal_recipients(deal) -> list[tuple[str, str]]:
     """Кому уходят документы и письма сделки: `(адрес, имя)` без повторов (ДК-3, ADR-0030 п. 8).
 
-    Контакт сделки и каждый, кому уже уходил документ сделки (получатель КП, договора, счёта, акта); если таких нет —
+    Контакт сделки и каждый контакт компании, кому уже уходил документ сделки (получатель КП, договора, счёта, акта); адрес без контакта сюда не входит; если таких нет —
     основной контакт компании, затем зарегистрированный покупатель. Прежние участники компании в ERP письма о документах
     не получают.
     """
@@ -145,9 +143,10 @@ def deal_recipients(deal) -> list[tuple[str, str]]:
     if contact is not None and not contact.is_archived:
         add(contact.email, contact.name)
     for link in document_links_of_deal(deal).select_related("contact"):
-        if link.contact is not None and link.contact.is_archived:
+        # Адрес без контакта (опечатка, пересылка) следующих документов сделки не получает (В-1, ADR-0030 п. 4)
+        if link.contact is None or link.contact.is_archived:
             continue
-        add(link.recipient_email, link.contact.name if link.contact is not None else "")
+        add(link.recipient_email, link.contact.name)
     if not found and deal.company_id is not None:
         primary = (
             Contact.objects.filter(active_contact_q(), company_id=deal.company_id)
@@ -743,3 +742,57 @@ def client_link_summary(quote) -> Optional[dict]:
         "first_opened_at": min(opened, default=quote.first_viewed_at),
         "last_opened_at": max(last, default=quote.first_viewed_at),
     }
+
+
+# ── Контакты, заведённые прежним выпуском ссылок (В-1, поправка к ADR-0030 п. 7) ─────────────────────────────────────
+
+
+def auto_created_document_contacts() -> list[dict]:
+    """Контакты, которые прежняя выдача ссылок завела по адресу получателя: без автора, без прав и без телефона, созданные
+    в ту же минуту, что первая ссылка на них, и не назначенные в заявке. Только чтение: удаляет или оставляет сотрудник.
+
+    Признак «создан ссылкой» косвенный (отдельного флага нет): список — для просмотра владельцем, не для автоматических
+    действий.
+    """
+    rows: dict[int, dict] = {}
+    links = (
+        DocumentLink.objects.exclude(contact__isnull=True)
+        .select_related("contact__company")
+        .order_by("created_at", "pk")
+    )
+    for link in links:
+        contact = link.contact
+        if contact.pk in rows:
+            rows[contact.pk]["links"] += 1
+            continue
+        if (
+            contact.created_by_id is None
+            and not contact.can_act
+            and not contact.is_admin
+            and not contact.is_primary
+            and not contact.phone
+            and contact.telegram_user_id is None
+            and contact.created_at <= link.created_at <= contact.created_at + timedelta(minutes=1)
+            and (link.recipient_email or "").lower() == (contact.email or "").lower()
+        ):
+            rows[contact.pk] = {
+                "contact_id": contact.pk,
+                "company_id": contact.company_id,
+                "company": contact.company.name,
+                "email": contact.email,
+                "created_at": contact.created_at,
+                "invited_at": contact.invited_at,
+                "last_login_at": contact.last_login_at,
+                "archived": contact.is_archived,
+                "links": 1,
+            }
+    deal_contacts = set()
+    for row in rows.values():
+        row["assigned_in_deal"] = False
+    if rows:
+        from crm.models import Deal
+
+        deal_contacts = set(Deal.objects.filter(contact_id__in=rows).values_list("contact_id", flat=True))
+        for pk in deal_contacts:
+            rows[pk]["assigned_in_deal"] = True
+    return [row for row in rows.values() if not row["assigned_in_deal"]]

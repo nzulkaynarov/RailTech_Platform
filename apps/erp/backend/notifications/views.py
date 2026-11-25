@@ -57,14 +57,17 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         from django.db.models import Q
 
         user = self.request.user
-        # Аудитория видимости: USER-канал — только для не-админов; PLATFORM_ADMIN-канал — только
-        # для Platform Admin. Админ НЕ видит клиентские уведомления; USER НЕ видит platform-алёрты.
+        # Аудитория видимости: PLATFORM_ADMIN-канал — только для Platform Admin; USER-канал — для
+        # адресата. Админ НЕ видит чужие клиентские уведомления; USER НЕ видит platform-алёрты.
+        # Админ CRM заведён в ERP как суперпользователь и сам получает адресованные ему
+        # уведомления (назначение, платёжка, визы): их он тоже видит, а не только системные алёрты.
         if user.is_superuser:
-            audience = Notification.AUDIENCE_PLATFORM_ADMIN
-        else:
-            audience = Notification.AUDIENCE_USER
+            return Notification.objects.select_related("type").filter(
+                (Q(audience=Notification.AUDIENCE_PLATFORM_ADMIN) & (Q(user=user) | Q(user__isnull=True)))
+                | (Q(audience=Notification.AUDIENCE_USER) & Q(user=user))
+            )
         return Notification.objects.select_related("type").filter(
-            Q(audience=audience) & (Q(user=user) | Q(user__isnull=True))
+            Q(audience=Notification.AUDIENCE_USER) & (Q(user=user) | Q(user__isnull=True))
         )
 
     @extend_schema(

@@ -189,6 +189,7 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
         "text": body.text,
         "amount": body.amount.model_dump() if body.amount else None,
         "due_date": body.due_date.isoformat() if body.due_date else None,
+        "invoice_later": body.invoice_later,
         "file_ids": body.file_ids,
         "erp_deal_id": body.erp_deal_id,
     }

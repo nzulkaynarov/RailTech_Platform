@@ -602,6 +602,10 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
     )
     if scope == "open":
         tasks = tasks.filter(deal__stage__code__in=OPEN_STAGES)
+    else:
+        tasks = tasks.filter(
+            deal__hidden_in_lists=False
+        )  # «Ошибка» и «Тест» — скрыты по умолчанию, открываются по номеру
     if mine:
         crm_ids = _mapped_crm_ids(user)
         tasks = tasks.filter(Q(assignees__user=user) | Q(assignees__crm_user_id__in=crm_ids)).distinct()
@@ -635,13 +639,14 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
 MAX_REFS = 5000
 
 
-def deal_refs(user, number: str = "") -> list[dict]:
+def deal_refs(user, number: str = "", *, any_request: bool = False) -> list[dict]:
     """Лёгкий справочник заявок с заданием расчёта (без КП, строк и виз): id, номер ЗВ/ПР (`Deal.number`, ERP-09),
     дата создания, стадия — для поиска заявки по номеру в BFF. `number` — отбор по номеру (`ЗВ-2026-104`, `ПР-2026-104`,
     `zv 2026 104` — один NNN года, префикс не важен: после принятия КП заявка становится проектом с тем же NNN); не номер —
     пусто. С новых заявок."""
     _require_staff(user)
-    rows = Deal.objects.filter(calc_tasks__isnull=False)
+    # `any_request` — и заявка без задания расчёта (черновик из передачи лида): у неё есть карточка «Закрыть заявку»
+    rows = Deal.objects.all() if any_request else Deal.objects.filter(calc_tasks__isnull=False)
     if number:
         parsed = deal_numbers.parse_query(number)
         if parsed is None:
@@ -747,6 +752,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
         },
         "visas": {name: groups[name] for name in VISA_GROUPS},
         "ready": {"allowed": blocker is None, "blocker": blocker, "missing": missing},
+        "close": close_state(deal, user),
         "rights": {
             "goods": rights[Zone.GOODS],
             "services": rights[Zone.SERVICES],
@@ -1658,6 +1664,177 @@ def lose(deal_id: int, user, reason: str) -> dict:
     )
     deal.refresh_from_db()
     return _sheet(deal, task, user)
+
+
+# ── «Закрыть заявку» на любом шаге до проекта (ЛХ-2) ──────────────────────────────────────────────────────────────
+
+#: Стадии, из которых заявку можно закрыть: всё до принятия КП (договор и дальше — проект, не заявка).
+CLOSABLE_STAGES = (
+    DealStageCode.DRAFT,
+    DealStageCode.KYC_PENDING,
+    DealStageCode.RFQ_OPEN,
+    DealStageCode.SOURCING,
+    DealStageCode.CALCULATING,
+    DealStageCode.QUOTE_SENT,
+)
+
+
+#: КП, не получившие решения: на проверке, у директора, готово к отправке и отправленное клиенту.
+UNFINISHED_QUOTE_STATUSES = (
+    QuoteStatusCode.PENDING_TRADE_REVIEW,
+    QuoteStatusCode.PENDING_APPROVAL,
+    QuoteStatusCode.READY_TO_SEND,
+    QuoteStatusCode.SENT,
+)
+
+
+def quote_sent_to_client(deal: Deal) -> bool:
+    """КП уже было у клиента: заявка в стадии «КП отправлено», либо КП отправлено, принято или отклонено клиентом.
+    Отказ директора КП клиенту не отправляет."""
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    if stage == DealStageCode.QUOTE_SENT:
+        return True
+    for quote in Quote.objects.filter(deal=deal).select_related("status"):
+        code = quote.status.code if quote.status_id else QuoteStatusCode.DRAFT
+        if code in (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED):
+            return True
+        if code == QuoteStatusCode.REJECTED and quote.director_decision != "reject":
+            return True
+    return False
+
+
+def _is_request_owner(deal: Deal, user) -> bool:
+    """Ответственный заявки — менеджер или взявший в работу. Исполнитель резолюции (визы расчёта) владельцем не считается."""
+    return user.pk in (deal.manager_id, deal.assigned_to_id)
+
+
+def can_close_request(deal: Deal, user) -> bool:
+    """Закрыть заявку может её ответственный и держатель зоны продаж (`deal.manage`); администратор — всегда."""
+    if not (getattr(user, "is_superuser", False) or is_seller(user)):
+        return False
+    return has_perm(user, Permission.DEAL_MANAGE.value) or _is_request_owner(deal, user)
+
+
+def close_state(deal: Deal, user) -> dict:
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    reason = deal.close_reason if deal.close_reason_id else None
+    return {
+        "allowed": stage in CLOSABLE_STAGES and not deal.is_project and can_close_request(deal, user),
+        "quote_sent": quote_sent_to_client(deal) if stage in CLOSABLE_STAGES else deal.closed_after_quote_sent,
+        "reason": reason.code if reason else None,
+        "comment": deal.close_comment or None,
+    }
+
+
+def _request_card(deal: Deal, task: Optional[CalcTask], user) -> dict:
+    """Карточка заявки для «Закрыть заявку»: заявка, её текст и файлы, что можно и чем закрыта — с заданием расчёта и без."""
+    from .draft_quote import deal_request_files, deal_request_lines_count, deal_request_text
+
+    return {
+        "deal": _deal_brief(deal),
+        "has_task": task is not None,
+        "request": {
+            "text": deal_request_text(deal),
+            "lines": deal_request_lines_count(deal),
+            "files": deal_request_files(deal),
+        },
+        "close": close_state(deal, user),
+    }
+
+
+def request_card(deal_id: int, user) -> dict:
+    _require_staff(user)
+    deal = _deal_or_404(deal_id)
+    return _request_card(deal, latest_task(deal.id), user)
+
+
+def close_reasons(user) -> list[dict]:
+    """Действующие причины закрытия (справочник `request-close-reasons`) с правилами — для диалога."""
+    from ..models import DealCloseReason
+
+    _require_staff(user)
+    return [
+        {
+            "code": row.code,
+            "name": {"ru": row.name, "uz": row.name_uz, "en": row.name_en},
+            "requires_comment": row.requires_comment,
+            "allowed_after_quote_sent": row.allowed_after_quote_sent,
+            "preselect_after_client_rejection": row.preselect_after_client_rejection,
+        }
+        for row in DealCloseReason.objects.filter(is_active=True).order_by("sort_order", "name")
+    ]
+
+
+@transaction.atomic
+def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> dict:
+    """«Закрыть заявку» на любом шаге до проекта: стадия «Отказ» (CLOSED_LOST) с причиной из справочника, событие
+    `deal.lost` в CRM, резервы снимает переход стадии. КП уже у клиента — только причины с `allowed_after_quote_sent`;
+    отправленное КП закрывается (клиент не примет его после закрытия). «Ошибка» и «Тест» без отправленных клиенту
+    документов скрывают заявку из списков (`hidden_in_lists`); запись и журнал остаются — удаления нет."""
+    from ..models import DealCloseReason
+    from .deals import transition_deal_stage
+    from .quotes._shared import _set_quote_status
+
+    _require_staff(user)
+    deal = _locked_deal_or_404(deal_id)
+    task = latest_task(deal.id)  # заявка без задания расчёта (черновик из передачи) закрывается так же
+    if not can_close_request(deal, user):
+        raise CalcError("ROLE_NOT_PERMITTED", 403)
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    if stage not in CLOSABLE_STAGES or deal.is_project:
+        raise CalcError("REQUEST_NOT_CLOSABLE", 409)
+    reason = DealCloseReason.objects.filter(code=(reason_code or "").strip(), is_active=True).first()
+    if reason is None:
+        raise CalcError("REASON_UNKNOWN", 400)
+    comment = (comment or "").strip()
+    if reason.requires_comment and not comment:
+        raise CalcError("COMMENT_REQUIRED", 400)
+    sent = quote_sent_to_client(deal)
+    if sent and not reason.allowed_after_quote_sent:
+        raise CalcError("REASON_NOT_ALLOWED_AFTER_QUOTE", 409)
+    lost_reason = f"{reason.name}: {comment}" if comment else reason.name
+    _deal, err = transition_deal_stage(
+        deal,
+        DealStageCode.CLOSED_LOST,
+        actor=user,
+        reason=f"Заявка закрыта: {lost_reason}",
+        lost_reason=lost_reason,
+    )
+    if err:
+        raise CalcError(err, 409)
+    # Незавершённые КП закрываются вместе с заявкой (клиент не примет отправленное, директору нечего одобрять): у закрытой
+    # заявки нет КП «у директора» и «готово к отправке». Для клиента такое КП — «закрыто», а не «отклонено».
+    for quote in Quote.objects.filter(deal=deal, status__code__in=UNFINISHED_QUOTE_STATUSES):
+        _set_quote_status(quote, QuoteStatusCode.CLOSED)
+    deal.close_reason = reason
+    deal.close_comment = comment[:2000]
+    deal.closed_from_stage = stage
+    deal.closed_after_quote_sent = sent
+    deal.hidden_in_lists = bool(reason.hide_when_unsent and not sent)
+    deal.save(
+        update_fields=[
+            "close_reason",
+            "close_comment",
+            "closed_from_stage",
+            "closed_after_quote_sent",
+            "hidden_in_lists",
+        ]
+    )
+    _log(
+        deal,
+        user,
+        "Заявка закрыта",
+        f"{task.letter_number if task else deal.number}: {lost_reason}",
+        "calc.closed",
+        {
+            "letter_number": task.letter_number if task else None,
+            "reason_code": reason.code,
+            "reason": reason.name,
+            "comment": comment,
+        },
+    )
+    deal.refresh_from_db()
+    return _request_card(deal, task, user)
 
 
 def line_visas(quote: Quote) -> list[tuple[str, Any, Any]]:

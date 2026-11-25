@@ -97,6 +97,13 @@ async function press(name: string) {
   fireEvent.click(await screen.findByRole("button", { name: new RegExp(`${name}$`) }));
 }
 
+/** Служебка с суммой без счёта: «Счёт партнёра придёт позже» (Б-9). */
+function invoiceLater() {
+  const head = screen.queryByRole("button", { name: /Текст и вложения/, expanded: false });
+  if (head) fireEvent.click(head);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Счёт партнёра придёт позже" }));
+}
+
 function fillMemo(subject = "Закупка канцтоваров", text = "Прошу согласовать закупку.") {
   type("Тема", subject);
   type("Текст", text);
@@ -364,6 +371,32 @@ describe("EDS · Создать документ: форма", () => {
     expect(saved?.letter?.registration_requested).not.toBeNull();
   });
 
+  it("автор с правом подписи: главная кнопка «Подписать и отправить» открывает карточку с окном подписания (Б-8)", async () => {
+    const { router } = await openForm("director@demo.example", "?type=letter");
+    type("Тема", "Ответ в банк");
+    await pickAddressee();
+    type("Текст", "Направляем реквизиты.");
+    // право подписи у документа появляется вместе с черновиком: форма сама сохраняет его при сборке PDF
+    step(/Проверка и отправка/);
+    const primary = await screen.findByRole("button", { name: /Подписать и отправить$/ });
+    await waitFor(() => {
+      expect(primary).toBeEnabled();
+    });
+    fireEvent.click(primary);
+
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe("/eds/documents");
+      },
+      { timeout: 5000 },
+    );
+    expect(router.state.location.search).toContain("sign=1");
+    expect(
+      await screen.findByRole("dialog", { name: "Подписание исходящего письма" }),
+    ).toBeInTheDocument();
+    expect(readEds().documents.find((d) => d.subject === "Ответ в банк")?.status).toBe("draft");
+  });
+
   it("«Подготовить ответ»: форма заполнена из входящего — корреспондент, ИНН, почта, тема; можно поправить (EDS-REPLY-1)", async () => {
     const letter = readLetters().find((l) => l.number === "ВХ-108/26");
     if (!letter) throw new Error("нет письма в моках");
@@ -475,6 +508,23 @@ describe("EDS · Создать документ: форма", () => {
     type("Сумма, сум", "1 500 000");
 
     expect(within(route).getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
+  });
+
+  it("служебка с суммой без счёта партнёра не уходит: в «Осталось» названо, что приложить; отметка «придёт позже» снимает требование (Б-9)", async () => {
+    await openForm("manager@demo.example");
+    fillMemo("Оплата рельсов", "Прошу оплатить поставку.");
+    type("Сумма, сум", "1 500 000");
+
+    step(/Проверка и отправка/);
+    const send = screen.getByRole("button", { name: /Отправить на согласование$/ });
+    expect(send).toBeDisabled();
+    expect(
+      screen.getAllByText(/Приложите счёт партнёра или отметьте, что он придёт позже\./).length,
+    ).toBeGreaterThan(0);
+
+    invoiceLater();
+    step(/Проверка и отправка/);
+    expect(screen.getByRole("button", { name: /Отправить на согласование$/ })).toBeEnabled();
   });
 
   it("согласующие и получатели копии (пункт 1.6): выбор в шаге «Согласование», после отправки — в маршруте", async () => {
@@ -609,6 +659,7 @@ describe("EDS · Создать документ: форма", () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Закупка мебели для переговорной", "Прошу согласовать закупку трёх столов.");
     type("Сумма, сум", "3 600 000");
+    invoiceLater();
 
     await press("Отправить на согласование");
 
@@ -630,6 +681,7 @@ describe("EDS · Создать документ: форма", () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Командировка", "Нужна командировка. [сбой]");
     type("Сумма, сум", "500 000");
+    invoiceLater();
 
     await press("Отправить на согласование");
 
@@ -662,22 +714,23 @@ describe("EDS · Создать документ: форма", () => {
     second.router.dispose();
   });
 
-  it("сохранение черновика: ничего не отправляется, документ остаётся «Черновиком» и открывается карточкой", async () => {
+  it("сохранение черновика: ничего не отправляется, форма остаётся открытой, второе нажатие обновляет тот же черновик (Б-8)", async () => {
     const { router } = await openForm("manager@demo.example");
     fillMemo("Черновик заявки на ноутбук", "Нужен ноутбук для нового сотрудника.");
 
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
 
+    expect(await screen.findByText("Черновик сохранён")).toBeVisible();
+    expect(router.state.location.pathname).toBe("/eds/new");
+    expect(screen.getByLabelText("Тема")).toHaveValue("Черновик заявки на ноутбук");
+    // дописали и сохранили ещё раз — форма по-прежнему на месте
+    type("Тема", "Черновик заявки на ноутбук Lenovo");
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/eds/documents");
+      expect(screen.getAllByText("Черновик сохранён").length).toBeGreaterThan(0);
     });
-    const heading = await screen.findByRole("heading", {
-      level: 3,
-      name: "Черновик заявки на ноутбук",
-    });
-    const panel = heading.closest("#pf-context-panel") as HTMLElement;
-    expect(within(panel).getByText("Черновик")).toBeVisible();
-    expect(within(panel).getByRole("link", { name: "Продолжить" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/eds/new");
+    expect(screen.getByLabelText("Тема")).toHaveValue("Черновик заявки на ноутбук Lenovo");
   });
 
   it("вложение: файл загружается сразу, его можно убрать; слишком большой не отправляется", async () => {

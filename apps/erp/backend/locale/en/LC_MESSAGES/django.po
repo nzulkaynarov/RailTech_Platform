@@ -7263,3 +7263,15 @@ msgstr "Total:"
 
 msgid "Просим сообщить цену, срок поставки и условия по каждой позиции."
 msgstr "Please state the price, delivery time and terms for each item."
+
+msgid "Договор продлён: %(number)s"
+msgstr "Contract renewed: %(number)s"
+
+msgid "Отказ от продления договора %(number)s"
+msgstr "Renewal of contract %(number)s declined"
+
+msgid "Срок договора продлён: %(number)s. Новый срок — до %(until)s."
+msgstr "The contract term was extended: %(number)s. New term — until %(until)s."
+
+msgid "Мы отказались от продления договора %(number)s: он закончится %(until)s."
+msgstr "We declined the renewal of contract %(number)s: it ends on %(until)s."

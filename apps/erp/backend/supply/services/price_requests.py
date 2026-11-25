@@ -18,6 +18,7 @@ from inventory.access import StockError, person_name, require_staff, require_sup
 from supply.models import PriceRequest, PriceRequestLine, PriceRequestStatus
 from supply.services.orders import get_supplier, supplier_email
 
+from catalog.candidates import is_unconfirmed_card
 from core.person_ref import person_ref
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,12 @@ def _deal_and_items(deal_id: int, item_ids: list[int]):
     if quote is None:
         raise StockError("CALC_NOT_STARTED", 409)
     ids = list(dict.fromkeys(item_ids))
-    items = {i.pk: i for i in quote.items.billable().select_related("product__domain_type", "calc").filter(pk__in=ids)}
+    items = {
+        i.pk: i
+        for i in quote.items.billable()
+        .select_related("product__domain_type", "product__status", "calc")
+        .filter(pk__in=ids)
+    }
     # Объектная проверка: строки должны быть строками расчёта этой заявки.
     if len(items) != len(ids):
         raise StockError("LINE_NOT_FOUND", 404)
@@ -56,6 +62,7 @@ def create(
     *,
     note: str = "",
     to_email: str = "",
+    partner_names: Optional[dict[int, dict]] = None,
 ) -> PriceRequest:
     require_supply(user)
     if not item_ids:
@@ -67,8 +74,13 @@ def create(
     recipient = (to_email or "").strip() or supplier_email(supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
-    # The partner sees what is asked, not our project number (СЦ-10): «Рельс Р65 и ещё 2 позиции».
-    reference = _items_summary(items)
+    # The partner sees what is asked, not our project number (СЦ-10): «Рельс Р65 и ещё 2 позиции» — НАШИМИ словами:
+    # название и артикул карточки каталога; слова клиента — только после подтверждения сотрудником (В-2).
+    rows = partner_lines(items, partner_names)
+    missing = [row for row in rows if row["name"] is None]
+    if missing:
+        raise StockError("PARTNER_NAME_REQUIRED", 409)
+    reference = _summary(rows[0]["name"], len(rows) - 1)
     subject = f"Запрос цены и срока поставки — {reference}"
     with transaction.atomic():
         request = PriceRequest.objects.create(
@@ -83,17 +95,13 @@ def create(
         PriceRequestLine.objects.bulk_create(
             PriceRequestLine(
                 request=request,
-                quote_item=item,
-                name=(
-                    item.imported_raw_name
-                    or (item.product.name if item.product_id else "")
-                    or f"Позиция {item.position}"
-                )[:500],
-                article=(item.mpn or (item.product.manufacturer_part_number if item.product_id else "") or "")[:120],
-                quantity=item.quantity,
-                unit=item.unit,
+                quote_item=row["item"],
+                name=row["name"][:500],
+                article=row["article"][:120],
+                quantity=row["item"].quantity,
+                unit=row["item"].unit,
             )
-            for item in items
+            for row in rows
         )
     failed = _dispatch(user, request, supplier, recipient, reference)
     _log_deal(deal, user, request, supplier.name, failed)
@@ -186,7 +194,7 @@ def create_from_order(
     order = orders._order_or_404(order_id, lock=True)
     if order.status != OrderStatus.DRAFT:
         raise StockError("ORDER_NOT_DRAFT", 409)
-    lines = list(order.lines.select_related("product", "deal"))
+    lines = list(order.lines.select_related("product__status", "deal"))
     if line_ids:
         by_id = {line.pk: line for line in lines}
         if any(pk not in by_id for pk in line_ids):
@@ -198,6 +206,11 @@ def create_from_order(
         raise StockError("NOTHING_TO_PRICE", 409)
     if len(chosen) > MAX_LINES:
         raise StockError("TOO_MANY_LINES", 400)
+    from supply.services.orders import refresh_partner_names, unconfirmed_lines
+
+    if unconfirmed_lines(chosen):
+        raise StockError("PARTNER_NAME_REQUIRED", 409)  # название строки — слова клиента, карточку не подтвердили
+    refresh_partner_names(chosen)  # карточку могли переименовать и опубликовать после создания строки
     recipient = (to_email or "").strip() or supplier_email(order.supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
@@ -251,11 +264,96 @@ def _log_deal(deal, user, request: PriceRequest, supplier_name: str, failed: boo
     )
 
 
-def _items_summary(items) -> str:
-    """Что запрашиваем — для темы письма и списка в кабинете партнёра: первая позиция и сколько ещё."""
-    first = items[0]
-    name = first.imported_raw_name or (first.product.name if first.product_id else "") or f"Позиция {first.position}"
-    return _summary(name, len(items) - 1)
+def partner_lines(items, partner_names: Optional[dict[int, dict]] = None) -> list[dict]:
+    """Строки запроса цены ТАК, как их увидит партнёр (В-2, аудит конфиденциальности 2026-11-25).
+
+    Название и артикул — нашей карточки каталога (`product.name`, `product.sku`). Слова клиента из заявки
+    (`imported_raw_name`: название объекта, станция, своя компания, номер чертежа) партнёру не уходят никогда сами:
+    строка без карточки получает название только из подтверждённого сотрудником «как назвать партнёру»
+    (`partner_names[item.pk]["name"]`; там же можно переименовать и строку с карточкой). Нет ни карточки, ни подтверждения —
+    `name=None` (`source="missing"`): отправить нельзя.
+    """
+    given = partner_names or {}
+    rows = []
+    for item in items:
+        confirmed = given.get(item.pk) or {}
+        staff_name = " ".join((confirmed.get("name") or "").split())
+        product = item.product if item.product_id else None
+        # карточка-черновик заведена расчётом из слов клиента и человеком не подтверждена: как её нет
+        trusted = product if product is not None and not is_unconfirmed_card(product) else None
+        if staff_name:
+            source, name = "staff", staff_name
+        elif trusted is not None:
+            source, name = "card", trusted.name
+        else:
+            source, name = "missing", None
+        # артикул — только наш (`sku` подтверждённой карточки); mpn и чертёж из заявки клиента партнёру не уходят
+        article = " ".join((confirmed.get("article") or "").split()) or (trusted.sku if trusted is not None else "")
+        rows.append(
+            {
+                "item": item,
+                "name": name,
+                "article": article or "",
+                "source": source,
+                "client_name": item.imported_raw_name or "",
+            }
+        )
+    return rows
+
+
+def _preview_supplier(supplier_id: int):
+    """Партнёр для предпросмотра: роль «поставщик» ему ставят в момент отправки (ЕД-6), поэтому до отправки подходит любая
+    чужая не архивная компания; сама отправка проверяет `get_supplier`."""
+    from parties.models import Company
+    from supply.services.orders import _own_company_id
+
+    company = Company.objects.exclude(pk=_own_company_id() or 0).filter(pk=supplier_id).first()
+    if company is None or getattr(company, "is_archived", False):
+        raise StockError("SUPPLIER_NOT_FOUND", 404)
+    return company
+
+
+def preview(
+    user,
+    deal_id: int,
+    supplier_id: int,
+    item_ids: list[int],
+    *,
+    note: str = "",
+    to_email: str = "",
+    partner_names: Optional[dict[int, dict]] = None,
+) -> dict:
+    """Предпросмотр запроса цены ровно в том виде, в каком он уйдёт партнёру: тема, строки (название партнёру, откуда оно,
+    слова клиента — только сотруднику, чтобы поправить), заметка текстом и адрес. Ничего не отправляет и не пишет."""
+    require_supply(user)
+    if not item_ids:
+        raise StockError("LINES_REQUIRED", 400)
+    if len(item_ids) > MAX_LINES:
+        raise StockError("TOO_MANY_LINES", 400)
+    _deal, items = _deal_and_items(deal_id, item_ids)
+    supplier = _preview_supplier(supplier_id)
+    rows = partner_lines(items, partner_names)
+    ready = all(row["name"] is not None for row in rows)
+    first = next((row["name"] for row in rows if row["name"]), "") or "…"
+    return {
+        "subject": f"Запрос цены и срока поставки — {_summary(first, len(rows) - 1)}",
+        "supplier": {"id": supplier.pk, "name": supplier.name},
+        "to_email": (to_email or "").strip() or supplier_email(supplier) or "",
+        "note": (note or "").strip()[:1000] or None,
+        "ready": ready,
+        "lines": [
+            {
+                "quote_item_id": row["item"].pk,
+                "name": row["name"],
+                "article": row["article"],
+                "source": row["source"],
+                "client_name": row["client_name"],
+                "quantity": row["item"].quantity,
+                "unit": row["item"].unit,
+            }
+            for row in rows
+        ],
+    }
 
 
 def _summary(name: str, rest: int) -> str:

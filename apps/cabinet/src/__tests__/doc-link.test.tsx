@@ -16,7 +16,19 @@ const LIVE = 'live-token-0123456789';
 const VIEWER = 'viewer-token-0123456789';
 const FOREIGN = 'foreign-token-0123456789';
 const open = (token = LIVE) => renderApp(`/d/${token}`);
-const quoteHeading = () => screen.findByRole('heading', { level: 1, name: 'КП QT-0118' });
+const quoteHeading = () => screen.findByRole('heading', { level: 1, name: 'Коммерческое предложение QT-0118' });
+
+describe('документ по ссылке: адрес не контакт компании (В-1)', () => {
+  it('гость видит документ и PDF; действий, «Открыть кабинет» и строки про код нет — одна нейтральная строка', async () => {
+    open('nocontact-token-0123456789');
+    await quoteHeading();
+    expect(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' })).toBeEnabled();
+    expect(screen.getByText('Чтобы ответить по документу — напишите отправителю')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять|Вернуть|Задать вопрос|Открыть кабинет/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Любое действие — после кода/)).not.toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+});
 
 describe('документ по ссылке: гость', () => {
   it('видит один документ — состав, факты, «Скачать PDF» — и ни одного раздела кабинета', async () => {
@@ -29,7 +41,7 @@ describe('документ по ссылке: гость', () => {
     expect(screen.getByText('ООО «Восток Транс»')).toBeInTheDocument();
     expect(screen.getAllByText(/с НДС/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Вы смотрите один документ, присланный на p\*\*\*@vostok-trans\.uz/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' })).toBeEnabled();
     expect(screen.getByText(/Любое действие — после кода, который придёт на p\*\*\*@vostok-trans\.uz/)).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Разделы кабинета' })).not.toBeInTheDocument();
     expect(seen.some((path) => /\/(me|quotes|requests|company|contracts)$/.test(path))).toBe(false);
@@ -46,7 +58,7 @@ describe('документ по ссылке: гость', () => {
     open();
     await quoteHeading();
 
-    await user.click(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' }));
+    await user.click(screen.getByRole('button', { name: 'Скачать PDF: предложение QT-0118' }));
 
     await waitFor(() => expect(window.URL.createObjectURL).toHaveBeenCalledTimes(1));
     expect(bodies).toEqual([{ token: LIVE }]);
@@ -148,7 +160,7 @@ describe('документ по ссылке: гость', () => {
     await user.type(within(dialog).getByLabelText('Что нужно исправить?'), 'Срок поставки велик');
     await user.click(within(dialog).getByRole('button', { name: 'Вернуть с замечаниями' }));
 
-    expect(await screen.findByText('Предложение возвращено с замечаниями.')).toBeInTheDocument();
+    expect(await screen.findByText('Предложение отклонено с замечаниями.')).toBeInTheDocument();
   });
 
   it('при первом входе между кодом и действием — оферта и политика; после «Принимаю» действие выполняется само', async () => {
@@ -189,6 +201,18 @@ describe('документ по ссылке: гость', () => {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
     expect(screen.getByText(/нет права принимать решения/)).toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+});
+
+describe('документ по ссылке: КП закрыто вместе с заявкой (ЛХ-2)', () => {
+  it('клиент читает «Заявка закрыта» словами, а не ключ перевода; кнопок решения нет', async () => {
+    open('closed-token-0123456789');
+    await quoteHeading();
+
+    expect(await screen.findByText('Заявка закрыта. Если вопрос актуален — напишите нам.')).toBeInTheDocument();
+    expect(screen.queryByText(/docLink\.state/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять|Вернуть/ })).not.toBeInTheDocument();
     await expectNoAxeViolations();
   });
 });

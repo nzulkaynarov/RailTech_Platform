@@ -29,10 +29,12 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { PictureEdit } from "../../../features/picture-edit/PictureEdit";
 import { companyToday } from "../../../shared/lib/dates";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { PersonCell } from "../../../shared/ui/EntityCell";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { PartnerCard } from "../../erp/catalog/PartnerCard";
@@ -323,6 +325,15 @@ function Loaded({
   );
 }
 
+function TermTag({ state }: { state: "open" | "renews" | "ends" | "expired" }) {
+  const { t } = useTranslation("clients");
+  const label = t(`counterparty.term.state.${state}`);
+  if (state === "renews") return <StatusTag tone="green">{label}</StatusTag>;
+  if (state === "ends") return <StatusTag tone="gold">{label}</StatusTag>;
+  if (state === "expired") return <StatusTag tone="red">{label}</StatusTag>;
+  return <StatusTag tone="default">{label}</StatusTag>;
+}
+
 function Overview({
   card,
   editable,
@@ -333,6 +344,7 @@ function Overview({
   onChanged: (next: Card) => void;
 }) {
   const { t } = useTranslation("clients");
+  const { date: formatDate } = useFormat();
   // СУЩ-3: фото контакта — тот же запрос и то же право, что у реквизитов; карточка получает новый адрес с версией
   const upload = useUploadContactPhoto();
   const remove = useDeleteContactPhoto();
@@ -395,6 +407,26 @@ function Overview({
           </Link>
         ) : null}
       </section>
+
+      {card.contract_term ? (
+        <section className="pf-fp-block" aria-labelledby={`pf-cp-${card.id}-term`}>
+          <h4 id={`pf-cp-${card.id}-term`}>{t("counterparty.term.title")}</h4>
+          <p className="pf-fp-sub" data-testid="counterparty-term">
+            <TermTag state={card.contract_term.state} />{" "}
+            {card.contract_term.valid_until
+              ? t("counterparty.term.until", {
+                  number: card.contract_term.number,
+                  until: formatDate(card.contract_term.valid_until),
+                })
+              : t("counterparty.term.open", { number: card.contract_term.number })}
+          </p>
+          {card.contract_term.blocks_new_work ? (
+            <p className="pf-hint" role="status">
+              {t("counterparty.term.blocks")}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="pf-fp-block" aria-labelledby={`pf-cp-${card.id}-bank`}>
         <h4 id={`pf-cp-${card.id}-bank`}>{t("counterparty.accounts.title")}</h4>

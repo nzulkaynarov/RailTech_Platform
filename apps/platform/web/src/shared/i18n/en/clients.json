@@ -108,6 +108,7 @@
   "clientSees": {
     "in_work": "Accepted, we are calculating",
     "awaiting_decision": "Awaiting your decision",
+    "contract_preparing": "We are preparing the contract",
     "contract_review": "Please agree the contract wording",
     "contract_signing": "Contract is being signed",
     "awaiting_payment": "Awaiting payment",
@@ -207,6 +208,18 @@
       "forbidden": "The mark is set and removed by a manager or procurement.",
       "failed": "Could not save. Try again.",
       "newRequestClosed": "New requests are closed: we do not work with this company."
+    },
+    "term": {
+      "title": "Contract",
+      "state": {
+        "open": "No end date",
+        "renews": "Renews itself",
+        "ends": "Ends on time",
+        "expired": "Term over"
+      },
+      "until": "{{number}} · until {{until}}",
+      "open": "{{number}} · no end date",
+      "blocks": "New quotes are not created until the contract is renewed. Started deals and payments are not affected."
     }
   },
   "picture": {

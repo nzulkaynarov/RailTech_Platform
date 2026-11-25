@@ -12,6 +12,8 @@ import {
   useAgreeCompanyPartnerContract,
   useCompany,
   useCompanyPartnerApplication,
+  useReturnCompanyPartnerContract,
+  useUploadCompanyPartnerSignedScan,
   useCompanySecurityLog,
   useDeleteCompanyLogo,
   useUploadCompanyLogo,
@@ -1064,6 +1066,10 @@ export function PartnerApplicationCard() {
   const partnerQuery = useCompanyPartnerApplication();
   const submitMutation = useSubmitCompanyPartnerApplication();
   const agreeMutation = useAgreeCompanyPartnerContract();
+  const returnMutation = useReturnCompanyPartnerContract();
+  const scanMutation = useUploadCompanyPartnerSignedScan();
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [returnNotes, setReturnNotes] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [agreeDialogOpen, setAgreeDialogOpen] = useState(false);
   const [agreeNotes, setAgreeNotes] = useState('');
@@ -1123,6 +1129,20 @@ export function PartnerApplicationCard() {
       );
     };
 
+    const handleReturn = () => {
+      returnMutation.mutate(
+        { notes: returnNotes.trim() },
+        {
+          onSuccess: () => {
+            setReturnDialogOpen(false);
+            setReturnNotes('');
+            toast.success(t('pages.company.partner.returnSuccess'));
+          },
+        },
+      );
+    };
+    const returned = Boolean(app.candidate_returned_at);
+
     return (
       <>
         <Card className="border-border">
@@ -1139,7 +1159,9 @@ export function PartnerApplicationCard() {
               </ToneBadge>
             </div>
             <CardDescription>
-              {app.status === 'contract_sent'
+              {app.status === 'contract_sent' && returned
+                ? t('pages.company.partner.returnedDesc')
+                : app.status === 'contract_sent'
                 ? t('pages.company.partner.contractSentDesc')
                 : app.status === 'candidate_agreed'
                 ? t('pages.company.partner.contractAgreedDesc')
@@ -1177,7 +1199,7 @@ export function PartnerApplicationCard() {
                   </a>
                 </Button>
 
-                {app.status === 'contract_sent' && (
+                {app.status === 'contract_sent' && !returned && (
                   <CanAct
                     fallback={
                       <p className="text-xs text-muted-foreground">{t('pages.company.partner.onlyCanAct')}</p>
@@ -1187,6 +1209,39 @@ export function PartnerApplicationCard() {
                       <CheckCircle2 className="size-4 mr-2" aria-hidden="true" />
                       {t('pages.company.partner.agreeContractBtn')}
                     </Button>
+                    <Button variant="outline" onClick={() => setReturnDialogOpen(true)}>
+                      {t('pages.company.partner.returnContractBtn')}
+                    </Button>
+                  </CanAct>
+                )}
+
+                {app.status === 'candidate_agreed' && (
+                  <CanAct
+                    fallback={
+                      <p className="text-xs text-muted-foreground">{t('pages.company.partner.onlyCanAct')}</p>
+                    }
+                  >
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        {app.has_signed_scan ? t('pages.company.partner.scanReceived') : t('pages.company.partner.scanNeeded')}
+                      </p>
+                      <FilePickerButton
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        label={app.has_signed_scan ? t('pages.company.partner.scanReplace') : t('pages.company.partner.scanUpload')}
+                        inputLabel={t('pages.company.partner.scanInput')}
+                        disabled={scanMutation.isPending}
+                        onPick={(file) =>
+                          scanMutation.mutate(file, {
+                            onSuccess: () => toast.success(t('pages.company.partner.scanSuccess')),
+                          })
+                        }
+                      />
+                      {scanMutation.error ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {t(apiErrorKey(scanMutation.error))}
+                        </p>
+                      ) : null}
+                    </div>
                   </CanAct>
                 )}
 
@@ -1199,6 +1254,23 @@ export function PartnerApplicationCard() {
             )}
           </CardContent>
         </Card>
+
+        <ActionDialog
+          open={returnDialogOpen}
+          onOpenChange={setReturnDialogOpen}
+          title={t('pages.company.partner.returnDialogTitle')}
+          description={t('pages.company.partner.returnDialogDesc')}
+          confirmLabel={t('pages.company.partner.returnSubmit')}
+          confirmDisabled={returnNotes.trim() === ''}
+          pending={returnMutation.isPending}
+          error={returnMutation.error}
+          onSubmit={handleReturn}
+        >
+          <div className="flex flex-col gap-2 pt-2">
+            <Label htmlFor="return-notes">{t('pages.company.partner.returnNotesLabel')}</Label>
+            <Textarea id="return-notes" value={returnNotes} onChange={(e) => setReturnNotes(e.target.value)} maxLength={1000} />
+          </div>
+        </ActionDialog>
 
         <ActionDialog
           open={agreeDialogOpen}

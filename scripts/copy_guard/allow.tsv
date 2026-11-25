@@ -1,0 +1,7 @@
+# Explained false alarms of the copy guard: key regex (full match, no wildcards) <TAB> class <TAB> reason. A reason is required.
+# The number of entries only goes down (test_copy_guard_cabinet.py: ALLOW_CEILING).
+languages\.(ru|en|uz)	untranslated	a language is named in its own language, in every locale
+languages\.(ru|en|uz)	mixed	a language is named in its own language, in every locale
+countryMask\.vatDe	mixed	USt-IdNr. is the official name of the German VAT number, the user looks for it by this name
+notifications\.text\.delivery_status_changed	code	the value is the delivery status label rendered by lib/notifications.ts, not a code
+verify\.notFoundText	code	the value is the code the user typed or scanned, shown back to them

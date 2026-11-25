@@ -96,7 +96,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    expect(await screen.findByText('Ответ дан')).toBeInTheDocument();
+    expect(await screen.findByText('Вы ответили')).toBeInTheDocument();
   });
 
   it('FX-7: без даты заказ не подтверждается, диалог объясняет почему', async () => {

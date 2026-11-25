@@ -1029,7 +1029,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / BAD_CHOICE / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -1083,7 +1083,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / BAD_CHOICE / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -3486,12 +3486,41 @@ paths:
           description: Нет права (зона строки, роль) или не сотрудник
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/close-reasons/:
+    get:
+      operationId: calc_close_reasons
+      description: GET /api/v1/calc/close-reasons/ — действующие причины закрытия заявки.
+      summary: Причины закрытия заявки (справочник `request-close-reasons`)
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcCloseReasonList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/deals/:
     get:
       operationId: calc_deal_refs
       description: GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия).
       summary: 'Заявки с заданием расчёта: id, номер, дата создания, стадия'
       parameters:
+      - in: query
+        name: any
+        schema:
+          type: boolean
+        description: Не только заявки с заданием расчёта
       - in: query
         name: number
         schema:
@@ -3615,6 +3644,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalcError'
           description: Заявки, задания расчёта или строки нет
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/{deal_id}/close/:
+    post:
+      operationId: calc_close
+      description: POST /api/v1/calc/<deal_id>/close/ — «Закрыть заявку» на любом шаге до проекта, причина из справочника.
+      summary: Закрыть заявку с причиной из справочника (ЛХ-2)
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcCloseInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CalcCloseInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalcCloseInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcRequestCard'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/{deal_id}/copy/:
@@ -4182,6 +4271,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalcError'
           description: Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/{deal_id}/request/:
+    get:
+      operationId: calc_request_card
+      description: GET /api/v1/calc/<deal_id>/request/ — карточка заявки (с заданием расчёта и без) для «Закрыть заявку».
+      summary: 'Карточка заявки: текст, файлы, можно ли закрыть'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcRequestCard'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/{deal_id}/start/:
@@ -6116,6 +6241,27 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/partner-applications/contract-options/:
+    get:
+      operationId: catalog_partner_applications_contract_options
+      description: Утверждённые шаблоны вида «партнёр» из библиотеки (по умолчанию — из настроек компании), языки каждого,
+        правило отступлений и кто решает. Пустой список — договор можно подготовить только своим файлом.
+      summary: Templates to prepare the partner contract from
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerContractOptions'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/catalog/partner-applications/{id}/:
     get:
       operationId: catalog_partner_applications_retrieve
@@ -6176,6 +6322,155 @@ paths:
             schema:
               $ref: '#/components/schemas/DeskPartnerApplicationApproveInRequest'
         required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/partner-applications/{id}/contract-decision/:
+    post:
+      operationId: catalog_partner_applications_contract_decision
+      description: 'Решение держателя права утверждать договоры: `approve` или `return` (замечание обязательно).'
+      summary: Decide on the partner contract
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerContractDecisionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerContractDecisionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerContractDecisionInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/partner-applications/{id}/document/:
+    get:
+      operationId: catalog_partner_applications_document
+      description: '`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного.'
+      summary: Download the contract or the signed scan
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: query
+        name: which
+        schema:
+          type: string
+          enum:
+          - contract
+          - scan
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/partner-applications/{id}/prepare-contract/:
+    post:
+      operationId: catalog_partner_applications_prepare_contract
+      description: Договор из утверждённого шаблона либо свой файл (multipart, `file`). Шаблон без отступлений готов к отправке;
+        свой файл или текст отступления уходят на решение держателя «Право».
+      summary: Prepare the partner contract
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerContractPrepareInRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerContractPrepareInRequest'
       security:
       - jwtAuth: []
       responses:
@@ -10018,6 +10313,35 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/decline-renewal/:
+    post:
+      operationId: crm_contracts_decline_renewal_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Decline the automatic renewal of a signed contract (ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
     get:
       operationId: crm_contracts_download_pdf_retrieve
@@ -10246,6 +10570,48 @@ paths:
             отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/renew/:
+    post:
+      operationId: crm_contracts_renew_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Renew the contract by agreement of the parties (foreign counterparty, expired term; ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractRenewByAgreementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/request-deviation/:
     post:
       operationId: crm_contracts_request_deviation_create
@@ -10325,6 +10691,35 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/restore-renewal/:
+    post:
+      operationId: crm_contracts_restore_renewal_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Restore the renewal declined earlier by the company, until the last notice day (ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -10461,6 +10856,35 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/send-new-edition/:
+    post:
+      operationId: crm_contracts_send_new_edition_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Send the new edition of the template to the counterparty for signature (ДС-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -21715,6 +22139,62 @@ paths:
             мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/stock/price-requests/preview/:
+    post:
+      operationId: stock_price_request_preview
+      description: 'POST /api/v1/stock/price-requests/preview/ — что увидит партнёр: тема, строки нашими словами, заметка,
+        адрес.'
+      summary: Предпросмотр запроса цены партнёру (ничего не отправляет)
+      tags:
+      - Stock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceRequestInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceRequestPreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Тело не прошло проверку
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Нет права, не сотрудник или нет права на цены поставщиков
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Заказа, строки, поставщика или заявки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockError'
+          description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/price-requests/{request_id}/answer/:
     post:
       operationId: stock_price_request_answer
@@ -23476,6 +23956,73 @@ components:
       - name
       - on_hand
       - supplier_name
+    CalcCloseInRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Код причины из справочника `request-close-reasons`
+          maxLength: 50
+        comment:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - reason
+    CalcCloseReason:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: object
+          additionalProperties:
+            type: string
+          description: Названия ru, uz, en
+        requires_comment:
+          type: boolean
+        allowed_after_quote_sent:
+          type: boolean
+        preselect_after_client_rejection:
+          type: boolean
+          description: Выбрана заранее в «Закрыть заявку» после отказа клиента от КП
+      required:
+      - allowed_after_quote_sent
+      - code
+      - name
+      - preselect_after_client_rejection
+      - requires_comment
+    CalcCloseReasonList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcCloseReason'
+      required:
+      - results
+    CalcCloseState:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+          description: 'Заявку можно закрыть: до проекта и по праву ответственного или `deal.manage`'
+        quote_sent:
+          type: boolean
+          description: 'КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`'
+        reason:
+          type: string
+          nullable: true
+          description: Код причины закрытия, если заявка закрыта через «Закрыть заявку»
+        comment:
+          type: string
+          nullable: true
+      required:
+      - allowed
+      - comment
+      - quote_sent
+      - reason
     CalcCopyInRequest:
       type: object
       properties:
@@ -23508,6 +24055,8 @@ components:
           $ref: '#/components/schemas/CalcVisaGroups'
         ready:
           $ref: '#/components/schemas/CalcReady'
+        close:
+          $ref: '#/components/schemas/CalcCloseState'
         rights:
           $ref: '#/components/schemas/CalcRights'
         created:
@@ -23518,6 +24067,7 @@ components:
           type: integer
           description: 'Строки чужой зоны (товары или услуги): их добавит коллега'
       required:
+      - close
       - created
       - deal
       - lines
@@ -23812,6 +24362,8 @@ components:
           $ref: '#/components/schemas/CalcVisaGroups'
         ready:
           $ref: '#/components/schemas/CalcReady'
+        close:
+          $ref: '#/components/schemas/CalcCloseState'
         rights:
           $ref: '#/components/schemas/CalcRights'
         created:
@@ -23819,6 +24371,7 @@ components:
           items:
             type: integer
       required:
+      - close
       - created
       - deal
       - lines
@@ -23983,6 +24536,23 @@ components:
       - files_pending
       - lines
       - text
+    CalcRequestCard:
+      type: object
+      properties:
+        deal:
+          $ref: '#/components/schemas/CalcDeal'
+        has_task:
+          type: boolean
+          description: У заявки есть задание расчёта (иначе — черновик из передачи лида)
+        request:
+          $ref: '#/components/schemas/CalcRequest'
+        close:
+          $ref: '#/components/schemas/CalcCloseState'
+      required:
+      - close
+      - deal
+      - has_task
+      - request
     CalcRights:
       type: object
       properties:
@@ -24026,9 +24596,12 @@ components:
           $ref: '#/components/schemas/CalcVisaGroups'
         ready:
           $ref: '#/components/schemas/CalcReady'
+        close:
+          $ref: '#/components/schemas/CalcCloseState'
         rights:
           $ref: '#/components/schemas/CalcRights'
       required:
+      - close
       - deal
       - lines
       - quote
@@ -25704,6 +26277,11 @@ components:
 
             * `always` - always
             * `never` - never
+        contract_four_eyes:
+          type: boolean
+          title: Решение по своему договору — другим держателем «Права»
+          description: Включено — подготовивший договор партнёра не решает по нему сам; единственный держатель права решает
+            самостоятельно с подтверждением и записью в журнале.
         default_client_contract_template:
           type: integer
           nullable: true
@@ -25712,6 +26290,62 @@ components:
           type: integer
           nullable: true
           title: 'Шаблон договора по умолчанию: партнёр'
+        contract_term_rule:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          title: Срок договора по умолчанию
+          description: |-
+            До 31 декабря года подписания, 12 месяцев с подписания или без срока. Шаблон может задать своё.
+
+            * `calendar_year` - До 31 декабря
+            * `twelve_months` - 12 месяцев с подписания
+            * `open` - Без срока
+        contract_auto_renew:
+          type: boolean
+          title: Договор продлевается сам
+          description: На следующий срок, если ни одна сторона не отказалась до последнего дня уведомления.
+        contract_notice_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          title: За сколько дней отказаться от продления
+        contract_next_year_from_day:
+          type: integer
+          maximum: 31
+          minimum: 1
+          title: С какого числа декабря первый срок — до конца следующего года
+        contract_remind_first_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Первое напоминание: за сколько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Второе напоминание: за сколько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока'
+        contract_expired_action:
+          allOf:
+          - $ref: '#/components/schemas/ContractExpiredActionEnum'
+          title: Что делать после окончания срока
+          description: |-
+            Касается только новых КП и сделок; начатая работа, оплаты и претензии не блокируются никогда.
+
+            * `block` - Не создавать новые КП и сделки
+            * `warn` - Только предупреждать
+        contract_foreign_by_agreement:
+          type: boolean
+          title: Нерезидент продлевается соглашением
+          description: 'Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение.'
+        contract_gating_kinds:
+          title: Какие договоры ограничивают новые сделки
+          description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
+            не закрывает.'
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -26105,6 +26739,23 @@ components:
       - viewer_can_sign_client
       - viewer_can_sign_manager
       - wording_selections
+    ContractApprovalEnum:
+      enum:
+      - requested
+      - approved
+      - returned
+      type: string
+      description: "* `` - \n* `requested` - requested\n* `approved` - approved\n* `returned` - returned"
+    ContractBlockerEnum:
+      enum:
+      - CONTRACT_NOT_PREPARED
+      - CONTRACT_APPROVAL_PENDING
+      - CONTRACT_APPROVAL_RETURNED
+      type: string
+      description: |-
+        * `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED
+        * `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING
+        * `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED
     ContractCard:
       type: object
       properties:
@@ -26127,6 +26778,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/ContractTemplateCard'
           nullable: true
+        term:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermCard'
+          nullable: true
+          description: 'Срок: только у подписанного договора'
         total:
           allOf:
           - $ref: '#/components/schemas/ProjectMoney'
@@ -26224,6 +26880,14 @@ components:
           minLength: 1
       required:
       - text
+    ContractExpiredActionEnum:
+      enum:
+      - block
+      - warn
+      type: string
+      description: |-
+        * `block` - Не создавать новые КП и сделки
+        * `warn` - Только предупреждать
     ContractFlow:
       type: object
       description: |-
@@ -26381,6 +27045,12 @@ components:
       - number
       - sent_to_client
       - status
+    ContractRenewByAgreementRequest:
+      type: object
+      properties:
+        agreement_number:
+          type: string
+          minLength: 1
     ContractRequest:
       type: object
       properties:
@@ -26459,6 +27129,12 @@ components:
       - missing
       - remark
       - settings_link
+    ContractSourceEnum:
+      enum:
+      - template
+      - upload
+      type: string
+      description: "* `` - \n* `template` - template\n* `upload` - upload"
     ContractTemplateCard:
       type: object
       description: 'Договор по шаблону (ДОК-10): имя и редакция, отступление, путь по фактам. Пусто у договоров прежним путём.'
@@ -26537,6 +27213,107 @@ components:
       description: |-
         * `supply` - supply
         * `services` - services
+    ContractTermCard:
+      type: object
+      description: 'Срок подписанного договора (ДС-1): считается при подписании из правила компании и шаблона; вручную не
+        вводится.'
+      properties:
+        state:
+          type: string
+          description: open — без срока; renews — продлится сам; ends — закончится (отказ или продление соглашением); expired
+            — срок вышел
+        rule:
+          type: string
+          description: calendar_year / twelve_months / open
+        renewal:
+          type: string
+          description: auto / by_agreement / none
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        last_notice_date:
+          type: string
+          format: date
+          nullable: true
+          description: Последний день отказа от продления
+        notice_days:
+          type: integer
+        renewals_count:
+          type: integer
+        foreign:
+          type: boolean
+          description: 'Иностранный контрагент: продление — соглашением, не автоматом'
+        declined_by:
+          type: string
+          nullable: true
+          description: company / client; null — отказа нет
+        declined_at:
+          type: string
+          format: date-time
+          nullable: true
+        template_edition:
+          type: integer
+          nullable: true
+          description: Редакция шаблона, на которой подписан договор
+        newer_edition:
+          type: integer
+          nullable: true
+          description: Есть более новая утверждённая редакция шаблона
+        confidentiality_years:
+          type: integer
+          nullable: true
+          description: 'NDA: лет тайны после окончания (справка)'
+        trade_secret_indefinite:
+          type: boolean
+          description: 'NDA: коммерческая тайна — без срока (справка)'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractTermCardActionsEnum'
+          description: Что можно сделать СЕЙЧАС этому сотруднику со сроком договора
+      required:
+      - actions
+      - confidentiality_years
+      - declined_at
+      - declined_by
+      - foreign
+      - last_notice_date
+      - newer_edition
+      - notice_days
+      - renewal
+      - renewals_count
+      - rule
+      - state
+      - template_edition
+      - trade_secret_indefinite
+      - valid_from
+      - valid_until
+    ContractTermCardActionsEnum:
+      enum:
+      - decline_renewal
+      - restore_renewal
+      - renew
+      - send_new_edition
+      type: string
+      description: |-
+        * `decline_renewal` - decline_renewal
+        * `restore_renewal` - restore_renewal
+        * `renew` - renew
+        * `send_new_edition` - send_new_edition
+    ContractTermRuleEnum:
+      enum:
+      - calendar_year
+      - twelve_months
+      - open
+      type: string
+      description: |-
+        * `calendar_year` - До 31 декабря
+        * `twelve_months` - 12 месяцев с подписания
+        * `open` - Без срока
     ContractTransitionInRequest:
       type: object
       properties:
@@ -27573,6 +28350,42 @@ components:
       - price
       - source
       - visibility
+    DeskContractTerm:
+      type: object
+      description: 'Срок договора с контрагентом (ДС-1): последний или действующий подписанный договор.'
+      properties:
+        contract_id:
+          type: integer
+        deal_id:
+          type: integer
+          description: 'Сделка договора: карточка проекта открывается по ней'
+        number:
+          type: string
+        state:
+          type: string
+          description: open / renews / ends / expired
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        last_notice_date:
+          type: string
+          format: date
+          nullable: true
+        foreign:
+          type: boolean
+        blocks_new_work:
+          type: boolean
+          description: Срок вышел и правило компании не даёт начинать новые КП
+      required:
+      - blocks_new_work
+      - contract_id
+      - deal_id
+      - foreign
+      - last_notice_date
+      - number
+      - state
+      - valid_until
     DeskCounterparty:
       type: object
       description: Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5).
@@ -27624,6 +28437,11 @@ components:
           - $ref: '#/components/schemas/DoNotWorkFacts'
           nullable: true
           description: 'Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем'
+        contract_term:
+          allOf:
+          - $ref: '#/components/schemas/DeskContractTerm'
+          nullable: true
+          description: Срок договора (ДС-1); `null` — подписанных договоров со сроком нет
       required:
       - accounts_masked
       - bank_accounts
@@ -29057,11 +29875,88 @@ components:
       - source_ref
     DeskPartnerApplicationDetail:
       type: object
+      description: 'ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки.'
       properties:
+        contract_source:
+          description: "Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.\n\n* `` - \n* `template`\
+            \ - template\n* `upload` - upload"
+          oneOf:
+          - $ref: '#/components/schemas/ContractSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contract_template_id:
+          type: integer
+          nullable: true
+        contract_template_name:
+          type: string
+          nullable: true
+        contract_template_edition:
+          type: integer
+          nullable: true
+        contract_language:
+          type: string
+        contract_deviation_text:
+          type: string
+        contract_approval:
+          description: "Согласование держателем «Право»: пусто — не требуется (шаблон без отступлений).\n\n* `` - \n* `requested`\
+            \ - requested\n* `approved` - approved\n* `returned` - returned"
+          oneOf:
+          - $ref: '#/components/schemas/ContractApprovalEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contract_approval_requested_by:
+          type: string
+          nullable: true
+        contract_approval_decided_by:
+          type: string
+          nullable: true
+        contract_approval_note:
+          type: string
+        contract_blocker:
+          nullable: true
+          description: |-
+            Что мешает отправить договор (только пока заявка в статусе submitted); null — можно отправлять.
+
+            * `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED
+            * `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING
+            * `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED
+          oneOf:
+          - $ref: '#/components/schemas/ContractBlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        candidate_returned_at:
+          type: string
+          format: date-time
+          nullable: true
+        has_signed_scan:
+          type: boolean
+        signed_scan_at:
+          type: string
+          format: date-time
+          nullable: true
+        can_decide_contract:
+          type: boolean
+          description: 'Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого.'
+        decision_needs_confirmation:
+          type: boolean
+          description: 'Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением.'
+        contract_approvers:
+          type: array
+          items:
+            type: string
+          description: Кто решает, пока согласование ждёт решения.
         id:
           type: integer
         source:
-          $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          allOf:
+          - $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          description: |-
+            Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).
+
+            * `public` - public
+            * `client_cabinet` - client_cabinet
+            * `letter` - letter
+        from_lead:
+          type: boolean
+          default: false
+          description: 'Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида'
         source_ref:
           type: string
           description: Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)
@@ -29158,15 +30053,31 @@ components:
           nullable: true
       required:
       - applicant_contact_id
+      - can_decide_contract
+      - candidate_returned_at
       - categories_description
       - company_id
       - company_match_pending
       - company_name
       - contact_name
+      - contract_approval
+      - contract_approval_decided_by
+      - contract_approval_note
+      - contract_approval_requested_by
+      - contract_approvers
+      - contract_blocker
       - contract_date
+      - contract_deviation_text
+      - contract_language
       - contract_number
+      - contract_source
+      - contract_template_edition
+      - contract_template_id
+      - contract_template_name
       - created_at
+      - decision_needs_confirmation
       - email
+      - has_signed_scan
       - id
       - inn
       - invite_delivery
@@ -29178,15 +30089,93 @@ components:
       - rejected_reason
       - reviewed_at
       - reviewed_by
+      - signed_scan_at
       - source
       - status
     DeskPartnerApplicationListItem:
       type: object
+      description: 'ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки.'
       properties:
+        contract_source:
+          description: "Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.\n\n* `` - \n* `template`\
+            \ - template\n* `upload` - upload"
+          oneOf:
+          - $ref: '#/components/schemas/ContractSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contract_template_id:
+          type: integer
+          nullable: true
+        contract_template_name:
+          type: string
+          nullable: true
+        contract_template_edition:
+          type: integer
+          nullable: true
+        contract_language:
+          type: string
+        contract_deviation_text:
+          type: string
+        contract_approval:
+          description: "Согласование держателем «Право»: пусто — не требуется (шаблон без отступлений).\n\n* `` - \n* `requested`\
+            \ - requested\n* `approved` - approved\n* `returned` - returned"
+          oneOf:
+          - $ref: '#/components/schemas/ContractApprovalEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        contract_approval_requested_by:
+          type: string
+          nullable: true
+        contract_approval_decided_by:
+          type: string
+          nullable: true
+        contract_approval_note:
+          type: string
+        contract_blocker:
+          nullable: true
+          description: |-
+            Что мешает отправить договор (только пока заявка в статусе submitted); null — можно отправлять.
+
+            * `CONTRACT_NOT_PREPARED` - CONTRACT_NOT_PREPARED
+            * `CONTRACT_APPROVAL_PENDING` - CONTRACT_APPROVAL_PENDING
+            * `CONTRACT_APPROVAL_RETURNED` - CONTRACT_APPROVAL_RETURNED
+          oneOf:
+          - $ref: '#/components/schemas/ContractBlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        candidate_returned_at:
+          type: string
+          format: date-time
+          nullable: true
+        has_signed_scan:
+          type: boolean
+        signed_scan_at:
+          type: string
+          format: date-time
+          nullable: true
+        can_decide_contract:
+          type: boolean
+          description: 'Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого.'
+        decision_needs_confirmation:
+          type: boolean
+          description: 'Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением.'
+        contract_approvers:
+          type: array
+          items:
+            type: string
+          description: Кто решает, пока согласование ждёт решения.
         id:
           type: integer
         source:
-          $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          allOf:
+          - $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          description: |-
+            Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).
+
+            * `public` - public
+            * `client_cabinet` - client_cabinet
+            * `letter` - letter
+        from_lead:
+          type: boolean
+          default: false
+          description: 'Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида'
         source_ref:
           type: string
           description: Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)
@@ -29272,14 +30261,30 @@ components:
           - $ref: '#/components/schemas/InviteDeliveryEnum'
           - $ref: '#/components/schemas/NullEnum'
       required:
+      - can_decide_contract
+      - candidate_returned_at
       - categories_description
       - company_match_pending
       - company_name
       - contact_name
+      - contract_approval
+      - contract_approval_decided_by
+      - contract_approval_note
+      - contract_approval_requested_by
+      - contract_approvers
+      - contract_blocker
       - contract_date
+      - contract_deviation_text
+      - contract_language
       - contract_number
+      - contract_source
+      - contract_template_edition
+      - contract_template_id
+      - contract_template_name
       - created_at
+      - decision_needs_confirmation
       - email
+      - has_signed_scan
       - id
       - inn
       - invite_delivery
@@ -29290,6 +30295,7 @@ components:
       - phone
       - rejected_reason
       - reviewed_at
+      - signed_scan_at
       - source
       - status
     DeskPartnerApplicationListResponse:
@@ -29317,14 +30323,17 @@ components:
       - rejected_reason
     DeskPartnerApplicationSendContractInRequest:
       type: object
+      description: 'Отправка подготовленного договора (ПД-1): номер и дата заданы при подготовке и здесь не меняются.'
       properties:
         contract_number:
           type: string
+          description: 'Не используется: номер задаётся при подготовке договора.'
           maxLength: 64
         contract_date:
           type: string
           format: date
           nullable: true
+          description: 'Не используется: дата задаётся при подготовке договора.'
         company_id:
           type: integer
           nullable: true
@@ -29333,6 +30342,98 @@ components:
           type: boolean
           default: false
           description: 'Сотрудник подтвердил: найденная компания — другая, завести новую.'
+    DeskPartnerContractDecisionInDecisionEnum:
+      enum:
+      - approve
+      - return
+      type: string
+      description: |-
+        * `approve` - approve
+        * `return` - return
+    DeskPartnerContractDecisionInRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DeskPartnerContractDecisionInDecisionEnum'
+        confirm_self:
+          type: boolean
+          default: false
+          description: Подтверждение самостоятельного решения единственным держателем «Права».
+        note:
+          type: string
+          maxLength: 1000
+      required:
+      - decision
+    DeskPartnerContractOptions:
+      type: object
+      description: 'Что выбрать при «Подготовить договор»: утверждённые партнёрские шаблоны библиотеки и правила компании.'
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskPartnerTemplateOption'
+        default_template_id:
+          type: integer
+          nullable: true
+        deviations_allowed:
+          type: boolean
+        approvers:
+          type: array
+          items:
+            type: string
+          description: Держатели зоны «Право» по имени.
+        can_decide:
+          type: boolean
+      required:
+      - approvers
+      - can_decide
+      - default_template_id
+      - deviations_allowed
+      - templates
+    DeskPartnerContractPrepareInRequest:
+      type: object
+      description: 'Договор из шаблона (`template_id` или умолчание настроек) либо свой файл (`file`: PDF или DOCX, multipart).'
+      properties:
+        template_id:
+          type: integer
+          nullable: true
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        deviation_text:
+          type: string
+          maxLength: 4000
+        contract_number:
+          type: string
+          maxLength: 64
+        contract_date:
+          type: string
+          format: date
+          nullable: true
+        file:
+          type: string
+          format: binary
+          description: 'Свой файл договора: PDF или DOCX, до 20 МБ.'
+    DeskPartnerTemplateOption:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        edition:
+          type: integer
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageEnum'
+        is_default:
+          type: boolean
+      required:
+      - edition
+      - id
+      - is_default
+      - languages
+      - name
     DeskPeoplePage:
       type: object
       properties:
@@ -30707,6 +31808,37 @@ components:
           oneOf:
           - $ref: '#/components/schemas/DocumentTemplateSubjectEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        term_rule:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        renewal_mode:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/RenewalModeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        notice_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: За сколько дней отказаться от продления
+          description: Пусто — как у компании.
+        confidentiality_years:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Тайна после окончания договора (лет)
+          description: 'Для NDA: справка в карточке договора; срок договора она не меняет.'
+        trade_secret_indefinite:
+          type: boolean
+          readOnly: true
+          title: Коммерческая тайна — без срока
+          description: 'Для NDA: справка в карточке договора.'
+        renewal_notice:
+          readOnly: true
+          title: Текст уведомления о продлении
+          description: '{ru, uz, en}: строка к уведомлению контрагента в Кабинете; пусто — стандартный текст.'
         is_locked:
           type: boolean
           readOnly: true
@@ -30729,6 +31861,7 @@ components:
       - approval_status
       - approved_at
       - approved_by_name
+      - confidentiality_years
       - counterparty_kind
       - created_at
       - edition
@@ -30741,9 +31874,14 @@ components:
       - kind_name
       - languages
       - name
+      - notice_days
       - placeholders_used
+      - renewal_mode
+      - renewal_notice
       - subject
       - submitted_at
+      - term_rule
+      - trade_secret_indefinite
       - updated_at
     DocumentTemplateCopyRequest:
       type: object
@@ -32629,6 +33767,9 @@ components:
         request_price:
           type: boolean
           description: 'Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)'
+        resend:
+          type: boolean
+          description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send/ (Б-5)'
         confirm:
           type: boolean
         receive:
@@ -34183,6 +35324,26 @@ components:
         * `candidate_agreed` - candidate_agreed
         * `approved` - approved
         * `rejected` - rejected
+    PartnerNameInRequest:
+      type: object
+      description: «Как назвать партнёру» — название (и артикул), подтверждённые сотрудником вместо слов клиента (В-2).
+      properties:
+        line_id:
+          type: integer
+          minimum: 1
+          description: Строка расчёта
+        name:
+          type: string
+          minLength: 1
+          description: Название для партнёра; слова клиента — только после правки
+          maxLength: 500
+        article:
+          type: string
+          default: ''
+          maxLength: 120
+      required:
+      - line_id
+      - name
     PartnerPriceVisibilityEnum:
       enum:
       - cabinet
@@ -34769,6 +35930,11 @@ components:
 
             * `always` - always
             * `never` - never
+        contract_four_eyes:
+          type: boolean
+          title: Решение по своему договору — другим держателем «Права»
+          description: Включено — подготовивший договор партнёра не решает по нему сам; единственный держатель права решает
+            самостоятельно с подтверждением и записью в журнале.
         default_client_contract_template:
           type: integer
           nullable: true
@@ -34777,6 +35943,62 @@ components:
           type: integer
           nullable: true
           title: 'Шаблон договора по умолчанию: партнёр'
+        contract_term_rule:
+          allOf:
+          - $ref: '#/components/schemas/ContractTermRuleEnum'
+          title: Срок договора по умолчанию
+          description: |-
+            До 31 декабря года подписания, 12 месяцев с подписания или без срока. Шаблон может задать своё.
+
+            * `calendar_year` - До 31 декабря
+            * `twelve_months` - 12 месяцев с подписания
+            * `open` - Без срока
+        contract_auto_renew:
+          type: boolean
+          title: Договор продлевается сам
+          description: На следующий срок, если ни одна сторона не отказалась до последнего дня уведомления.
+        contract_notice_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          title: За сколько дней отказаться от продления
+        contract_next_year_from_day:
+          type: integer
+          maximum: 31
+          minimum: 1
+          title: С какого числа декабря первый срок — до конца следующего года
+        contract_remind_first_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Первое напоминание: за сколько дней до последнего дня уведомления'
+        contract_remind_last_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Второе напоминание: за сколько дней до последнего дня уведомления'
+        contract_foreign_remind_days:
+          type: integer
+          maximum: 365
+          minimum: 1
+          title: 'Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока'
+        contract_expired_action:
+          allOf:
+          - $ref: '#/components/schemas/ContractExpiredActionEnum'
+          title: Что делать после окончания срока
+          description: |-
+            Касается только новых КП и сделок; начатая работа, оплаты и претензии не блокируются никогда.
+
+            * `block` - Не создавать новые КП и сделки
+            * `warn` - Только предупреждать
+        contract_foreign_by_agreement:
+          type: boolean
+          title: Нерезидент продлевается соглашением
+          description: 'Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение.'
+        contract_gating_kinds:
+          title: Какие договоры ограничивают новые сделки
+          description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
+            не закрывает.'
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -36468,6 +37690,11 @@ components:
             default: ''
           - type: string
             maxLength: 0
+        partner_names:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerNameInRequest'
+          description: Подтверждённые названия для партнёра; строка без карточки каталога без названия не уходит (409 `PARTNER_NAME_REQUIRED`)
       required:
       - deal_id
       - line_ids
@@ -36502,6 +37729,79 @@ components:
             $ref: '#/components/schemas/PriceRequest'
       required:
       - results
+    PriceRequestPreview:
+      type: object
+      properties:
+        subject:
+          type: string
+        supplier:
+          $ref: '#/components/schemas/OrderSupplier'
+        to_email:
+          type: string
+        note:
+          type: string
+          nullable: true
+          description: Заметка партнёру ровно так, как уйдёт
+        ready:
+          type: boolean
+          description: У каждой строки есть название для партнёра
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceRequestPreviewLine'
+      required:
+      - lines
+      - note
+      - ready
+      - subject
+      - supplier
+      - to_email
+    PriceRequestPreviewLine:
+      type: object
+      properties:
+        quote_item_id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+          description: Как увидит партнёр; null — не названа, отправить нельзя
+        article:
+          type: string
+        source:
+          allOf:
+          - $ref: '#/components/schemas/PriceRequestPreviewLineSourceEnum'
+          description: |-
+            card — карточка каталога; staff — подтверждено сотрудником
+
+            * `card` - card
+            * `staff` - staff
+            * `missing` - missing
+        client_name:
+          type: string
+          description: Слова клиента из заявки — только сотруднику, партнёру не уходят
+        quantity:
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+        unit:
+          type: string
+      required:
+      - article
+      - client_name
+      - name
+      - quantity
+      - quote_item_id
+      - source
+      - unit
+    PriceRequestPreviewLineSourceEnum:
+      enum:
+      - card
+      - staff
+      - missing
+      type: string
+      description: |-
+        * `card` - card
+        * `staff` - staff
+        * `missing` - missing
     PriceRequestStatusEnum:
       enum:
       - sent
@@ -39597,6 +40897,16 @@ components:
           type: integer
       required:
       - member_id
+    RenewalModeEnum:
+      enum:
+      - auto
+      - by_agreement
+      - none
+      type: string
+      description: |-
+        * `auto` - Продлевается сам
+        * `by_agreement` - Продлевается соглашением
+        * `none` - Не продлевается
     RequestFile:
       type: object
       properties:

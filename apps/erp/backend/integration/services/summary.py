@@ -65,6 +65,10 @@ def company_documents(company: Company, *, deal_id: Optional[int] = None) -> Lis
 def _quote_status(quote) -> str:
     """`QuoteStatus` контракта. Отправленные и решённые — проекция портала; до отправки CRM видит `draft`/`approval`."""
     code = quote.status.code if quote.status_id else QuoteStatusCode.DRAFT
+    if code == QuoteStatusCode.CLOSED:
+        return (
+            "rejected"  # в контракте интеграции нет «закрыто»: сделка уже закрыта отказом (`deal.lost`), КП не принято
+        )
     if code in projections.CLIENT_QUOTE_STATUSES:
         return projections.quote_status(quote)
     return "draft" if code == QuoteStatusCode.DRAFT else "approval"

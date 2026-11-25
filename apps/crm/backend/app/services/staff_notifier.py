@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
 from app.domain.lead_sources import WEB_NOTE_MARK
 from app.domain.platform_links import LinkBase
+from app.domain.platform_roles import handles_leads
 from app.domain.staff_notify import (
     Staff,
     alert_recipients,
@@ -28,7 +29,9 @@ from app.domain.staff_notify import (
 )
 from app.models.auth import Role, User, UserRole
 from app.models.leads import Conversation, Lead, LeadNote, Message
+from app.repositories import platform_roles as platform_roles_repo
 from app.services import channel_texts as tx
+from app.services.user_platform import grants_of
 
 logger = structlog.get_logger(__name__)
 TEST_TEXT = "✅ Проверка доставки: личные уведомления CRM приходят сюда."
@@ -111,6 +114,9 @@ class StaffNotifier:
             user = await session.get(User, user_id)
             lead = await session.get(Lead, lead_id)
         if user is None or lead is None or not user.is_active or user.tg_user_id is None:
+            return False
+        # Личные сообщения о лидах отключены в профиле — остаётся колокольчик.
+        if not user.notify_leads:
             return False
         url = escape(links.lead(lead_id), quote=True)
         body = tx.HANDOVER_DM.format(
@@ -231,10 +237,15 @@ async def _staff(session: AsyncSession, user_id: int | None = None) -> list[Staf
     roles: dict[int, list[str]] = {}
     for uid, name in (await session.execute(roles_stmt)).all():
         roles.setdefault(uid, []).append(name)
+    platform = await platform_roles_repo.roles_by_user(session)
     return [
         Staff(
             user_id=u.id,
             roles=tuple(roles.get(u.id, ())),
+            # Без ролей Платформы (старые записи) — прежний признак: базовая роль `manager`.
+            handles_leads=handles_leads(grants_of(platform[u.id]))
+            if u.id in platform
+            else "manager" in roles.get(u.id, ()),
             is_active=u.is_active,
             tg_user_id=u.tg_user_id,
             notify_system=u.notify_system,

@@ -215,6 +215,8 @@ export const useAddQuoteComment = (id: number) =>
   useInvalidatingMutation((text: string) => portal.addQuoteComment(id, text), [keys.quote(id)]);
 
 export const useSignContract = () => useInvalidatingMutation(portal.signContract, [keys.contracts, ['documents']]);
+export const useDeclineContractRenewal = () => useInvalidatingMutation(portal.declineContractRenewal, [keys.contracts]);
+export const useRestoreContractRenewal = () => useInvalidatingMutation(portal.restoreContractRenewal, [keys.contracts]);
 /**
  * Приёмка акта: если приложен скан — сначала `POST /uploads`, затем `POST /acts/{id}/accept {upload_id}`;
  * без скана — приёмка без тела. Ошибка любого шага — ошибка мутации (диалог показывает её текстом).
@@ -312,6 +314,12 @@ export const useSubmitCompanyPartnerApplication = () =>
 
 export const useAgreeCompanyPartnerContract = () =>
   useInvalidatingMutation(portal.agreeCompanyPartnerContract, [keys.partnerApplication]);
+
+export const useReturnCompanyPartnerContract = () =>
+  useInvalidatingMutation(portal.returnCompanyPartnerContract, [keys.partnerApplication]);
+
+export const useUploadCompanyPartnerSignedScan = () =>
+  useInvalidatingMutation(portal.uploadCompanyPartnerSignedScan, [keys.partnerApplication]);
 
 export const useSubmitPartnerApplication = () =>
   useMutation({ mutationFn: portal.submitPartnerApplication });

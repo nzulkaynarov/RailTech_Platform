@@ -34,7 +34,7 @@ import * as partner from './partnerMock';
  * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
  * Документ по ссылке из письма (ДК-1, ДК-2): токен `/d/<токен>` — `revoked…` → 410 `DOC_LINK_REVOKED`, `expired…` →
  * 410 `DOC_LINK_EXPIRED`, `superseded…` → 410 `DOC_LINK_SUPERSEDED`, `unknown…` или короче 16 знаков → 404; `viewer…` —
- * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято;
+ * получатель без права действовать; `foreign…` — ссылка другой компании (сессия видит гостевой вид); `done…` — КП уже принято; `closed…` — КП закрыто вместе с заявкой (ЛХ-2);
  * `toosoon…` — повтор кода раньше срока (429). Код: `000000` — неверный, `111111` — пять неверных подряд, иной — вход.
  * Чат кабинета (CHAT-1): лента компании `GET /messages[?after_id]`, `POST /messages` (повтор того же `client_message_id`
  * — прежнее сообщение, 200; текст `fail` — 503 для сценария «Не отправлено»), `POST /messages/read` — отметка не назад,
@@ -441,6 +441,7 @@ function docLinkState(token: string): string {
   if (decided) return decided;
   if (token.includes('paid')) return 'paid';
   if (token.includes('cancelled')) return 'cancelled';
+  if (token.includes('closed')) return 'closed';
   if (token.includes('done')) {
     const kind = docKind(token);
     return kind === 'price_request' ? 'answered' : kind === 'supplier_order' ? 'confirmed' : 'accepted';
@@ -452,6 +453,7 @@ function docLinkAvailability(token: string, session: MockSession | null): Schema
   const state = docLinkState(token);
   if (DOC_ACTIONS[docKind(token)].length === 0) return { allowed: false, reason: 'no_actions' };
   if (state !== 'open') return { allowed: false, reason: state };
+  if (token.includes('nocontact')) return { allowed: false, reason: 'no_contact' }; // адрес не контакт компании: гость
   if (session && token.includes('foreign')) return { allowed: false, reason: 'other_company' };
   const canAct = session ? contactFor(session.role).can_act : !token.includes('viewer');
   return canAct ? { allowed: true, reason: null } : { allowed: false, reason: 'no_right' };
@@ -1069,6 +1071,33 @@ export const handlers = [
       { action: true },
     ),
   ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/decline-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (!contract.term) return error(409, 'TERM_NOT_AVAILABLE');
+        if (contract.term.declined_by) return error(409, 'TERM_ALREADY_DECLINED');
+        contract.term = { ...contract.term, state: 'ends', declined_by: 'client', can_decline: false, can_restore: true };
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/contracts/:id/restore-renewal`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (contract.term?.declined_by !== 'client') return error(409, 'TERM_NOT_DECLINED');
+        contract.term = { ...contract.term, state: 'renews', declined_by: null, can_decline: true, can_restore: false };
+        return json(contract);
+      },
+      { action: true },
+    ),
+  ),
   http.get(`${API}/invoices`, withSession(({ db }) => json(db.invoices))),
   http.post<IdParams>(
     `${API}/invoices/:id/proofs`,
@@ -1535,6 +1564,36 @@ export const handlers = [
         if (body.notes) {
           db.partnerApplication.candidate_notes = body.notes;
         }
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/company/partner-application/return`,
+    withSession(
+      async ({ db, request }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'contract_sent') {
+          return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
+        }
+        const body = ((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string };
+        if (!body.notes?.trim()) return error(400, 'RETURN_NOTE_REQUIRED');
+        db.partnerApplication.candidate_notes = body.notes;
+        db.partnerApplication.candidate_returned_at = new Date().toISOString();
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/company/partner-application/signed-scan`,
+    withSession(
+      async ({ db }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'candidate_agreed') {
+          return error(400, 'SCAN_NOT_EXPECTED');
+        }
+        db.partnerApplication.has_signed_scan = true;
+        db.partnerApplication.signed_scan_at = new Date().toISOString();
         return json(db.partnerApplication);
       },
       { action: true },

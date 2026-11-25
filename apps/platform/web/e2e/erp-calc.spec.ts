@@ -306,3 +306,44 @@ test.describe("Расчёт на телефоне @mobile", () => {
     await expect(sheet).toBeHidden();
   });
 });
+
+test.describe("Неактивная кнопка называет причину (Б-2)", () => {
+  test("«Отправить запрос»: пока не выбран партнёр — причина под формой, на 1512, 1440 и 390", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    for (const width of [1512, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openCalc(page);
+      await page.reload();
+      await expect(
+        page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
+      await expect(page.getByText("Выберите партнёра.")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Отправить запрос" })).toBeDisabled();
+      await settledScreenshot(page, "price-request-reason");
+      await expectNoViolations(page, `запрос цены с причиной, ${String(width)}`);
+    }
+  });
+});
+
+test.describe("Расчёт после «Расчёт готов»: путь дальше (Б-1)", () => {
+  test("у КП на одобрении в плашке — ссылка «Открыть КП», на 1512, 1440 и 390", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "universal@demo.example");
+    for (const width of [1512, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-101")}`);
+      const link = page.getByRole("link", { name: "Открыть КП КП-2026/112" });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute(
+        "href",
+        `/eds/drafts/${encodeURIComponent("КП-2026/112")}`,
+      );
+      await settledScreenshot(page, "calc-quote-link");
+      await expectNoViolations(page, `расчёт у директора со ссылкой на КП, ${String(width)}`);
+    }
+  });
+});
