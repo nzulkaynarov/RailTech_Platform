@@ -20,7 +20,14 @@ import { memoPath, moneyProps } from "./model";
 
 export function MemoFiles({ memo }: { memo: PaymentMemoCard }) {
   const { t, i18n } = useTranslation("payments");
-  if (memo.files.length === 0) return <p className="pf-hint">{t("memo.panel.noFiles")}</p>;
+  if (memo.files.length === 0) {
+    // Б-9: автор отметил «счёт придёт позже» — записку не возвращаем, а напоминаем автору
+    return (
+      <p className="pf-hint">
+        {t(memo.invoice_later === true ? "memo.panel.invoiceLater" : "memo.panel.noFiles")}
+      </p>
+    );
+  }
   return (
     <ul className="pf-dec-list" aria-label={t("memo.panel.files")}>
       {memo.files.map((file) => (

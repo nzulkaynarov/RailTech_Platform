@@ -91,7 +91,7 @@ class StaffProfileService:
             if full_name is not None and not full_name.strip():
                 raise rules.ProfileValueError("name_required", "full_name")
             return (
-                None if phone is None else rules.normalize_phone(phone),
+                None if phone is None else rules.normalize_staff_phone(phone),
                 None if timezone is None else rules.checked_timezone(timezone),
                 None if email_signature is None else rules.checked_signature(email_signature),
             )

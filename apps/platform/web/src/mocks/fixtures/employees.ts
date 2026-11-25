@@ -1,5 +1,5 @@
 import type { Employee } from "../../shared/api/generated/model";
-import { avatarUrlOf } from "../profileStore";
+import { avatarUrlOf, nameOf, readProfile } from "../profileStore";
 import { ROLE_ID, readRoles, roleRefOf, rolesOf } from "./roles";
 import { DEMO_USERS } from "./users";
 
@@ -20,20 +20,21 @@ function accessFor(roleIds: readonly string[]): Employee["access"] {
 
 interface Seed {
   id: string;
-  telegram: boolean;
+  /** `blocked` — привязан, но бот не может писать («Старт» не нажат или бот заблокирован) */
+  telegram: Employee["telegram"];
   status?: Employee["status"];
 }
 
 const SEEDS: readonly Seed[] = [
-  { id: "u-demo-manager", telegram: true },
-  { id: "u-demo-director", telegram: true },
-  { id: "u-demo-supply", telegram: false },
-  { id: "u-demo-engineer", telegram: false },
-  { id: "u-demo-accountant", telegram: true },
-  { id: "u-demo-admin", telegram: true },
-  { id: "u-demo-all", telegram: false },
-  { id: "u-demo-new", telegram: false, status: "invited" },
-  { id: "u-demo-disabled", telegram: false, status: "disabled" },
+  { id: "u-demo-manager", telegram: "linked" },
+  { id: "u-demo-director", telegram: "linked" },
+  { id: "u-demo-supply", telegram: "not_linked" },
+  { id: "u-demo-engineer", telegram: "not_linked" },
+  { id: "u-demo-accountant", telegram: "blocked" },
+  { id: "u-demo-admin", telegram: "linked" },
+  { id: "u-demo-all", telegram: "not_linked" },
+  { id: "u-demo-new", telegram: "not_linked", status: "invited" },
+  { id: "u-demo-disabled", telegram: "not_linked", status: "disabled" },
 ];
 
 function seedEmployees(): MockEmployee[] {
@@ -50,7 +51,8 @@ function seedEmployees(): MockEmployee[] {
       role_ids: roleIds,
       access: accessFor(roleIds),
       status: seed.status ?? "active",
-      telegram_linked: seed.telegram,
+      telegram_linked: seed.telegram !== "not_linked",
+      telegram: seed.telegram,
       erp_sync: "ok",
     };
     return [employee];
@@ -65,6 +67,7 @@ function seedEmployees(): MockEmployee[] {
     access: { crm: true, erp: true },
     status: "invited",
     telegram_linked: false,
+    telegram: "not_linked",
     erp_sync: "pending",
   };
   return [...fromUsers, invited];
@@ -106,8 +109,20 @@ export function toEmployee(employee: MockEmployee): Employee {
   const { role_ids: roleIds, ...rest } = employee;
   // СУЩ-3: фото, загруженное в «Профиле», видно в списке; отключённому — инициалы, как в BFF
   const avatar = employee.status === "disabled" ? undefined : avatarUrlOf(employee.id);
+  // Замещение хранится в профиле: его ставит сам сотрудник или администратор в карточке (СОТР-1)
+  const stored = readProfile(employee.id).deputy;
   return {
     ...rest,
+    ...(stored
+      ? {
+          deputy: {
+            user_id: stored.id,
+            name: nameOf(stored.id),
+            date_from: stored.date_from,
+            date_to: stored.date_to,
+          },
+        }
+      : {}),
     roles: rolesOf(roleIds, readRoles()).map(roleRefOf),
     ...(avatar ? { avatar_url: avatar } : {}),
   };

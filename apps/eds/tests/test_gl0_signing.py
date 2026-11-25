@@ -101,14 +101,18 @@ async def test_with_the_setting_off_the_author_is_refused_and_the_card_names_who
 async def test_strict_rule_counts_the_same_pool_as_the_signer_pick(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
-    """The accountant holds an authority but cannot open a handed-over draft (no letters.register): he is not in the
-    pool, so he is neither the computed signer nor a reason to refuse the author. Before ГЛ-0 it counted him."""
+    """The accountant holds an authority and opens a handed-over draft without letters.register (СОТР-1): he is in
+    the pool, so he is the computed signer and the strict rule refuses the author in his favour."""
     await set_rule(client, staff, author_may_sign=False)
     await grant(client, staff, "registrar")
     await grant(client, staff, "accountant")
     doc = await draft_of(client, staff["registrar"])
     signing = (await card(client, staff["registrar"], doc["id"]))["signing"]
-    assert (signing["can_sign"], signing["reason"], signing["signer"]["crm_user_id"]) == (True, None, REGISTRAR)
+    assert (signing["can_sign"], signing["reason"], signing["signer"]["crm_user_id"]) == (
+        False,
+        "author_cannot_sign",
+        6,
+    )
 
 
 async def test_strict_rule_lets_the_only_holder_in_the_pool_sign(

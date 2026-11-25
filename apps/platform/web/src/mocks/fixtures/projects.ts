@@ -636,9 +636,11 @@ export function clientStatusOf(p: ProjectState): ProjectRow["client_status"] {
   if (step === "DONE") return "done";
   if (step === "CONTRACT") {
     const status = p.contract?.status;
-    return status === "client_agreed" || status === "issued_at_operator"
-      ? "contract_signing"
-      : "contract_review";
+    if (status === "client_agreed" || status === "issued_at_operator") return "contract_signing";
+    // «Согласуйте редакцию» — только пока проект у клиента; нет договора, не отправлен, отклонён — готовит продавец (СЦ-8).
+    return p.contract?.sent_to_client && status !== "rejected"
+      ? "contract_review"
+      : "contract_preparing";
   }
   if (p.act?.status === "issued") return "awaiting_acceptance";
   if (

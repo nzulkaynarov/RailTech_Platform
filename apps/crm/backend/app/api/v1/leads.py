@@ -415,7 +415,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             lead.first_response_due_at, lead.assigned_user_id, now
         ),
         origin=_origin_out(lead),
-        discarded_kind=lead.discarded_kind,
+        discarded_kind=lead.discarded_kind if lead.discarded_kind != "partner" else None,
+        partner_application_id=lead.partner_application_id,
         duplicate_of_lead_id=lead.duplicate_of_lead_id,
         confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
         if confirmation is not None

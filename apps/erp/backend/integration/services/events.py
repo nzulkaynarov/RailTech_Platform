@@ -314,6 +314,8 @@ def publish_quote_outcome(
         "erp_quote_id": quote.id,
         "version": quote.version,
     }
+    if getattr(quote, "number", None):
+        payload["number"] = quote.number  # сотруднику в уведомлении — номер КП, не внутренний id
     if reason:
         payload["reason"] = reason
     if contact is not None:

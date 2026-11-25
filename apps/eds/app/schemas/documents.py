@@ -117,6 +117,8 @@ class DocumentCreate(Strict):
     addressee_crm_user_id: int | None = None
     amount: Money | None = None
     due_date: dt.date | None = None
+    #: Счёт партнёра придёт позже (служебка с суммой без файла счёта)
+    invoice_later: bool = False
     file_ids: FileIds = Field(default_factory=list)
     source_message_id: Annotated[str | None, Field(max_length=128)] = None
     erp_deal_id: int | None = None
@@ -130,6 +132,7 @@ class DocumentSubmitIn(Strict):
     text: DocText | None = None
     amount: Money | None = None
     due_date: dt.date | None = None
+    invoice_later: bool | None = None
     file_ids: FileIds | None = None
     # Пункт 1.6 плана: согласующие перед шагами шаблона (по порядку) и получатели копии; не передано — прежние.
     approvers: Annotated[list[PositiveInt], Field(max_length=10)] | None = None
@@ -245,6 +248,7 @@ class Document(BaseModel):
     watchers: list[PersonRef] = []
     amount: Money | None
     due_date: dt.date | None
+    invoice_later: bool = False
     files: list[FileRef]
     source_message_id: str | None
     erp_deal_id: int | None

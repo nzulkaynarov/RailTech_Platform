@@ -121,7 +121,12 @@ def _create_company(app: PartnerApplication, kind: str) -> Company:
 def _applicant_contact(app: PartnerApplication, company: Company, user) -> Contact:
     if app.applicant_contact and app.applicant_contact.company_id == company.pk:
         return app.applicant_contact
-    contact = Contact.objects.filter(active_contact_q(), company=company, email__iexact=app.email).first()
+    # Пустая почта не сопоставляет контакт: иначе заявка без почты «нашла» бы любой контакт без адреса
+    contact = (
+        Contact.objects.filter(active_contact_q(), company=company, email__iexact=app.email).first()
+        if app.email.strip()
+        else None
+    )
     if contact is None:
         contact = Contact.objects.create(
             company=company,
@@ -150,7 +155,7 @@ def _render_contract(app: PartnerApplication, **kwargs) -> bytes:
 
 def _invite_deliveries(apps) -> dict[str, str]:
     """Итог последнего письма-приглашения по адресам заявок: `queued`, `sent`, `failed` (одним запросом)."""
-    emails = {app.email.lower() for app in apps if app.source == PartnerApplicationSource.PUBLIC and app.email}
+    emails = {app.email.lower() for app in apps if app.source != PartnerApplicationSource.CLIENT_CABINET and app.email}
     if not emails:
         return {}
     wanted = Q()
@@ -177,7 +182,9 @@ def _app_dict(app: PartnerApplication, deliveries: dict[str, str]) -> dict:
 
     return {
         "id": app.pk,
-        "source": app.source,
+        # Перечень `source` в контракте ERP не растёт (ломающее после 1.0): лид отдаётся как письмо с признаком
+        "source": PartnerApplicationSource.LETTER if app.source == PartnerApplicationSource.LEAD else app.source,
+        "from_lead": app.source == PartnerApplicationSource.LEAD,
         "status": app.status,
         "source_ref": app.source_ref,
         "kind": app.kind,
@@ -258,6 +265,54 @@ def create_from_letter(data: dict, user) -> dict:
     return get_application(app.pk)
 
 
+@transaction.atomic
+def create_from_lead(data: dict) -> tuple[PartnerApplication, bool]:
+    """«Партнёр» из карточки лида CRM (ЛП-1): заявка кандидата по лиду, `source = lead`, `source_ref` — номер лида.
+
+    Идемпотентно по номеру лида: повтор и параллельный повтор (блокировка на номер) возвращают ту же заявку без второй
+    строки в очереди. Отклонённая заявка не блокирует: тот же лид можно подать снова. Согласия кандидата ещё нет
+    (`consent=False`) — дальше обычный договорный шлюз; компания заводится при одобрении, а не здесь."""
+    from integration.services.handoff import _advisory_lock
+
+    ref = data["source_ref"].strip()
+    _advisory_lock("partner-lead", ref)
+    existing = (
+        PartnerApplication.objects.filter(source=PartnerApplicationSource.LEAD, source_ref=ref)
+        .exclude(status=PartnerApplicationStatus.REJECTED)
+        .order_by("-created_at")
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    country_code = (data.get("country") or "UZ").strip().upper()
+    app = PartnerApplication.objects.create(
+        source=PartnerApplicationSource.LEAD,
+        source_ref=ref,
+        country=Country.objects.filter(code__iexact=country_code).first(),
+        company_name=data["company_name"].strip(),
+        inn=(data.get("inn") or "").strip(),
+        kind=data.get("kind") or "supplier",
+        categories_description=data["categories_description"].strip(),
+        contact_name=data["contact_name"].strip(),
+        email=(data.get("email") or "").strip().lower(),
+        phone=(data.get("phone") or "").strip(),
+        language=data.get("language") or "ru",
+        consent=False,
+        status=PartnerApplicationStatus.SUBMITTED,
+    )
+    record(
+        None,
+        entity="partner_application",
+        instance=app,
+        event="created_from_lead",
+        action=f"Заявка заведена по лиду {app.source_ref}",
+        before=None,
+        after={"status": app.status, "source_ref": app.source_ref},
+        detail=app.company_name,
+    )
+    return app, True
+
+
 def get_application(pk: int) -> dict:
     app = PartnerApplication.objects.filter(pk=pk).select_related("company", "reviewed_by", "applicant_contact").first()
     if app is None:
@@ -303,7 +358,8 @@ def send_contract(pk: int, data: dict, user) -> dict:
 
         invited_contact = None
         # Заявка из внешнего входа: кандидату нужен вход, чтобы прочитать и согласовать договор
-        if app.source == PartnerApplicationSource.PUBLIC:
+        # (внешний вход, входящее письмо, лид CRM; кабинетному клиенту вход уже есть)
+        if app.source != PartnerApplicationSource.CLIENT_CABINET:
             if not app.company_id:
                 company = _chosen_company(app, data) or _create_company(app, app.kind)
                 contact = _applicant_contact(app, company, user)

@@ -42,7 +42,8 @@ Reader = Annotated[
     Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ, deputy=True)),
 ]
 Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE, P.LETTERS_REGISTER))]
-Signer = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.MEMOS_APPROVE))]
+# Подпись письма: полномочие из реестра (проверяет `documents.sign_check`), раздел прав не нужен.
+Signer = Annotated[Employee, Depends(require_permission())]
 Accountant = Annotated[Employee, Depends(require_permission(P.PAYMENTS_CONFIRM))]
 Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
 AnyEmployee = Annotated[Employee, Depends(require_permission())]
@@ -161,7 +162,7 @@ async def _render_of(session: AsyncSession, employee: Employee, document_id: uui
     # PDF без знака «ПРОЕКТ», построенный до SIGN-1, не выдаётся: для экрана «не запрашивался» — он запросит заново.
     if render is None or renders.is_unmarked_draft(render):
         raise not_found("PDF письма не запрашивался.")
-    if not render.final and not documents.may_open_pdf(employee, document):
+    if not render.final and not await documents.may_open_pdf(session, employee, document):
         raise not_found("Документ не найден.")  # проект — только автору и делопроизводителю переданного (SIGN-1)
     return render
 

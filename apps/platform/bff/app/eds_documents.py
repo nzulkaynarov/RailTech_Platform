@@ -246,6 +246,7 @@ class _RawDocument(BaseModel):
     watchers: list[EdsPerson] = Field(default_factory=list)
     amount: EdsMoney | None
     due_date: str | None
+    invoice_later: bool = False
     files: list[EdsFile]
     erp_deal_id: int | None
     deal_number: str | None
@@ -372,6 +373,7 @@ async def present(
             "watchers": raw.watchers,
             "amount": raw.amount,
             "due_date": raw.due_date,
+            "invoice_later": raw.invoice_later,
             "files": [EdsFile.model_validate(f.model_dump()) for f in raw.files],
             "deal": deal,
             "recipient": None
