@@ -80,7 +80,9 @@
     "requestPrice": "Hamkordan narx söraş",
     "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
     "requestFiles": "Ariza fayllari",
-    "downloadFile": "{{name}} faylini yuklab oliş"
+    "downloadFile": "{{name}} faylini yuklab oliş",
+    "openQuote": "TK {{number}}ni oçiş",
+    "openProject": "Loyihani oçiş"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
@@ -235,14 +237,15 @@
       "no_lines": "Kamida bitta qator qöşing.",
       "not_started": "Avval hisob-kitobni boşlang.",
       "not_draft": "Hisob-kitob allaqaçon direktorga topşirilgan.",
-      "at_director": "",
-      "approved": "",
-      "rejected": "",
-      "not_in_calculation": "",
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
-    "done": "TK qoralamasi direktorda"
+    "done": "TK qoralamasi direktorda",
+    "closed": {
+      "approved": "TK maʼqullandi",
+      "rejected": "TK rad etildi",
+      "not_in_calculation": "Ariza hisob-kitobda emas."
+    }
   },
   "task": {
     "resolution": "Direktor rezolyutsiyasi",

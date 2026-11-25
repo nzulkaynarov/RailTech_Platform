@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { ApiError } from "../../shared/api/errors";
+import i18n from "../../shared/i18n";
 
 /**
  * Текст ошибки операций над сотрудником для сотрудника-админа. Коды — контракт BFF (`LAST_ADMIN`, `LAST_DIRECTOR`,
@@ -15,6 +16,11 @@ export function employeeErrorText(t: TFunction, error: unknown): string {
     return t(`${base}ACTIVE_LEADS`);
   }
   if (error.code === "CONFLICT" && reason === "own_account") return t(`${base}OWN_ACCOUNT`);
+  // Замещение за сотрудника (СОТР-1): причина от CRM — «себя нельзя», «период в прошлом»…
+  if (typeof reason === "string" && reason.startsWith("deputy_")) {
+    const path = `${base}${reason}`;
+    if (i18n.exists(path, { ns: "modules" })) return t(path);
+  }
   if (
     [
       "LAST_ADMIN",

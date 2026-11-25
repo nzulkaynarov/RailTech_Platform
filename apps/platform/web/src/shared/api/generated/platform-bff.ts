@@ -397,6 +397,8 @@ import type {
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
   PartnerApplicationSendContractRequest,
+  PartnerHandoffIn,
+  PartnerHandoffView,
   PartnerRequestDecision,
   PasswordConfirm,
   PaymentBoard,
@@ -58122,6 +58124,138 @@ export const useCreateCrmRequest = <
   TContext
 > => {
   return useMutation(getCreateCrmRequestMutationOptions(options), queryClient);
+};
+
+export const getHandOverCrmLeadAsPartnerUrl = (lead: string) => {
+  return `/api/v1/crm/leads/${lead}/partner`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент): CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки. Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой, второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM — `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+ * @summary «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+ */
+export const handOverCrmLeadAsPartner = async (
+  lead: string,
+  partnerHandoffIn: PartnerHandoffIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerHandoffView> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerHandoffView>(getHandOverCrmLeadAsPartnerUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerHandoffIn),
+  });
+};
+
+export const getHandOverCrmLeadAsPartnerMutationKey = () => ["handOverCrmLeadAsPartner"] as const;
+
+export const getHandOverCrmLeadAsPartnerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+    TError,
+    HandOverCrmLeadAsPartnerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+  TError,
+  HandOverCrmLeadAsPartnerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHandOverCrmLeadAsPartnerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+    HandOverCrmLeadAsPartnerMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return handOverCrmLeadAsPartner(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandOverCrmLeadAsPartnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>
+>;
+export type HandOverCrmLeadAsPartnerMutationBody = PartnerHandoffIn;
+export type HandOverCrmLeadAsPartnerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type HandOverCrmLeadAsPartnerMutationVariables = { lead: string; data: PartnerHandoffIn };
+
+/**
+ * @summary «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+ */
+export const useHandOverCrmLeadAsPartner = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+      TError,
+      HandOverCrmLeadAsPartnerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof handOverCrmLeadAsPartner>>,
+  TError,
+  HandOverCrmLeadAsPartnerMutationVariables,
+  TContext
+> => {
+  return useMutation(getHandOverCrmLeadAsPartnerMutationOptions(options), queryClient);
 };
 
 export const getRetryCrmRequestUrl = (deal: number) => {

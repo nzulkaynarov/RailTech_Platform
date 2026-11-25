@@ -150,6 +150,8 @@ class LeadDetail(LeadOut):
     # «Спам» | «тест» | «дубль» (LH-1) и лид, на который указывает дубль.
     discarded_kind: Literal["spam", "test", "duplicate"] | None = None
     duplicate_of_lead_id: int | None = None
+    # «Передан как партнёр» (ЛП-1): заявка кандидата в ERP; `discarded_kind` у такого лида пуст.
+    partner_application_id: int | None = None
     # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
     confirmation: NoticeOut | None = None
     # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —

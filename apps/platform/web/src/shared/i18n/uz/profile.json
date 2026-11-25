@@ -41,7 +41,7 @@
     "rolesHint": "Qaysi bölimlar sizga oçiqligini rollar belgilaydi.",
     "phone": "Telefon",
     "phoneHint": "Masalan, +998 90 123-45-67",
-    "phoneInvalid": "Raqamni tekşiring: 7 dan 15 gaça raqam, «+» bilan boşlanişi mumkin.",
+    "phoneInvalid": "Raqamni tekşiring: mamlakat kodini kiriting, masalan +998 90 123-45-67.",
     "language": "Til",
     "timezone": "Vaqt mintaqasi",
     "timezoneHint": "Örinbosarlik sanalari va xatlardagi vaqt şu böyiça hisoblanadi.",
@@ -52,7 +52,7 @@
     "cancel": "Bekor qiliş",
     "saved": "Profil saqlandi",
     "errors": {
-      "phone_invalid": "Raqamni tekşiring: 7 dan 15 gaça raqam, «+» bilan boşlanişi mumkin.",
+      "phone_invalid": "Raqamni tekşiring: mamlakat kodini kiriting, masalan +998 90 123-45-67.",
       "timezone_unknown": "Bunday vaqt mintaqasi yöq. Röyxatdan tanlang.",
       "signature_invalid": "Imzo 1000 belgidan oşmasligi kerak.",
       "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",

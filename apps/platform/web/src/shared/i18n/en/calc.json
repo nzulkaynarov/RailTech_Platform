@@ -80,7 +80,9 @@
     "requestPrice": "Request a partner price",
     "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed.",
     "requestFiles": "Request files",
-    "downloadFile": "Download file {{name}}"
+    "downloadFile": "Download file {{name}}",
+    "openQuote": "Open quote {{number}}",
+    "openProject": "Open project"
   },
   "lines": {
     "title": "Costing lines",
@@ -235,14 +237,15 @@
       "no_lines": "Add at least one line.",
       "not_started": "Start costing first.",
       "not_draft": "Costing has already gone to the director.",
-      "at_director": "",
-      "approved": "",
-      "rejected": "",
-      "not_in_calculation": "",
       "rejected_client": "The client rejected the quote — choose above: a new quote version or «Close request»."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
-    "done": "Draft quote with the director"
+    "done": "Draft quote with the director",
+    "closed": {
+      "approved": "Quote approved",
+      "rejected": "Quote rejected",
+      "not_in_calculation": "The request is out of costing."
+    }
   },
   "task": {
     "resolution": "Director's resolution",

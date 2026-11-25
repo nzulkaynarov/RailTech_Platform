@@ -46,6 +46,7 @@
     }
   },
   "clientStatus": {
+    "contract_preparing": "We are preparing the contract",
     "contract_review": "Please agree the contract wording",
     "contract_signing": "Contract is being signed",
     "awaiting_payment": "Awaiting payment",
@@ -115,10 +116,10 @@
       "invoiceType": "Invoice for payment",
       "actType": "Act of work or delivery",
       "none": "—",
-      "contractMissing": "No contract draft yet: the accountant creates it from the accepted quote.",
-      "invoiceMissing": "The invoice appears after the contract is signed: the draft is created automatically.",
+      "contractMissing": "No contract draft yet.",
+      "invoiceMissing": "No invoice yet.",
       "invoiceMissingSigned": "The contract is signed, no invoice yet: issue it in “Finance”.",
-      "actMissing": "The act is issued against an issued invoice.",
+      "actMissing": "No act yet.",
       "actAfterDelivery": "Act — after delivery",
       "invoiceDue": "due {{date}}",
       "invoiceCount": "invoices: {{count}}",
@@ -142,10 +143,9 @@
     },
     "execution": {
       "title": "Fulfilment",
-      "hint": "Stock shipments are in Stock · Shipments. Here you mark goods in transit and delivered.",
       "shipment": "Shipment",
-      "none": "No shipment yet: it is created after the contract is signed.",
-      "awaitingShipment": "Delivery marks appear once the goods are shipped from the warehouse.",
+      "none": "No shipment yet.",
+      "awaitingShipment": "Marks appear after shipping.",
       "status": "Status",
       "expected": "Expected date",
       "shipped": "Shipped",
@@ -380,7 +380,7 @@
     "number": "Act {{number}}",
     "none": {
       "title": "No act yet",
-      "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Finance”.",
+      "noInvoice": "No invoice issued yet — issue it in “Finance”.",
       "notDelivered": "The act comes after delivery: it can be issued once the goods are delivered to the client.",
       "forbidden": "Insufficient permissions.",
       "ready": "The invoice is issued: you can issue the act.",

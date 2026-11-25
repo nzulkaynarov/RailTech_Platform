@@ -12,7 +12,13 @@ export type RegisterSection = "file" | "sender" | "content" | "route" | "review"
 export interface RegisterDraft {
   values: RegisterValues;
   active: RegisterSection;
-  ai: { id: string; filled: AiField[]; left: AiField[] } | null;
+  ai: {
+    id: string;
+    filled: AiField[];
+    left: AiField[];
+    byCode?: AiField[];
+    receivedUsed?: string;
+  } | null;
   savedAt: string;
 }
 

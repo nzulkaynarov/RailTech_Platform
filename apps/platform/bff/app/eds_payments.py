@@ -506,6 +506,7 @@ def memo_card(raw: Any, approval: Any | None) -> PaymentMemoCard:
             author=_person(raw.get("author")) or EdsPerson(crm_user_id=0, full_name=""),
             amount=_memo_money(raw.get("amount")),
             due_date=_date(raw.get("due_date")),
+            invoice_later=bool(raw.get("invoice_later")),
             deal=EdsDealRef(erp_deal_id=raw["erp_deal_id"], number=raw.get("deal_number"))
             if isinstance(raw.get("erp_deal_id"), int)
             else None,

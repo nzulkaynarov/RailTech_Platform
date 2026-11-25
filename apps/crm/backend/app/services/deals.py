@@ -10,7 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
-from sqlalchemy import func, literal_column, select
+from sqlalchemy import ColumnElement, exists, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.deals import (
@@ -267,11 +267,17 @@ async def _check_owner(session: AsyncSession, user_id: int | None) -> None:
         )
 
 
+def _of_partner_lead() -> ColumnElement[bool]:
+    """The deal belongs to a lead that was handed over as a partner."""
+    return exists().where(Lead.id == Deal.lead_id, Lead.discarded_kind == "partner")
+
+
 async def summary(
     session: AsyncSession, days: int, now: datetime, tz: str = "Asia/Tashkent"
 ) -> DealsSummary:
     since = now - timedelta(days=days)
-    closed = (Deal.closed_at >= since,)
+    # A lead handed over as a partner (ЛП-1) is not a lost sale and its deal is not pipeline.
+    closed = (Deal.closed_at >= since, ~_of_partner_lead())
     won = await session.execute(
         select(
             Deal.currency,
@@ -295,7 +301,9 @@ async def summary(
     )
     lost_rows = lost.all()
     open_count = await session.scalar(
-        select(func.count()).select_from(Deal).where(Deal.stage == DealStage.OPEN.value)
+        select(func.count())
+        .select_from(Deal)
+        .where(Deal.stage == DealStage.OPEN.value, ~_of_partner_lead())
     )
     return DealsSummary(
         days=days,
@@ -315,7 +323,11 @@ async def _daily(session: AsyncSession, since: datetime, now: datetime, tz: str)
     day = func.date(func.timezone(tz, Deal.closed_at)).label("day")
     rows = await session.execute(
         select(day, Deal.stage, func.count())
-        .where(Deal.stage.in_((DealStage.WON.value, DealStage.LOST.value)), Deal.closed_at >= since)
+        .where(
+            Deal.stage.in_((DealStage.WON.value, DealStage.LOST.value)),
+            Deal.closed_at >= since,
+            ~_of_partner_lead(),
+        )
         .group_by(day, Deal.stage)
     )
     counts = {(r[0], r[1]): int(r[2]) for r in rows.all()}

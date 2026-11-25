@@ -116,7 +116,8 @@
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
     "enqueue_failed": "Could not queue the sending — try again a bit later",
     "generic": "Could not create the request. The form data is kept — try again",
-    "letter_uploading": "Wait for the file to upload"
+    "letter_uploading": "Wait for the file to upload",
+    "do_not_work": "We do not work with this company: a request cannot be created"
   },
   "sections": {
     "request": "Request",
@@ -126,5 +127,45 @@
     "found": "There is a request draft from {{time}}",
     "continue": "Continue",
     "restart": "Start over"
+  },
+  "who": {
+    "legend": "Who is this?",
+    "client": "Client",
+    "partner": "Partner"
+  },
+  "partner": {
+    "title": "Partner",
+    "intro": "The application goes to “Partner applications”. The lead does not become a client.",
+    "company": "Company",
+    "country": "Country",
+    "inn": "Tax ID",
+    "contact": "Contact person",
+    "email": "Email",
+    "phone": "Phone",
+    "offer": "What they offer",
+    "channelsHint": "Email is required: the contract is sent there",
+    "submit": "Hand over as partner",
+    "submitting": "Handing over…",
+    "cancel": "Cancel",
+    "done": {
+      "title": "Lead handed over as partner",
+      "text": "The application is created, the lead is closed.",
+      "repeated": "The lead was already handed over — this is the same application.",
+      "open": "Open partner applications",
+      "close": "Close"
+    },
+    "errors": {
+      "company": "Enter the company",
+      "contact": "Enter the contact person",
+      "offer": "Describe what the partner offers",
+      "email": "Enter the email",
+      "request_not_allowed": "The lead is already closed",
+      "erp_not_configured": "Accounting is not connected",
+      "not_lead_owner": "Another employee handles this lead",
+      "erp_unavailable": "Accounting does not respond — your data is kept, try again shortly",
+      "generic": "Could not hand over. Your data is kept — try again",
+      "invalid_email": "Check the email address",
+      "VALIDATION_FAILED": "Check the entered data"
+    }
   }
 }

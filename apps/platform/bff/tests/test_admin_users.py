@@ -171,6 +171,16 @@ class CrmUsers:
         )
         if loses and self._active_admins(user_id) == 0:
             return self._error(409, "last_admin")
+        if body.get("clear_deputy"):
+            user.update(deputy_user_id=None, deputy_from=None, deputy_to=None)
+        if "deputy_user_id" in body:
+            if body["deputy_user_id"] == user_id:  # правило CRM: себя заместителем нельзя
+                return self._error(422, "validation_failed", reason="deputy_is_self")
+            user.update(
+                deputy_user_id=body["deputy_user_id"],
+                deputy_from=body["deputy_from"],
+                deputy_to=body["deputy_to"],
+            )
         user.update({k: v for k, v in body.items() if k in user})
         return httpx.Response(200, json=with_refs(user))
 
@@ -681,6 +691,7 @@ async def test_crm_validation_error_lists_fields(
         {"is_active": None},
         {"transfer_to_user_id": "x"},
         {"full_name": "Другое Имя"},
+        {"deputy": None, "position": "Новая"},  # замещение — только отдельным запросом
     ],
 )
 async def test_update_body_is_validated(web: Web, crm: CrmUsers, payload: dict[str, Any]) -> None:
@@ -900,3 +911,97 @@ async def test_invite_when_crm_goes_down_after_create(web: Web, crm: CrmUsers) -
     assert "почт" not in body["message"].lower().replace("отправлено", "")
     assert body["details"]["employee_id"] == "101"
     assert body["details"]["invite"] == "not_sent"
+
+
+# --- СОТР-1: Telegram в трёх состояниях и замещение за сотрудника ---
+
+
+async def test_telegram_has_three_states_from_the_crm_delivery_mark(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    await login_as(web, "ADMIN")
+    crm.users[11]["tg_user_id"] = 555  # привязан, бот пишет
+    crm.users[12]["tg_user_id"] = 556
+    crm.users[12]["tg_dm_failed_at"] = "2026-11-24T10:00:00Z"  # привязан, но сообщения не доходят
+
+    response = await web.client.get("/api/v1/admin/users")
+
+    assert response.status_code == 200
+    check(response, "/admin/users", "get")
+    items = {e["id"]: e for e in response.json()["items"]}
+    assert items["11"]["telegram"] == "linked"
+    assert items["12"]["telegram"] == "blocked"
+    assert items["12"]["telegram_linked"] is True  # привязка есть, доставки нет
+    assert items[str(ADMIN_ID)]["telegram"] == "not_linked"
+    assert items[str(ADMIN_ID)]["telegram_linked"] is False
+
+
+async def test_admin_sets_the_deputy_of_an_employee_and_the_card_names_them(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    await login_as(web, "ADMIN")
+    period = {"deputy_id": "11", "date_from": "2026-11-26", "date_to": "2026-12-01"}
+
+    response = await web.send("PATCH", "/api/v1/admin/users/12", json={"deputy": period})
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/users/{id}", "patch")
+    assert json.loads(crm.patch_route.calls.last.request.content) == {
+        "deputy_user_id": 11,
+        "deputy_from": "2026-11-26",
+        "deputy_to": "2026-12-01",
+    }
+    assert response.json()["deputy"] == {
+        "user_id": "11",
+        "name": "Анна Демова",
+        "date_from": "2026-11-26",
+        "date_to": "2026-12-01",
+    }
+    listed = (await web.client.get("/api/v1/admin/users")).json()["items"]
+    assert {e["id"]: e.get("deputy", {}).get("name") for e in listed}["12"] == "Анна Демова"
+
+
+async def test_admin_clears_the_deputy_with_an_explicit_null(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    await login_as(web, "ADMIN")
+    crm.users[12].update(deputy_user_id=11, deputy_from="2026-11-26", deputy_to="2026-12-01")
+
+    response = await web.send("PATCH", "/api/v1/admin/users/12", json={"deputy": None})
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/users/{id}", "patch")
+    assert json.loads(crm.patch_route.calls.last.request.content) == {"clear_deputy": True}
+    assert "deputy" not in response.json()
+
+
+async def test_an_employee_cannot_be_their_own_deputy(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    await login_as(web, "ADMIN")
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/users/12",
+        json={"deputy": {"deputy_id": "12", "date_from": "2026-11-26", "date_to": "2026-11-27"}},
+    )
+
+    assert response.status_code == 422
+    check(response, "/admin/users/{id}", "patch")
+    assert response.json()["details"]["reason"] == "deputy_is_self"
+    assert crm.users[12].get("deputy_user_id") is None
+
+
+async def test_the_deputy_of_somebody_else_needs_the_admin_section_on_write(
+    web: Web, crm: CrmUsers
+) -> None:
+    await login_as(web, "DIRECTOR")  # раздел `admin` только на чтение
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/users/12",
+        json={"deputy": {"deputy_id": "11", "date_from": "2026-11-26", "date_to": "2026-11-27"}},
+    )
+
+    assert response.status_code == 403
+    assert crm.patch_route.call_count == 0

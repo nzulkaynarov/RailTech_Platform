@@ -1,4 +1,4 @@
-import { Button, Skeleton } from "antd";
+import { Button, Skeleton, Tag } from "antd";
 import { useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -112,7 +112,11 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         <h3 className="pf-fp-title">{card.name}</h3>
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           <span className="pf-hint">{card.lead}</span>
-          <StatusTag kind="lead" status={card.status} />
+          {card.partner_application != null ? (
+            <Tag>{t("leads:card.partner")}</Tag>
+          ) : (
+            <StatusTag kind="lead" status={card.status} />
+          )}
           {card.discarded ? (
             <span className="pf-hint">
               {t(`leads:discarded.${card.discarded}`)}
@@ -162,6 +166,25 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
                 </LinkButton>
               ) : null,
             },
+            ...(card.partner_application != null
+              ? [
+                  {
+                    label: t("leads:card.partnerOpen"),
+                    value: canEdit(me, "erp.stock") ? (
+                      <LinkButton
+                        type="link"
+                        size="small"
+                        style={{ padding: 0 }}
+                        to="/crm/clients?kind=applications"
+                      >
+                        {`№ ${String(card.partner_application)}`}
+                      </LinkButton>
+                    ) : (
+                      `№ ${String(card.partner_application)}`
+                    ),
+                  },
+                ]
+              : []),
             ...(card.first_response.due_at
               ? [
                   {

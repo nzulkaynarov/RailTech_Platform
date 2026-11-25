@@ -197,17 +197,19 @@ async def test_card_of_an_author_without_signing_right_still_names_the_signer(
     assert (await card(client, staff["manager"], doc["id"]))["signing"] == expected
 
 
-async def test_authority_holder_who_cannot_open_the_draft_is_never_the_signer(
+async def test_authority_holder_without_letters_register_is_the_signer(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
-    # Бухгалтер без letters.register: черновик ему недоступен, поэтому подписантом он не становится.
+    # СОТР-1: бухгалтер без letters.register видит переданный черновик и становится подписантом (реестр — правда).
     await grant(client, staff, "accountant")
     doc = await draft_of(client, staff["manager"])
     await hand_over(client, staff["manager"], doc["id"])
+    assert len((await tasks_of(client, staff["accountant"]))["signatures"]) == 1
     for name in staff:
-        assert (await tasks_of(client, staff[name]))["signatures"] == [], name
-    assert (await card(client, staff["director"], doc["id"]))["signing"]["signer"] is None
-    # Директор с полномочием забирает задачу, хотя бухгалтер стоит в реестре раньше по имени/основанию.
+        if name != "accountant":
+            assert (await tasks_of(client, staff[name]))["signatures"] == [], name
+    assert (await card(client, staff["director"], doc["id"]))["signing"]["signer"]["crm_user_id"] == 6
+    # Директор с полномочием по приказу: устав выше приказа, задача остаётся у бухгалтера.
     await grant(client, staff, "director", basis="order", basis_number="1", basis_date="2026-01-02")
-    assert len((await tasks_of(client, staff["director"]))["signatures"]) == 1
-    assert (await tasks_of(client, staff["accountant"]))["signatures"] == []
+    assert len((await tasks_of(client, staff["accountant"]))["signatures"]) == 1
+    assert (await tasks_of(client, staff["director"]))["signatures"] == []

@@ -27,6 +27,8 @@ import type {
   PairingAccepted,
   PairingRotateRequest,
   PairingRotated,
+  PartnerApplicationIn,
+  PartnerApplicationOut,
   ProvisionUserRequest,
   ProvisionUserResponse,
   SearchCatalogParams,
@@ -314,6 +316,54 @@ export const createClientRequest = async (
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const data: ClientRequestOut = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getCreatePartnerApplicationUrl = () => {
+  return `/partner-applications`;
+};
+
+/**
+ * Менеджер CRM отвечает на вопрос «Кто это?» в карточке лида словом «Партнёр»: ERP заводит заявку кандидата в
+ * очередь «Заявки партнёров» (`source = lead`, `source_ref` = номер лида `lead_number`). Согласия кандидата ещё нет —
+ * дальше обычный договорный шлюз; компания создаётся при одобрении, а не здесь. Идемпотентно по `lead_number`:
+ * повтор и параллельный повтор (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй строки в очереди;
+ * отклонённая заявка повтор не блокирует. Почта обязательна.
+ * @summary Заявка кандидата в партнёры из карточки лида CRM («Партнёр», ЛП-1)
+ */
+export const createPartnerApplication = async (
+  partnerApplicationIn: PartnerApplicationIn,
+  options?: RequestInit,
+): Promise<PartnerApplicationOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getCreatePartnerApplicationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationIn),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: PartnerApplicationOut = body ? JSON.parse(body) : {};
   return data;
 };
 

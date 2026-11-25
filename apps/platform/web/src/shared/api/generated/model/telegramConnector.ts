@@ -7,6 +7,11 @@
  * Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.
  */
 export interface TelegramConnector {
+  /**
+   * Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно.
+   * @nullable
+   */
+  channel_can_invite?: boolean | null;
   /** @nullable */
   channel_id: number | null;
   /** @nullable */

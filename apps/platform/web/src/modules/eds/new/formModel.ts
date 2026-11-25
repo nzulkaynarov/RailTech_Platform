@@ -67,6 +67,8 @@ export interface FormValues {
   recipientContactId: string;
   deal: DealChoice | null;
   attachments: Attachment[];
+  /** Служебка с суммой без счёта партнёра: «счёт придёт позже» — явная отметка вместо молчаливого пропуска (Б-9) */
+  invoiceLater: boolean;
   /** Только письмо (P8b): «в ответ на» — номер входящего ВХ; регистрация закрывает поручение «Подготовить ответ» */
   inReplyTo: string;
   /** Письмо на бланке (P4): тело — дерево редактора, «кому», почта адресата, подписант (пусто — подписант бланка) */
@@ -94,6 +96,7 @@ export const EMPTY_FORM: FormValues = {
   recipientContactId: "",
   deal: null,
   attachments: [],
+  invoiceLater: false,
   inReplyTo: "",
   body: emptyDoc(),
   recipientAttention: "",
@@ -205,7 +208,17 @@ export function validate(values: FormValues, today: string = todayInCompanyZone(
     }
   } else {
     if (values.text.trim() === "") errors.text = true;
-    if (!parseAmount(values.amount).ok) errors.amount = true;
+    const amount = parseAmount(values.amount);
+    if (!amount.ok) errors.amount = true;
+    // Служебка с суммой — это просьба оплатить: счёт партнёра нужен сразу или с отметкой «придёт позже» (Б-9)
+    else if (
+      values.kind === "memo" &&
+      amount.value !== null &&
+      !values.invoiceLater &&
+      !values.attachments.some((a) => a.status === "done")
+    ) {
+      errors.invoice = true;
+    }
     if (values.dueDate !== "" && values.dueDate < today) errors.due_date = true;
   }
   return errors;
@@ -221,6 +234,7 @@ export function validateDraft(
 ): FormErrors {
   const errors = validate(values, today);
   delete errors.recipient;
+  delete errors.invoice;
   return errors;
 }
 
@@ -231,6 +245,7 @@ export const FIELD_ORDER: readonly FieldKey[] = [
   "recipient_email",
   "text",
   "amount",
+  "invoice",
   "due_date",
   "erp_deal_id",
   "in_reply_to_number",
@@ -247,6 +262,7 @@ interface Payload {
   text: string;
   amount: { amount: string; currency: string } | null;
   due_date: string | null;
+  invoice_later: boolean;
   file_ids: string[];
   erp_deal_id: number | null;
   recipient?: { company_id: string; contact_id: string | null };
@@ -290,6 +306,12 @@ export function toPayload(
     text,
     amount: amount ? { amount, currency: HOME_CURRENCY } : null,
     due_date: !letter && values.dueDate !== "" ? values.dueDate : null,
+    // отметка живёт, только пока у служебки с суммой нет счёта; приложили файл — она не нужна
+    invoice_later:
+      values.invoiceLater &&
+      !letter &&
+      amount !== null &&
+      !values.attachments.some((a) => a.status === "done"),
     file_ids: values.attachments.flatMap((a) => (a.status === "done" && a.id ? [a.id] : [])),
     erp_deal_id: values.deal?.erp_deal_id ?? null,
     ...(letter && body
@@ -371,6 +393,7 @@ export function fromDocument(doc: EdsDocument): FormValues {
       id: file.id,
       existing: true,
     })),
+    invoiceLater: doc.invoice_later === true,
     inReplyTo: "",
     // Письмо без тела (до P4) открывается с его текстом в одном абзаце.
     body: doc.letter?.body

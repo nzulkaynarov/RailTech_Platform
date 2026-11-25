@@ -363,7 +363,8 @@
         "title": "Not your step",
         "text": ""
       },
-      "journal": "Memo log"
+      "journal": "Memo log",
+      "invoiceLater": "The invoice will come later — remind the author"
     },
     "form": {
       "name": "Memo payment",

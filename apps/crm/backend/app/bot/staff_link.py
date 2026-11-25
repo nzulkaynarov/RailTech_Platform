@@ -9,9 +9,10 @@ from typing import Any
 
 from aiogram import F, Router
 from aiogram.filters import CommandObject, CommandStart
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from app.domain import staff_telegram as rules
+from app.services.staff_channel import StaffChannelService
 from app.services.staff_telegram_link import StaffTelegramLinkService
 
 router = Router(name="staff-link")
@@ -30,7 +31,10 @@ def _is_staff_start(
 
 @router.message(CommandStart(deep_link=True), _is_staff_start, F.from_user)
 async def on_staff_start(
-    message: Message, staff_code: str, staff_link: StaffTelegramLinkService
+    message: Message,
+    staff_code: str,
+    staff_link: StaffTelegramLinkService,
+    staff_channel: StaffChannelService | None = None,
 ) -> None:
     sender = message.from_user
     if sender is None:  # отфильтровано F.from_user, проверка для типов
@@ -39,3 +43,11 @@ async def on_staff_start(
     language = outcome.language or (sender.language_code or "")[:2] or None
     table = {"linked": rules.LINKED, "taken": rules.TAKEN}.get(outcome.status, rules.INVALID)
     await message.answer(rules.text(table, language))
+    if outcome.status == "linked" and staff_channel is not None:
+        url = await staff_channel.invite_url(sender.id)
+        if url is not None:  # join-request link: the bot approves a linked employee
+            button = InlineKeyboardButton(text=rules.text(rules.JOIN_BUTTON, language), url=url)
+            await message.answer(
+                rules.text(rules.JOIN_CHANNEL, language),
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[button]]),
+            )

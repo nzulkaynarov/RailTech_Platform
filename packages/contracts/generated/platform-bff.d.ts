@@ -8163,6 +8163,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/leads/{lead}/partner": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+     * @description CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент): CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки. Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой, второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM — `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+     */
+    post: operations["handOverCrmLeadAsPartner"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/requests/{deal}/retry": {
     parameters: {
       query?: never;
@@ -10418,6 +10438,8 @@ export interface components {
     };
     /** @description Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`. */
     TelegramConnector: {
+      /** @description Бот может приглашать в канал команды (право «приглашать пользователей»); `false` — нужно право, `null` — неизвестно. */
+      channel_can_invite?: boolean | null;
       channel_id: number | null;
       channel_title: string | null;
       configured: boolean;
@@ -11383,8 +11405,15 @@ export interface components {
         erp: boolean;
       };
       status: components["schemas"]["EmployeeStatus"];
-      /** @description Привязан Telegram для уведомлений сотруднику */
+      /** @description Привязан Telegram для уведомлений сотруднику (есть привязка; дойдут ли сообщения — `telegram`) */
       telegram_linked: boolean;
+      /**
+       * @description `linked` — привязан и бот может писать; `not_linked` — не привязан; `blocked` — привязан, но сообщения не доходят (CRM отметила отказ Telegram: «Старт» не нажат или бот заблокирован) — сотруднику нужно привязать заново
+       * @enum {string}
+       */
+      telegram: "linked" | "not_linked" | "blocked";
+      /** @description Замещение на период (СОТР-1): поставил сам сотрудник в профиле или администратор в карточке; нет — поля нет */
+      deputy?: components["schemas"]["DeputyPeriod"];
       erp_sync: components["schemas"]["ErpSyncState"];
       /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
@@ -11507,6 +11536,8 @@ export interface components {
       is_active?: boolean;
       /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
       transfer_to_user_id?: string;
+      /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */
+      deputy?: components["schemas"]["DeputyUpdate"] | null;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
@@ -11977,6 +12008,7 @@ export interface components {
        * @enum {string}
        */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12221,6 +12253,7 @@ export interface components {
       step: "CONTRACT" | "PAYMENT" | "DONE";
       /** @enum {string} */
       client_status:
+        | "contract_preparing"
         | "contract_review"
         | "contract_signing"
         | "awaiting_payment"
@@ -12448,6 +12481,11 @@ export interface components {
       amount: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       files: components["schemas"]["EdsFile"][];
       /** @description Связь с проектом */
       deal: components["schemas"]["EdsDealRef"] | null;
@@ -12717,6 +12755,11 @@ export interface components {
        * @description «Нужно до» — не в прошлом
        */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       /** @description Связь с проектом (`GET /eds/deal-options`) */
       erp_deal_id?: number | null;
@@ -12751,6 +12794,11 @@ export interface components {
       amount?: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date?: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       file_ids?: string[];
       erp_deal_id?: number | null;
       /** @description Только `letter_out`; не передан — прежний */
@@ -13386,6 +13434,11 @@ export interface components {
       amount: components["schemas"]["PaymentMoney"] | null;
       /** Format: date */
       due_date: string | null;
+      /**
+       * @description Служебка с суммой без счёта партнёра: автор отметил, что счёт придёт позже (Б-9)
+       * @default false
+       */
+      invoice_later: boolean;
       deal: components["schemas"]["EdsDealRef"] | null;
       files: components["schemas"]["EdsFile"][];
       document_status: string;
@@ -14925,6 +14978,13 @@ export interface components {
     LetterIntakeIn: {
       /** Format: uuid */
       file_id: string;
+      /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
+      received_at?: string | null;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока)
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {
@@ -14970,6 +15030,8 @@ export interface components {
       fields: components["schemas"]["LetterIntakeFields"];
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */
@@ -17181,6 +17243,8 @@ export interface components {
       send: boolean;
       /** @description В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
       request_price: boolean;
+      /** @description Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send (Б-5); только в карточке заказа */
+      resend?: boolean;
       confirm: boolean;
       receive: boolean;
       cancel: boolean;
@@ -17852,6 +17916,8 @@ export interface components {
       discarded?: ("spam" | "test" | "duplicate") | null;
       /** @description Номер оставшегося лида, если `discarded = duplicate` */
       duplicate_of?: string | null;
+      /** @description Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
+      partner_application?: number | null;
     };
     /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
     LeadOrigin: {
@@ -17962,6 +18028,7 @@ export interface components {
     ClientSees:
       | "in_work"
       | "awaiting_decision"
+      | "contract_preparing"
       | "contract_review"
       | "contract_signing"
       | "awaiting_payment"
@@ -18087,6 +18154,8 @@ export interface components {
       company?: {
         name: string;
         inn?: string | null;
+        /** @description Страна — вместе с названием ищет уже заведённую компанию (ЛП-1) */
+        country?: string | null;
       } | null;
       contact: components["schemas"]["RequestContactFormIn"];
       summary: string;
@@ -18102,6 +18171,30 @@ export interface components {
         method: "phone" | "email" | "paper";
         comment?: string | null;
       } | null;
+    };
+    /** @description Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
+    PartnerHandoffIn: {
+      company_name: string;
+      /**
+       * @description ISO 3166-1 alpha-2
+       * @default UZ
+       */
+      country: string;
+      /** @default  */
+      inn: string;
+      /** @description Что предлагает кандидат (из запроса лида) */
+      offer: string;
+      contact_name: string;
+      email: string;
+      /** @default  */
+      phone: string;
+    };
+    PartnerHandoffView: {
+      lead: string;
+      /** @description Заявка кандидата в ERP */
+      application: number;
+      /** @description `false` — лид уже был передан как партнёр: возвращена первая заявка */
+      created: boolean;
     };
     RequestCreatedView: {
       client_id: number;
@@ -19035,10 +19128,10 @@ export interface components {
       can_act?: boolean;
     };
     /**
-     * @description Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+     * @description Откуда заявка — внешний вход, кабинет клиента, входящее письмо (сотрудник, план 1.9) или лид CRM (ЛП-1)
      * @enum {string}
      */
-    PartnerApplicationSource: "public" | "client_cabinet" | "letter";
+    PartnerApplicationSource: "public" | "client_cabinet" | "letter" | "lead";
     /** @enum {string} */
     PartnerApplicationStatus:
       | "submitted"
@@ -34351,6 +34444,51 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  handOverCrmLeadAsPartner: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида */
+        lead: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerHandoffIn"];
+      };
+    };
+    responses: {
+      /** @description Лид уже передан как партнёр — та же заявка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
+        };
+      };
+      /** @description Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр» */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
         };
       };
       401: components["responses"]["SessionExpired"];
