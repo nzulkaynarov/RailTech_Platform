@@ -46,7 +46,9 @@ class CalcVisaStatesSerializer(serializers.Serializer):
 
 class CalcTaskRowSerializer(serializers.Serializer):
     deal = CalcDealSerializer()
-    letter_number = serializers.CharField()
+    letter_number = serializers.CharField(
+        allow_blank=True, help_text="Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
+    )
     due = serializers.DateField()
     state = serializers.ChoiceField(choices=CALC_STATES)
     rejected_by = serializers.ChoiceField(
@@ -76,7 +78,9 @@ class CalcDealRefListSerializer(serializers.Serializer):
 
 
 class CalcTaskBriefSerializer(serializers.Serializer):
-    letter_number = serializers.CharField()
+    letter_number = serializers.CharField(
+        allow_blank=True, help_text="Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
+    )
     letter_subject = serializers.CharField(allow_blank=True)
     resolution_text = serializers.CharField(allow_blank=True)
     decided_at = serializers.DateTimeField()

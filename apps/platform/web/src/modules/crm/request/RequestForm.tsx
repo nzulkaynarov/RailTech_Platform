@@ -13,6 +13,7 @@ import {
   useCopyCrmMessageAttachmentToRequest,
   useCreateCrmRequest,
   useGetCrmClient,
+  useGetCrmRequestResolution,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -185,6 +186,7 @@ export function RequestForm({
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<RequestCreatedView | null>(null);
   const create = useCreateCrmRequest();
+  const resolution = useGetCrmRequestResolution();
   const refresh = useRefreshCrm();
   const fixedClient = clientId !== null || lead?.client != null;
   // Название из переписки лида: стоит в поле выбора серым и открывает поиск по нему
@@ -782,6 +784,15 @@ export function RequestForm({
             title: t("request:sections.review"),
             content: (
               <div className="pf-fp-stack">
+                {resolution.data ? (
+                  <p className="pf-fp-sub">
+                    {resolution.data.mode === "never"
+                      ? t("request:routing.calc")
+                      : t("request:routing.letter", {
+                          urgent: state.urgency === "urgent" ? t("request:routing.urgent") : "",
+                        })}
+                  </p>
+                ) : null}
                 <p className="pf-fp-sub">{t("request:clientGets")}</p>
                 <StepRemaining
                   id={id("remaining")}

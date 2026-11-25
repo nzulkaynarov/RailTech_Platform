@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetCompanyMock, updateCompanyMock } from "../../../mocks/fixtures/company";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
@@ -226,6 +227,26 @@ describe("«Создать заявку» из лида и из клиента (
       "href",
       `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
     );
+  });
+
+  it("на проверке сказано, что будет дальше — по настройке «Резолюция перед расчётом» (РЕЗ-1)", async () => {
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Проверка");
+    expect(
+      await within(panel).findByText("Заявка уйдёт на резолюцию, затем в расчёт."),
+    ).toBeVisible();
+    cleanup();
+
+    updateCompanyMock((state) => {
+      state.quote.request_resolution = "never";
+    });
+    const again = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(again, "Проверка");
+    expect(
+      await within(again).findByText("Заявка сразу уйдёт в расчёт ответственному."),
+    ).toBeVisible();
+    expect(within(again).queryByText(/на резолюцию/)).toBeNull();
+    resetCompanyMock();
   });
 
   it("сбой сервера оставляет введённое; повтор с тем же ключом создаёт одну заявку", async () => {

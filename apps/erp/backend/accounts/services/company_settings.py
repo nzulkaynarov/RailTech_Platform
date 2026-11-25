@@ -165,9 +165,9 @@ def update_company_settings(
                 setattr(settings_row, field, found)
             changed.append(field)
 
-    # РЕЗ-1: резолюция директора перед расчётом — always | cabinet_letters | never.
+    # РЕЗ-1: резолюция директора перед расчётом — always | client_own | never.
     if "request_resolution" in data:
-        if data.get("request_resolution") not in ("always", "cabinet_letters", "never"):
+        if data.get("request_resolution") not in ("always", "client_own", "never"):
             return None, "BAD_REQUEST_RESOLUTION"
         settings_row.request_resolution = data["request_resolution"]
         changed.append("request_resolution")

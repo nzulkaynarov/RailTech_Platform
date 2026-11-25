@@ -126,6 +126,7 @@ def publish_request_created(
     manager_crm_user_id: Optional[int] = None,
     letter_file_id: Optional[str] = None,
     crm_request_id: Optional[int] = None,
+    client_initiated: bool = False,
 ) -> Optional[Event]:
     """Событие `request.created`: заявка (сделка) создана. Источник решает создатель: портал — `cabinet`, передача из CRM — `crm`.
 
@@ -156,11 +157,17 @@ def publish_request_created(
 
     # РЕЗ-1: резолюция директора — настройка компании; не нужна и есть кому считать — расчёт сразу, без письма в EDS.
     direct_to: Optional[int] = None
+    letter_file: Optional[tuple] = None
     if not isinstance(deal, dict):
         from crm.services import request_resolution
 
-        if not request_resolution.required(source):
+        # Заявка по письму клиента (файл письма приложен) — тоже «подана клиентом»
+        if not request_resolution.required(source, client_initiated=client_initiated or bool(letter_file_id)):
             direct_to = request_resolution.responsible_crm_user_id(deal, payload.get("manager_crm_user_id"))
+            if direct_to is not None and letter_file_id:
+                letter_file = request_resolution.fetch_letter_file(str(letter_file_id), direct_to)
+                if letter_file is None:  # файл письма не достать — письмо остаётся, расчёт не теряет вложение
+                    direct_to = None
             if direct_to is not None:
                 payload["resolution_required"] = False
 
@@ -173,6 +180,8 @@ def publish_request_created(
         crm_client_id=crm_client_id,
     )
     if direct_to is not None and event is not None:
+        if letter_file is not None:
+            request_resolution.attach_request_file(deal, *letter_file)
         request_resolution.start_direct_calculation(deal, direct_to)
     return event
 

@@ -44,7 +44,10 @@ VISA_LEGAL = "approvals.visa_legal"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
 #: Сервисные операции (не сотрудник): своя схема токена, без прав сотрудника (ADR-0026: ERP читает PDF писем).
-SERVICE = {("get", "/api/v1/service/letters/{document_id}/pdf"): "erpService"}
+SERVICE = {
+    ("get", "/api/v1/service/letters/{document_id}/pdf"): "erpService",
+    ("get", "/api/v1/service/files/{file_id}"): "erpService",  # РЕЗ-1: файл письма по заявке без резолюции
+}
 # Любой активный сотрудник, сужение — внутри операции (P8b, SPEC-v3 §3.2a «Права»: исполнитель видит письмо своего
 # поручения без `letters.read`): карточка письма, ознакомление, действия исполнителя и автора резолюции, свои задачи.
 ANY_EMPLOYEE = {

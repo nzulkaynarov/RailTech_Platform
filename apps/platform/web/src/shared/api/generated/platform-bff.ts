@@ -453,6 +453,7 @@ import type {
   RequestCreatedView,
   RequestFileFromMessageIn,
   RequestFormIn,
+  RequestResolutionView,
   RequestRetriedView,
   ResetPasswordIn,
   ResolutionAssignees,
@@ -57596,8 +57597,8 @@ export const getCreateCrmRequestUrl = () => {
 };
 
 /**
- * CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
- * @summary «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+ * CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS — если по настройке «Резолюция перед расчётом» она нужна (`GET /crm/requests/resolution`), иначе заявка сразу идёт в расчёт ответственному. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
+ * @summary «+ Создать заявку» из лида или клиента → в ERP, дальше резолюция или сразу расчёт
  */
 export const createCrmRequest = async (
   requestFormIn: RequestFormIn,
@@ -57690,7 +57691,7 @@ export type CreateCrmRequestMutationError = ErrorType<
 export type CreateCrmRequestMutationVariables = { data: RequestFormIn };
 
 /**
- * @summary «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+ * @summary «+ Создать заявку» из лида или клиента → в ERP, дальше резолюция или сразу расчёт
  */
 export const useCreateCrmRequest = <
   TError = ErrorType<
@@ -57721,6 +57722,133 @@ export const useCreateCrmRequest = <
 > => {
   return useMutation(getCreateCrmRequestMutationOptions(options), queryClient);
 };
+
+export const getGetCrmRequestResolutionUrl = () => {
+  return `/api/v1/crm/requests/resolution`;
+};
+
+/**
+ * Настройка компании «Правила работы · Продажи → Резолюция перед расчётом» (ERP): `always` — письмо на резолюцию у каждой заявки, `client_own` — только у заявок, которые клиент подал сам (Кабинет, бот, письмо клиента), `never` — не нужна, заявка сразу в расчёт ответственному. Форма «Создать заявку» говорит по ней, что случится после отправки. Раздел `crm.clients` полный.
+ * @summary Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)
+ */
+export const getCrmRequestResolution = async (
+  options?: Parameters<typeof http>[1],
+): Promise<RequestResolutionView> => {
+  return http<RequestResolutionView>(getGetCrmRequestResolutionUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmRequestResolutionQueryKey = () => {
+  return [`/api/v1/crm/requests/resolution`] as const;
+};
+
+export const getGetCrmRequestResolutionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmRequestResolution>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestResolution>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmRequestResolutionQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmRequestResolution>>> = ({
+    signal,
+  }) => getCrmRequestResolution({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCrmRequestResolution>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCrmRequestResolutionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCrmRequestResolution>>
+>;
+export type GetCrmRequestResolutionQueryError = ErrorType<unknown>;
+
+export function useGetCrmRequestResolution<
+  TData = Awaited<ReturnType<typeof getCrmRequestResolution>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestResolution>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmRequestResolution>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmRequestResolution>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmRequestResolution<
+  TData = Awaited<ReturnType<typeof getCrmRequestResolution>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestResolution>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmRequestResolution>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmRequestResolution>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmRequestResolution<
+  TData = Awaited<ReturnType<typeof getCrmRequestResolution>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestResolution>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)
+ */
+
+export function useGetCrmRequestResolution<
+  TData = Awaited<ReturnType<typeof getCrmRequestResolution>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmRequestResolution>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmRequestResolutionQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getRetryCrmRequestUrl = (deal: number) => {
   return `/api/v1/crm/requests/${deal}/retry`;

@@ -20,6 +20,7 @@ import type {
 } from "../shared/api/generated/model";
 import { failure } from "./adminUsers";
 import { parseUploadedFile } from "./edsDocuments";
+import { readCompanyMock } from "./fixtures/company";
 import { mockFlag } from "./fixtures/messages";
 import {
   type LeadMockRow,
@@ -366,6 +367,13 @@ export const crmLeadsHandlers = [
     });
     writeLeads(state);
     return HttpResponse.json({ client_id: state.nextClient });
+  }),
+
+  // РЕЗ-1: режим «Резолюция перед расчётом» — из настройки компании мока
+  http.get("*/api/v1/crm/requests/resolution", () => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    return HttpResponse.json({ mode: readCompanyMock().quote.request_resolution });
   }),
 
   http.post("*/api/v1/crm/requests", async ({ request }) => {

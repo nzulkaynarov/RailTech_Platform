@@ -24081,6 +24081,7 @@ components:
       properties:
         letter_number:
           type: string
+          description: Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)
         letter_subject:
           type: string
         resolution_text:
@@ -24128,6 +24129,7 @@ components:
           $ref: '#/components/schemas/CalcDeal'
         letter_number:
           type: string
+          description: Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)
         due:
           type: string
           format: date
@@ -25667,10 +25669,10 @@ components:
           - $ref: '#/components/schemas/RequestResolutionEnum'
           title: Резолюция перед расчётом
           description: |-
-            always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.
+            always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.
 
             * `always` - always
-            * `cabinet_letters` - cabinet_letters
+            * `client_own` - client_own
             * `never` - never
         default_client_contract_template:
           type: integer
@@ -34733,10 +34735,10 @@ components:
           - $ref: '#/components/schemas/RequestResolutionEnum'
           title: Резолюция перед расчётом
           description: |-
-            always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.
+            always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.
 
             * `always` - always
-            * `cabinet_letters` - cabinet_letters
+            * `client_own` - client_own
             * `never` - never
         default_client_contract_template:
           type: integer
@@ -39592,12 +39594,12 @@ components:
     RequestResolutionEnum:
       enum:
       - always
-      - cabinet_letters
+      - client_own
       - never
       type: string
       description: |-
         * `always` - always
-        * `cabinet_letters` - cabinet_letters
+        * `client_own` - client_own
         * `never` - never
     ResetPasswordRequest:
       type: object

@@ -27,7 +27,8 @@ const MARGINS = ["default_margin_percent", "min_margin_percent", "target_margin_
  * гарантия, маржа, базис; «Каталог» — цена и порог карточки; «Налоги и валюты» — валюта, НДС и возраст курса;
  * «Уведомления» — напоминания о счетах и актах; «Свежесть цен поставщиков» — отдельная карточка рядом с каталогом. Одна и та же запись настроек компании ERP, у каждой страницы свои поля.
  */
-export type QuoteGroup = "sales" | "contracts" | "catalog" | "supplier" | "taxes" | "reminders";
+export type QuoteGroup =
+  "sales" | "requests" | "contracts" | "catalog" | "supplier" | "taxes" | "reminders";
 
 const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
   sales: [
@@ -37,8 +38,9 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "payment_terms_days",
     "default_warranty_months",
     "default_payment_terms",
-    "request_resolution", // РЕЗ-1: резолюция перед расчётом — настройка, не зашитый шаг
   ],
+  // РЕЗ-1: что происходит с заявкой до расчёта — настройка, не зашитый шаг
+  requests: ["request_resolution"],
   // ДОК-10: правила договора по утверждённому шаблону — данные компании, не код
   contracts: [
     "contract_auto_send",
@@ -301,7 +303,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             className="pf-co-wide"
           >
             <Select
-              options={(["always", "cabinet_letters", "never"] as const).map((value) => ({
+              options={(["always", "client_own", "never"] as const).map((value) => ({
                 value,
                 label: t(`quote.resolution.${value}`),
               }))}

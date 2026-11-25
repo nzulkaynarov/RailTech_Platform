@@ -80,7 +80,8 @@
     "requestPrice": "Request a partner price",
     "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed.",
     "requestFiles": "Request files",
-    "downloadFile": "Download file {{name}}"
+    "downloadFile": "Download file {{name}}",
+    "subtitleNoLetter": "{{client}} · costing due {{due}}"
   },
   "lines": {
     "title": "Costing lines",
@@ -264,7 +265,10 @@
     "memo": "A purchase outside the quote — a memo to the director.",
     "memoAction": "Write a memo",
     "open": "Open costing",
-    "requestFiles": "Request files"
+    "requestFiles": "Request files",
+    "noResolution": "No resolution was needed — the calculation went straight to the responsible person.",
+    "calcHeading": "Calculation",
+    "assignedDirect": "assigned: {{names}}"
   },
   "errors": {
     "visas_missing": "Not every line is signed off.",

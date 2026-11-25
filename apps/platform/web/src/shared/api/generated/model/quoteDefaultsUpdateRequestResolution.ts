@@ -4,13 +4,13 @@
  */
 
 /**
- * РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never)
+ * РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)
  */
 export type QuoteDefaultsUpdateRequestResolution =
   (typeof QuoteDefaultsUpdateRequestResolution)[keyof typeof QuoteDefaultsUpdateRequestResolution];
 
 export const QuoteDefaultsUpdateRequestResolution = {
   always: "always",
-  cabinet_letters: "cabinet_letters",
+  client_own: "client_own",
   never: "never",
 } as const;

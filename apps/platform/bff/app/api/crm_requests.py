@@ -30,6 +30,7 @@ from app.api.crm_messages import _lead_id
 from app.api.eds_documents import MAX_UPLOAD_BYTES, FileStream, _read_limited, _too_large
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
+from app.clients.erp_company import ErpCompany
 from app.crm_clients_view import CrmRequestCreated, CrmRequestRetried
 from app.deps import Authed, require, require_all
 from app.eds_documents import EdsProxy, eds_error
@@ -41,6 +42,7 @@ from app.schemas_crm_leads import (
     RequestCreatedView,
     RequestFileFromMessageIn,
     RequestFormIn,
+    RequestResolutionView,
     RequestRetriedView,
 )
 from app.schemas_eds_documents import EdsFile
@@ -96,6 +98,19 @@ async def create_request(
         created=out.created and upstream.status_code == 201,
         transfer=out.erp_request_status,
     )
+
+
+@router.get(
+    "/crm/requests/resolution",
+    response_model=RequestResolutionView,
+    operation_id="getCrmRequestResolution",
+)
+async def request_resolution(authed: Writer) -> RequestResolutionView:
+    """Режим резолюции перед расчётом (настройка компании): форма говорит, что будет дальше."""
+    erp = ErpCompany(authed.call)
+    raw = await erp.data("GET", await erp.company_path("settings/"))
+    value = raw.get("request_resolution")
+    return RequestResolutionView(mode=value if value in ("client_own", "never") else "always")
 
 
 @router.post(

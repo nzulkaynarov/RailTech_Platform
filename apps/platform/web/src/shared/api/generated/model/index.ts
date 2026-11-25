@@ -1035,6 +1035,8 @@ export * from "./requestFormInCompany";
 export * from "./requestFormInConsent";
 export * from "./requestFormInConsentMethod";
 export * from "./requestFormInUrgency";
+export * from "./requestResolutionView";
+export * from "./requestResolutionViewMode";
 export * from "./requestRetriedView";
 export * from "./requestRetriedViewTransfer";
 export * from "./resetPasswordIn";

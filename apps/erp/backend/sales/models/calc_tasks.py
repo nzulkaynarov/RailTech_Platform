@@ -38,7 +38,9 @@ class CalcTask(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Письмо EDS"),
-        help_text=_("Входящее письмо EDS, на которое наложена резолюция (одно задание на письмо); пусто — расчёт поставлен без резолюции (РЕЗ-1)"),
+        help_text=_(
+            "Входящее письмо EDS, на которое наложена резолюция (одно задание на письмо); пусто — расчёт поставлен без резолюции (РЕЗ-1)"
+        ),
     )
     letter_number = models.CharField(
         max_length=32, verbose_name=_("Номер письма"), help_text=_("Номер входящего письма в EDS (IN-001/26)")
@@ -71,8 +73,18 @@ class CalcTask(models.Model):
         verbose_name_plural = _("Задания расчёта")
         ordering = ["-decided_at", "-id"]
 
+    @property
+    def has_resolution(self) -> bool:
+        """Расчёт поставлен резолюцией (письмо EDS), а не по настройке «резолюция не нужна» (РЕЗ-1)."""
+        return self.eds_letter_id is not None
+
+    @property
+    def label(self) -> str:
+        """Как назвать расчёт в тексте: номер письма с резолюцией, иначе номер заявки."""
+        return self.letter_number or (self.deal.number if self.deal_id else "") or f"D-{self.deal_id}"
+
     def __str__(self):
-        return f"Расчёт по {self.letter_number} (сделка #{self.deal_id})"
+        return f"Расчёт по {self.label} (сделка #{self.deal_id})"
 
 
 class CalcTaskAssignee(models.Model):

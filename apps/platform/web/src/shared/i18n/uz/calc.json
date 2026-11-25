@@ -80,7 +80,8 @@
     "requestPrice": "Hamkordan narx söraş",
     "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
     "requestFiles": "Ariza fayllari",
-    "downloadFile": "{{name}} faylini yuklab oliş"
+    "downloadFile": "{{name}} faylini yuklab oliş",
+    "subtitleNoLetter": "{{client}} · hisob-kitob muddati {{due}}"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
@@ -264,7 +265,10 @@
     "memo": "TKdan taşqari xarid — direktorga xizmat xati bilan.",
     "memoAction": "Xizmat xati yoziş",
     "open": "Hisob-kitobni oçiş",
-    "requestFiles": "Ariza fayllari"
+    "requestFiles": "Ariza fayllari",
+    "noResolution": "Rezolyusiya kerak boʼlmadi — hisob-kitob darhol masʼul xodimga topshirildi.",
+    "calcHeading": "Hisob-kitob",
+    "assignedDirect": "tayinlangan: {{names}}"
   },
   "errors": {
     "visas_missing": "Barça qatorlar tasdiqlanmagan.",

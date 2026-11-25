@@ -79,8 +79,6 @@
   "consequence": {
     "lead": "The lead becomes a client and you become responsible for the conversation; the bot keeps answering for this client.",
     "request": "A request with a number appears in records.",
-    "letter": "The letter goes to the director in “Documents · Incoming letters”{{urgent}}.",
-    "urgentSuffix": " marked “Urgent”",
     "chat": "A project chat is created."
   },
   "clientGets": "The client gets: “Request № … accepted, we are calculating” and an “Open portal” button — in Telegram or by email.",
@@ -126,5 +124,10 @@
     "found": "There is a request draft from {{time}}",
     "continue": "Continue",
     "restart": "Start over"
+  },
+  "routing": {
+    "letter": "The request goes to a resolution{{urgent}}, then to calculation.",
+    "calc": "The request goes straight to the responsible person for calculation.",
+    "urgent": " (urgent)"
   }
 }

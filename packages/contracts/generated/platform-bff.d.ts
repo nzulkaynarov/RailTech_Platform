@@ -8093,10 +8093,30 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
-     * @description CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
+     * «+ Создать заявку» из лида или клиента → в ERP, дальше резолюция или сразу расчёт
+     * @description CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS — если по настройке «Резолюция перед расчётом» она нужна (`GET /crm/requests/resolution`), иначе заявка сразу идёт в расчёт ответственному. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
      */
     post: operations["createCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/requests/resolution": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Резолюция перед расчётом: что будет с заявкой дальше (РЕЗ-1)
+     * @description Настройка компании «Правила работы · Продажи → Резолюция перед расчётом» (ERP): `always` — письмо на резолюцию у каждой заявки, `client_own` — только у заявок, которые клиент подал сам (Кабинет, бот, письмо клиента), `never` — не нужна, заявка сразу в расчёт ответственному. Форма «Создать заявку» говорит по ней, что случится после отправки. Раздел `crm.clients` полный.
+     */
+    get: operations["getCrmRequestResolution"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -13820,10 +13840,10 @@ export interface components {
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
       /**
-       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)
        * @enum {string}
        */
-      request_resolution?: "always" | "cabinet_letters" | "never";
+      request_resolution?: "always" | "client_own" | "never";
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -13879,10 +13899,10 @@ export interface components {
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
       /**
-       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (cabinet_letters) или не нужна, заявка сразу в расчёт ответственному (never)
+       * @description РЕЗ-1: резолюция директора перед расчётом — у каждой заявки (always, по умолчанию), только у заявок из Кабинета и писем (client_own) или не нужна, заявка сразу в расчёт ответственному (never)
        * @enum {string}
        */
-      request_resolution?: "always" | "cabinet_letters" | "never";
+      request_resolution?: "always" | "client_own" | "never";
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -18016,6 +18036,10 @@ export interface components {
       created: boolean;
       /** @enum {string} */
       transfer: "pending" | "done" | "failed";
+    };
+    RequestResolutionView: {
+      /** @enum {string} */
+      mode: "always" | "client_own" | "never";
     };
     RequestRetriedView: {
       deal: number;
@@ -34178,6 +34202,26 @@ export interface operations {
       409: components["responses"]["RequestConflict"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmRequestResolution: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Режим */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestResolutionView"];
+        };
+      };
     };
   };
   retryCrmRequest: {

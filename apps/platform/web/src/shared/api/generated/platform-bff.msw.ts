@@ -362,6 +362,7 @@ import type {
   Reminded,
   ReplyTemplateList,
   RequestCreatedView,
+  RequestResolutionView,
   RequestRetriedView,
   ResolutionAssignees,
   ResolutionTemplate,
@@ -17944,7 +17945,7 @@ export const getGetQuoteDefaultsResponseMock = (
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   request_resolution: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["always", "cabinet_letters", "never"] as const),
+    faker.helpers.arrayElement(["always", "client_own", "never"] as const),
     undefined,
   ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -17996,7 +17997,7 @@ export const getUpdateQuoteDefaultsResponseMock = (
   contract_sign_before_send: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   contract_deviations_allowed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   request_resolution: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(["always", "cabinet_letters", "never"] as const),
+    faker.helpers.arrayElement(["always", "client_own", "never"] as const),
     undefined,
   ]),
   default_client_contract_template: faker.helpers.arrayElement([faker.number.int(), null]),
@@ -35805,6 +35806,13 @@ export const getCreateCrmRequestResponseMock = (
     },
   ]);
 
+export const getGetCrmRequestResolutionResponseMock = (
+  overrideResponse: Partial<Extract<RequestResolutionView, object>> = {},
+): RequestResolutionView => ({
+  mode: faker.helpers.arrayElement(["always", "client_own", "never"] as const),
+  ...overrideResponse,
+});
+
 export const getRetryCrmRequestResponseMock = (
   overrideResponse: Partial<Extract<RequestRetriedView, object>> = {},
 ): RequestRetriedView => ({
@@ -51786,6 +51794,30 @@ export const getCreateCrmRequestMockHandler = (
   );
 };
 
+export const getGetCrmRequestResolutionMockHandler = (
+  overrideResponse?:
+    | RequestResolutionView
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<RequestResolutionView> | RequestResolutionView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/requests/resolution",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmRequestResolutionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRetryCrmRequestMockHandler = (
   overrideResponse?:
     | RequestRetriedView
@@ -54339,6 +54371,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUnbindCrmTelegramGroupMockHandler(),
   getGetCrmClientTelegramGroupMockHandler(),
   getCreateCrmRequestMockHandler(),
+  getGetCrmRequestResolutionMockHandler(),
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
   getCopyCrmMessageAttachmentToRequestMockHandler(),

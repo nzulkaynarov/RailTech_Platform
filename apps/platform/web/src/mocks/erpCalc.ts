@@ -20,6 +20,7 @@ import type {
 import { CATALOG, type MockCalc, type MockLine, PARSE_PROPOSAL, seedCalcs } from "./fixtures/calc";
 import { stockOfLine } from "./erpStock";
 import { UNITS } from "./fixtures/erpCatalog";
+import { mockFlag } from "./fixtures/messages";
 import { buildMe, readSession } from "./mockSession";
 import { itemRefOf } from "./fixtures/itemRef";
 
@@ -56,6 +57,8 @@ function write(calcs: MockCalc[]): void {
 }
 
 /** Для тестов: исходные данные расчётов. */
+export const NO_RESOLUTION = "rt-pf-mock-no-resolution";
+
 export function resetCalcMock(): void {
   memory = null;
   try {
@@ -304,11 +307,12 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     step: calc.stage,
     path,
     task: {
-      letter_number: calc.letterNumber,
+      // РЕЗ-1: расчёт без резолюции — письма нет (флаг мока `rt-pf-mock-no-resolution`)
+      letter_number: mockFlag(NO_RESOLUTION) ? "" : calc.letterNumber,
       letter_subject: calc.letterSubject,
-      resolution_text: calc.resolution,
+      resolution_text: mockFlag(NO_RESOLUTION) ? "" : calc.resolution,
       decided_at: calc.decidedAt,
-      decided_by: calc.decidedBy,
+      decided_by: mockFlag(NO_RESOLUTION) ? null : calc.decidedBy,
       due: calc.due,
       ...(cost ? { min_margin_pct: calc.minMargin } : {}),
       assignees: calc.assignees,

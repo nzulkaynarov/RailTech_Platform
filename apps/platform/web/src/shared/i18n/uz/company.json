@@ -300,6 +300,12 @@
         "hint": "Hamkor narxi neça kun tasdiqlangan hisoblanadi va tugaşidan neça kun oldin ogohlantiriş.",
         "note": "Xaridga darhol qöllanadi.",
         "save": "Muddatlarni saqlaş"
+      },
+      "requests": {
+        "title": "Arizalar",
+        "hint": "Ariza hisob-kitobgaça nima boʼladi.",
+        "note": "Qoida yangi arizalarga amal qiladi.",
+        "save": "Qoidani saqlash"
       }
     },
     "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
@@ -312,7 +318,7 @@
     "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
     "resolution": {
       "always": "Har bir arizada",
-      "cabinet_letters": "Faqat Kabinet va xatlardan kelgan arizalarda",
+      "client_own": "Faqat mijoz özi bergan arizalarda",
       "never": "Kerak emas"
     },
     "defaultClientTemplate": "Standart şablon: mijoz",

@@ -40943,7 +40943,8 @@
                 "type": "object",
                 "properties": {
                     "letter_number": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
                     },
                     "letter_subject": {
                         "type": "string"
@@ -41008,7 +41009,8 @@
                         "$ref": "#/components/schemas/CalcDeal"
                     },
                     "letter_number": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Номер письма с резолюцией; пусто — расчёт без резолюции (РЕЗ-1)"
                     },
                     "due": {
                         "type": "string",
@@ -43044,7 +43046,7 @@
                             }
                         ],
                         "title": "Резолюция перед расчётом",
-                        "description": "always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
+                        "description": "always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
                     },
                     "default_client_contract_template": {
                         "type": "integer",
@@ -54758,7 +54760,7 @@
                             }
                         ],
                         "title": "Резолюция перед расчётом",
-                        "description": "always — у каждой заявки; cabinet_letters — только у заявок из Кабинета и писем; never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
+                        "description": "always — у каждой заявки; client_own — только у заявок, которые клиент подал сам (Кабинет, бот, письмо); never — не нужна, заявка сразу в расчёт ответственному.\n\n* `always` - always\n* `client_own` - client_own\n* `never` - never"
                     },
                     "default_client_contract_template": {
                         "type": "integer",
@@ -61026,11 +61028,11 @@
             "RequestResolutionEnum": {
                 "enum": [
                     "always",
-                    "cabinet_letters",
+                    "client_own",
                     "never"
                 ],
                 "type": "string",
-                "description": "* `always` - always\n* `cabinet_letters` - cabinet_letters\n* `never` - never"
+                "description": "* `always` - always\n* `client_own` - client_own\n* `never` - never"
             },
             "ResetPasswordRequest": {
                 "type": "object",

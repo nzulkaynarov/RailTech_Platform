@@ -304,7 +304,7 @@ def apply_without_resolution(deal: Deal, *, crm_user_id: int, due: date) -> Calc
     task = CalcTask.objects.create(
         deal=deal,
         eds_letter_id=None,
-        letter_number=number[:32],
+        letter_number="",  # письма нет: номер заявки в `deal`, а не в номере письма (РЕЗ-1)
         letter_subject=(deal.title or "")[:300],
         resolution_text="",
         due=due,

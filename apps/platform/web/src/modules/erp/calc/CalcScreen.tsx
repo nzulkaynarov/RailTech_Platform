@@ -233,7 +233,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const editable = state === "in_progress" || state === "returned";
   const canLines = sheet.rights.goods || sheet.rights.services;
   const subtitle = [
-    t("sheet.subtitle", {
+    t(sheet.task.letter_number ? "sheet.subtitle" : "sheet.subtitleNoLetter", {
       client: sheet.client ?? sheet.title,
       letter: sheet.task.letter_number,
       due: date(sheet.task.due),

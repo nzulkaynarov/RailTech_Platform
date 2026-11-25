@@ -64,3 +64,23 @@ async def test_service_path_rejects_staff_tokens_and_foreign_documents(
     assert_error(await client.get(path, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
     missing = "/api/v1/service/letters/00000000-0000-0000-0000-000000000000/pdf"
     assert_error(await client.get(missing, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
+
+
+async def test_erp_reads_an_unattached_request_file_only_for_its_author(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    """РЕЗ-1: заявка без резолюции — ERP берёт файл письма клиента; чужой автор, привязанный файл, чужой токен — нет."""
+    from tests.test_files import upload
+
+    manager = staff["manager"]
+    ref = (await upload(client, manager, name="письмо клиента.pdf")).json()
+    path = f"/api/v1/service/files/{ref['id']}"
+    author = {"created_by": manager.id}
+
+    got = await client.get(path, params=author, headers=bearer(ERP_SERVICE_TOKEN))
+    assert got.status_code == 200 and "%D0%BF%D0%B8%D1%81%D1%8C%D0%BC%D0%BE" in got.headers["content-disposition"]
+    assert_error(await client.get(path, params=author), 401, "UNAUTHORIZED", reason="missing")
+    other = {"created_by": manager.id + 1}
+    assert_error(await client.get(path, params=other, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")
+    unknown = "/api/v1/service/files/00000000-0000-0000-0000-000000000000"
+    assert_error(await client.get(unknown, params=author, headers=bearer(ERP_SERVICE_TOKEN)), 404, "NOT_FOUND")

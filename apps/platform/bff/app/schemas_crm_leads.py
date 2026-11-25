@@ -339,6 +339,12 @@ class RequestCreatedView(BaseModel):
     transfer: Transfer
 
 
+class RequestResolutionView(BaseModel):
+    """РЕЗ-1: настройка компании «Резолюция перед расчётом»: форма обещает то, что случится."""
+
+    mode: Literal["always", "client_own", "never"]
+
+
 class RequestRetriedView(BaseModel):
     deal: int
     client_id: int

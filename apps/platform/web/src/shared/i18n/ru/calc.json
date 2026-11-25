@@ -80,7 +80,8 @@
     "requestPrice": "Запросить цену у партнёра",
     "rejectedComment": "Директор отклонил КП: «{{comment}}». Расчёт закрыт.",
     "requestFiles": "Файлы заявки",
-    "downloadFile": "Скачать файл {{name}}"
+    "downloadFile": "Скачать файл {{name}}",
+    "subtitleNoLetter": "{{client}} · срок расчёта {{due}}"
   },
   "lines": {
     "title": "Строки расчёта",
@@ -264,7 +265,10 @@
     "memo": "Закупка вне КП — служебной запиской директору.",
     "memoAction": "Сделать записку",
     "open": "Открыть расчёт",
-    "requestFiles": "Файлы заявки"
+    "requestFiles": "Файлы заявки",
+    "noResolution": "Резолюция не требовалась — расчёт поставлен ответственному сразу.",
+    "calcHeading": "Расчёт",
+    "assignedDirect": "назначен(а): {{names}}"
   },
   "errors": {
     "visas_missing": "Не все строки подтверждены.",

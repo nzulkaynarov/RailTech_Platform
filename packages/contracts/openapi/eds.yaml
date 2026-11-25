@@ -2591,6 +2591,45 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/service/files/{file_id}:
+    get:
+      tags: [documents]
+      operationId: downloadRequestFileForErp
+      summary: Файл письма по заявке — для ERP, когда резолюция не нужна (РЕЗ-1)
+      description: |
+        Сервисный путь, не сотрудника: зовёт только ERP по `Authorization: Bearer <SERVICE_TOKEN_ERP_TO_EDS>`. Отдаёт последнюю
+        версию файла, который ещё ни к чему не привязан (ни письмо, ни документ, ни поручение) и загружен сотрудником
+        `created_by` — менеджером заявки. Иначе 404 без подробностей; токен не задан или неверный — 401. ERP кладёт файл в
+        исходники заявки, чтобы расчёт видел письмо клиента, когда EDS письма по заявке не заводит.
+      security:
+        - erpService: []
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: created_by
+          in: query
+          required: true
+          description: crm_user_id загрузившего файл сотрудника
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Содержимое файла
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                contentMediaType: application/octet-stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/documents/{document_id}/registration-request:
     post:
       tags: [documents]

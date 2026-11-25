@@ -300,6 +300,12 @@
         "hint": "How many days a partner price counts as confirmed and how many days ahead to warn about expiry.",
         "note": "Applies to purchasing at once.",
         "save": "Save terms"
+      },
+      "requests": {
+        "title": "Requests",
+        "hint": "What happens to a request before calculation.",
+        "note": "The rule applies to new requests.",
+        "save": "Save rule"
       }
     },
     "contract_auto_send": "A contract from an approved template goes to the Cabinet by itself after the quote is accepted",
@@ -312,7 +318,7 @@
     "request_resolutionHint": "If a resolution is not needed, the request goes straight to the responsible person for calculation. The resolution is given by holders of the «Resolution» permission (Roles & permissions).",
     "resolution": {
       "always": "Every request",
-      "cabinet_letters": "Only requests from the Cabinet and letters",
+      "client_own": "Only requests the client submitted themselves",
       "never": "Not needed"
     },
     "defaultClientTemplate": "Default template: client",

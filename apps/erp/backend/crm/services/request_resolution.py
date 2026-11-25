@@ -3,8 +3,8 @@
 `CompanySettings.request_resolution` своей компании («Правила работы · Продажи»):
 
 * `always` (по умолчанию) — письмо директору у каждой заявки, как раньше;
-* `cabinet_letters` — письмо только у заявок из Кабинета (письма регистрирует сам EDS и от этой настройки не зависят);
-  заявка, заведённая сотрудником или переданная из CRM, идёт сразу в расчёт;
+* `client_own` — «только заявки, которые клиент подал сам»: Кабинет, бот и заявка по письму клиента; заявка, заведённая
+  сотрудником, идёт сразу в расчёт;
 * `never` — резолюция не нужна нигде.
 
 Нужна ли резолюция, решает `required(source)`. Когда не нужна, `start_direct_calculation` ставит задание расчёта
@@ -20,7 +20,7 @@ from typing import Optional
 
 from django.utils import timezone
 
-MODES = ("always", "cabinet_letters", "never")
+MODES = ("always", "client_own", "never")
 DEFAULT_MODE = "always"
 #: Срок расчёта без резолюции: резолюция задавала его вручную; здесь — календарные дни от заведения заявки.
 DIRECT_DUE_DAYS = 3
@@ -38,13 +38,15 @@ def mode() -> str:
     return value if value in MODES else DEFAULT_MODE
 
 
-def required(source: str) -> bool:
-    """Нужна ли резолюция по заявке из источника `source` (`crm` | `cabinet` | `erp`)."""
+def required(source: str, *, client_initiated: bool = False) -> bool:
+    """Нужна ли резолюция по заявке из источника `source` (`crm` | `cabinet` | `erp`).
+
+    `client_initiated` — заявку подал сам клиент (бот, передача из лида, заявка по его письму); Кабинет — всегда."""
     current = mode()
     if current == "never":
         return False
-    if current == "cabinet_letters":
-        return source == "cabinet"
+    if current == "client_own":
+        return source == "cabinet" or client_initiated
     return True
 
 
@@ -58,10 +60,54 @@ def start_direct_calculation(deal, crm_user_id: int):
 
 
 def responsible_crm_user_id(deal, manager_crm_user_id: Optional[int]) -> Optional[int]:
-    """Ответственный за заявку — сотрудник CRM: менеджер вызывающего, иначе ответственный сделки ERP."""
+    """Ответственный за заявку — сотрудник CRM с действующим пользователем ERP: менеджер вызывающего, иначе
+    ответственный сделки ERP. Без пользователя ERP считать некому — `None` (заявка идёт прежним путём, с письмом)."""
+    from integration.models import CrmUserMapping
     from integration.services.event_builders import _crm_user_id
 
-    if manager_crm_user_id:
-        return int(manager_crm_user_id)
-    found = _crm_user_id(getattr(deal, "assigned_to", None)) or _crm_user_id(getattr(deal, "manager", None))
-    return int(found) if found else None
+    found = (
+        manager_crm_user_id
+        or _crm_user_id(getattr(deal, "assigned_to", None))
+        or _crm_user_id(getattr(deal, "manager", None))
+    )
+    if not found:
+        return None
+    active = CrmUserMapping.objects.filter(crm_user_id=found, user__is_active=True).exists()
+    return int(found) if active else None
+
+
+def fetch_letter_file(file_id: str, created_by: Optional[int]):
+    """Файл письма клиента из EDS (сервисный путь, только непривязанный файл автора заявки): `(имя, байты)` или `None`."""
+    import httpx
+    from django.conf import settings
+
+    token = settings.SERVICE_TOKEN_ERP_TO_EDS
+    if not token or not created_by:
+        return None
+    try:
+        response = httpx.get(
+            f"{settings.EDS_INTERNAL_URL}/api/v1/service/files/{file_id}",
+            params={"created_by": int(created_by)},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200:
+        return None
+    from urllib.parse import unquote
+
+    disposition = response.headers.get("content-disposition", "")
+    name = unquote(disposition.split("filename*=UTF-8''", 1)[1]) if "filename*=UTF-8''" in disposition else "letter"
+    return name[:255], response.content
+
+
+def attach_request_file(deal, name: str, data: bytes) -> None:
+    """Файл письма клиента — исходник заявки: виден в «Расчёте» (`deal_request_files`)."""
+    from django.core.files.base import ContentFile
+
+    from sourcing.models import Attachment, AttachmentKind
+
+    Attachment.objects.create(
+        deal=deal, kind=AttachmentKind.SOURCE, original_filename=name, file=ContentFile(data, name=name)
+    )
