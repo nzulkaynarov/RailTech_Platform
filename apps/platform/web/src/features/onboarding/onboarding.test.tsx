@@ -1,10 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import { endSession } from "../../mocks/mockSession";
 import i18n from "../../shared/i18n";
+import * as navigate from "../../shared/lib/navigate";
 import { renderApp, signInAs } from "../../test/renderApp";
+import { server } from "../../test/server";
 import { setViewportWidth } from "../../test/viewport";
 
 beforeEach(() => {
@@ -15,6 +18,7 @@ beforeEach(() => {
   void i18n.changeLanguage("ru");
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   endSession();
 });
@@ -50,12 +54,15 @@ describe("Первый вход", () => {
     ).toBeInTheDocument();
   });
 
-  it("в списке «что делать утром» последняя строка — «Привязать Telegram», пока он не привязан", async () => {
+  it("«Подключить уведомления на телефон» — отдельная строка под списком, не его пункт; нужна, пока Telegram не привязан", async () => {
     firstLogin("supply@demo.example"); // Telegram не привязан
     const dialog = await screen.findByRole("dialog", { name: /Добро пожаловать/ });
-    const button = await within(dialog).findByRole("button", { name: "Привязать Telegram" });
-    const items = within(dialog).getAllByRole("listitem");
-    expect(items[items.length - 1]).toContainElement(button);
+    const button = await within(dialog).findByRole("button", {
+      name: "Подключить уведомления на телефон",
+    });
+    for (const item of within(dialog).getAllByRole("listitem")) {
+      expect(item).not.toContainElement(button);
+    }
   });
 
   it("с привязанным Telegram строки нет", async () => {
@@ -65,7 +72,9 @@ describe("Первый вход", () => {
       expect(within(dialog).getAllByRole("listitem").length).toBeGreaterThan(0);
     });
     await profileAnswered();
-    expect(within(dialog).queryByRole("button", { name: "Привязать Telegram" })).toBeNull();
+    expect(
+      within(dialog).queryByRole("button", { name: "Подключить уведомления на телефон" }),
+    ).toBeNull();
   });
 
   it("тур из четырёх шагов: фокус на карточке, aria, Escape закрывает", async () => {
@@ -139,5 +148,50 @@ describe("Первый вход", () => {
     renderApp("/dashboard/queue");
     await screen.findByRole("button", { name: "Помощь (клавиша ?)" });
     expect(screen.queryByText(/Добро пожаловать/)).toBeNull();
+  });
+});
+
+describe("«Подключить уведомления на телефон»: открытие бота", () => {
+  const NAME = "Подключить уведомления на телефон";
+
+  it("вкладка открыта до ответа, потом ведёт в бота; у вкладки нет opener", async () => {
+    const tab = { location: { href: "" }, close: vi.fn(), opener: window };
+    vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    firstLogin("supply@demo.example");
+    fireEvent.click(await screen.findByRole("button", { name: NAME }));
+    await waitFor(() => {
+      expect(tab.location.href).toContain("https://t.me/");
+    });
+    expect(tab.opener).toBeNull();
+  });
+
+  it("браузер не дал открыть вкладку (window.open → null): переход в этой же вкладке", async () => {
+    vi.spyOn(window, "open").mockReturnValue(null);
+    const go = vi.spyOn(navigate, "navigateTo").mockImplementation(() => undefined);
+    firstLogin("supply@demo.example");
+    fireEvent.click(await screen.findByRole("button", { name: NAME }));
+    await waitFor(() => {
+      expect(go).toHaveBeenCalledWith(expect.stringContaining("https://t.me/"));
+    });
+  });
+
+  it("сервер отказал: вкладка закрыта, ошибка видна словами", async () => {
+    const tab = { location: { href: "" }, close: vi.fn(), opener: window };
+    vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    server.use(
+      http.post("*/me/telegram-link", () =>
+        HttpResponse.json(
+          { code: "CONFLICT", message: "Бот не запущен.", details: { reason: "bot_not_running" } },
+          { status: 409 },
+        ),
+      ),
+    );
+    firstLogin("supply@demo.example");
+    fireEvent.click(await screen.findByRole("button", { name: NAME }));
+    await waitFor(() => {
+      expect(tab.close).toHaveBeenCalled();
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(/\S/);
+    expect(tab.location.href).toBe("");
   });
 });

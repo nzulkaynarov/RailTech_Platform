@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { useCreateTelegramLink, useGetProfile } from "../../shared/api/generated/platform-bff";
+import { navigateTo } from "../../shared/lib/navigate";
 import { profileErrorText } from "../profile/errors";
 
 export interface TelegramLinkLine {
@@ -29,8 +30,10 @@ export function useTelegramLink(): TelegramLinkLine {
       const tab = window.open("", "_blank");
       create.mutate(undefined, {
         onSuccess: (ticket) => {
-          if (tab) tab.location.href = ticket.url;
-          else window.location.assign(ticket.url);
+          if (tab) {
+            tab.opener = null; // the bot page gets no handle to the Platform
+            tab.location.href = ticket.url;
+          } else navigateTo(ticket.url);
         },
         onError: () => {
           tab?.close();

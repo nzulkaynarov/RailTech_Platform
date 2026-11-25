@@ -41,7 +41,6 @@
   },
   "start": {
     "intro": "Ertalab «Vazifalar»ni oçing: har bir qator sizning rolingiz uçun bitta iş. Qönğiroqça yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami böyiça topadi.",
-    "yours": "Sizning rolingiz: {{role}}",
     "others": "Boşqa rollar uçun",
     "kinds": {
       "director": {
@@ -460,7 +459,7 @@
   },
   "welcome": {
     "title": "Xuş kelibsiz, {{name}}",
-    "telegram": "Telegramni ulaş",
+    "telegram": "Telefonga bildirişnomalarni ulaş",
     "lead": "Ertalab siz şularni qilasiz:",
     "tour": "Nima qayerda ekanini körsatiş",
     "skip": "Ötkazib yuboriş",

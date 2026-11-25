@@ -3,10 +3,10 @@ import { type Page, expect, test } from "@playwright/test";
 import { login, settledScreenshot } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 
-// ОНБ-1.3 на MSW: «Привязать Telegram» одной строкой в приветствии первого входа и в пустой «Главной»; в приветствии нет
+// ОНБ-1.3 на MSW: «Подключить уведомления на телефон» одной строкой в приветствии первого входа и в пустой «Главной»; в приветствии нет
 // «Ваша роль — …». Снимки 1512, 1440 и 390 и axe 0 (`E2E_SCREENSHOT_DIR=docs/screens/onb3-link-telegram`).
 const WIDTHS = [1512, 1440, 390] as const;
-const TELEGRAM = "Привязать Telegram";
+const TELEGRAM = "Подключить уведомления на телефон";
 
 async function sized(page: Page, name: string, ready: () => Promise<void>): Promise<void> {
   for (const width of WIDTHS) {
@@ -21,7 +21,7 @@ async function sized(page: Page, name: string, ready: () => Promise<void>): Prom
   }
 }
 
-test.describe("Привязать Telegram — одна строка", () => {
+test.describe("Подключить уведомления на телефон — одна строка", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("приветствие: последняя строка списка; роли нет; тап открывает бота", async ({

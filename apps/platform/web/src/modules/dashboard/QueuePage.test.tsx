@@ -423,7 +423,7 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).getByRole("link", { name: "Проекты" })).toBeVisible();
   });
 
-  it("пустая «Главная»: «Привязать Telegram» одной кнопкой, если он не привязан; тап открывает бота", async () => {
+  it("пустая «Главная»: «Подключить уведомления на телефон» одной кнопкой, если он не привязан; тап открывает бота", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } }),
@@ -434,7 +434,9 @@ describe("Dashboard · Моя очередь", () => {
     signInAs("supply@demo.example"); // Telegram не привязан
     renderApp("/dashboard/queue");
     const page = await main();
-    fireEvent.click(await within(page).findByRole("button", { name: "Привязать Telegram" }));
+    fireEvent.click(
+      await within(page).findByRole("button", { name: "Подключить уведомления на телефон" }),
+    );
     await waitFor(() => {
       expect(tab.location.href).toBe("https://t.me/rt_demo_bot?start=staff_Zm9yLXRoZS1kZW1v");
     });
@@ -453,7 +455,9 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
     expect(await within(page).findByText("Клиенты вас сейчас не ждут")).toBeVisible();
     await profileAnswered();
-    expect(within(page).queryByRole("button", { name: "Привязать Telegram" })).toBeNull();
+    expect(
+      within(page).queryByRole("button", { name: "Подключить уведомления на телефон" }),
+    ).toBeNull();
   });
 
   it("менеджер без задач: «Клиенты вас сейчас не ждут»", async () => {

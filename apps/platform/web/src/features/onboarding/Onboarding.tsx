@@ -277,21 +277,21 @@ export function Onboarding() {
         {steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
-        {telegram.show ? (
-          <li>
-            <Button
-              type="link"
-              size="small"
-              loading={telegram.pending}
-              onClick={telegram.start}
-              style={{ padding: 0, height: "auto" }}
-            >
-              {t("welcome.telegram")}
-            </Button>
-            {telegram.error ? <span role="alert"> {telegram.error}</span> : null}
-          </li>
-        ) : null}
       </ol>
+      {telegram.show ? (
+        <p style={{ margin: "12px 0 0" }}>
+          <Button
+            type="link"
+            size="small"
+            loading={telegram.pending}
+            onClick={telegram.start}
+            style={{ padding: 0, height: "auto" }}
+          >
+            {t("welcome.telegram")}
+          </Button>
+          {telegram.error ? <span role="alert"> {telegram.error}</span> : null}
+        </p>
+      ) : null}
     </Modal>
   );
 }
