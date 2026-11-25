@@ -27,11 +27,11 @@ function useReasonName(): (reason: CalcCloseReason) => string {
 /** Окно «Закрыть заявку» (ЛХ-2): причина из справочника, комментарий — когда нужен; закрыть можно на любом шаге до проекта. */
 function CloseModal({
   target,
-  preselect,
+  afterClientRejection,
   onClose,
 }: {
   target: Closable;
-  preselect?: string;
+  afterClientRejection: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation("calc");
@@ -41,7 +41,7 @@ function CloseModal({
   const nameOf = useReasonName();
   const commentId = useId();
   const reasons = useListCalcCloseReasons();
-  const [code, setCode] = useState<string | null>(preselect ?? null);
+  const [picked, setPicked] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const quoteSent = target.close?.quote_sent === true;
@@ -58,6 +58,11 @@ function CloseModal({
     },
   });
   const items = reasons.data?.items ?? [];
+  // После отказа клиента от КП причина выбрана заранее — та, что отмечена флагом в справочнике (не зашита в код)
+  const preselected = afterClientRejection
+    ? items.find((row) => row.preselect_after_client_rejection)?.code
+    : undefined;
+  const code = picked ?? preselected ?? null;
   const chosen = items.find((row) => row.code === code) ?? null;
   const text = comment.trim();
   const ready = chosen !== null && (!chosen.requires_comment || text !== "");
@@ -88,7 +93,7 @@ function CloseModal({
           aria-label={t("close.reason")}
           value={code}
           onChange={(event) => {
-            setCode(String(event.target.value));
+            setPicked(String(event.target.value));
           }}
         >
           <div className="pf-calc-stack">
@@ -131,15 +136,15 @@ function CloseModal({
 /**
  * «Закрыть заявку» — одно действие везде, где открыта заявка до проекта: шапка расчёта, окно «Задание», карточка заявки без
  * расчёта. Видна только когда `close.allowed` (заявка до проекта, не закрыта, сотрудник — ответственный или держатель зоны
- * продаж). `preselect` — причина, выбранная заранее (после отказа клиента от КП — «Клиент передумал»).
+ * продаж). `afterClientRejection` — после отказа клиента от КП: причина выбрана заранее по флагу справочника.
  */
 export function CloseRequestButton({
   target,
-  preselect,
+  afterClientRejection = false,
   size,
 }: {
   target: Closable;
-  preselect?: string;
+  afterClientRejection?: boolean;
   size?: "small";
 }) {
   const { t } = useTranslation("calc");
@@ -159,7 +164,7 @@ export function CloseRequestButton({
       {open ? (
         <CloseModal
           target={target}
-          preselect={preselect}
+          afterClientRejection={afterClientRejection}
           onClose={() => {
             setOpen(false);
           }}

@@ -6,9 +6,6 @@ import { useNewCalcQuoteVersion } from "../../../shared/api/generated/platform-b
 import { calcRef, useApplySheet, useErrorText } from "./api";
 import { CloseRequestButton } from "./CloseRequest";
 
-/** Причина, выбранная заранее в «Закрыть заявку» после отказа клиента от КП (справочник `request-close-reasons`). */
-const CLIENT_CHANGED_MIND = "CHANGED_MIND";
-
 /**
  * Клиент отклонил КП (SPEC-v3 §3.3, D26G-3): причина клиента и решение менеджера — «Новая версия КП» (расчёт снова
  * открывается черновиком версии +1) или «Отказ по заявке» с причиной. Действия — только при `quote.can_revise`.
@@ -60,7 +57,7 @@ export function ClientRejection({ sheet }: { sheet: CalcSheet }) {
               >
                 {t("rejection.newVersion.button")}
               </Button>
-              <CloseRequestButton target={sheet} preselect={CLIENT_CHANGED_MIND} />
+              <CloseRequestButton target={sheet} afterClientRejection />
             </div>
           </div>
         ) : (

@@ -9,4 +9,6 @@ export interface CalcCloseReason {
   name: CalcCloseReasonName;
   requires_comment: boolean;
   allowed_after_quote_sent: boolean;
+  /** Выбрана заранее в «Закрыть заявку» после отказа клиента от КП (флаг справочника) */
+  preselect_after_client_rejection: boolean;
 }

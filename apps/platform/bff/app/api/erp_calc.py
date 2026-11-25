@@ -304,7 +304,8 @@ async def download_request_file(
     authed: Reader, number: Number, file_id: Annotated[int, Path(ge=1, le=2**31 - 1)]
 ) -> StreamingResponse:
     """Файл заявки клиента (СЦ-10) потоком, всегда как вложение; права на файл — у ERP."""
-    return await stream_request_file(authed, await _erp(authed).deal_id(number), file_id)
+    deal_id = await _erp(authed).deal_id(number, any_request=True)  # и файл черновика без расчёта
+    return await stream_request_file(authed, deal_id, file_id)
 
 
 @router.post(

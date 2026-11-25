@@ -30972,6 +30972,7 @@ export const getListCalcCloseReasonsResponseMock = (
     },
     requires_comment: faker.datatype.boolean(),
     allowed_after_quote_sent: faker.datatype.boolean(),
+    preselect_after_client_rejection: faker.datatype.boolean(),
   })),
   ...overrideResponse,
 });

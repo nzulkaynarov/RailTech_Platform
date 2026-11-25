@@ -92,7 +92,7 @@ async def on_project_document(event: Event, session: AsyncSession) -> None:
 async def on_deal_lost(event: Event, session: AsyncSession) -> None:
     """Заявка закрыта в ERP (ЛХ-2): открытый круг одобрения КП по ней снимается."""
     data = DealLost.model_validate(event.data)
-    withdrawn = await quotes.close_for_lost_deal(session, data.deal.erp_deal_id)
+    withdrawn = await quotes.close_for_lost_deal(session, data.deal.erp_deal_id, lost_at=parse_time(event.time))
     log.info("quote_routes_withdrawn", deal=data.deal.number, routes=withdrawn, event_id=event.id)
 
 

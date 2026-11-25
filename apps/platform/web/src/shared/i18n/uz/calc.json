@@ -239,7 +239,7 @@
       "approved": "",
       "rejected": "",
       "not_in_calculation": "",
-      "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki arizadan voz keçiş."
+      "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
     "done": "TK qoralamasi direktorda"
@@ -282,9 +282,9 @@
     "quote_not_rejected_by_client": "Yangi versiya va voz keçiş mijoz TTni rad etgandan keyin mavjud.",
     "reason_required": "Sababni kiriting.",
     "amount_too_large": "Kurs böyiça qator summasi juda katta. Xarid valyutasini tekşiring: sömdagi summa boşqa valyutadagi qatorda turibdi.",
-    "reason_unknown": "Ro‘yxatdan sababni tanlang.",
+    "reason_unknown": "Röyxatdan sababni tanlang.",
     "comment_required": "Izoh kiriting.",
-    "request_not_closable": "Arizani endi yopib bo‘lmaydi: u yopilgan yoki loyihaga aylangan.",
+    "request_not_closable": "Arizani endi yopib bölmaydi: u yopilgan yoki loyihaga aylangan.",
     "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang."
   },
   "load": {
@@ -344,9 +344,9 @@
     "cancel": "Bekor qiliş",
     "done": "Ariza yopildi",
     "closed": "Ariza yopildi: {{reason}}",
-    "closedNext": "U navbatlardan çiqdi, mijozga yopilgan deb ko‘rsatiladi.",
+    "closedNext": "U navbatlardan çiqdi, mijozga yopilgan deb körsatiladi.",
     "draftTitle": "{{number}} arizasi",
-    "draftHint": "Ariza bo‘yicha hisob-kitob hali yo‘q: uni shu yerda yopiş mumkin.",
+    "draftHint": "Ariza böyiça hisob-kitob hali yöq: uni şu yerda yopiş mumkin.",
     "client": "Mijoz",
     "stage": "Qadam",
     "textRequest": "Mijoz arizasi"

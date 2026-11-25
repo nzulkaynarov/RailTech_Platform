@@ -125,7 +125,8 @@
       "viewed": "Körilgan",
       "accepted": "Qabul qilingan",
       "rejected": "Rad etilgan",
-      "expired": "Muddati tugagan"
+      "expired": "Muddati tugagan",
+      "closed": "Sörov yopildi"
     },
     "contract": {
       "sent": "Kelişişingiz kutilmoqda",

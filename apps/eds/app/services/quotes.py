@@ -5,6 +5,8 @@ ERP с `version + 1` и новый круг маршрута. Снимок КП 
 содержания сверх снимка у EDS нет.
 """
 
+from datetime import datetime
+
 import structlog
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import func, select
@@ -94,11 +96,14 @@ async def open_for_quote(session: AsyncSession, bus: AsyncBus, data: QuoteReady)
     )
 
 
-async def close_for_lost_deal(session: AsyncSession, erp_deal_id: int) -> int:
+async def close_for_lost_deal(session: AsyncSession, erp_deal_id: int, *, lost_at: datetime) -> int:
     """Заявка закрыта в ERP (`erp.deal.lost`, ЛХ-2): открытые круги КП по ней снимаются — директору решать нечего.
 
     Не решение директора: события нет, одна строка журнала на круг; статус `returned`, шаг — `skipped`, как у круга,
     замещённого новой версией. Возвращает число снятых кругов; повтор события ничего не меняет.
+
+    Круг, открытый ПОСЛЕ события (`lost_at` — время события ERP; запоздавшая или переставленная доставка, заявку могли
+    вернуть в расчёт и отправить КП заново), не трогается: событие закрыло только то, что было открыто к его моменту.
     """
     open_routes = (
         (
@@ -108,6 +113,7 @@ async def close_for_lost_deal(session: AsyncSession, erp_deal_id: int) -> int:
                     ApprovalRoute.template == ApprovalTemplate.QUOTE.value,
                     ApprovalRoute.erp_deal_id == erp_deal_id,
                     ApprovalRoute.status == RouteStatus.OPEN.value,
+                    ApprovalRoute.created_at <= lost_at,
                 )
                 .with_for_update()
             )

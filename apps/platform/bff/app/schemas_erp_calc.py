@@ -247,6 +247,7 @@ class CalcCloseReason(BaseModel):
     name: CalcCloseReasonName
     requires_comment: bool
     allowed_after_quote_sent: bool
+    preselect_after_client_rejection: bool
 
 
 class CalcCloseReasonList(BaseModel):

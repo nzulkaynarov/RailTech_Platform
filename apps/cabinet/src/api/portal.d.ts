@@ -2876,8 +2876,11 @@ export interface components {
             lines?: components["schemas"]["RequestLineIn"][];
             attachments?: components["schemas"]["AttachmentRef"][];
         };
-        /** @enum {string} */
-        QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired";
+        /**
+         * @description `closed` — КП закрыто вместе с заявкой (сотрудник закрыл заявку, ЛХ-2); клиенту это не отказ
+         * @enum {string}
+         */
+        QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired" | "closed";
         QuoteListItem: {
             /** Format: int64 */
             id: number;

@@ -16876,6 +16876,8 @@ export interface components {
       };
       requires_comment: boolean;
       allowed_after_quote_sent: boolean;
+      /** @description Выбрана заранее в «Закрыть заявку» после отказа клиента от КП (флаг справочника) */
+      preselect_after_client_rejection: boolean;
     };
     CalcCloseReasonList: {
       items: components["schemas"]["CalcCloseReason"][];

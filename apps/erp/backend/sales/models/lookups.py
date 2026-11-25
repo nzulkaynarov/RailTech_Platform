@@ -77,6 +77,10 @@ class DealCloseReason(LocalizedNames, AbstractLookup):
         default=False, verbose_name=_("Скрывать из списков, если клиенту ничего не отправлено")
     )
 
+    preselect_after_client_rejection = models.BooleanField(
+        default=False, verbose_name=_("Выбрана заранее после отказа клиента от КП")
+    )
+
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Причина закрытия заявки")
         verbose_name_plural = _("Справочник: Причины закрытия заявок")

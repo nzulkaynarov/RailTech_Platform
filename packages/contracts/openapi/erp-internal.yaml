@@ -23602,10 +23602,14 @@ components:
           type: boolean
         allowed_after_quote_sent:
           type: boolean
+        preselect_after_client_rejection:
+          type: boolean
+          description: Выбрана заранее в «Закрыть заявку» после отказа клиента от КП
       required:
       - allowed_after_quote_sent
       - code
       - name
+      - preselect_after_client_rejection
       - requires_comment
     CalcCloseReasonList:
       type: object

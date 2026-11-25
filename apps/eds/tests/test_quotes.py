@@ -361,3 +361,16 @@ async def test_deal_lost_of_another_deal_leaves_the_quote_route_open(
     assert await deliver_erp(client, container, lost) == "processed"
     route = await only_route(client, staff["director"])
     assert route["status"] == "open" and route["can_decide"] is True
+
+
+async def test_a_late_deal_lost_does_not_withdraw_a_round_opened_after_it(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Запоздавший `deal.lost` (заявку вернули в расчёт, КП ушло заново) круг, открытый после него, не снимает."""
+    assert await ready(client, container) == "processed"  # круг открыт «сейчас» (часы сервиса — 2026-10-26)
+    lost = erp_event("erp/deal.lost.v1")
+    lost["time"] = "2026-10-20T05:00:00Z"  # событие старше круга
+    lost["data"]["deal"]["erp_deal_id"] = 905
+    assert await deliver_erp(client, container, lost) == "processed"
+    route = await only_route(client, staff["director"])
+    assert route["status"] == "open" and route["can_decide"] is True

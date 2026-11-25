@@ -51,6 +51,8 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const quote = sheet.quote;
   if (!quote) return null;
+  // Закрытая заявка: КП «у директора» и прочие состояния расчёта не показываем, итог — «Заявка закрыта: причина»
+  if (sheet.step === "LOST") return null;
   if (quote.state === "at_director") {
     return (
       <Alert
@@ -162,6 +164,7 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
       },
     },
   });
+  if (sheet.step === "LOST") return null; // закрытая заявка: «Расчёт готов» и «у директора» не показываем
   if (stateOf(sheet) === "at_director") {
     return (
       <div className="pf-calc-ready">
@@ -250,10 +253,12 @@ function Content({ sheet }: { sheet: CalcSheet }) {
         subtitle={subtitle}
         extra={
           <div className="pf-calc-row">
-            <StatusTag kind="quote" status={state}>
-              {t(`state.${stateLabel(sheet)}`)}
-            </StatusTag>
-            {sheet.quote !== null && sheet.rights.stock === true ? (
+            {sheet.step === "LOST" ? null : (
+              <StatusTag kind="quote" status={state}>
+                {t(`state.${stateLabel(sheet)}`)}
+              </StatusTag>
+            )}
+            {sheet.quote !== null && sheet.step !== "LOST" && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
                   openForm("price");

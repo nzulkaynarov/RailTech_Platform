@@ -181,7 +181,7 @@ def _sales_specs() -> tuple["Spec", ...]:
         Spec(
             "request-close-reasons",
             DealCloseReason,
-            ("Причины закрытия заявки", "Ariza yopilish sabablari", "Request close reasons"),
+            ("Причины закрытия заявки", "Ariza yopiliş sabablari", "Request close reasons"),
             attrs=(
                 Attr(
                     "requires_comment",
@@ -198,8 +198,17 @@ def _sales_specs() -> tuple["Spec", ...]:
                     "boolean",
                     (
                         "Скрывать из списков, если клиенту ничего не отправлено",
-                        "Mijozga hech narsa yuborilmagan bo‘lsa, ro‘yxatlardan yashirish",
+                        "Mijozga heç narsa yuborilmagan bölsa, röyxatlardan yaşiriş",
                         "Hide from lists if nothing was sent to the client",
+                    ),
+                ),
+                Attr(
+                    "preselect_after_client_rejection",
+                    "boolean",
+                    (
+                        "Выбрана заранее после отказа клиента от КП",
+                        "Mijoz TTni rad etgandan keyin oldindan tanlanadi",
+                        "Preselected after the client rejected the quote",
                     ),
                 ),
             ),

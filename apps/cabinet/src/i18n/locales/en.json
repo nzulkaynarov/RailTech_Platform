@@ -125,7 +125,8 @@
       "viewed": "Viewed",
       "accepted": "Accepted",
       "rejected": "Rejected",
-      "expired": "Expired"
+      "expired": "Expired",
+      "closed": "Request closed"
     },
     "contract": {
       "sent": "Awaiting your agreement",

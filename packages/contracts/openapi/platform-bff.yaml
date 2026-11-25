@@ -28822,7 +28822,7 @@ components:
     CalcCloseReason:
       type: object
       additionalProperties: false
-      required: [code, name, requires_comment, allowed_after_quote_sent]
+      required: [code, name, requires_comment, allowed_after_quote_sent, preselect_after_client_rejection]
       properties:
         code: {type: string}
         name:
@@ -28835,6 +28835,7 @@ components:
             en: {type: string}
         requires_comment: {type: boolean}
         allowed_after_quote_sent: {type: boolean}
+        preselect_after_client_rejection: {type: boolean, description: 'Выбрана заранее в «Закрыть заявку» после отказа клиента от КП (флаг справочника)'}
 
     CalcCloseReasonList:
       type: object

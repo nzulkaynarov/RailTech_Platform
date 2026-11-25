@@ -751,7 +751,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
         },
         "visas": {name: groups[name] for name in VISA_GROUPS},
         "ready": {"allowed": blocker is None, "blocker": blocker, "missing": missing},
-        "close": close_state(deal, task, user),
+        "close": close_state(deal, user),
         "rights": {
             "goods": rights[Zone.GOODS],
             "services": rights[Zone.SERVICES],
@@ -1678,6 +1678,15 @@ CLOSABLE_STAGES = (
 )
 
 
+#: КП, не получившие решения: на проверке, у директора, готово к отправке и отправленное клиенту.
+UNFINISHED_QUOTE_STATUSES = (
+    QuoteStatusCode.PENDING_TRADE_REVIEW,
+    QuoteStatusCode.PENDING_APPROVAL,
+    QuoteStatusCode.READY_TO_SEND,
+    QuoteStatusCode.SENT,
+)
+
+
 def quote_sent_to_client(deal: Deal) -> bool:
     """КП уже было у клиента: заявка в стадии «КП отправлено», либо КП отправлено, принято или отклонено клиентом.
     Отказ директора КП клиенту не отправляет."""
@@ -1693,27 +1702,23 @@ def quote_sent_to_client(deal: Deal) -> bool:
     return False
 
 
-def _is_request_owner(deal: Deal, task: Optional[CalcTask], user) -> bool:
-    if user.pk in (deal.manager_id, deal.assigned_to_id):
-        return True
-    if task is None:
-        return False
-    crm_ids = _mapped_crm_ids(user)
-    return task.assignees.filter(Q(user=user) | Q(crm_user_id__in=crm_ids)).exists()
+def _is_request_owner(deal: Deal, user) -> bool:
+    """Ответственный заявки — менеджер или взявший в работу. Исполнитель резолюции (визы расчёта) владельцем не считается."""
+    return user.pk in (deal.manager_id, deal.assigned_to_id)
 
 
-def can_close_request(deal: Deal, task: Optional[CalcTask], user) -> bool:
+def can_close_request(deal: Deal, user) -> bool:
     """Закрыть заявку может её ответственный и держатель зоны продаж (`deal.manage`); администратор — всегда."""
     if not (getattr(user, "is_superuser", False) or is_seller(user)):
         return False
-    return has_perm(user, Permission.DEAL_MANAGE.value) or _is_request_owner(deal, task, user)
+    return has_perm(user, Permission.DEAL_MANAGE.value) or _is_request_owner(deal, user)
 
 
-def close_state(deal: Deal, task: Optional[CalcTask], user) -> dict:
+def close_state(deal: Deal, user) -> dict:
     stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
     reason = deal.close_reason if deal.close_reason_id else None
     return {
-        "allowed": stage in CLOSABLE_STAGES and not deal.is_project and can_close_request(deal, task, user),
+        "allowed": stage in CLOSABLE_STAGES and not deal.is_project and can_close_request(deal, user),
         "quote_sent": quote_sent_to_client(deal) if stage in CLOSABLE_STAGES else deal.closed_after_quote_sent,
         "reason": reason.code if reason else None,
         "comment": deal.close_comment or None,
@@ -1732,7 +1737,7 @@ def _request_card(deal: Deal, task: Optional[CalcTask], user) -> dict:
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
         },
-        "close": close_state(deal, task, user),
+        "close": close_state(deal, user),
     }
 
 
@@ -1753,6 +1758,7 @@ def close_reasons(user) -> list[dict]:
             "name": {"ru": row.name, "uz": row.name_uz, "en": row.name_en},
             "requires_comment": row.requires_comment,
             "allowed_after_quote_sent": row.allowed_after_quote_sent,
+            "preselect_after_client_rejection": row.preselect_after_client_rejection,
         }
         for row in DealCloseReason.objects.filter(is_active=True).order_by("sort_order", "name")
     ]
@@ -1771,7 +1777,7 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
     _require_staff(user)
     deal = _locked_deal_or_404(deal_id)
     task = latest_task(deal.id)  # заявка без задания расчёта (черновик из передачи) закрывается так же
-    if not can_close_request(deal, task, user):
+    if not can_close_request(deal, user):
         raise CalcError("ROLE_NOT_PERMITTED", 403)
     stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
     if stage not in CLOSABLE_STAGES or deal.is_project:
@@ -1795,9 +1801,10 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
     )
     if err:
         raise CalcError(err, 409)
-    if sent:
-        for quote in Quote.objects.filter(deal=deal, status__code=QuoteStatusCode.SENT):
-            _set_quote_status(quote, QuoteStatusCode.REJECTED)
+    # Незавершённые КП закрываются вместе с заявкой (клиент не примет отправленное, директору нечего одобрять): у закрытой
+    # заявки нет КП «у директора» и «готово к отправке». Для клиента такое КП — «закрыто», а не «отклонено».
+    for quote in Quote.objects.filter(deal=deal, status__code__in=UNFINISHED_QUOTE_STATUSES):
+        _set_quote_status(quote, QuoteStatusCode.CLOSED)
     deal.close_reason = reason
     deal.close_comment = comment[:2000]
     deal.closed_from_stage = stage

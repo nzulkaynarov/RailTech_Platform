@@ -5,20 +5,20 @@ import pgtrigger.compiler
 import pgtrigger.migrations
 from django.db import migrations, models
 
-#: (code, ru, uz, en, requires_comment, allowed_after_quote_sent, hide_when_unsent)
+#: (code, ru, uz, en, requires_comment, allowed_after_quote_sent, hide_when_unsent, preselect_after_client_rejection)
 REASONS = [
-    ("ERROR", "Оформлена по ошибке", "Xato rasmiylashtirilgan", "Created by mistake", False, False, True),
-    ("DUPLICATE", "Дубль", "Dublikat", "Duplicate", False, False, False),
-    ("TEST", "Тест", "Test", "Test", False, False, True),
-    ("CHANGED_MIND", "Клиент передумал", "Mijoz fikrini o‘zgartirdi", "Client changed their mind", False, True, False),
-    ("NO_REPLY", "Клиент не отвечает", "Mijoz javob bermayapti", "Client does not reply", False, True, False),
-    ("OTHER", "Другое — комментарий", "Boshqa — izoh", "Other — comment", True, True, False),
+    ("ERROR", "Оформлена по ошибке", "Xato rasmiylaştirilgan", "Created by mistake", False, False, True, False),
+    ("DUPLICATE", "Дубль", "Dublikat", "Duplicate", False, False, False, False),
+    ("TEST", "Тест", "Test", "Test", False, False, True, False),
+    ("CHANGED_MIND", "Клиент передумал", "Mijoz fikrini özgartirdi", "Client changed their mind", False, True, False, True),
+    ("NO_REPLY", "Клиент не отвечает", "Mijoz javob bermayapti", "Client does not reply", False, True, False, False),
+    ("OTHER", "Другое — комментарий", "Boşqa — izoh", "Other — comment", True, True, False, False),
 ]
 
 
 def seed_reasons(apps, schema_editor):
     model = apps.get_model("sales", "DealCloseReason")
-    for order, (code, ru, uz, en, comment, after_quote, hide) in enumerate(REASONS, start=1):
+    for order, (code, ru, uz, en, comment, after_quote, hide, preselect) in enumerate(REASONS, start=1):
         model.objects.update_or_create(
             code=code,
             defaults={
@@ -29,12 +29,26 @@ def seed_reasons(apps, schema_editor):
                 "requires_comment": comment,
                 "allowed_after_quote_sent": after_quote,
                 "hide_when_unsent": hide,
+                "preselect_after_client_rejection": preselect,
             },
         )
+    # КП, закрытое вместе с заявкой: клиенту оно не «отклонено», а «закрыто»
+    apps.get_model("sales", "QuoteStatus").objects.get_or_create(
+        code="CLOSED", defaults={"name": "Закрыто вместе с заявкой", "sort_order": 60}
+    )
 
 
 def unseed_reasons(apps, schema_editor):
+    """Откат: причины удалить нельзя, пока на них ссылаются заявки (PROTECT) — ссылки снимаются, закрытые КП — «Отклонено»."""
+    apps.get_model("sales", "Deal").objects.filter(close_reason__isnull=False).update(close_reason=None)
     apps.get_model("sales", "DealCloseReason").objects.filter(code__in=[r[0] for r in REASONS]).delete()
+    status = apps.get_model("sales", "QuoteStatus")
+    rejected = status.objects.filter(code="REJECTED").first()
+    closed = status.objects.filter(code="CLOSED").first()
+    if closed is not None:
+        if rejected is not None:
+            apps.get_model("sales", "Quote").objects.filter(status=closed).update(status=rejected)
+        closed.delete()
 
 
 class Migration(migrations.Migration):
@@ -83,6 +97,10 @@ class Migration(migrations.Migration):
                     models.BooleanField(
                         default=False, verbose_name="Скрывать из списков, если клиенту ничего не отправлено"
                     ),
+                ),
+                (
+                    "preselect_after_client_rejection",
+                    models.BooleanField(default=False, verbose_name="Выбрана заранее после отказа клиента от КП"),
                 ),
             ],
             options={

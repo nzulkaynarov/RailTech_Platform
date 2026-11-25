@@ -115,7 +115,12 @@ def test_closing_a_sent_quote_stops_the_client_from_accepting_it(world):  # noqa
     assert _close(world, world["supply"], "ERROR").status_code == 409
     assert _close(world, world["supply"], "CHANGED_MIND").status_code == 200
     quote.refresh_from_db()
-    assert quote.status.code == "REJECTED"
+    assert quote.status.code == "CLOSED", "для клиента КП «закрыто», а не «отклонено»"
+    from integration.services import summary
+    from portal import projections
+
+    assert projections.quote_status(quote) == "closed" and quote.status.code in projections.CLIENT_QUOTE_STATUSES
+    assert summary._quote_status(quote) == "rejected", "в контракте интеграции «закрыто» нет"
     with pytest.raises(ValueError):
         perform_quote_acceptance(quote.pk)
 
@@ -192,3 +197,67 @@ def test_deal_refs_find_a_draft_only_when_any_request_is_asked(world):  # noqa: 
     assert api.get("/api/v1/calc/deals/", {"number": number}).json()["results"] == []
     found = api.get("/api/v1/calc/deals/", {"number": number, "any": "1"}).json()["results"]
     assert [row["id"] for row in found] == [draft.pk]
+
+
+def test_a_calc_task_assignee_who_is_not_the_owner_cannot_close(world):  # noqa: F811
+    """Исполнитель резолюции (визы расчёта) без права `deal.manage` и не ответственный за заявку закрыть её не может."""
+    from accounts.models import CompanyMember, CompanyRole
+
+    member = CompanyMember.objects.get(user=world["engineer"])  # crm_user_id 12 — исполнитель резолюции по услугам
+    member.company_roles.set(
+        [CompanyRole.objects.create(company=world["seller"], name="Только визы", permissions=["quote.visa_services"])]
+    )
+    assert _deal(world).manager_id == world["supply"].pk
+    assert _api(world["engineer"]).get(_url(world)).json()["close"]["allowed"] is False
+    assert _close(world, world["engineer"], "TEST").status_code == 403
+    assert _deal(world).stage.code == "CALCULATING"
+
+
+def test_closing_moves_every_unfinished_quote_to_closed(world):  # noqa: F811
+    """КП у директора и готовое к отправке закрываются вместе с заявкой: «у директора на одобрении» у закрытой не бывает."""
+    _ready(world)
+    quote = Quote.objects.get(deal=world["deal"])
+    assert quote.status.code == "PENDING_APPROVAL"
+    assert _close(world, world["supply"], "CHANGED_MIND").status_code == 200
+    quote.refresh_from_db()
+    assert quote.status.code == "CLOSED"
+    sheet = _api(world["supply"]).get(_url(world)).json()
+    assert sheet["deal"]["stage_code"] == "CLOSED_LOST" and sheet["quote"]["state"] != "at_director"
+
+
+def test_the_client_rejection_reason_is_preselected_by_a_dictionary_flag(world):  # noqa: F811
+    listed = _api(world["supply"]).get("/api/v1/calc/close-reasons/").json()["results"]
+    assert [r["code"] for r in listed if r["preselect_after_client_rejection"]] == ["CHANGED_MIND"]
+    DealCloseReason.objects.filter(code="CHANGED_MIND").update(preselect_after_client_rejection=False)
+    DealCloseReason.objects.filter(code="NO_REPLY").update(preselect_after_client_rejection=True)
+    listed = _api(world["supply"]).get("/api/v1/calc/close-reasons/").json()["results"]
+    assert [r["code"] for r in listed if r["preselect_after_client_rejection"]] == ["NO_REPLY"]
+
+
+def test_the_migration_rolls_back_with_a_closed_request_and_forward_again(world):  # noqa: F811
+    """Откат 0023: ссылка закрытой заявки на причину снимается (PROTECT), закрытое КП возвращается в «Отклонено»."""
+    from django.db import connection
+    from django.db.migrations.executor import MigrationExecutor
+
+    _ready(world)
+    assert _close(world, world["supply"], "OTHER", "Передали").status_code == 200
+
+    def migrate(target):
+        with connection.cursor() as cursor:
+            cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")  # отложенные триггеры истории сделки — до ALTER TABLE
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([target])
+
+    migrate(("sales", "0022_dok10_contract_template_approval"))
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT count(*) FROM sales_deal WHERE id = %s", [world["deal"].pk])
+        assert cursor.fetchone()[0] == 1
+        cursor.execute("SELECT count(*) FROM sales_quotestatus WHERE code = 'CLOSED'")
+        assert cursor.fetchone()[0] == 0
+        cursor.execute(
+            "SELECT s.code FROM sales_quote q JOIN sales_quotestatus s ON s.id = q.status_id WHERE q.deal_id = %s",
+            [world["deal"].pk],
+        )
+        assert [row[0] for row in cursor.fetchall()] == ["REJECTED"]
+    migrate(("sales", "0023_close_request"))

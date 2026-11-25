@@ -259,6 +259,9 @@ class CalcCloseReasonSerializer(serializers.Serializer):
     name = serializers.DictField(child=serializers.CharField(allow_blank=True), help_text="Названия ru, uz, en")
     requires_comment = serializers.BooleanField()
     allowed_after_quote_sent = serializers.BooleanField()
+    preselect_after_client_rejection = serializers.BooleanField(
+        help_text="Выбрана заранее в «Закрыть заявку» после отказа клиента от КП"
+    )
 
 
 class CalcCloseReasonListSerializer(serializers.Serializer):

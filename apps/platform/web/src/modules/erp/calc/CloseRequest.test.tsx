@@ -32,6 +32,9 @@ describe("Расчёт · «Закрыть заявку» (ЛХ-2)", () => {
       expect(screen.getByText("Заявка закрыта: Другое — комментарий")).toBeVisible();
     });
     expect(screen.queryByRole("button", { name: "Закрыть заявку" })).toBeNull();
+    // закрытая заявка не показывает «КП у директора на одобрении» и статус расчёта
+    expect(screen.queryByText(/у директора на одобрении/i)).toBeNull();
+    expect(screen.queryByText(/Черновик КП у директора/)).toBeNull();
   });
 
   it("после отправки КП причины «Ошибка», «Дубль», «Тест» недоступны", async () => {

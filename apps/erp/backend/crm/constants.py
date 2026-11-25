@@ -48,6 +48,7 @@ class QuoteStatusCode(models.TextChoices):
     SENT = "SENT", "Отправлено клиенту"
     APPROVED = "APPROVED", "Одобрено"
     REJECTED = "REJECTED", "Отклонено"
+    CLOSED = "CLOSED", "Закрыто вместе с заявкой"
 
 
 # ── Post-sale status codes ──────────────────────────────────────────────────

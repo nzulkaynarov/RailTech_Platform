@@ -228,8 +228,17 @@ async def test_without_calc_section_everything_is_403_and_erp_is_untouched(
         ("POST", f"/erp/calc/{NUMBER}/ready"),
         ("POST", f"/erp/calc/{NUMBER}/lines/7/visa"),
         ("PATCH", f"/erp/calc/{NUMBER}/lines/7"),
+        ("GET", f"/erp/calc-request/{NUMBER}"),
+        ("POST", f"/erp/calc/{NUMBER}/close"),
     ):
-        response = await call(web, method, path, {"quantity": 2} if method == "PATCH" else None)
+        body = (
+            {"quantity": 2}
+            if method == "PATCH"
+            else {"reason": "TEST"}
+            if path.endswith("/close")
+            else None
+        )
+        response = await call(web, method, path, body)
         assert response.status_code == 403, (method, path)
     assert erp_data_calls(erp) == []
 
@@ -574,6 +583,7 @@ async def test_close_reasons_and_close_request_are_proxied_with_erp_refusals(
                         },
                         "requires_comment": True,
                         "allowed_after_quote_sent": True,
+                        "preselect_after_client_rejection": False,
                     }
                 ]
             },
@@ -1200,3 +1210,43 @@ async def test_a_draft_request_without_a_calc_task_opens_a_card_and_is_closed(
     check(done, "/erp/calc/{number}/close", "post")
     assert done.json()["step"] == "LOST"
     assert shut.called
+
+
+async def test_close_is_for_the_full_calc_section_only_and_read_only_roles_get_403(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """Бухгалтер читает расчёт, но заявку закрыть не может: 403, ERP не вызывается."""
+    await web.login(["ACCOUNTANT"])
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet()))
+    assert (await web.client.get(f"/api/v1/erp/calc/{ENCODED}")).status_code == 200
+    before = len(erp_data_calls(erp))
+    refused = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert refused.status_code == 403
+    assert len(erp_data_calls(erp)) == before
+
+
+async def test_request_file_of_a_draft_without_a_calc_task_is_streamed(
+    web: Web, be: Backends
+) -> None:
+    """ЛХ-2: файл черновика без задания расчёта: номер ищется среди всех заявок (`any=1`)."""
+    await web.login(["SUPPLY"])
+    draft = deal(id=777, number="ЗВ-2026-120", stage_code="DRAFT")
+    refs_route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(draft))
+    )
+    file_route = be.router.get(f"{API}/crm/deals/777/request-files/9/").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"draft file",
+            headers={"content-disposition": "attachment; filename*=utf-8''zayavka.pdf"},
+        )
+    )
+
+    response = await web.client.get(
+        f"/api/v1/erp/calc/{quote('ЗВ-2026-120', safe='')}/request-files/9"
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"draft file"
+    assert file_route.called
+    assert refs_route.calls.last.request.url.params["any"] == "1"

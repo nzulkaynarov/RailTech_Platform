@@ -239,7 +239,7 @@
       "approved": "",
       "rejected": "",
       "not_in_calculation": "",
-      "rejected_client": "The client rejected the quote — choose above: a new quote version or a lost request."
+      "rejected_client": "The client rejected the quote — choose above: a new quote version or «Close request»."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
     "done": "Draft quote with the director"

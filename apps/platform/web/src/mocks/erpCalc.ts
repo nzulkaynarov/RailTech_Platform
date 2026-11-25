@@ -268,10 +268,11 @@ const CLOSE_REASONS = [
   {
     code: "ERROR",
     ru: "Оформлена по ошибке",
-    uz: "Xato rasmiylashtirilgan",
+    uz: "Xato rasmiylaştirilgan",
     en: "Created by mistake",
     comment: false,
     afterQuote: false,
+    preselect: false,
   },
   {
     code: "DUPLICATE",
@@ -280,15 +281,25 @@ const CLOSE_REASONS = [
     en: "Duplicate",
     comment: false,
     afterQuote: false,
+    preselect: false,
   },
-  { code: "TEST", ru: "Тест", uz: "Test", en: "Test", comment: false, afterQuote: false },
+  {
+    code: "TEST",
+    ru: "Тест",
+    uz: "Test",
+    en: "Test",
+    comment: false,
+    afterQuote: false,
+    preselect: false,
+  },
   {
     code: "CHANGED_MIND",
     ru: "Клиент передумал",
-    uz: "Mijoz fikrini o‘zgartirdi",
+    uz: "Mijoz fikrini özgartirdi",
     en: "Client changed their mind",
     comment: false,
     afterQuote: true,
+    preselect: true,
   },
   {
     code: "NO_REPLY",
@@ -297,14 +308,16 @@ const CLOSE_REASONS = [
     en: "Client does not reply",
     comment: false,
     afterQuote: true,
+    preselect: false,
   },
   {
     code: "OTHER",
     ru: "Другое — комментарий",
-    uz: "Boshqa — izoh",
+    uz: "Boşqa — izoh",
     en: "Other — comment",
     comment: true,
     afterQuote: true,
+    preselect: false,
   },
 ] as const;
 
@@ -979,6 +992,7 @@ export const erpCalcHandlers = [
         name: { ru: row.ru, uz: row.uz, en: row.en },
         requires_comment: row.comment,
         allowed_after_quote_sent: row.afterQuote,
+        preselect_after_client_rejection: row.preselect,
       })),
     });
   }),

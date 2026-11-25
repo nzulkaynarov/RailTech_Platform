@@ -33,7 +33,9 @@ function Body({ card, titled }: { card: CalcRequestCard; titled: boolean }) {
         ]}
       />
       {card.request.files?.length ? <RequestFiles sheet={card} /> : null}
-      {card.has_task ? null : <p className="pf-hint">{t("calc:close.draftHint")}</p>}
+      {card.has_task || card.step === "LOST" ? null : (
+        <p className="pf-hint">{t("calc:close.draftHint")}</p>
+      )}
       <div>
         <CloseRequestButton target={card} />
       </div>
