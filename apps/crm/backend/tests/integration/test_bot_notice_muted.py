@@ -80,10 +80,12 @@ async def test_each_contact_gets_the_text_in_the_language_of_their_own_lead(
     texts = dict(harness.bot.sent)
     assert set(texts) == {777, 888}
     assert texts[777] != texts[888]  # узбекский контакт не получает русский текст
-    # кнопки — тоже на языке контакта, адрес — кабинет (точные страницы объектов — УВ-2)
+    # кнопки — на языке контакта и ведут на точную страницу объекта в кабинете (УВ-2)
     buttons = {
         chat: [(b.text, b.url) for row in markup.inline_keyboard for b in row]
         for (chat, _), markup in zip(harness.bot.sent, harness.bot.markups, strict=True)
     }
-    assert buttons[777][-1] == ("Кабинет", "https://cabinet.example")
-    assert buttons[888][-1] == ("Kabinet", "https://cabinet.example")
+    assert buttons[777][-1][0] == "Кабинет"
+    assert buttons[888][-1][0] == "Kabinet"
+    assert buttons[777][-1][1] == buttons[888][-1][1]
+    assert buttons[777][-1][1].startswith("https://cabinet.example/invoices?focus=")
