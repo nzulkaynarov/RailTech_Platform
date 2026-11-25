@@ -163,6 +163,8 @@ class LeadCard(BaseModel):
     # LH-1: лид отброшен как спам, тест или дубль (и номер оставшегося лида у дубля)
     discarded: Literal["spam", "test", "duplicate"] | None = None
     duplicate_of: str | None = None
+    # ЛП-1: лид передан как партнёр — номер заявки кандидата в ERP («Заявки партнёров»)
+    partner_application: int | None = None
 
 
 # --- клиенты --------------------------------------------------------------------------------------
@@ -296,6 +298,8 @@ class RequestCompanyIn(BaseModel):
 
     name: str = Field(min_length=1, max_length=255)
     inn: str | None = Field(default=None, max_length=32)
+    # ISO 3166-1 alpha-2: вместе с названием ищет уже заведённую компанию (ЛП-1)
+    country: str | None = Field(default=None, pattern=r"^[A-Za-z]{2}$")
 
 
 class RequestContactFormIn(BaseModel):
@@ -329,6 +333,27 @@ class RequestFormIn(BaseModel):
     # Basis of the request (plan 0.4, FR-9): the letter or request file uploaded to EDS first.
     letter_file_id: str = Field(pattern=UUID_PATTERN)
     consent: RequestConsentIn | None = None
+
+
+class PartnerHandoffIn(BaseModel):
+    """ЛП-1, «Кто это?» → «Партнёр»: заявка кандидата из карточки лида; нужен e-mail или телефон."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_name: str = Field(min_length=1, max_length=255)
+    country: str = Field(default="UZ", pattern=r"^[A-Za-z]{2}$")
+    inn: str = Field(default="", max_length=32)
+    offer: str = Field(min_length=1, max_length=4000)
+    contact_name: str = Field(min_length=1, max_length=255)
+    email: str = Field(default="", max_length=254)
+    phone: str = Field(default="", max_length=32)
+
+
+class PartnerHandoffView(BaseModel):
+    lead: str
+    application: int
+    # false — лид уже был передан как партнёр: возвращена первая заявка, второй не заведено
+    created: bool
 
 
 class RequestCreatedView(BaseModel):

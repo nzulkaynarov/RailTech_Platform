@@ -258,6 +258,54 @@ def create_from_letter(data: dict, user) -> dict:
     return get_application(app.pk)
 
 
+@transaction.atomic
+def create_from_lead(data: dict) -> tuple[PartnerApplication, bool]:
+    """«Партнёр» из карточки лида CRM (ЛП-1): заявка кандидата по лиду, `source = lead`, `source_ref` — номер лида.
+
+    Идемпотентно по номеру лида: повтор и параллельный повтор (блокировка на номер) возвращают ту же заявку без второй
+    строки в очереди. Отклонённая заявка не блокирует: тот же лид можно подать снова. Согласия кандидата ещё нет
+    (`consent=False`) — дальше обычный договорный шлюз; компания заводится при одобрении, а не здесь."""
+    from integration.services.handoff import _advisory_lock
+
+    ref = data["source_ref"].strip()
+    _advisory_lock("partner-lead", ref)
+    existing = (
+        PartnerApplication.objects.filter(source=PartnerApplicationSource.LEAD, source_ref=ref)
+        .exclude(status=PartnerApplicationStatus.REJECTED)
+        .order_by("-created_at")
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    country_code = (data.get("country") or "UZ").strip().upper()
+    app = PartnerApplication.objects.create(
+        source=PartnerApplicationSource.LEAD,
+        source_ref=ref,
+        country=Country.objects.filter(code__iexact=country_code).first(),
+        company_name=data["company_name"].strip(),
+        inn=(data.get("inn") or "").strip(),
+        kind=data.get("kind") or "supplier",
+        categories_description=data["categories_description"].strip(),
+        contact_name=data["contact_name"].strip(),
+        email=(data.get("email") or "").strip().lower(),
+        phone=(data.get("phone") or "").strip(),
+        language=data.get("language") or "ru",
+        consent=False,
+        status=PartnerApplicationStatus.SUBMITTED,
+    )
+    record(
+        None,
+        entity="partner_application",
+        instance=app,
+        event="created_from_lead",
+        action=f"Заявка заведена по лиду {app.source_ref}",
+        before=None,
+        after={"status": app.status, "source_ref": app.source_ref},
+        detail=app.company_name,
+    )
+    return app, True
+
+
 def get_application(pk: int) -> dict:
     app = PartnerApplication.objects.filter(pk=pk).select_related("company", "reviewed_by", "applicant_contact").first()
     if app is None:

@@ -1085,7 +1085,9 @@
     },
     "source": {
       "public": "Public form",
-      "client_cabinet": "Client cabinet"
+      "client_cabinet": "Client cabinet",
+      "letter": "Incoming letter",
+      "lead": "Lead"
     },
     "inn": "TIN: {{inn}}",
     "matchFound": "Database match: {{name}}",

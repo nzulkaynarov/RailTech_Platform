@@ -860,6 +860,8 @@ export * from "./partnerApplicationRejectRequest";
 export * from "./partnerApplicationSendContractRequest";
 export * from "./partnerApplicationSource";
 export * from "./partnerApplicationStatus";
+export * from "./partnerHandoffIn";
+export * from "./partnerHandoffView";
 export * from "./partnerRequestDecision";
 export * from "./passwordConfirm";
 export * from "./paymentBoard";

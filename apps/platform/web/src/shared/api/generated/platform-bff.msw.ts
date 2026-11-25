@@ -313,6 +313,7 @@ import type {
   OnBehalfRecord,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
+  PartnerHandoffView,
   PartnerRequestDecision,
   PaymentBoard,
   PaymentCard,
@@ -35399,6 +35400,7 @@ export const getGetCrmLeadResponseMock = (
     null,
   ]),
   duplicate_of: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+  partner_application: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -35793,6 +35795,24 @@ export const getCreateCrmRequestResponseMock = (
       lead: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
       created: faker.datatype.boolean(),
       transfer: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      ...overrideResponse,
+    },
+  ]);
+
+export const getHandOverCrmLeadAsPartnerResponseMock = (
+  overrideResponse: Partial<Extract<PartnerHandoffView, object>> = {},
+): PartnerHandoffView =>
+  faker.helpers.arrayElement([
+    {
+      lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+      application: faker.number.int(),
+      created: faker.datatype.boolean(),
+      ...overrideResponse,
+    },
+    {
+      lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+      application: faker.number.int(),
+      created: faker.datatype.boolean(),
       ...overrideResponse,
     },
   ]);
@@ -51778,6 +51798,30 @@ export const getCreateCrmRequestMockHandler = (
   );
 };
 
+export const getHandOverCrmLeadAsPartnerMockHandler = (
+  overrideResponse?:
+    | PartnerHandoffView
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerHandoffView> | PartnerHandoffView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/leads/:lead/partner",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getHandOverCrmLeadAsPartnerResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getRetryCrmRequestMockHandler = (
   overrideResponse?:
     | RequestRetriedView
@@ -54331,6 +54375,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUnbindCrmTelegramGroupMockHandler(),
   getGetCrmClientTelegramGroupMockHandler(),
   getCreateCrmRequestMockHandler(),
+  getHandOverCrmLeadAsPartnerMockHandler(),
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
   getCopyCrmMessageAttachmentToRequestMockHandler(),

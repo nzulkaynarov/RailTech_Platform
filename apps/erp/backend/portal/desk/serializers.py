@@ -150,7 +150,7 @@ class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
 
 class DeskPartnerApplicationListItem(serializers.Serializer):
     id = serializers.IntegerField()
-    source = serializers.ChoiceField(choices=["public", "client_cabinet", "letter"])
+    source = serializers.ChoiceField(choices=["public", "client_cabinet", "letter", "lead"])
     source_ref = serializers.CharField(
         allow_blank=True, required=False, help_text="Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)"
     )

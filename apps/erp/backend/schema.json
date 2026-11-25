@@ -313,6 +313,20 @@
                 }
             }
         },
+        "/api/integration/v1/partner-applications": {
+            "post": {
+                "operationId": "api_integration_v1_partner_applications_create",
+                "description": "POST /api/integration/v1/partner-applications — «Партнёр» из карточки лида CRM (ЛП-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/users/{crm_user_id}/sessions": {
             "delete": {
                 "operationId": "api_integration_v1_users_sessions_destroy",
@@ -54028,10 +54042,11 @@
                 "enum": [
                     "public",
                     "client_cabinet",
-                    "letter"
+                    "letter",
+                    "lead"
                 ],
                 "type": "string",
-                "description": "* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
+                "description": "* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter\n* `lead` - lead"
             },
             "PartnerApplicationStatusEnum": {
                 "enum": [

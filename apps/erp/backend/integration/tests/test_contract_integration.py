@@ -295,6 +295,7 @@ WRITE_PATHS = {
     ("POST", "/clients/handoff"),
     ("POST", "/clients/{crm_client_id}/requests"),
     ("POST", "/clients/{crm_client_id}/invite"),
+    ("POST", "/partner-applications"),
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
     ("DELETE", "/users/{crm_user_id}/sessions"),
@@ -343,6 +344,23 @@ def client_request_body(crm_request_id, *, contact=None):
     }
 
 
+def partner_application_body(crm_lead_id, *, company="Контур Партнёр"):
+    """`PartnerApplicationIn` (ЛП-1): «Партнёр» из карточки лида."""
+    return {
+        "crm_lead_id": crm_lead_id,
+        "lead_number": f"L-{crm_lead_id:04d}",
+        "company_name": company,
+        "country": "UZ",
+        "inn": "",
+        "kind": "supplier",
+        "categories_description": "Поставляем крепёж и рельсовые скрепления",
+        "contact_name": "Иван Партнёров",
+        "email": "partner@example.test",
+        "phone": "+998901234567",
+        "language": "ru",
+    }
+
+
 def provision_body(crm_user_id, email):
     return {
         "crm_user_id": crm_user_id,
@@ -381,6 +399,7 @@ THROTTLE_CASES = {
     ("POST", "/clients/handoff"): ("/clients/handoff", handoff_body(8301, "830100001")),
     ("POST", "/clients/{crm_client_id}/requests"): ("/clients/999999/requests", client_request_body(8399)),
     ("POST", "/clients/{crm_client_id}/invite"): ("/clients/999999/invite", {"channel": "email"}),
+    ("POST", "/partner-applications"): ("/partner-applications", partner_application_body(8398)),
     ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
     ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
     ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
@@ -467,6 +486,22 @@ def exercise_all(client, world):
         out.append(("POST", requests_path, expected, json.loads(response.content)))
     hit("POST", requests_path, "/clients/8101/requests", 422, body={"crm_request_id": 8113})
     hit("POST", requests_path, "/clients/8101/requests", 401, api=anonymous, body=client_request_body(8114))
+
+    # POST /partner-applications (ЛП-1): 201 → 200 (повтор по номеру лида) → 409 (ключ с другим телом) → 422 → 401
+    partners_path = "/partner-applications"
+    first = hit("POST", partners_path, partners_path, 201, body=partner_application_body(8121))
+    repeat = hit("POST", partners_path, partners_path, 200, body=partner_application_body(8121))
+    assert first["erp_application_id"] == repeat["erp_application_id"] and first["created"] and not repeat["created"]
+    same_key = str(uuid.uuid4())
+    for body, expected in (
+        (partner_application_body(8122), 201),
+        (partner_application_body(8122, company="Иное"), 409),
+    ):
+        response = client.post(PREFIX + partners_path, body, format="json", HTTP_IDEMPOTENCY_KEY=same_key)
+        assert response.status_code == expected, response.content
+        out.append(("POST", partners_path, expected, json.loads(response.content)))
+    hit("POST", partners_path, partners_path, 422, body={"crm_lead_id": 8123})
+    hit("POST", partners_path, partners_path, 401, api=anonymous, body=partner_application_body(8124))
 
     # POST /clients/{id}/invite (0.8.0): 200 (Telegram — событие боту CRM; письмо — свой канал; причина в `error`) → 404 → 422 → 401
     invite = "/clients/{crm_client_id}/invite"
@@ -606,7 +641,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 17
+    assert len(THROTTLE_CASES) == 18
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))

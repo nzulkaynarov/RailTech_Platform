@@ -8103,6 +8103,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/leads/{lead}/partner": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Кто это?» → «Партнёр»: заявка кандидата в партнёры из карточки лида (ЛП-1)
+     * @description CRM `POST /leads/{id}/actions/hand_over_partner`. Раздел `crm.clients` полный. Вместо «Создать заявку» (лид — клиент): CRM заводит заявку кандидата в ERP (очередь «Заявки партнёров», источник «лид», ссылка — номер лида) и закрывает лид исходом «передан как партнёр» — в клиенты он не попадает, `LeadCard.partner_application` несёт номер заявки. Идемпотентно по лиду: повтор (двойной клик, вторая вкладка, параллельно) — 200 `created: false` с первой заявкой, второй не заводится; новая — 201. ERP недоступна — 503, лид не тронут, действие можно повторить. Отказы CRM — `details.reason`: `request_not_allowed` (лид уже закрыт), `erp_not_configured`, `not_lead_owner`.
+     */
+    post: operations["handOverCrmLeadAsPartner"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/requests/{deal}/retry": {
     parameters: {
       query?: never;
@@ -17747,6 +17767,8 @@ export interface components {
       discarded?: ("spam" | "test" | "duplicate") | null;
       /** @description Номер оставшегося лида, если `discarded = duplicate` */
       duplicate_of?: string | null;
+      /** @description Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
+      partner_application?: number | null;
     };
     /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
     LeadOrigin: {
@@ -17982,6 +18004,8 @@ export interface components {
       company?: {
         name: string;
         inn?: string | null;
+        /** @description Страна — вместе с названием ищет уже заведённую компанию (ЛП-1) */
+        country?: string | null;
       } | null;
       contact: components["schemas"]["RequestContactFormIn"];
       summary: string;
@@ -17997,6 +18021,31 @@ export interface components {
         method: "phone" | "email" | "paper";
         comment?: string | null;
       } | null;
+    };
+    /** @description Нужен e-mail или телефон */
+    PartnerHandoffIn: {
+      company_name: string;
+      /**
+       * @description ISO 3166-1 alpha-2
+       * @default UZ
+       */
+      country: string;
+      /** @default  */
+      inn: string;
+      /** @description Что предлагает кандидат (из запроса лида) */
+      offer: string;
+      contact_name: string;
+      /** @default  */
+      email: string;
+      /** @default  */
+      phone: string;
+    };
+    PartnerHandoffView: {
+      lead: string;
+      /** @description Заявка кандидата в ERP */
+      application: number;
+      /** @description `false` — лид уже был передан как партнёр: возвращена первая заявка */
+      created: boolean;
     };
     RequestCreatedView: {
       client_id: number;
@@ -34160,6 +34209,51 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  handOverCrmLeadAsPartner: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида */
+        lead: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerHandoffIn"];
+      };
+    };
+    responses: {
+      /** @description Лид уже передан как партнёр — та же заявка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
+        };
+      };
+      /** @description Заявка кандидата заведена в ERP, лид закрыт исходом «передан как партнёр» */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerHandoffView"];
         };
       };
       401: components["responses"]["SessionExpired"];

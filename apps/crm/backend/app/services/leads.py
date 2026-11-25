@@ -166,7 +166,7 @@ class LeadService:
             lead.assigned_user_id = who.user_id
             lead.snoozed_until = None
             # Забрав отброшенный лид, сотрудник возвращает его в списки (LH-1).
-            lead.discarded_kind = lead.duplicate_of_lead_id = None
+            lead.discarded_kind = lead.duplicate_of_lead_id = lead.partner_application_id = None
             if escalation is not None:
                 escalation.status = "taken"
                 escalation.taken_by_user_id = who.user_id

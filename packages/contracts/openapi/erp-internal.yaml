@@ -34122,11 +34122,13 @@ components:
       - public
       - client_cabinet
       - letter
+      - lead
       type: string
       description: |-
         * `public` - public
         * `client_cabinet` - client_cabinet
         * `letter` - letter
+        * `lead` - lead
     PartnerApplicationStatusEnum:
       enum:
       - submitted

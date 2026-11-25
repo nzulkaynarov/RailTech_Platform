@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas_company import Body, ident, text
 
-PartnerApplicationSource = Literal["public", "client_cabinet", "letter"]
+PartnerApplicationSource = Literal["public", "client_cabinet", "letter", "lead"]
 PartnerApplicationStatus = Literal[
     "submitted", "contract_sent", "candidate_agreed", "approved", "rejected"
 ]

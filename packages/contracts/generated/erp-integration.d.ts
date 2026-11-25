@@ -171,6 +171,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/partner-applications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Заявка кандидата в партнёры из карточки лида CRM («Партнёр», ЛП-1)
+     * @description Менеджер CRM отвечает на вопрос «Кто это?» в карточке лида словом «Партнёр»: ERP заводит заявку кандидата в
+     *     очередь «Заявки партнёров» (`source = lead`, `source_ref` = номер лида `lead_number`). Согласия кандидата ещё нет —
+     *     дальше обычный договорный шлюз; компания создаётся при одобрении, а не здесь. Идемпотентно по `lead_number`:
+     *     повтор и параллельный повтор (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй строки в очереди;
+     *     отклонённая заявка повтор не блокирует. E-mail не обязателен (лид мог прийти по телефону).
+     */
+    post: operations["createPartnerApplication"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/documents/{erp_document_id}/link": {
     parameters: {
       query?: never;
@@ -559,6 +583,46 @@ export interface components {
       next_step?: string | null;
       /** Format: date-time */
       updated_at: string;
+    };
+    /** @description Заявка кандидата в партнёры из карточки лида CRM (ЛП-1) */
+    PartnerApplicationIn: {
+      /** Format: int64 */
+      crm_lead_id: number;
+      /** @description Номер лида (`L-0123`) — `source_ref` заявки и ключ идемпотентности */
+      lead_number: string;
+      company_name: string;
+      /**
+       * @description ISO 3166-1 alpha-2
+       * @default UZ
+       */
+      country: string;
+      /** @default  */
+      inn: string;
+      /**
+       * @default supplier
+       * @enum {string}
+       */
+      kind: "manufacturer" | "supplier" | "principal" | "other";
+      /** @description Что предлагает кандидат (из запроса лида) */
+      categories_description: string;
+      contact_name: string;
+      /** @default  */
+      email: string;
+      /** @default  */
+      phone: string;
+      /**
+       * @default ru
+       * @enum {string}
+       */
+      language: "ru" | "uz" | "en";
+    };
+    PartnerApplicationOut: {
+      /** Format: int64 */
+      erp_application_id: number;
+      /** @enum {string} */
+      status: "submitted" | "contract_sent" | "candidate_agreed" | "approved" | "rejected";
+      /** @description `false` — заявка по этому лиду уже была */
+      created: boolean;
     };
     /** @description Заявка из «Создать заявку» CRM (CRM-03); лишние поля — 422 */
     ClientRequestIn: {
@@ -1268,6 +1332,54 @@ export interface operations {
         };
       };
       /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. `COMPANY_DO_NOT_WORK` — у компании отметка «Не работать» (Х-8): новая заявка не создана; CRM помечает заявку `failed` с причиной `erp_company_do_not_work`, повтор — после снятия отметки в ERP. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  createPartnerApplication: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка по этому лиду уже есть — возвращена она же (`created: false`) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationOut"];
+        };
+      };
+      /** @description Заявка создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationOut"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом */
       409: {
         headers: {
           [name: string]: unknown;
