@@ -321,7 +321,7 @@
       "validation": "проверьте комментарий",
       "unknown": "что-то пошло не так, введённое осталось в форме"
     },
-    "submitNoChannels": "Одобрить КП",
+    "submitNoChannels": "Одобрить без отправки",
     "submitFor": "Одобрить КП за {{name}}",
     "confirmVerb": "Одобрить"
   },

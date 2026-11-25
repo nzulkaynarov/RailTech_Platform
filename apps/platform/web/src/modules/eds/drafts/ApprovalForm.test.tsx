@@ -256,13 +256,14 @@ describe("Одобрение КП: форма", () => {
     await openForm();
   });
 
-  it("без каналов главная кнопка — «Одобрить КП»", async () => {
+  it("без каналов главная кнопка — «Одобрить без отправки» (Б-3)", async () => {
     const { form } = await openForm();
     for (const name of ["Telegram-бот", "Кабинет", "Почта"]) {
       fireEvent.click(within(form).getByRole("checkbox", { name }));
     }
 
-    expect(within(form).getByRole("button", { name: "Одобрить КП" })).toBeEnabled();
+    expect(within(form).getByRole("button", { name: "Одобрить без отправки" })).toBeEnabled();
+    expect(within(form).queryByRole("button", { name: APPROVE })).toBeNull();
   });
 
   it("состав КП не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {

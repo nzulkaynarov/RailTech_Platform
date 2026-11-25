@@ -321,7 +321,7 @@
       "validation": "izohni tekşiring",
       "unknown": "nimadir xato ketdi, kiritilgan matn şaklda qoldi"
     },
-    "submitNoChannels": "TTni tasdiqlaş",
+    "submitNoChannels": "Yubormasdan tasdiqlaş",
     "submitFor": "{{name}} uçun TTni tasdiqlaş",
     "confirmVerb": "Tasdiqlaş"
   },
