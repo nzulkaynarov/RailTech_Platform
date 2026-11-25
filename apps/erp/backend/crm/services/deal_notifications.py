@@ -61,11 +61,12 @@ def permission_holder_user_ids(permission: str) -> List[int]:
 
 
 def responsible_seller_ids(deal) -> List[int]:
-    """Ответственный продавец сделки (менеджер), если он ещё сотрудник; иначе пусто."""
-    manager_id = getattr(deal, "manager_id", None)
-    if not manager_id:
+    """Ответственный продавец сделки — взявший её из очереди (`assigned_to`), иначе прежний `manager`;
+    только если он ещё сотрудник своей компании."""
+    responsible = getattr(deal, "assigned_to_id", None) or getattr(deal, "manager_id", None)
+    if not responsible:
         return []
-    return [uid for uid in seller_team_user_ids(deal) if uid == manager_id]
+    return [uid for uid in seller_team_user_ids(deal) if uid == responsible]
 
 
 def notify_deal_users(

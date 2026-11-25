@@ -31,8 +31,10 @@ def team(world, settings):
     make_own_company(world["seller_co"])
     settings.OWN_COMPANY_ID = world["seller_co"].pk
     deal = world["deal"]
-    deal.manager = world["seller_user"]  # ответственный продавец
-    deal.save(update_fields=["manager"])
+    # ответственный продавец взял сделку из очереди (`assigned_to`); прежнего `manager` нет
+    deal.assigned_to = world["seller_user"]
+    deal.manager = None
+    deal.save(update_fields=["assigned_to", "manager"])
     other_seller = _member(world["seller_co"], "other-seller@g3.test", can_sell=True)
     return {
         "accountant": _with_role(world, "accountant@g3.test", "finance.invoice"),
