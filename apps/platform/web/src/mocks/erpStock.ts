@@ -6,6 +6,7 @@ import type {
   PriceRequest,
   PriceRequestAnswerIn,
   PriceRequestIn,
+  PriceRequestPreview,
   PriceRequestList,
   QueueItem,
   StockAdjustIn,
@@ -980,6 +981,27 @@ export const erpStockHandlers = [
     return HttpResponse.json<PriceRequestList>({ items });
   }),
 
+  http.post("*/api/v1/erp/calc/:number/price-requests/preview", async ({ params, request }) => {
+    // В-2: что увидит партнёр — название нашей карточки; слова клиента — только сотруднику и только для правки.
+    const held = guard("erp.stock", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json()) as PriceRequestIn;
+    const number = decodeURIComponent(String(params["number"]));
+    // роль «партнёр» ставится при отправке: предпросмотр доступен и компании, которой в списке партнёров ещё нет
+    const supplier = SUPPLIERS.find((s) => String(s.id) === body.supplier_id);
+    const lines = partnerLines(number, body);
+    if (lines === null) return missing("line_not_found", "Строки нет.");
+    const first = lines.find((l) => l.name !== null)?.name ?? "…";
+    return HttpResponse.json<PriceRequestPreview>({
+      subject: `Запрос цены и срока поставки — ${first}${lines.length > 1 ? ` и ещё ${String(lines.length - 1)}` : ""}`,
+      supplier: { id: body.supplier_id, name: supplier?.name ?? "Партнёр" },
+      to_email: body.to_email ?? supplier?.email ?? "",
+      note: body.note ?? null,
+      ready: lines.every((l) => l.name !== null),
+      lines,
+    });
+  }),
+
   http.post("*/api/v1/erp/calc/:number/price-requests", async ({ params, request }) => {
     const held = guard("erp.stock", "full");
     if ("error" in held) return held.error;
@@ -992,11 +1014,15 @@ export const erpStockHandlers = [
     if (!email) {
       return conflict("supplier_email_required", "У партнёра нет почты: укажите адрес для письма.");
     }
+    const named = partnerLines(number, body);
+    if (named === null) return missing("line_not_found", "Строки нет.");
+    if (named.some((l) => l.name === null)) {
+      return conflict("partner_name_required", "У строки нет карточки каталога: укажите название.");
+    }
     const lines = body.line_ids.map((id) => ({
       id: Number(id),
       line: lookupCalcLine(number, Number(id)),
     }));
-    if (lines.some((l) => l.line === null)) return missing("line_not_found", "Строки нет.");
     state.nextId += 1;
     const entry = {
       id: state.nextId,
@@ -1011,13 +1037,16 @@ export const erpStockHandlers = [
       answeredAt: null,
       answeredBy: null,
       answerNote: null,
-      lines: lines.map(({ id, line }) => ({
-        lineId: id,
-        name: line?.name ?? "",
-        article: line?.article ?? "",
-        quantity: line?.quantity ?? 1,
-        unit: line?.unit ?? "",
-      })),
+      lines: lines.map(({ id, line }) => {
+        const shown = named.find((n) => n.line_id === String(id));
+        return {
+          lineId: id,
+          name: shown?.name ?? "",
+          article: shown?.article ?? line?.article ?? "",
+          quantity: line?.quantity ?? 1,
+          unit: line?.unit ?? "",
+        };
+      }),
     };
     state.priceRequests.push(entry);
     write(state);
@@ -1701,6 +1730,29 @@ export const erpStockHandlers = [
 ];
 
 // --- общие помощники обработчиков ----------------------------------------------------------------
+
+/** Строки запроса так, как их увидит партнёр: карточка каталога или название, подтверждённое сотрудником; иначе `null`. */
+function partnerLines(number: string, body: PriceRequestIn): PriceRequestPreview["lines"] | null {
+  const confirmed = new Map((body.partner_names ?? []).map((row) => [row.line_id, row]));
+  const rows: PriceRequestPreview["lines"] = [];
+  for (const id of body.line_ids) {
+    const line = lookupCalcLine(number, Number(id));
+    if (line === null) return null;
+    const staff = confirmed.get(id);
+    const staffName = staff?.name.trim() ?? "";
+    const named = staffName !== "";
+    rows.push({
+      line_id: id,
+      name: named ? staffName : line.productId === null ? null : line.name,
+      article: staff?.article?.trim() || (line.productId === null ? "" : line.article),
+      source: named ? "staff" : line.productId === null ? "missing" : "card",
+      client_name: line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+    });
+  }
+  return rows;
+}
 
 function presentPriceRequest(p: ReturnType<typeof read>["priceRequests"][number]): PriceRequest {
   const supplier = SUPPLIERS.find((s) => s.id === p.supplierId);

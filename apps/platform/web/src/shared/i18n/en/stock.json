@@ -406,6 +406,15 @@
     "submit": "Send request",
     "sent": "Request sent to {{email}}",
     "failed": "The letter to “{{name}}” was not sent: the request stays in the log as “not sent”.",
+    "preview": {
+      "title": "What the partner will see",
+      "subject": "Subject",
+      "to": "To",
+      "note": "Comment to the partner",
+      "partnerName": "Name for the partner, line {{n}}",
+      "clientWords": "In the request: “{{name}}”. These words are not sent to the partner.",
+      "missing": "Enter a name: the line has no catalogue card."
+    },
     "logTitle": "Partner price requests",
     "logEmpty": "No requests yet.",
     "status": {

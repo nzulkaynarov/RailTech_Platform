@@ -189,6 +189,7 @@ ACTIONS: list[tuple[str, str, Any]] = [
     ("PUT", f"/erp/calc/{NUMBER}/lines/7/reserve", {"quantity": 1}),
     ("DELETE", f"/erp/calc/{NUMBER}/lines/7/reserve", None),
     ("POST", f"/erp/calc/{NUMBER}/price-requests", {"supplier_id": "5", "line_ids": ["7"]}),
+    ("POST", f"/erp/calc/{NUMBER}/price-requests/preview", {"supplier_id": "5", "line_ids": ["7"]}),
     ("POST", "/erp/price-requests/3/answer", {}),
     ("POST", "/erp/price-requests/3/partner-links/revoke", None),
     ("POST", f"/erp/stock/orders/{ORDER}/partner-links/revoke", None),
@@ -540,6 +541,57 @@ async def test_price_request_goes_through_erp_and_is_listed(
     check(listed, "/erp/calc/{number}/price-requests", "get")
     assert dict(journal.calls.last.request.url.params) == {"deal_id": "104"}
     assert listed.json()["items"][0]["status"] == "sent"
+
+
+async def test_price_request_preview_and_confirmed_partner_names(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """В-2: предпросмотр — что увидит партнёр; названия сотрудника уходят в ERP."""
+    await web.login(["SUPPLY"])
+    preview = erp.post(f"{STOCK}/price-requests/preview/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "subject": "Запрос цены и срока поставки — Рельс",
+                "supplier": {"id": 5, "name": "ООО Вымышленный Поставщик"},
+                "to_email": "sales@vendor.example",
+                "note": "Срочно",
+                "ready": False,
+                "lines": [
+                    {
+                        "quote_item_id": 7,
+                        "name": None,
+                        "article": "",
+                        "source": "missing",
+                        "client_name": "Рельс для ст. Чиланзар",
+                        "quantity": 2,
+                        "unit": "шт.",
+                    }
+                ],
+            },
+        )
+    )
+    body = {
+        "supplier_id": "5",
+        "line_ids": ["7"],
+        "note": "Срочно",
+        "partner_names": [{"line_id": "7", "name": "Рельс Р65", "article": "Р-65"}],
+    }
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/price-requests/preview", body)
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/calc/{number}/price-requests/preview", "post")
+    assert json.loads(preview.calls.last.request.content)["partner_names"] == [
+        {"line_id": 7, "name": "Рельс Р65", "article": "Р-65"}
+    ]
+    assert response.json()["lines"][0]["source"] == "missing"
+    assert response.json()["ready"] is False
+    erp.post(f"{STOCK}/price-requests/").mock(
+        return_value=httpx.Response(409, json={"detail": "PARTNER_NAME_REQUIRED"})
+    )
+    refused = await call(
+        web, "POST", f"/erp/calc/{ENCODED}/price-requests", {"supplier_id": "5", "line_ids": ["7"]}
+    )
+    assert refused.status_code == 409
 
 
 async def test_price_request_refusals(web: Web, erp: respx.MockRouter) -> None:

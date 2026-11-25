@@ -417,6 +417,7 @@ import type {
   PriceRequestAnswerIn,
   PriceRequestIn,
   PriceRequestList,
+  PriceRequestPreview,
   Profile,
   ProfileUpdate,
   ProjectActActionIn,
@@ -53164,6 +53165,138 @@ export const useCreateCalcPriceRequest = <
   TContext
 > => {
   return useMutation(getCreateCalcPriceRequestMutationOptions(options), queryClient);
+};
+
+export const getPreviewCalcPriceRequestUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/price-requests/preview`;
+};
+
+/**
+ * ERP `POST /stock/price-requests/preview/`: что увидит партнёр — тема, строки нашими словами (название и артикул карточки каталога; слова клиента партнёру не уходят), заметка ровно как уйдёт, адрес. Ничего не отправляет. У строки без карточки `name = null`, `source = missing`: отправить можно после «как назвать партнёру» (`partner_names`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Предпросмотр запроса цены партнёру
+ */
+export const previewCalcPriceRequest = async (
+  number: string,
+  priceRequestIn: PriceRequestIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequestPreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceRequestPreview>(getPreviewCalcPriceRequestUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceRequestIn),
+  });
+};
+
+export const getPreviewCalcPriceRequestMutationKey = () => ["previewCalcPriceRequest"] as const;
+
+export const getPreviewCalcPriceRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+    TError,
+    PreviewCalcPriceRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+  TError,
+  PreviewCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewCalcPriceRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+    PreviewCalcPriceRequestMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return previewCalcPriceRequest(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewCalcPriceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>
+>;
+export type PreviewCalcPriceRequestMutationBody = PriceRequestIn;
+export type PreviewCalcPriceRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type PreviewCalcPriceRequestMutationVariables = { number: string; data: PriceRequestIn };
+
+/**
+ * @summary Расчёт · Предпросмотр запроса цены партнёру
+ */
+export const usePreviewCalcPriceRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+      TError,
+      PreviewCalcPriceRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewCalcPriceRequest>>,
+  TError,
+  PreviewCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewCalcPriceRequestMutationOptions(options), queryClient);
 };
 
 export const getAnswerPriceRequestUrl = (requestId: string) => {

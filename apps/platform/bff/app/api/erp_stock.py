@@ -26,6 +26,7 @@ from app.schemas_erp_stock import (
     PriceRequestAnswerIn,
     PriceRequestIn,
     PriceRequestList,
+    PriceRequestPreview,
     ReceiptLineIn,
     ShipLineIn,
     StockAdjustIn,
@@ -56,6 +57,7 @@ from app.schemas_erp_stock import (
     to_order,
     to_order_list,
     to_price_request,
+    to_price_request_preview,
     to_product,
     to_receipts,
     to_reservation,
@@ -102,6 +104,7 @@ _CONFLICTS = {
     "REQUEST_NOT_SENT": "Письмо не ушло: ответ отмечать нечего.",
     "SERVICE_NOT_STOCKED": "Услуги на склад не принимаются.",
     "CALC_NOT_STARTED": "Расчёт ещё не начат.",
+    "PARTNER_NAME_REQUIRED": "У строки нет карточки каталога: укажите, как назвать её партнёру.",
 }
 _FIELDS = {"PRICES_FORBIDDEN": "unit_price", "BAD_CURRENCY": "currency"}
 
@@ -349,15 +352,7 @@ async def list_price_requests(authed: CalcReader, number: Number) -> PriceReques
     return PriceRequestList(items=[to_price_request(r) for r in data.get("results", [])])
 
 
-@router.post(
-    "/calc/{number}/price-requests",
-    response_model=PriceRequest,
-    operation_id="createCalcPriceRequest",
-    tags=["calc"],
-)
-async def create_price_request(authed: Actor, number: Number, body: PriceRequestIn) -> PriceRequest:
-    erp = _erp(authed)
-    deal_id = await erp.deal_id(number)
+def _price_request_payload(deal_id: Any, body: PriceRequestIn) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "deal_id": deal_id,
         "supplier_id": int(body.supplier_id),
@@ -367,7 +362,45 @@ async def create_price_request(authed: Actor, number: Number, body: PriceRequest
         payload["note"] = body.note
     if body.to_email:
         payload["to_email"] = str(body.to_email)
-    return to_price_request(await erp.stock("POST", "price-requests/", json=payload))
+    if body.partner_names:
+        payload["partner_names"] = [
+            {"line_id": int(row.line_id), "name": row.name, "article": row.article or ""}
+            for row in body.partner_names
+        ]
+    return payload
+
+
+@router.post(
+    "/calc/{number}/price-requests/preview",
+    response_model=PriceRequestPreview,
+    operation_id="previewCalcPriceRequest",
+    tags=["calc"],
+)
+async def preview_price_request(
+    authed: Actor, number: Number, body: PriceRequestIn
+) -> PriceRequestPreview:
+    """Что увидит партнёр: тема, строки нашими словами, заметка, адрес. Ничего не отправляет."""
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number)
+    return to_price_request_preview(
+        await erp.stock(
+            "POST", "price-requests/preview/", json=_price_request_payload(deal_id, body)
+        )
+    )
+
+
+@router.post(
+    "/calc/{number}/price-requests",
+    response_model=PriceRequest,
+    operation_id="createCalcPriceRequest",
+    tags=["calc"],
+)
+async def create_price_request(authed: Actor, number: Number, body: PriceRequestIn) -> PriceRequest:
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number)
+    return to_price_request(
+        await erp.stock("POST", "price-requests/", json=_price_request_payload(deal_id, body))
+    )
 
 
 @router.post(

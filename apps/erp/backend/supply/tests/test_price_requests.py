@@ -151,15 +151,9 @@ def test_role_matrix_and_the_answer(world):
     ],
 )
 def test_items_summary_counts_in_words(rest, tail):
-    from types import SimpleNamespace
+    from supply.services.price_requests import _summary
 
-    from supply.services.price_requests import _items_summary
-
-    first = SimpleNamespace(imported_raw_name="Рельс Р65", product_id=None, product=None, position=1)
-    items = [first] + [
-        SimpleNamespace(imported_raw_name="x", product_id=None, product=None, position=i) for i in range(rest)
-    ]
-    assert _items_summary(items) == "Рельс Р65" + tail
+    assert _summary("Рельс Р65", rest) == "Рельс Р65" + tail
 
 
 # ── СЦ-10: «Запросить цену» из черновика заказа ──────────────────────────────────────────────────────────────────────
@@ -229,3 +223,101 @@ def test_request_from_an_order_refusals(world):
     priced = _draft(world, [{"product_id": world["rail"].pk, "quantity": 1, "unit_price": "5.00"}])
     nothing = api(world["supply"]).post(f"{STOCK}orders/{priced['id']}/price-request/", {}, format="json")
     assert nothing.status_code == 409 and nothing.json()["detail"] == "NOTHING_TO_PRICE"
+
+
+# ── В-2: слова клиента партнёру не уходят без подтверждения сотрудником ─────────────────────────────────────────────
+
+CLIENT_WORDS = "Стрелка для ст. Чиланзар, ООО МетроСтрой, черт. МС-77"
+
+
+def _client_words(items):
+    QuoteItem.objects.filter(pk=items[0].pk).update(imported_raw_name=CLIENT_WORDS)
+
+
+def _everything_partner_sees(request_id: int) -> str:
+    """Тема, строки, письмо (текст и HTML) и всё, что видит партнёр в кабинете и по ссылке: проекция партнёра."""
+    from portal.services import partner_orders
+
+    saved = PriceRequest.objects.get(pk=request_id)
+    parts = [saved.subject, saved.note] + [f"{line.name} {line.article}" for line in saved.lines.all()]
+    for message in mail.outbox:
+        parts += [message.subject, message.body] + [html for html, _mime in message.alternatives]
+    projection = partner_orders.get_partner_price_request(saved.supplier, saved.pk)
+    parts.append(str(projection))
+    return "\n".join(str(p) for p in parts)
+
+
+def test_client_words_never_reach_the_partner_unconfirmed(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2), (world["bolt"], 100)])
+    _client_words(items)
+    response = _ask(world, deal, items)
+    assert response.status_code == 201, response.json()
+    body = response.json()
+    assert [line["name"] for line in body["lines"]] == ["Перевод стрелочный Р65 1/11", "Болт путевой М22"]
+    assert body["lines"][0]["article"] == world["rail"].sku
+    seen = _everything_partner_sees(body["id"])
+    for secret in ("Чиланзар", "МетроСтрой", "МС-77", CLIENT_WORDS):
+        assert secret not in seen
+    assert "Перевод стрелочный Р65 1/11" in seen
+
+
+def test_a_line_without_a_card_is_not_sent_until_the_staff_names_it(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2), (world["bolt"], 100)])
+    _client_words(items)
+    QuoteItem.objects.filter(pk=items[0].pk).update(product=None)
+    refused = _ask(world, deal, items)
+    assert refused.status_code == 409 and refused.json()["detail"] == "PARTNER_NAME_REQUIRED"
+    assert not PriceRequest.objects.exists() and not mail.outbox
+    confirmed = _ask(world, deal, items, partner_names=[{"line_id": items[0].pk, "name": "Стрелочный перевод Р65"}])
+    assert confirmed.status_code == 201, confirmed.json()
+    seen = _everything_partner_sees(confirmed.json()["id"])
+    assert "Стрелочный перевод Р65" in seen
+    for secret in ("Чиланзар", "МетроСтрой", "МС-77"):
+        assert secret not in seen
+
+
+def test_the_staff_can_rename_a_card_line_and_the_subject_follows(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2)])
+    response = _ask(
+        world, deal, items, partner_names=[{"line_id": items[0].pk, "name": "Крестовина Р65", "article": "К-1"}]
+    )
+    assert response.status_code == 201
+    assert response.json()["subject"].endswith("Крестовина Р65") and mail.outbox[0].subject.endswith("Крестовина Р65")
+    assert response.json()["lines"][0]["article"] == "К-1"
+
+
+def test_preview_shows_what_the_partner_will_see_including_the_note(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2), (world["bolt"], 100)])
+    _client_words(items)
+    QuoteItem.objects.filter(pk=items[1].pk).update(product=None, imported_raw_name="Наши болты для Метростроя")
+    body = {"deal_id": deal.pk, "supplier_id": world["vendor"].pk, "line_ids": [i.pk for i in items], "note": "Срочно"}
+    first = api(world["supply"]).post(f"{URL}preview/", body, format="json")
+    assert first.status_code == 200, first.json()
+    data = first.json()
+    assert data["ready"] is False and data["note"] == "Срочно"
+    assert [(row["source"], row["name"]) for row in data["lines"]] == [
+        ("card", "Перевод стрелочный Р65 1/11"),
+        ("missing", None),
+    ]
+    assert data["lines"][0]["client_name"] == CLIENT_WORDS  # сотрудник видит слова клиента, чтобы поправить
+    assert "Чиланзар" not in data["subject"] and not mail.outbox and not PriceRequest.objects.exists()
+    body["partner_names"] = [{"line_id": items[1].pk, "name": "Болт путевой"}]
+    second = api(world["supply"]).post(f"{URL}preview/", body, format="json").json()
+    assert second["ready"] is True and second["lines"][1]["source"] == "staff"
+
+
+def test_preview_needs_the_supply_right(world):
+    deal, _q, items = make_deal(world, [(world["rail"], 2)])
+    body = {"deal_id": deal.pk, "supplier_id": world["vendor"].pk, "line_ids": [items[0].pk]}
+    assert api(world["reader"]).post(f"{URL}preview/", body, format="json").status_code == 403
+
+
+def test_preview_works_before_the_company_is_marked_as_a_partner(world):
+    """Роль «поставщик» ставится при отправке (ЕД-6): предпросмотр доступен и компании без неё, отправка — нет."""
+    from parties.models import Company
+
+    deal, _q, items = make_deal(world, [(world["rail"], 2)])
+    stranger = Company.objects.create(name="Новая Компания", inn="5550001112")
+    body = {"deal_id": deal.pk, "supplier_id": stranger.pk, "line_ids": [items[0].pk]}
+    assert api(world["supply"]).post(f"{URL}preview/", body, format="json").status_code == 200
+    assert api(world["supply"]).post(URL, body, format="json").status_code == 404

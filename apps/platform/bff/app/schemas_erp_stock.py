@@ -563,6 +563,16 @@ class StockShipIn(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
 
+class PartnerNameIn(BaseModel):
+    """«Как назвать партнёру»: название и артикул, подтверждённые сотрудником."""
+
+    model_config = _STRICT
+
+    line_id: str = Field(pattern=DIGITS, max_length=12)
+    name: str = Field(min_length=1, max_length=500)
+    article: str | None = Field(default=None, max_length=120)
+
+
 class PriceRequestIn(BaseModel):
     model_config = _STRICT
 
@@ -572,6 +582,37 @@ class PriceRequestIn(BaseModel):
     )
     note: str | None = Field(default=None, max_length=1000)
     to_email: str | None = Field(default=None, pattern=EMAIL, max_length=254)
+    partner_names: list[PartnerNameIn] | None = Field(
+        default=None,
+        max_length=100,
+        description=(
+            "Подтверждённые сотрудником названия для партнёра. Строка без карточки "
+            "без названия не уходит (409 `PARTNER_NAME_REQUIRED`); слова клиента сами не попадают."
+        ),
+    )
+
+
+class PriceRequestPreviewLine(BaseModel):
+    line_id: str
+    name: str | None = Field(description="Как увидит партнёр; null — не названа, отправить нельзя")
+    article: str
+    source: Literal["card", "staff", "missing"] = Field(
+        description="card — карточка каталога; staff — подтверждено сотрудником; missing — нет"
+    )
+    client_name: str = Field(
+        description="Слова клиента из заявки — только сотруднику, партнёру не уходят"
+    )
+    quantity: float
+    unit: str
+
+
+class PriceRequestPreview(BaseModel):
+    subject: str
+    supplier: StockSupplierRef
+    to_email: str
+    note: str | None = Field(description="Заметка партнёру ровно так, как уйдёт")
+    ready: bool = Field(description="У каждой строки есть название для партнёра")
+    lines: list[PriceRequestPreviewLine]
 
 
 class PriceRequestAnswerIn(BaseModel):
@@ -1004,6 +1045,29 @@ def to_shipments(raw: Mapping[str, Any]) -> StockShipmentList:
     return StockShipmentList(
         items=[to_shipment(s) for s in raw.get("results", [])],
         rights=to_rights(raw.get("rights") or {}),
+    )
+
+
+def to_price_request_preview(raw: Mapping[str, Any]) -> PriceRequestPreview:
+    supplier = raw["supplier"]
+    return PriceRequestPreview(
+        subject=raw["subject"],
+        supplier=StockSupplierRef(id=str(supplier["id"]), name=supplier["name"]),
+        to_email=raw.get("to_email") or "",
+        note=raw.get("note"),
+        ready=bool(raw["ready"]),
+        lines=[
+            PriceRequestPreviewLine(
+                line_id=str(x["quote_item_id"]),
+                name=x.get("name"),
+                article=x.get("article") or "",
+                source=x["source"],
+                client_name=x.get("client_name") or "",
+                quantity=x["quantity"],
+                unit=x.get("unit") or "",
+            )
+            for x in raw.get("lines") or []
+        ],
     )
 
 

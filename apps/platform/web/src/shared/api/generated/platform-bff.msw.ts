@@ -329,6 +329,7 @@ import type {
   PriceImportStatus,
   PriceRequest,
   PriceRequestList,
+  PriceRequestPreview,
   Profile,
   ProjectAct,
   ProjectActRef,
@@ -32224,6 +32225,34 @@ export const getCreateCalcPriceRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getPreviewCalcPriceRequestResponseMock = (
+  overrideResponse: Partial<Extract<PriceRequestPreview, object>> = {},
+): PriceRequestPreview => ({
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ready: faker.datatype.boolean(),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    source: faker.helpers.arrayElement(["card", "staff", "missing"] as const),
+    client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.float({ fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
 export const getAnswerPriceRequestResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -50948,6 +50977,30 @@ export const getCreateCalcPriceRequestMockHandler = (
   );
 };
 
+export const getPreviewCalcPriceRequestMockHandler = (
+  overrideResponse?:
+    | PriceRequestPreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PriceRequestPreview> | PriceRequestPreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/price-requests/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewCalcPriceRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getAnswerPriceRequestMockHandler = (
   overrideResponse?:
     | PriceRequest
@@ -54296,6 +54349,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getReleaseCalcLineReservationMockHandler(),
   getListCalcPriceRequestsMockHandler(),
   getCreateCalcPriceRequestMockHandler(),
+  getPreviewCalcPriceRequestMockHandler(),
   getAnswerPriceRequestMockHandler(),
   getGetPriceRequestPartnerLinksMockHandler(),
   getRevokePriceRequestPartnerLinksMockHandler(),
