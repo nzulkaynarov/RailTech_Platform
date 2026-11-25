@@ -209,8 +209,10 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { mobile } = useViewport();
   const [params, setParams] = useSearchParams();
   // План 1.1: «Создать → Расчёт» открывает расчёт сразу с разбором файла заявки (`?parse=1`)
+  // Разбор открывается только там, где строки ещё правятся: у КП на одобрении и в закрытом расчёте он кончился бы ошибкой (Б-6)
+  const parseOpen = ["not_started", "in_progress", "returned"].includes(stateOf(sheet));
   const [dialog, setDialog] = useState<"add" | "parse" | "previous" | "price" | "terms" | null>(
-    () => (params.get("parse") === "1" && sheet.rights.build ? "parse" : null),
+    () => (params.get("parse") === "1" && sheet.rights.build && parseOpen ? "parse" : null),
   );
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
   const openForm = (kind: "add" | "price" | "terms") => {
