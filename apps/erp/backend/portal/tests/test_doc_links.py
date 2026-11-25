@@ -119,7 +119,10 @@ class TestMint:
         second, raw2 = doc_links.mint_quote_link(quote)
         assert raw1 != raw2 and first.pk != second.pk
 
-    def test_a_recipient_without_a_contact_gets_one_without_rights(self, quote, client_company, client_contact):
+    def test_a_recipient_without_a_contact_stays_a_guest_of_that_one_document(self, quote, client_company):
+        """В-1 (ADR-0030 п. 7, поправка 2026-11-25): адрес получателя контактом не становится; гость — один документ."""
+        from parties.models import Contact
+
         from accounts.models import CustomUser
 
         buyer = CustomUser.objects.create_user(
@@ -128,9 +131,68 @@ class TestMint:
         quote.deal.contact = None
         quote.deal.client = buyer
         quote.deal.save()
-        link, _ = doc_links.mint_quote_link(quote)
-        assert link.contact.email == "new.buyer@example.uz" and link.contact.company_id == client_company.pk
-        assert link.contact.can_act is False and link.contact.is_admin is False
+        before = Contact.objects.filter(company=client_company).count()
+        link, raw = doc_links.mint_quote_link(quote)
+        assert link.contact is None and link.recipient_email == "new.buyer@example.uz"
+        assert Contact.objects.filter(company=client_company).count() == before
+        # просмотр и PDF — по ссылке, без входа; действий нет, причина названа
+        body = open_(raw).json()
+        assert body["session"] == "none" and body["decide"] == {"allowed": False, "reason": "no_contact"}
+        assert post("pdf", {"token": raw}).status_code == status.HTTP_200_OK
+        # кода и сессии нет: войти в кабинет по такой ссылке нельзя
+        mail.outbox.clear()
+        assert post("code", {"token": raw}).status_code == status.HTTP_403_FORBIDDEN
+        assert post("verify", {"token": raw, "code": "123456"}).status_code == status.HTTP_403_FORBIDDEN
+        assert not mail.outbox and not MagicLinkToken.objects.filter(document_link=link).exists()
+        assert not PortalSession.objects.exists()
+        assert post("act", {"token": raw, "action": "accept"}).status_code in (401, 403)
+        # отзыв ссылки заканчивает гостевой доступ
+        doc_links.revoke_quote_links(quote, None)
+        assert open_(raw).status_code == status.HTTP_410_GONE
+        assert post("pdf", {"token": raw}).status_code == status.HTTP_410_GONE
+        # вход по ссылке на почту такому адресу тоже не выпускается: контакта нет
+        from portal.services.magic_link import find_login_contact
+
+        assert find_login_contact("new.buyer@example.uz") is None
+
+    def test_old_auto_created_contacts_are_listed_read_only(self, quote, client_company):
+        """Контакт, заведённый прежним выпуском ссылок, попадает в список для владельца; назначенные и с правами — нет."""
+        from io import StringIO
+
+        from django.core.management import call_command
+        from parties.models import Contact
+
+        auto = Contact.objects.create(company=client_company, name="a@x.example", email="a@x.example", can_act=False)
+        DocumentLink.objects.create(
+            token_hash=hash_token("old"),
+            kind="quote",
+            quote=quote,
+            contact=auto,
+            recipient_email="a@x.example",
+            expires_at=timezone.now() + datetime.timedelta(days=5),
+        )
+        rows = doc_links.auto_created_document_contacts()
+        assert [row["contact_id"] for row in rows] == [auto.pk]
+        assert not [row for row in rows if row["email"] == quote.deal.contact.email]  # контакт заявки — не авто
+        out = StringIO()
+        call_command("list_auto_document_contacts", stdout=out)
+        assert "a@x.example" in out.getvalue() and Contact.objects.filter(pk=auto.pk).exists()
+
+    def test_a_guest_link_opens_no_other_part_of_the_cabinet(self, quote):
+        """Гость по ссылке без контакта не листает ни КП, ни счета, ни документы, ни команду, ни чат."""
+        from accounts.models import CustomUser
+
+        buyer = CustomUser.objects.create_user(username="guest.b", email="guest.b@example.uz", password="x")
+        quote.deal.contact = None
+        quote.deal.client = buyer
+        quote.deal.save()
+        _, raw = doc_links.mint_quote_link(quote)
+        guest = PortalAPIClient()
+        assert open_(raw, guest).status_code == status.HTTP_200_OK
+        for path in ("quotes", "invoices", "documents", "team", "messages", "contracts", "acts"):
+            response = guest.get(f"/api/portal/v1/{path}")
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED, path
+        assert guest.get(f"/api/portal/v1/quotes/{quote.pk}").status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_the_send_task_mails_a_cabinet_link_not_the_erp_page(self, quote, monkeypatch):
         from crm import tasks
@@ -369,18 +431,6 @@ class TestCodeIsLogin:
         assert client.post(f"{BASE}/act", {"token": raw, "action": "accept"}, format="json").status_code == 403
         quote.refresh_from_db()
         assert quote.status.code == QuoteStatusCode.SENT
-
-    def test_a_new_first_contact_does_not_become_admin(self, quote):
-        from accounts.models import CustomUser
-
-        buyer = CustomUser.objects.create_user(username="first", email="first@example.uz", password="x")
-        quote.deal.contact = None
-        quote.deal.client = buyer
-        quote.deal.save()
-        link, raw = doc_links.mint_quote_link(quote)
-        client, response = verified_client(raw, link)
-        assert response.json()["can_act"] is False
-        assert link.contact.is_admin is False
 
     def test_session_keeps_the_legal_gate(self, minted):
         from portal.services import legal
