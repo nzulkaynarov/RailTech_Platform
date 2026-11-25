@@ -98,7 +98,10 @@ function formatInstant(date: Date, timeZone: string, withTime: boolean, language
     ...DATE_STYLE,
     ...(withTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
     timeZone,
-  }).format(date);
+  })
+    .format(date)
+    // «г.» не отрывается от года на новую строку
+    .replace(/ г\./, `${NBSP}г.`);
 }
 
 /** Календарная дата `YYYY-MM-DD` (поле `format: date`): «25 окт. 2026 г.», без сдвига по поясу. */

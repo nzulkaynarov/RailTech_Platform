@@ -462,7 +462,7 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                 "rezolyusiyasiz kiruvçi xat",
                 "incoming letter without a resolution",
             )
-            + (tr(" · срочное", " · shoşilinç", " · urgent") if letter.get("urgent") else ""),
+            + (tr(" · срочное", " · şoşilinç", " · urgent") if letter.get("urgent") else ""),
             title=tr(
                 f"Наложить резолюцию на письмо {number}",
                 f"{number} xatga rezolyusiya qöyiş",
@@ -909,7 +909,7 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
 _SUBJECT = {
     "access": ("доступ", "kiriş", "access"),
     "notification": ("уведомления", "bildirişnomalar", "notifications"),
-    "template": ("шаблон документа", "hujjat şablonı", "document template"),
+    "template": ("шаблон документа", "hujjat şabloni", "document template"),
     "error": ("ошибка", "xato", "error"),
     "other": ("другое", "boşqa", "other"),
 }
@@ -1033,7 +1033,7 @@ def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                 )
                 if expected
                 else None,
-                tr(f"{days} дн. просрочки", f"{days} kun kecikkan", f"{days} d overdue")
+                tr(f"{days} дн. просрочки", f"{days} kun keçikkan", f"{days} d overdue")
                 if isinstance(days, int)
                 else None,
             ),
@@ -1316,7 +1316,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="memos_to_approve",
             label=tr("Служебные записки", "Xizmat xatlari", "Internal memos"),
             count=_own_count(snap.memos),
-            hint=tr("Документы · Внутренние", "Hujjatlar · Ichki", "Documents · Internal")
+            hint=tr("Документы · Внутренние", "Hujjatlar · Içki", "Documents · Internal")
             + (tr(" · не меньше", " · kamida", " · at least") if snap.memos_more else ""),
             path="/eds/approvals",
         )
@@ -1340,7 +1340,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
     if wants_projects(view):
         cards["projects_in_work"] = QueueCard(
             key="projects_in_work",
-            label=tr("Проекты в работе", "İşdagi loyihalar", "Projects in progress"),
+            label=tr("Проекты в работе", "Işdagi loyihalar", "Projects in progress"),
             count=projects_in_work(snap),
             hint=tr("Главная · Проекты", "Asosiy · Loyihalar", "Home · Projects"),
             path="/eds/projects",

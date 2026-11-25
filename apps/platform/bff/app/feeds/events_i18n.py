@@ -80,9 +80,9 @@ EVENT_TEXTS_EN: dict[str, str] = {
     "catalog.category_request_approved": "Category created",
     "catalog.category_request_rejected": "Category request declined",
     "product.hs_code_changed": "HS code changed",
-    "company.linked_by_inn": "Company linked to a CRM client by tax ID",
-    "integration.paired_bootstrap": "Operations paired with Contacts",
-    "integration.paired_code": "Operations paired with Contacts by code",
+    "company.linked_by_inn": "Company linked to a client by tax ID",
+    "integration.paired_bootstrap": "Systems linked",
+    "integration.paired_code": "Systems linked by code",
     "integration.pairing_code_issued": "Pairing code issued",
     "portal.legal.accepted": "The client accepted the cabinet terms or policy",
     "admin.portal_legal.published": "A new edition of a cabinet document was published",
@@ -177,15 +177,15 @@ EVENT_TEXTS_UZ: dict[str, str] = {
     "fulfillment.status_changed": "Bajariliş holati özgardi",
     "fulfillment.accepted_by_client": "Bajarilişni mijoz qabul qildi",
     "fulfillment.accept_failed": "Bajariliş «qabul qilindi» holatiga ötkazilmadi",
-    "fulfillment.overdue": "Bajarilişda kechikiş",
+    "fulfillment.overdue": "Bajarilişda keçikiş",
     "catalog.category_requested": "Yangi kategoriya söralgan",
     "catalog.category_request_reviewed": "Kategoriya sörovi körib çiqildi",
     "catalog.category_request_approved": "Kategoriya yaratildi",
     "catalog.category_request_rejected": "Kategoriya sörovi rad etildi",
     "product.hs_code_changed": "TIF TN kodi özgardi",
-    "company.linked_by_inn": "Kompaniya CRM mijoziga STIR böyiça bağlandi",
-    "integration.paired_bootstrap": "Amallar Kontaktlar bilan juftlandi",
-    "integration.paired_code": "Amallar Kontaktlar bilan kod orqali juftlandi",
+    "company.linked_by_inn": "Kompaniya mijozga STIR böyiça bağlandi",
+    "integration.paired_bootstrap": "Tizimlar bağlandi",
+    "integration.paired_code": "Tizimlar kod orqali bağlandi",
     "integration.pairing_code_issued": "Juftlaş kodi berildi",
     "portal.legal.accepted": "Mijoz kabinet şartlari yoki siyosatini qabul qildi",
     "admin.portal_legal.published": "Kabinet hujjatining yangi tahriri eʼlon qilindi",
@@ -206,10 +206,10 @@ EVENT_TEXTS_UZ: dict[str, str] = {
     "admin.exchange_rate.auto_skipped": "MB kursi qöllanmadi: qöldagi kurs amalda",
 }
 
-NEUTRAL = ("Действие в ERP", "ERPdagi harakat", "Action in Operations")
+NEUTRAL = ("Действие в системе", "Tizimdagi harakat", "Action in the system")
 ADMIN = (
-    "Административное действие в ERP",
-    "ERPdagi maʼmuriy harakat",
-    "Administrative action in Operations",
+    "Административное действие",
+    "Maʼmuriy harakat",
+    "Administrative action",
 )
 SYSTEM = ("Система", "Tizim", "System")

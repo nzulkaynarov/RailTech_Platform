@@ -578,9 +578,9 @@ async def test_activity_drops_service_events_and_never_shows_a_raw_code(
     assert [i["text"] for i in response.json()["items"]] == [
         "КП отправлено клиенту",
         "Договор отменён",
-        "Действие в ERP",
-        "Действие в ERP",
-        "Административное действие в ERP",
+        "Действие в системе",
+        "Действие в системе",
+        "Административное действие",
     ]
     for raw in ("sso.", "auth.", "some.new_event", "[FORCE_ADMIN]"):
         assert raw not in response.text
@@ -614,7 +614,7 @@ async def test_activity_admin_events_are_words_not_raw_verbs(
     assert [i["text"] for i in items] == [
         "Строка справочника удалена",
         "Шаблон письма добавлен",
-        "Административное действие в ERP",
+        "Административное действие",
         "КП отправлено клиенту",
     ]
     assert [i.get("code") for i in items] == [
@@ -1390,10 +1390,30 @@ def test_activity_event_texts_exist_in_every_language() -> None:
     token = lang_var.set("uz")
     try:
         assert event_text("invoice.issued", "") == "Hisob çiqarildi"
-        assert event_text("zzz.unknown", "") == "ERPdagi harakat"
+        assert event_text("zzz.unknown", "") == "Tizimdagi harakat"
         lang_var.set("en")
         assert event_text("invoice.issued", "") == "Invoice issued"
-        assert event_text("admin.zzz", "") == "Administrative action in Operations"
+        assert event_text("admin.zzz", "") == "Administrative action"
     finally:
         lang_var.reset(token)
     assert event_text("invoice.issued", "") == "Счёт выставлен"
+
+
+async def test_activity_today_follows_accept_language(web: Web, fb: FeedBackends) -> None:
+    """СЦ-7: `/activity/today` с `Accept-Language: uz` отвечает по-узбекски, без — по-русски."""
+    m = fb.m
+    fb.state["activity_logs"] = {
+        "results": [
+            log(1, m.ago(minutes=1), "quote.sent", event_code="quote.sent"),
+            log(2, m.ago(minutes=2), "", event_code="", user_name=""),
+            log(3, m.ago(minutes=3), "", event_code="some.new_event"),
+        ]
+    }
+    await web.login(["DIRECTOR"])
+
+    uz = await web.client.get("/api/v1/activity/today", headers={"Accept-Language": "uz-UZ"})
+    ru = await web.client.get("/api/v1/activity/today")
+
+    assert uz.json()["items"][0]["text"] == "TT mijozga yuborildi"
+    assert "Tizimdagi harakat" in [i["text"] for i in uz.json()["items"]]
+    assert ru.json()["items"][0]["text"] == "КП отправлено клиенту"

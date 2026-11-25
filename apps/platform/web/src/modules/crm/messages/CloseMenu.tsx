@@ -1,5 +1,5 @@
 import { Button, Dropdown, Menu } from "antd";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChevronDownIcon } from "../../../shared/ui/lucide";
@@ -27,6 +27,8 @@ export function CloseMenu({
   const { t } = useTranslation("messages");
   const [open, setOpen] = useState<CloseKind | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const items = [
     ...(close
       ? [
@@ -50,6 +52,8 @@ export function CloseMenu({
       kind={open}
       onClose={() => {
         setOpen(null);
+        // после окна фокус возвращается на «Закрыть», а не пропадает в начало страницы
+        buttonRef.current?.focus();
       }}
     />
   ) : null;
@@ -57,8 +61,10 @@ export function CloseMenu({
     return (
       <>
         <Button
+          ref={buttonRef}
           aria-label={`${t("close.menu")}: ${name}`}
           aria-expanded={expanded}
+          aria-controls={expanded ? menuId : undefined}
           onClick={() => {
             setExpanded((value) => !value);
           }}
@@ -67,7 +73,14 @@ export function CloseMenu({
         </Button>
         {expanded ? (
           <Menu
+            id={menuId}
             className="pf-crm-close-inline"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              setExpanded(false);
+              buttonRef.current?.focus();
+            }}
             selectable={false}
             items={items}
             onClick={({ key }) => {

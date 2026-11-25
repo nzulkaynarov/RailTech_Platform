@@ -17,12 +17,26 @@ lang_var: ContextVar[str] = ContextVar("feed_lang", default="ru")
 
 
 def parse_language(header: str | None) -> str:
-    """Первый поддерживаемый язык из `Accept-Language`; нет или чужой — русский."""
+    """Язык из `Accept-Language` с учётом весов (`q`): `uz`, `uz-*`, `en`, `en-*`, `ru`, `ru-*`.
+
+    Побеждает поддерживаемый язык с наибольшим весом (при равенстве — раньше в списке);
+    `q=0` — «не хочу»; нет или чужие языки — русский."""
+    best, best_q = "ru", 0.0
     for part in (header or "").split(","):
-        tag = part.split(";")[0].strip().lower()[:2]
-        if tag in LANGUAGES:
-            return tag
-    return "ru"
+        tag, *params = (piece.strip() for piece in part.split(";"))
+        primary = tag.lower().split("-")[0]
+        if primary not in LANGUAGES:
+            continue
+        weight = 1.0
+        for param in params:
+            if param.lower().startswith("q="):
+                try:
+                    weight = float(param[2:])
+                except ValueError:
+                    weight = 0.0
+        if weight > best_q:
+            best, best_q = primary, weight
+    return best
 
 
 def tr(ru: str, uz: str, en: str) -> str:

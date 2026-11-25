@@ -80,9 +80,9 @@ def _calc_action(task: dict[str, Any], mine: set[str]) -> str | None:
     states = [visas.get(group) for group in ("stock", "supply", "engineer")]
     if "done" in states and all(s in ("none", "done") for s in states):
         return tr(
-            "Отправить директору расчёт по заявке",
-            "Ariza böyiça hisob-kitobni direktorga yuboriş",
-            "Send the costing to the director for request",
+            "Отправить на утверждение расчёт по заявке",
+            "Ariza böyiça hisob-kitobni tasdiqlaşga yuboriş",
+            "Send the costing for approval for request",
         )
     return tr("Рассчитать заявку", "Arizani hisoblaş", "Cost request")
 
@@ -217,7 +217,7 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
                 kind="issue_invoice",
                 title=tr(
                     f"Выставить счёт {number}",
-                    f"{number} hisobni chiqariş",
+                    f"{number} hisobni çiqariş",
                     f"Issue invoice {number}",
                 ),
                 subtitle=join(
@@ -315,9 +315,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
         return (
             "issue_contract",
             tr(
-                f"Выставить у оператора договор {contract.number} по",
-                f"{contract.number} şartnomani operatorda chiqariş:",
-                f"Issue contract {contract.number} at the operator —",
+                f"Отправить на подпись договор {contract.number} по",
+                f"{contract.number} şartnomani imzoga yuboriş:",
+                f"Send contract {contract.number} for signature —",
             ),
             tr(
                 "клиент согласовал редакцию",
@@ -334,9 +334,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
                 f"Attach the scan of signed contract {contract.number} —",
             ),
             tr(
-                "договор выставлен у оператора",
-                "şartnoma operatorda chiqarilgan",
-                "the contract is issued at the operator",
+                "договор на подписи",
+                "şartnoma imzoda",
+                "the contract is out for signature",
             ),
         )
     if contract.status == "rejected":
@@ -372,7 +372,7 @@ def _act_step(row: RawRow) -> tuple[str, str] | None:
             tr("Выпустить акт по", "Aktni çiqariş:", "Issue the act for"),
             tr(
                 "товар доставлен, счета оплачены",
-                "tovar yetkazildi, hisoblar töllangan",
+                "tovar yetkazildi, hisoblar tölangan",
                 "goods delivered, invoices paid",
             ),
         )
@@ -390,7 +390,7 @@ def _rows(raw: list[dict[str, Any]]) -> list[RawRow]:
 
 
 def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
-    """Договор (сформировать, отправить, выставить у оператора, скан, доработать) и акт к выпуску:
+    """Договор (сформировать, отправить, на подпись, скан, доработать) и акт к выпуску:
     строка открывает проект на вкладке «Договор» или «Акт»."""
     del now
     out: list[Work] = []

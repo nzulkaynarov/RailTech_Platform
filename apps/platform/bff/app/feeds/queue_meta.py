@@ -176,7 +176,7 @@ DEFAULT_REASON: dict[QueueItemKind, tuple[str, str, str]] = {
     ),
     "issue_invoice": (
         "счёт ждёт выставления",
-        "hisob chiqarilişini kutmoqda",
+        "hisob çiqarilişini kutmoqda",
         "the invoice awaits issuing",
     ),
     "issue_contract": (
@@ -191,7 +191,7 @@ DEFAULT_REASON: dict[QueueItemKind, tuple[str, str, str]] = {
     ),
     "issue_act": (
         "счета оплачены — нужен акт",
-        "hisoblar töllangan — akt kerak",
+        "hisoblar tölangan — akt kerak",
         "invoices are paid — an act is needed",
     ),
     "supplier_overdue": (

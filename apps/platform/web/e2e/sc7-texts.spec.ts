@@ -7,12 +7,12 @@ import { expectNoViolations } from "./support/axe";
 // журнал доставки почты — назначение и причина словами. Обе ширины, axe (WCAG 2.1 AA). Данные вымышленные.
 const WIDTHS = [1512, 1440, 390] as const;
 
-async function shot(page: Page, name: string): Promise<void> {
+async function shot(page: Page, name: string, fullPage = true): Promise<void> {
   const dir = process.env["E2E_SCREENSHOT_DIR"];
   if (!dir) return;
   await page.waitForTimeout(400);
   const width = page.viewportSize()?.width ?? 0;
-  await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, fullPage: true });
+  await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, fullPage });
 }
 
 async function signInAt(page: Page, width: number, email: string): Promise<void> {
@@ -48,7 +48,8 @@ test.describe("СЦ-7: тексты и числа", () => {
       ]);
       expect(menuBox && messageBox && menuBox.y >= messageBox.y + messageBox.height - 1).toBe(true);
       await expect(lastMessage).toBeVisible();
-      await shot(page, "lead-panel-close-menu");
+      await page.getByRole("menuitem", { name: "Дубль" }).scrollIntoViewIfNeeded();
+      await shot(page, "lead-panel-close-menu", false);
       await expectNoViolations(page, `карточка лида ${String(width)}`);
     });
 
@@ -58,7 +59,8 @@ test.describe("СЦ-7: тексты и числа", () => {
       await expect(page.getByRole("list", { name: "Журнал доставки" })).toBeVisible();
       await expect(page.getByText("CRM · Подтверждение запроса")).toBeVisible();
       await expect(page.getByText(/web_confirmation|smtp_unavailable|SMTP 550/)).toHaveCount(0);
-      await shot(page, "mail-log");
+      await page.getByRole("list", { name: "Журнал доставки" }).scrollIntoViewIfNeeded();
+      await shot(page, "mail-log", false);
       await expectNoViolations(page, `журнал почты ${String(width)}`);
     });
   }
