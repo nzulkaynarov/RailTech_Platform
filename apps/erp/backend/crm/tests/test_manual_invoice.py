@@ -253,3 +253,41 @@ def test_issue_cancel_lifecycle_and_payment_guard(scenario):
     cancelled, cancel_err = cancel_invoice(fresh, scenario["seller_user"])
     assert cancel_err is None
     assert cancelled.status_code == "CANCELLED"
+
+
+@pytest.mark.django_db
+def test_manual_invoice_from_quote_with_charges_matches_the_quote_projection(scenario):
+    """К-1: счёт «из КП» + своя строка — строки КП = клиентская проекция КП (статьи разнесены), итоги точны.
+
+    Цена×количество строки может отличаться от суммы строки на ±0,005×кол-во (как в самом КП); итоги — точные.
+    """
+    from crm.models import ChargeType, QuoteCharge
+    from crm.services.documents import client_projection_items
+
+    quote = scenario["quote"]
+    QuoteItem.objects.create(
+        quote=quote, display_type="ITEM", frozen_base_price=Decimal("333.33"), quantity=3, imported_raw_name="second"
+    )
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
+    commission = ChargeType.objects.get_or_create(code="COMMISSION", defaults={"name": "Комиссия"})[0]
+    QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("5000.00"), sort_order=1)
+    QuoteCharge.objects.create(quote=quote, charge_type=commission, rate_percent=Decimal("10"), sort_order=2)
+    quote = Quote.objects.get(pk=quote.pk)
+    assert quote.charges_total > 0
+
+    invoice, err = create_manual_invoice(
+        scenario["deal"].id,
+        scenario["seller_user"],
+        source_quote_id=quote.id,
+        lines=[{"description": "Доставка", "quantity": 1, "unit_price_excl_vat": "150.00"}],
+    )
+    assert err is None
+    projected = [r for r in client_projection_items(quote) if r["display_type"] == "ITEM"]
+    from_quote = list(invoice.items.filter(source_quote_item__isnull=False).order_by("id"))
+    assert [(i.unit_price_excl_vat, i.line_total_excl_vat) for i in from_quote] == [
+        (r["final_price_excl_vat"], r["line_total"]) for r in projected
+    ]
+    assert sum(i.line_total_excl_vat for i in from_quote) == quote.total_excl_vat
+    assert invoice.subtotal_excl_vat == quote.total_excl_vat + Decimal("150.00")
+    assert sum(i.line_total_excl_vat for i in invoice.items.all()) == invoice.subtotal_excl_vat
+    assert invoice.subtotal_excl_vat + invoice.vat_amount == invoice.total_incl_vat

@@ -14,6 +14,8 @@ class RequestCompanyIn(BaseModel):
 
     name: str = Field(min_length=1, max_length=255)
     inn: str | None = Field(default=None, max_length=32)
+    # ISO 3166-1 alpha-2: the search for an existing company uses it together with the name (ЛП-1).
+    country: str | None = Field(default=None, min_length=2, max_length=2)
 
 
 class RequestContactIn(BaseModel):

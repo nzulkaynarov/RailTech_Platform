@@ -156,22 +156,21 @@ async def test_nobody_can_sign_tells_the_holders_of_signing_manage(
     assert "Права подписи" in notice["subtitle"]
 
 
-async def test_the_only_signer_being_the_author_who_cannot_open_the_draft_is_missing(
+async def test_the_only_signer_being_the_author_without_letters_register_gets_no_missing_notice(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
-    await authorise(client, staff, crm_user_id=5)  # автор без letters.register: подписать не может
+    await authorise(client, staff, crm_user_id=5)  # автор с полномочием, без letters.register: подписывает сам (СОТР-1)
     await hand_over(client, staff["manager"])
-    [notice] = await notices(container)
-    assert notice["kind"] == "letter_signer_missing" and 9 in notice["recipients"]
+    assert await notices(container) == []  # «Подписать некому» нет, а подписанту-автору писать не о чем
 
 
-async def test_holder_without_letters_register_is_not_asked_to_sign(
+async def test_holder_without_letters_register_is_asked_to_sign(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
-    await authorise(client, staff, crm_user_id=6)  # бухгалтер: полномочие есть, доступа к черновику нет
+    await authorise(client, staff, crm_user_id=6)  # бухгалтер: полномочие есть, раздела регистрации нет (СОТР-1)
     await hand_over(client, staff["manager"])
     [notice] = await notices(container)
-    assert notice["kind"] == "letter_signer_missing" and 6 not in notice["recipients"]
+    assert notice["kind"] == "letter_sign_requested" and notice["recipients"] == [6]
 
 
 async def test_reply_letter_signer_gets_sign_notice_even_if_holds_letters_register(

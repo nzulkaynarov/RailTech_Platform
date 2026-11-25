@@ -208,6 +208,7 @@ def lead_card(
         origin=origin_of(lead.origin),
         discarded=_discarded(lead.discarded_kind),
         duplicate_of=lead_number(lead.duplicate_of_lead_id) if lead.duplicate_of_lead_id else None,
+        partner_application=lead.partner_application_id,
     )
 
 

@@ -407,3 +407,25 @@ test.describe("Одобрение и согласование на телефо�
     await settledScreenshot(page, "memo-agreed");
   });
 });
+
+test.describe("КП без каналов (Б-3)", () => {
+  test("все каналы сняты — главная кнопка «Одобрить без отправки», на 1512, 1440 и 390", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    for (const width of [1512, 1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
+      const form = quoteForm(page);
+      for (const channel of ["Telegram-бот", "Кабинет", "Почта"]) {
+        const box = form.getByRole("checkbox", { name: channel });
+        if (await box.isChecked()) await box.uncheck();
+      }
+      const approve = form.getByRole("button", { name: "Одобрить без отправки" });
+      await expect(approve).toBeEnabled();
+      await approve.scrollIntoViewIfNeeded();
+      await settledScreenshot(page, "approve-no-channels");
+      await expectNoViolations(page, `КП без каналов, ${String(width)}`);
+    }
+  });
+});

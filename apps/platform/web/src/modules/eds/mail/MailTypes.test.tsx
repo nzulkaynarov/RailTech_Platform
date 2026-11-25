@@ -30,6 +30,7 @@ function registrarWith(roleId: string) {
     access: { crm: true, erp: true },
     status: "active" as const,
     telegram_linked: false,
+    telegram: "not_linked" as const,
     erp_sync: "ok" as const,
   };
 }

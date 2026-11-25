@@ -16,6 +16,7 @@ import { todayLabel } from "../../shared/lib/format";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../shared/lib/useFormat";
 import { CounterCard, CounterGrid, CounterGridSkeleton } from "../../shared/ui/CounterCard";
+import { TelegramLinkButton } from "../../features/onboarding/TelegramLinkButton";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
@@ -188,11 +189,14 @@ export function QueuePage() {
         title={t(`modules:dashboard.queue.empty.${emptyKind}.title`)}
         text={emptyText}
         action={
-          emptyKind === "director" && showLink ? (
-            <LinkButton to="/eds/projects">
-              {t("modules:dashboard.queue.empty.director.action")}
-            </LinkButton>
-          ) : undefined
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+            {emptyKind === "director" && showLink ? (
+              <LinkButton to="/eds/projects">
+                {t("modules:dashboard.queue.empty.director.action")}
+              </LinkButton>
+            ) : null}
+            <TelegramLinkButton />
+          </div>
         }
       />
     );

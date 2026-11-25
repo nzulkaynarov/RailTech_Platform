@@ -18,6 +18,18 @@ const FOREIGN = 'foreign-token-0123456789';
 const open = (token = LIVE) => renderApp(`/d/${token}`);
 const quoteHeading = () => screen.findByRole('heading', { level: 1, name: 'КП QT-0118' });
 
+describe('документ по ссылке: адрес не контакт компании (В-1)', () => {
+  it('гость видит документ и PDF; действий, «Открыть кабинет» и строки про код нет — одна нейтральная строка', async () => {
+    open('nocontact-token-0123456789');
+    await quoteHeading();
+    expect(screen.getByRole('button', { name: 'Скачать PDF: КП QT-0118' })).toBeEnabled();
+    expect(screen.getByText('Чтобы ответить по документу — напишите отправителю')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять|Вернуть|Задать вопрос|Открыть кабинет/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Любое действие — после кода/)).not.toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+});
+
 describe('документ по ссылке: гость', () => {
   it('видит один документ — состав, факты, «Скачать PDF» — и ни одного раздела кабинета', async () => {
     const seen: string[] = [];

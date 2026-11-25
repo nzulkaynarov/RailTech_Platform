@@ -29019,7 +29019,18 @@ components:
         id:
           type: integer
         source:
-          $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          allOf:
+          - $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          description: |-
+            Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).
+
+            * `public` - public
+            * `client_cabinet` - client_cabinet
+            * `letter` - letter
+        from_lead:
+          type: boolean
+          default: false
+          description: 'Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида'
         source_ref:
           type: string
           description: Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)
@@ -29144,7 +29155,18 @@ components:
         id:
           type: integer
         source:
-          $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          allOf:
+          - $ref: '#/components/schemas/PartnerApplicationSourceEnum'
+          description: |-
+            Заявка из карточки лида CRM отдаётся как `letter` с `from_lead = true` (перечень не растёт: ERP SPA и BFF читают его строго).
+
+            * `public` - public
+            * `client_cabinet` - client_cabinet
+            * `letter` - letter
+        from_lead:
+          type: boolean
+          default: false
+          description: 'Заявка заведена из карточки лида CRM (ЛП-1): `source_ref` — номер лида'
         source_ref:
           type: string
           description: Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)
@@ -32587,6 +32609,9 @@ components:
         request_price:
           type: boolean
           description: 'Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)'
+        resend:
+          type: boolean
+          description: 'Заказ отправлен, но письмо партнёру не ушло: «Отправить ещё раз» — тот же POST …/send/ (Б-5)'
         confirm:
           type: boolean
         receive:

@@ -183,6 +183,7 @@ async def bot_lifespan(
                 ),
                 staff_link=container.staff_telegram_link,
                 client_groups=container.telegram_groups,
+                staff_channel=container.staff_channel,
             )
 
         async def resolve() -> tuple[str, TokenSource]:

@@ -2,6 +2,7 @@ import { Alert } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
+import { EmployeeDeputy } from "../../../features/assign-deputy/EmployeeDeputy";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
 import { ResetPassword } from "../../../features/reset-password/ResetPassword";
@@ -11,6 +12,7 @@ import { erpAttention, erpSyncReason } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmployeeStatusTag, RoleTags, TelegramText } from "./EmployeeCells";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { PersonAvatar } from "../../../shared/ui/EntityCell";
 
 export interface EmployeeCardProps {
@@ -26,6 +28,7 @@ export interface EmployeeCardProps {
 /** Карточка сотрудника в боковом окне: реквизиты, выдача ролей одной кнопкой, отключение (SPEC-v3 §7.6). */
 export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: EmployeeCardProps) {
   const { t } = useTranslation("modules");
+  const format = useFormat();
   const attention = erpAttention(employee);
   const erpReason = erpSyncReason(employee.erp_sync_error);
   const disabled = employee.status === "disabled";
@@ -49,8 +52,21 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             : [{ label: t("admin.org.card.roles"), value: <RoleTags roles={employee.roles} /> }]),
           {
             label: t("admin.org.card.telegram"),
-            value: <TelegramText linked={employee.telegram_linked} />,
+            value: <TelegramText state={employee.telegram} />,
           },
+          // Форма «Замещение» ниже есть только у администратора и у действующего сотрудника: остальным — строка
+          ...(employee.deputy && !(canEdit && !disabled)
+            ? [
+                {
+                  label: t("admin.org.deputy.title"),
+                  value: t("admin.org.deputy.line", {
+                    name: employee.deputy.name,
+                    from: format.date(employee.deputy.date_from, "date"),
+                    to: format.date(employee.deputy.date_to, "date"),
+                  }),
+                },
+              ]
+            : []),
         ]}
       />
       {attention === "pending" ? (
@@ -84,6 +100,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             selfId={selfId}
             otherActiveAdmins={otherActiveAdmins}
           />
+          <EmployeeDeputy employee={employee} selfId={selfId} />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
           <ResetPassword employee={employee} selfId={selfId} />
           <ResetSecondFactor employee={employee} selfId={selfId} />

@@ -57,7 +57,14 @@ import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { AiFillBar } from "./AiFillBar";
 import { DuplicateNotice } from "./DuplicateCheck";
 import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplicates";
-import { type AiField, applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
+import {
+  type AiField,
+  applySuggestion,
+  bannerKind,
+  byCodeFields,
+  decisionOf,
+  revertSuggestion,
+} from "./aiFill";
 import {
   clearRegisterDraft,
   DRAFT_FILE_KEY,
@@ -71,7 +78,10 @@ import "../new/new.css";
 import "./register.css";
 
 /** Поля, заполненные «Заполнить из файла» и ещё не исправленные человеком (id поля формы). */
-const SuggestedFields = createContext<ReadonlySet<string>>(new Set());
+const SuggestedFields = createContext<{ ids: ReadonlySet<string>; byCode: ReadonlySet<string> }>({
+  ids: new Set(),
+  byCode: new Set(),
+});
 
 const AI_FIELD_IDS: Readonly<Record<AiField, string>> = {
   senderName: registerFieldId("sender_name"),
@@ -98,11 +108,16 @@ function Field({
   children: ReactNode;
 }) {
   const { t } = useTranslation("letters");
-  const suggested = useContext(SuggestedFields).has(id);
+  const marks = useContext(SuggestedFields);
+  const suggested = marks.ids.has(id);
   return (
     <div className="pf-fp-field">
       <label htmlFor={id}>{label}</label>
-      {suggested ? <span className="pf-reg-ai-chip">{t("register.ai.chip")}</span> : null}
+      {suggested ? (
+        <span className="pf-reg-ai-chip">
+          {t(marks.byCode.has(id) ? "register.ai.chipRules" : "register.ai.chip")}
+        </span>
+      ) : null}
       {children}
       {error ? (
         <span className="pf-field-error" id={`${id}-error`} role="alert">
@@ -236,14 +251,28 @@ export function RegisterLetterPage() {
   useEffect(() => {
     latest.current = values;
   }, [values]);
-  const [ai, setAi] = useState<{ id: string; filled: AiField[]; left: Set<AiField> } | null>(null);
+  const [ai, setAi] = useState<{
+    id: string;
+    filled: AiField[];
+    left: Set<AiField>;
+    byCode: Set<AiField>;
+    receivedUsed: string;
+  } | null>(null);
   useEffect(() => {
     // Пока на плашке не выбрано «Продолжить» или «Начать заново», прежний черновик не трогаем.
     if (!userId || mailId !== null || offer) return;
     writeRegisterDraft(userId, today, {
       values,
       active,
-      ai: ai ? { id: ai.id, filled: ai.filled, left: [...ai.left] } : null,
+      ai: ai
+        ? {
+            id: ai.id,
+            filled: ai.filled,
+            left: [...ai.left],
+            byCode: [...ai.byCode],
+            receivedUsed: ai.receivedUsed,
+          }
+        : null,
     });
   }, [userId, mailId, offer, values, active, ai, today]);
   const touch = (key: keyof RegisterValues) => {
@@ -347,10 +376,14 @@ export function RegisterLetterPage() {
       : []),
     { label: t("letters:register.review.files"), value: doneFiles.map((a) => a.name).join(", ") },
   ].filter((item) => item.value !== null && item.value !== "");
-  const fileSummary = [
-    doneFiles.map((a) => a.name).join(", "),
-    ai ? t("letters:register.ai.applied", { count: ai.left.size }) : "",
-  ]
+  const bannerText = (state: { left: Set<AiField>; byCode: Set<AiField> }) => {
+    const kind = bannerKind(state.left, state.byCode);
+    if (kind === "ai") return t("letters:register.ai.applied", { count: state.left.size });
+    return t(
+      kind === "rules" ? "letters:register.ai.appliedRules" : "letters:register.ai.appliedMixed",
+    );
+  };
+  const fileSummary = [doneFiles.map((a) => a.name).join(", "), ai ? bannerText(ai) : ""]
     .filter(Boolean)
     .join(" · ");
   const fieldError = (field: RegisterField) =>
@@ -497,7 +530,13 @@ export function RegisterLetterPage() {
                   setValues({ ...offer.values, sourceMailId: null });
                   setAi(
                     offer.ai
-                      ? { id: offer.ai.id, filled: offer.ai.filled, left: new Set(offer.ai.left) }
+                      ? {
+                          id: offer.ai.id,
+                          filled: offer.ai.filled,
+                          left: new Set(offer.ai.left),
+                          byCode: new Set(offer.ai.byCode ?? []),
+                          receivedUsed: offer.ai.receivedUsed ?? "",
+                        }
                       : null,
                   );
                   markLeft(
@@ -530,7 +569,10 @@ export function RegisterLetterPage() {
         />
       ) : null}
       <SuggestedFields.Provider
-        value={new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : [])}
+        value={{
+          ids: new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : []),
+          byCode: new Set([...(ai?.byCode ?? [])].map((key) => AI_FIELD_IDS[key])),
+        }}
       >
         <form
           aria-label={t("letters:register.formLabel")}
@@ -583,6 +625,27 @@ export function RegisterLetterPage() {
                         noAutoFor={restoredFileId}
                         attachments={values.attachments}
                         applied={ai?.left.size ?? 0}
+                        banner={ai ? bannerKind(ai.left, ai.byCode) : "ai"}
+                        staleDue={
+                          ai !== null &&
+                          ai.left.has("documentDue") &&
+                          ai.byCode.has("documentDue") &&
+                          ai.receivedUsed !== values.receivedAt
+                        }
+                        onRecompute={(due, used) => {
+                          setValues((prev) => ({ ...prev, documentDue: due }));
+                          setAi((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  byCode: new Set(prev.byCode).add("documentDue"),
+                                  receivedUsed: used,
+                                }
+                              : prev,
+                          );
+                        }}
+                        receivedAt={values.receivedAt}
+                        today={today}
                         linkQuery={
                           canLink && !values.deal && ai
                             ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
@@ -600,6 +663,10 @@ export function RegisterLetterPage() {
                             id: suggestion.suggestion_id,
                             filled: result.filled,
                             left: new Set(result.filled),
+                            byCode: new Set(
+                              byCodeFields(suggestion).filter((k) => result.filled.includes(k)),
+                            ),
+                            receivedUsed: latest.current.receivedAt,
                           });
                         }}
                         onRevert={() => {

@@ -49,6 +49,29 @@ function invalid(field: string, reason: string, message: string) {
   return failure(422, "VALIDATION_FAILED", message, { fields: [field], reason }, "crm");
 }
 
+/** Правила CRM к замещению (`checked_deputy`): одни и те же для «Профиля» и для карточки сотрудника у администратора. */
+export function deputyRefusal(employeeId: string, body: DeputyUpdate) {
+  const field = "deputy_id";
+  if (body.deputy_id === employeeId) {
+    return invalid(field, "deputy_is_self", "Заместителем нельзя назначить себя.");
+  }
+  if (body.date_to < body.date_from) {
+    return invalid("date_to", "deputy_period_reversed", "Дата окончания раньше даты начала.");
+  }
+  if (body.date_to < todayIso()) {
+    return invalid("date_to", "deputy_period_past", "Период уже закончился.");
+  }
+  const days = (Date.parse(body.date_to) - Date.parse(body.date_from)) / 86_400_000;
+  if (days > 366) {
+    return invalid("date_to", "deputy_period_too_long", "Период не может быть длиннее года.");
+  }
+  const colleague = readEmployees().find((e) => e.id === body.deputy_id);
+  if (!colleague || colleague.status === "disabled") {
+    return invalid(field, "deputy_not_colleague", "Этот сотрудник не может вести очередь.");
+  }
+  return null;
+}
+
 function toProfile(userId: string): Profile {
   const user = findUserById(userId);
   const stored = readProfile(userId);
@@ -98,7 +121,9 @@ function confirmTelegramIfAsked(userId: string): void {
   if (nick === null || !stored.pendingLink) return;
   window.localStorage.removeItem(`${TELEGRAM_CONFIRM_KEY}-${userId}`);
   writeEmployees(
-    readEmployees().map((e) => (e.id === userId ? { ...e, telegram_linked: true } : e)),
+    readEmployees().map((e) =>
+      e.id === userId ? { ...e, telegram_linked: true, telegram: "linked" as const } : e,
+    ),
   );
   patchProfile(userId, { pendingLink: false, telegramUsername: nick });
 }
@@ -194,7 +219,11 @@ export const profileHandlers = [
     if (!userId) return expired();
     const body = (await request.json()) as ProfileUpdate;
     if (body.phone !== undefined && !validPhone(body.phone)) {
-      return invalid("phone", "phone_invalid", "Телефон: от 7 до 15 цифр, можно с «+».");
+      return invalid(
+        "phone",
+        "phone_invalid",
+        "Телефон: укажите код страны, например +998 90 123-45-67.",
+      );
     }
     if (body.timezone !== undefined && !validZone(body.timezone)) {
       return invalid("timezone", "timezone_unknown", "Такого часового пояса нет.");
@@ -290,7 +319,9 @@ export const profileHandlers = [
     const userId = currentUserId();
     if (!userId) return expired();
     writeEmployees(
-      readEmployees().map((e) => (e.id === userId ? { ...e, telegram_linked: false } : e)),
+      readEmployees().map((e) =>
+        e.id === userId ? { ...e, telegram_linked: false, telegram: "not_linked" as const } : e,
+      ),
     );
     patchProfile(userId, { pendingLink: false, telegramUsername: undefined });
     return HttpResponse.json(toProfile(userId));
@@ -309,24 +340,8 @@ export const profileHandlers = [
     const userId = currentUserId();
     if (!userId) return expired();
     const body = (await request.json()) as DeputyUpdate;
-    const field = "deputy_id";
-    if (body.deputy_id === userId) {
-      return invalid(field, "deputy_is_self", "Заместителем нельзя назначить себя.");
-    }
-    if (body.date_to < body.date_from) {
-      return invalid("date_to", "deputy_period_reversed", "Дата окончания раньше даты начала.");
-    }
-    if (body.date_to < todayIso()) {
-      return invalid("date_to", "deputy_period_past", "Период уже закончился.");
-    }
-    const days = (Date.parse(body.date_to) - Date.parse(body.date_from)) / 86_400_000;
-    if (days > 366) {
-      return invalid("date_to", "deputy_period_too_long", "Период не может быть длиннее года.");
-    }
-    const colleague = readEmployees().find((e) => e.id === body.deputy_id);
-    if (!colleague || colleague.status === "disabled") {
-      return invalid(field, "deputy_not_colleague", "Этот сотрудник не может вести очередь.");
-    }
+    const refusal = deputyRefusal(userId, body);
+    if (refusal) return refusal;
     patchProfile(userId, {
       deputy: { id: body.deputy_id, date_from: body.date_from, date_to: body.date_to },
     });

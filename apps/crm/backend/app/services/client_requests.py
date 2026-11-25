@@ -9,10 +9,12 @@
 регистрирует письмо ВХ директору в EDS. Согласие обязательно: из бота или отметка сотрудника (D-8).
 """
 
+import re
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Final
 
 import structlog
 from sqlalchemy import select
@@ -208,6 +210,10 @@ class ClientRequestService:
         _require_consent(lead)
         before = lead_parts.snapshot(lead)
         client = await _client_for(session, lead, body, who)
+        # A second press of the form (new `request_key`, same lead, client and text): the first one.
+        again = await _same_request(session, lead, client, body)
+        if again is not None:
+            return again
         contact = await _contact(session, client, lead, body.contact, who)
         if lead.client_id != client.id:
             await _bind_identities(session, lead.id, client.id, who)
@@ -284,15 +290,114 @@ async def _client_for(
         return client
     if body.company is None:
         raise ValidationFailedError("choose a client or enter the company", field="company")
+    # One company is one card (ЛП-1): look up by INN, then by normalised name and country first.
+    country = body.company.country or country_of_phone(lead.phone_e164)
+    found = await find_client(session, body.company.name, body.company.inn, country)
+    if found is not None:
+        client = await session.get(Client, found.id, with_for_update=True)
+        if client is not None:
+            return client
     client = Client(
         name=body.company.name.strip(),
         inn=(body.company.inn or "").strip() or None,
+        country=country,
         owner_user_id=who.user_id,
     )
     session.add(client)
     await session.flush()
     await bus_events.client_created(session, client, who.actor)
     return client
+
+
+# Dial codes that point to one country; `+7` is shared by RU and KZ, so it gives no hint.
+_DIAL_COUNTRY: Final = (
+    ("+998", "UZ"),
+    ("+996", "KG"),
+    ("+992", "TJ"),
+    ("+375", "BY"),
+    ("+971", "AE"),
+    ("+86", "CN"),
+    ("+90", "TR"),
+    ("+49", "DE"),
+    ("+91", "IN"),
+    ("+82", "KR"),
+)
+
+
+def country_of_phone(phone_e164: str | None) -> str | None:
+    """Country hint of a lead from its phone's dial code (the form has no country for a client)."""
+    for prefix, code in _DIAL_COUNTRY:
+        if phone_e164 and phone_e164.startswith(prefix):
+            return code
+    return None
+
+
+def normalize_name(name: str) -> str:
+    """Company name for an exact comparison: case, quotes, dots and extra spaces do not matter."""
+    cleaned = re.sub(r"[\"'«»“”„‟`´.,]", " ", name.casefold().replace("ё", "е"))
+    return " ".join(cleaned.split())
+
+
+async def find_client(
+    session: AsyncSession, name: str, inn: str | None, country: str | None = None
+) -> Client | None:
+    """The existing client of a company: by INN first, then by the exact normalised name (and the
+    country when both sides know it). `None` — no such client, a new card is allowed."""
+    digits = (inn or "").strip()
+    if digits:
+        by_inn = await session.scalar(
+            select(Client).where(Client.inn == digits).order_by(Client.id).limit(1)
+        )
+        if by_inn is not None:
+            return by_inn
+    wanted = normalize_name(name)
+    if not wanted:
+        return None
+    # The first word narrows the scan in SQL; the exact comparison is on the normalised text.
+    first = wanted.split()[0]
+    candidates = await session.scalars(
+        select(Client).where(Client.name.ilike(f"%{first}%")).order_by(Client.id)
+    )
+    for candidate in candidates:
+        if normalize_name(candidate.name) != wanted:
+            continue
+        # The same name with another INN is another company: never merge on the name alone.
+        if digits and candidate.inn and candidate.inn.strip() != digits:
+            continue
+        if country and candidate.country and candidate.country.upper() != country.upper():
+            continue
+        return candidate
+    return None
+
+
+async def _same_request(
+    session: AsyncSession, lead: Lead, client: Client, body: RequestCreate
+) -> _Done | None:
+    """A not failed request of this lead for this client with the same text: a repeated press
+    returns it instead of making a second one (ЛП-1)."""
+    deal = await session.scalar(
+        select(Deal)
+        .where(
+            Deal.lead_id == lead.id,
+            Deal.client_id == client.id,
+            Deal.request_key.is_not(None),
+            Deal.request_summary == body.summary.strip(),
+            Deal.erp_request_status.in_(("pending", "done")),
+        )
+        .order_by(Deal.id)
+        .limit(1)
+    )
+    if deal is None:
+        return None
+    return _Done(
+        RequestCreated(
+            client_id=client.id,
+            deal_id=deal.id,
+            lead_id=lead.id,
+            erp_request_status=deal.erp_request_status or "pending",
+            created=False,
+        )
+    )
 
 
 async def _become_customer(session: AsyncSession, lead: Lead, who: Principal) -> None:

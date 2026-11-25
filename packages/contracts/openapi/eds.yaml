@@ -2396,7 +2396,9 @@ paths:
         статус переходит в `sent`, рендерится итоговый PDF/A без плашки «ПРОЕКТ», закрываются связанные поручения
         по входящему письму, публикуется событие `uz.railtech.eds.document.signed.v1`, и при `dispatch_method = email`
         и `send = true` запускается отправка адресату.
-      x-rt-permissions: [letters.register, memos.approve]
+        Раздел прав (`letters.register`, `memos.approve`) не нужен: подписывает тот, у кого есть действующее полномочие
+        в реестре; иначе 403 `no_permission` или `no_authority`.
+      x-rt-permissions: []
       parameters:
         - $ref: '#/components/parameters/DocumentId'
       requestBody:
@@ -4964,6 +4966,8 @@ components:
       required: [file_id]
       properties:
         file_id: { $ref: '#/components/schemas/Uuid' }
+        received_at: { type: string, format: date, description: 'Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации. Позже сегодняшнего дня (дня компании) или старше года — 422 `received_at` (`in_future`, `too_old`)' }
+        rules_only: { type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока от новой даты поступления): платного вызова нет; срока в тексте нет — 409 `nothing_recognized`' }
     LetterIntakeFields:
       type: object
       additionalProperties: false
@@ -5018,8 +5022,15 @@ components:
           enum: [text, image]
           description: '`text` — текстовый слой PDF (маскированный), `image` — скан или фото (модель с изображением)'
         fields: { $ref: '#/components/schemas/LetterIntakeFields' }
-        alias: { type: string, examples: [intake-model] }
+        alias:
+          type: string
+          examples: [intake-model]
+          description: '`rules` — модель не использовалась: срок по тексту письма («в течение N дней») посчитал код (СЦ-11)'
         prompt_version: { type: string }
+        by_code:
+          type: array
+          items: { type: string, enum: [sender_inn, document_due] }
+          description: 'Поля, которые посчитал код, а не модель (срок по обороту «в течение N дней», ИНН); экран метит их «Из текста письма». Для `alias: rules` — все предложенные поля'
     AiDecisionIn:
       type: object
       additionalProperties: false
@@ -6385,6 +6396,10 @@ components:
           type: [string, 'null']
           format: date
           description: «Нужно до»
+        invoice_later:
+          type: boolean
+          default: false
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6436,6 +6451,9 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: [boolean, 'null']
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6561,6 +6579,9 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: [boolean, 'null']
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         file_ids:
           type: array
           uniqueItems: true
@@ -6733,6 +6754,10 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        invoice_later:
+          type: boolean
+          default: false
+          description: 'Служебка с суммой отправлена без счёта партнёра — автор отметил, что счёт придёт позже (Б-9)'
         files:
           type: array
           items:

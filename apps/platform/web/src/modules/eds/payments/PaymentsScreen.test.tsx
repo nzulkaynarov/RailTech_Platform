@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
 import { findInvoice } from "../../../mocks/fixtures/payments";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupPaymentTests, signIn } from "../../../test/paymentsKit";
@@ -332,6 +333,26 @@ describe("Записки к оплате", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Оплаченные" }));
     const paid = await screen.findByRole("row", { name: /СЗ-2026\/015/ });
     expect(within(paid).getByText(/Оплачена/)).toBeVisible();
+  });
+
+  it("без счёта: «не приложен»; с отметкой автора «счёт придёт позже» — «напомнить автору», а не «верните» (Б-9)", async () => {
+    const id = "60000000-0000-4000-8000-000000000015";
+    const bare = (extra: object) => {
+      writeMemos(readMemos().map((m) => (m.id === id ? { ...m, files: [], ...extra } : m)));
+    };
+    bare({});
+    signIn("accountant@demo.example");
+    renderAt(`/eds/payments/${id}`);
+    await decisionEl();
+    expect(await screen.findByText(/Счёт партнёра не приложен/)).toBeVisible();
+    cleanup();
+
+    bare({ invoice_later: true });
+    signIn("accountant@demo.example");
+    renderAt(`/eds/payments/${id}`);
+    await decisionEl();
+    expect(await screen.findByText("Счёт придёт позже — напомнить автору")).toBeVisible();
+    expect(screen.queryByText(/Верните записку автору/)).toBeNull();
   });
 
   it("сумма больше согласованной: кнопка неактивна, причина названа", async () => {
