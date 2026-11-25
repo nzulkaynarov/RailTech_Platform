@@ -60,6 +60,8 @@ class CabinetCopyGuard(unittest.TestCase):
             self.assertTrue(key and cls and reason.strip(), f"key, class and reason are required: {line!r}")
             self.assertNotIn(".*", key, f"no wildcard patterns: {line!r}")
             self.assertNotIn(".+", key, f"no wildcard patterns: {line!r}")
+            for wide in ("\\w+", "\\w*", "[^"):
+                self.assertNotIn(wide, key, f"no wide patterns: {line!r}")
 
     def test_rules_catch_what_the_cabinet_was_cleaned_of(self) -> None:
         guard = _load("copy_guard")
@@ -77,6 +79,8 @@ class CabinetCopyGuard(unittest.TestCase):
         self.assertIn("gender", classes("Согласен(на) на обработку"))
         self.assertIn("promise", classes("Файлы в чат пока не прикладываются"))
         self.assertIn("jargon", classes("Рег. номер / Tax ID"))
+        self.assertIn("vendor", classes("Проверка в Soliq"))
+        self.assertNotIn("vendor", classes("Soliq raqami", "uz"))
 
     def test_rules_do_not_flag_plain_words(self) -> None:
         guard = _load("copy_guard")
