@@ -732,7 +732,7 @@ async def test_order_card_tells_the_real_mail_result(
 async def test_resend_action_of_an_order_comes_from_erp(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
-    """Б-5: «Отправить ещё раз» — действие карточки, которое решает ERP; без него (старый ERP) оно выключено."""
+    """Б-5: «Отправить ещё раз» — действие карточки от ERP; без него (старый ERP) выключено."""
     await web.login(["SUPPLY"])
     actions = {"edit": False, "send": False, "confirm": True, "receive": False, "cancel": True}
     failed = order_detail(

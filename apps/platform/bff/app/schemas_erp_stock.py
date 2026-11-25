@@ -155,7 +155,7 @@ class SupplierOrderActions(BaseModel):
     edit: bool
     send: bool
     request_price: bool = False
-    # Б-5: заказ отправлен, письмо партнёру не ушло — «Отправить ещё раз» (тот же POST /stock/orders/{n}/send)
+    # Б-5: заказ отправлен, письмо партнёру не ушло — «Отправить ещё раз» (тот же POST send)
     resend: bool = False
     confirm: bool
     receive: bool
