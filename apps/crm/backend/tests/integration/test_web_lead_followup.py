@@ -27,6 +27,7 @@ from app.models.auth import User
 from app.models.email import EmailLog
 from app.models.leads import Lead, LeadNote, Message
 from app.models.notices import ClientNotice
+from app.models.platform_roles import PlatformRole, UserPlatformRole
 from app.repositories import leads as repo
 from app.security.secrets_store import SecretCipher
 from app.services import web_lead_sla
@@ -531,7 +532,7 @@ async def test_overdue_reminder_goes_to_everyone_subscribed(
 ) -> None:
     lead_id = post_web(client, live_settings)
     one, _ = await make_user(sessions, "one@railtech.uz", ["manager"])
-    two, _ = await make_user(sessions, "two@railtech.uz", ["admin"])
+    two, _ = await make_user(sessions, "two@railtech.uz", ["manager"])
     async with sessions() as session, session.begin():
         await session.execute(update(User).where(User.id == one.id).values(tg_user_id=8101))
         await session.execute(update(User).where(User.id == two.id).values(tg_user_id=8102))
@@ -651,3 +652,51 @@ async def test_overdue_sweep_finds_a_deadline_that_moved_to_the_surviving_card(
     assert await web_lead_sla.mark_overdue(sessions, web_id, datetime.now(UTC)) is False
     assert await web_lead_sla.mark_overdue(sessions, survivor, datetime.now(UTC)) is True
     assert await web_lead_sla.overdue_ids(sessions, datetime.now(UTC)) == []
+
+
+async def test_new_web_lead_does_not_reach_an_admin_by_the_legacy_base_role(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+) -> None:
+    lead_id = post_web(client, live_settings)
+    admin_only, _ = await make_user(sessions, "it-admin@railtech.uz", ["admin"])
+    handler, _ = await make_user(sessions, "handler@railtech.uz", ["admin"])
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == admin_only.id).values(tg_user_id=8201))
+        await session.execute(update(User).where(User.id == handler.id).values(tg_user_id=8202))
+        manager_role = (
+            await session.scalars(select(PlatformRole).where(PlatformRole.code == "tpl:MANAGER"))
+        ).one()
+        session.add(UserPlatformRole(user_id=handler.id, role_id=manager_role.id))
+        admin_role = (
+            await session.scalars(select(PlatformRole).where(PlatformRole.code == "ADMIN"))
+        ).one()
+        session.add(UserPlatformRole(user_id=admin_only.id, role_id=admin_role.id))
+
+    bot = FakeSender()
+    delivered = await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15)
+
+    assert delivered == 1
+    assert [chat for chat, _ in bot.sent] == [8202]
+
+
+async def test_new_web_lead_for_legacy_users_without_platform_roles_goes_to_the_manager_only(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+) -> None:
+    """Старые записи без ролей Платформы: признак `manager`; viewer и admin лидов не получают."""
+    lead_id = post_web(client, live_settings)
+    manager, _ = await make_user(sessions, "legacy-m@railtech.uz", ["manager"])
+    viewer, _ = await make_user(sessions, "legacy-v@railtech.uz", ["viewer"])
+    admin, _ = await make_user(sessions, "legacy-a@railtech.uz", ["admin"])
+    async with sessions() as session, session.begin():
+        for user, tg in ((manager, 8301), (viewer, 8302), (admin, 8303)):
+            await session.execute(update(User).where(User.id == user.id).values(tg_user_id=tg))
+
+    bot = FakeSender()
+    delivered = await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15)
+
+    assert delivered == 1
+    assert [chat for chat, _ in bot.sent] == [8301]

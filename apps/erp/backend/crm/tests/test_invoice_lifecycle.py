@@ -246,6 +246,9 @@ def test_auto_invoice_on_closed_won_creates_draft_and_notifies_seller(world):
     from crm.tasks import auto_invoice_on_closed_won
 
     deal = world["deal"]
+    # СОТР-1: черновик счёта адресован держателям `finance.invoice` и ответственному продавцу, не всем продавцам
+    deal.manager = world["seller_user"]
+    deal.save(update_fields=["manager"])
     auto_invoice_on_closed_won.apply(args=[deal.id]).get()
 
     invoice = Invoice.objects.get(deal=deal)

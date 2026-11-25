@@ -41,11 +41,13 @@ def _notify_invoice_issued_to_buyer(invoice) -> None:
 def notify_seller_invoice_draft(invoice) -> None:
     """Alert the back-office team that an invoice DRAFT was auto-created on deal win — they must
     review it and explicitly issue it (владелец не теряет контроль; ERP canon). FK→deal."""
-    from .deal_notifications import notify_deal_users, seller_team_user_ids
+    from .deal_notifications import notify_deal_users, permission_holder_user_ids, responsible_seller_ids
 
     deal = invoice.deal
+    # Счёт выставляет тот, у кого `finance.invoice` (бухгалтер), и ответственный продавец; не все продавцы (СОТР-1)
+    recipients = set(permission_holder_user_ids("finance.invoice")) | set(responsible_seller_ids(deal))
     notify_deal_users(
-        seller_team_user_ids(deal),
+        recipients,
         deal=deal,
         title="Счёт создан черновиком",
         message=f"По сделке {deal_ref(deal)} создан счёт {invoice.number} — проверьте и выставьте",
