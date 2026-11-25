@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
+import { MOCK_ERP_DOWN_KEY } from "../../../mocks/feedHandlers";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import {
@@ -228,11 +229,57 @@ describe("«Создать заявку» из лида и из клиента (
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
     expect(created?.requests[0]?.letter_file_id).toBeTruthy();
     expect(created?.requests[0]?.urgency).toBe("urgent");
-    expect(within(panel).getByRole("link", { name: "Открыть карточку клиента" })).toHaveAttribute(
+    // Б-7: номер заявки, что дальше и «Открыть заявку»
+    expect(await within(panel).findByText("Ждёт резолюции.")).toBeVisible();
+    expect(created?.requests[0]?.number).toBeTruthy();
+    expect(within(panel).getByText(String(created?.requests[0]?.number))).toBeVisible();
+    expect(within(panel).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
       `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
     );
   });
+
+  it("учёт недоступен: номера нет, вместо «Ждёт резолюции» — «Не передана в учёт» (Б-7)", async () => {
+    window.localStorage.setItem(MOCK_ERP_DOWN_KEY, "1");
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(within(panel).getByText(/Не передана в учёт/)).toBeVisible();
+    expect(within(panel).queryByText("Ждёт резолюции.")).toBeNull();
+    window.localStorage.removeItem(MOCK_ERP_DOWN_KEY);
+  });
+
+  it("передача в учёт ещё идёт: «Ждёт резолюции» не обещаем, карточка перечитывается и номер появляется сам (Б-7)", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/crm/clients/:id", ({ params }) => {
+        calls += 1;
+        const client = readLeads().clients.find((c) => String(c.id) === String(params["id"]));
+        if (!client) return HttpResponse.json({}, { status: 404 });
+        const requests =
+          calls <= 2
+            ? client.requests.map((r, i) =>
+                i === 0 ? { ...r, number: null, transfer: "pending" as const } : r,
+              )
+            : client.requests;
+        return HttpResponse.json({ ...client, requests, do_not_work: null });
+      }),
+    );
+    const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    open(panel, "Запрос");
+    await attach(panel);
+    fireEvent.click(submitButton(panel));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    expect(within(panel).queryByText("Ждёт резолюции.")).toBeNull();
+    expect(within(panel).queryByText(/Не передана в учёт/)).toBeNull();
+    // через 2 с карточка перечитана, номер выдан, передача завершена
+    expect(
+      await within(panel).findByText("Ждёт резолюции.", undefined, { timeout: 8000 }),
+    ).toBeVisible();
+    expect(calls).toBeGreaterThan(2);
+  }, 20000);
 
   it("сбой сервера оставляет введённое; повтор с тем же ключом создаёт одну заявку", async () => {
     const keys: string[] = [];

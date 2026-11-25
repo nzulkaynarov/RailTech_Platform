@@ -307,6 +307,8 @@
     "contract_sign_before_send": "Our signature comes before sending to the client",
     "contract_sign_before_sendHint": "Off — the contract goes out as soon as it is assembled.",
     "contract_deviations_allowed": "Deviations from the template — by request to the Legal holder",
+    "contract_four_eyes": "Decision on own contract — by another Legal holder",
+    "contract_four_eyesHint": "Whoever prepared a partner contract does not decide on it. The only holder decides after a confirmation, and it is journaled.",
     "contract_deviations_allowedHint": "A contract with a deviation follows the visa route and does not go to the client before it.",
     "defaultClientTemplate": "Default template: client",
     "defaultPartnerTemplate": "Default template: partner",

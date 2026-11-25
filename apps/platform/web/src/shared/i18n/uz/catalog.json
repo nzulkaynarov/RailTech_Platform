@@ -142,7 +142,28 @@
       "partner_suspended": "Hamkor töxtatilgan. Töxtatişni hamkor kartasida bekor qiling.",
       "inn_too_long": "Arizadagi STIR 20 belgidan uzun. Arizani rad eting yoki qayta topşirişni sörang.",
       "contract_render_failed": "Şartnomani yiğib bölmadi. Heç narsa saqlanmadi, keyinroq urinib köring.",
-      "company_mismatch": "Ariza boşqa taşkilotga boğlangan. Röyxatni yangilang."
+      "company_mismatch": "Ariza boşqa taşkilotga boğlangan. Röyxatni yangilang.",
+      "no_approved_partner_template": "Tasdiqlangan hamkorlik şartnoma şabloni yöq. Uni şartnoma şablonlarida tasdiqlang yoki öz faylingizni yuklang.",
+      "contract_template_required": "Şartnoma şablonini tanlang.",
+      "contract_template_not_offered": "Bu şablon tasdiqlanmagan yoki hamkorlar uçun emas. Röyxatni yangilang.",
+      "contract_template_unfilled": "Şablonda maʼlumotsiz joylar qoldi. Şablonni kutubxonada tuzating.",
+      "contract_not_prepared": "Avval şartnomani tayyorlang.",
+      "contract_approval_pending": "Şartnoma «Huquq» zonasi egasi qarorini kutmoqda.",
+      "contract_approval_returned": "Şartnoma qayta işlaşga qaytarilgan: yangi versiyani tayyorlang.",
+      "contract_file_invalid": "Fayl mos kelmadi: 20 MB gaça PDF yoki DOCX kerak.",
+      "contract_deviations_disabled": "Kompaniya qoidasi öz fayl va şablondan çetga çiqişga yöl qöymaydi.",
+      "contract_already_sent": "Şartnoma nomzodga allaqaçon yuborilgan.",
+      "contract_language_invalid": "Şartnoma tilini röyxatdan tanlang.",
+      "deviation_text_too_long": "Çetga çiqiş tavsifi juda uzun: 4000 belgigaça.",
+      "contract_decision_forbidden": "«Huquq» zonasi egasi qaror qiladi.",
+      "contract_approval_not_requested": "Hozir şartnoma böyiça qaror kutilmayapti. Röyxatni yangilang.",
+      "contract_return_note_required": "Izoh yozing: nimani tuzatiş kerak.",
+      "contract_decision_invalid": "«Kelişiş» yoki «Qaytariş»ni tanlang.",
+      "candidate_email_required": "Nomzodda e-mail yöq: kiriş xatini yuboriş imkoni yöq.",
+      "signed_scan_required": "Imzolangan skan olinmagan. Usiz tasdiqlaş uçun sabab körsating.",
+      "contract_date_invalid": "Şartnoma sanasi notöğri.",
+      "self_approval_not_allowed": "Qarorni «Huquq» zonasining boşqa egasi qiladi. Uning nomi ariza qatorida.",
+      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang."
     }
   },
   "items": {
@@ -1115,21 +1136,25 @@
       "resendContract": "Şartnomani qayta yuboriş",
       "approve": "Maʼqullaş va kabinetni oçiş",
       "approveWithoutAgreement": "Kelişuvsiz tasdiqlaş",
-      "reject": "Rad etiş"
+      "reject": "Rad etiş",
+      "prepare": "Şartnomani tayyorlaş",
+      "prepareAgain": "Qayta tayyorlaş",
+      "decide": "Şartnoma böyiça qaror"
     },
     "empty": {
       "title": "Hamkorlik arizalari yöq",
       "hint": "Hozirça böş."
     },
     "sendContractModal": {
-      "title": "Şartnoma loyihasini yuboriş: {{name}}",
-      "hint": "Tayyorlangan şartnoma raqamini körsating va nomzodga loyiha yuborilganini belgilang.",
-      "ok": "Şartnoma yuborilgan deb belgilaş",
+      "title": "Şartnomani yuboriş: {{name}}",
+      "hint": "Şartnoma nomzodga yuboriladi, {{email}} manziliga esa kabinetga kiriş xati ketadi.",
+      "ok": "Şartnomani yuboriş",
       "steps": [
         "Ariza holati «Şartnoma yuborilgan» ga özgaradi",
         "Nomzod hamkorlik şartnomasi loyihasini oladi",
         "Nomzod kabinetga kiriş xatini oladi"
-      ]
+      ],
+      "noEmail": "Nomzodda e-mail yöq: kiriş xatini yuboriş imkoni yöq."
     },
     "approveModal": {
       "title": "Arizani maʼqullaş va kabinetni oçiş: {{name}}",
@@ -1145,7 +1170,8 @@
         "Şartnoma raqami va sanasi hamkor kartasida qayd etiladi",
         "Aloqaçi şaxs kiriş kodi bilan taklifnoma oladi",
         "Kontragent mijozlar qatorida paydo böladi"
-      ]
+      ],
+      "hintNoScan": "Imzolangan skan olinmagan. Tasdiqlaş uçun sabab körsating — u jurnalga yoziladi."
     },
     "rejectModal": {
       "title": "Arizani rad etiş: {{name}}",
@@ -1153,6 +1179,62 @@
       "reasonLabel": "Rad etiş sababi",
       "reasonPlaceholder": "Masalan: bunday mahsulotni yetkazmaymiz / sertifikatlar yöq",
       "ok": "Arizani rad etiş"
+    },
+    "noApprovers": "«Huquq» zonasi egasi tayinlanmagan",
+    "contractLine": {
+      "requested": "Qaror kutilmoqda: {{who}}",
+      "approved": "Kelişilgan: {{who}}",
+      "returned": "Qaytarilgan: {{note}}",
+      "template": "Şablon «{{name}}», {{edition}}-tahrir, {{language}}",
+      "upload": "Öz fayl",
+      "notPrepared": "Şartnoma tayyorlanmagan.",
+      "library": "Şartnoma şablonlari",
+      "ready": "Yuborişga tayyor",
+      "candidateReturned": "Nomzod qaytardi: {{note}}",
+      "waitingCandidate": "Nomzod javobi kutilmoqda",
+      "waitingScan": "Imzolangan skan kutilmoqda",
+      "scanReady": "Skan olindi: {{date}}",
+      "openContract": "Şartnoma",
+      "openScan": "Skan"
+    },
+    "prepareModal": {
+      "title": "Nomzod uçun şartnoma: {{name}}",
+      "ok": "Şartnomani tayyorlaş",
+      "loading": "Şablonlar yuklanmoqda…",
+      "noTemplate": "Tasdiqlangan hamkorlik şartnoma şabloni yöq. Öz faylingizni yuklang yoki şablonni tasdiqlang.",
+      "openLibrary": "Şartnoma şablonlarini oçiş",
+      "mode": "Şartnoma manbai",
+      "fromTemplate": "Şablondan",
+      "ownFile": "Öz fayl",
+      "template": "Şablon",
+      "templatePlaceholder": "Şablonni tanlang",
+      "templateOption": "{{name}} · {{edition}}-tahrir",
+      "file": "Şartnoma fayli",
+      "fileHint": "PDF yoki DOCX, 20 MB gaça",
+      "language": "Şartnoma tili",
+      "deviation": "Şablondan farqi",
+      "deviationHint": "Ixtiyoriy. Çetga çiqiş «Huquq» zonasi egasi qaroriga yuboriladi va kelişilgaç şartnomaga kiradi.",
+      "needsApproval": "Qaror qiladi: {{who}}. Kelişilgaç yuborişingiz mumkin.",
+      "readyToSend": "Kelişiş şart emas: tasdiqlangan şablon, çetga çiqişsiz.",
+      "languages": {
+        "ru": "Русский",
+        "en": "English",
+        "uz": "Özbekça"
+      }
+    },
+    "decisionModal": {
+      "title": "Şartnoma böyiça qaror: {{name}}",
+      "hintFile": "Xodim öz şartnoma faylini yukladi.",
+      "hintDeviation": "Şablondan çetga çiqiş söralgan.",
+      "decision": "Qaror",
+      "approve": "Kelişiş",
+      "return": "Qaytariş",
+      "note": "Izoh",
+      "ok": {
+        "approve": "Şartnomani kelişiş",
+        "return": "Qayta işlaşga qaytariş"
+      },
+      "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi"
     }
   },
   "backToItems": "Pozitsiyalarga"

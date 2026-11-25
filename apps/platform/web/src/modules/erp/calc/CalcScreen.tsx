@@ -324,7 +324,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 {t(`state.${stateLabel(sheet)}`)}
               </StatusTag>
             )}
-            {sheet.quote !== null && sheet.step !== "LOST" && sheet.rights.stock === true ? (
+            {editable && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
                   openForm("price");

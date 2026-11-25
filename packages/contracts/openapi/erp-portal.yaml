@@ -3429,15 +3429,20 @@ paths:
     get:
       tags: [company]
       operationId: getCompanyPartnerContractPdf
-      summary: Скачать проект или подписанный партнёрский договор
+      summary: Скачать партнёрский договор, отправленный кандидату
       description: |
-        Отдаёт PDF-файл проекта договора или подписанного партнёрского договора компании сессии для ознакомления и
-        согласования. Открыт любой сессии (FX-1). Документ не собрался — 503 `DOCUMENT_PENDING`, заглушка не отдаётся.
+        Отдаёт файл договора, который сотрудник отправил кандидату (ПД-1): PDF по утверждённому шаблону либо свой файл
+        компании (PDF или DOCX; тип — в `Content-Type`, вид — `PartnerApplication.contract_file_kind`). Открыт любой
+        сессии (FX-1). До отправки файла для кандидата нет — 404. Документ не собирается на лету: встроенного образца нет.
       responses:
         '200':
-          description: PDF-файл договора
+          description: Файл договора
           content:
             application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
               schema:
                 type: string
                 format: binary
@@ -3449,12 +3454,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
-        '503':
-          description: Документ не собрался (`DOCUMENT_PENDING`), повторите позже
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /company/partner-application/agree:
     post:
@@ -3495,12 +3494,91 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
-        '503':
-          description: Документ не собрался (`DOCUMENT_PENDING`), повторите позже
+
+  /company/partner-application/return:
+    post:
+      tags: [company]
+      operationId: returnCompanyPartnerContract
+      summary: Вернуть партнёрский договор с замечанием
+      description: |
+        Кандидат не согласен с договором и возвращает его с замечанием (ПД-1). Статус остаётся `contract_sent`,
+        `candidate_returned_at` заполняется, замечание — в `candidate_notes`; сотрудник готовит новую версию.
+        Открыт любой сессии (FX-1), требует права действовать `can_act`. Замечание обязательно (`RETURN_NOTE_REQUIRED`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notes]
+              properties:
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Замечание кандидата к договору
+      responses:
+        '200':
+          description: Замечание принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '400':
+          description: Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет замечания (`RETURN_NOTE_REQUIRED`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /company/partner-application/signed-scan:
+    post:
+      tags: [company]
+      operationId: uploadCompanyPartnerSignedScan
+      summary: Загрузить скан подписанного партнёрского договора
+      description: |
+        После согласования (`candidate_agreed`) кандидат загружает скан подписанного договора (ПД-1): PDF, JPG, PNG или
+        WebP до 20 МБ; повторная загрузка заменяет скан. Единственное исключение из «только JSON» помимо `/uploads`.
+        Открыт любой сессии (FX-1), требует права действовать `can_act`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Скан принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '400':
+          description: Скан сейчас не ждут (`SCAN_NOT_EXPECTED`) или файл не подходит (`SCAN_INVALID`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /team:
     get:
@@ -3937,6 +4015,9 @@ components:
         - ALREADY_PARTNER
         - APPLICATION_EXISTS
         - PARTNER_APPLICATION_NOT_FOUND
+        - SCAN_NOT_EXPECTED
+        - SCAN_INVALID
+        - RETURN_NOTE_REQUIRED
         - NOT_IN_CONTRACT_SENT_STATUS
         - LAST_ADMIN_CANNOT_BE_REMOVED
         - CANNOT_DEACTIVATE_SELF
@@ -4045,7 +4126,21 @@ components:
           description: Примечания/комментарии кандидата при согласовании
         has_contract_pdf:
           type: boolean
-          description: Наличие прикреплённого PDF-файла договора
+          description: Договор отправлен кандидату и его можно открыть (PDF по шаблону или свой файл)
+        contract_file_kind:
+          type: [string, 'null']
+          enum: [pdf, docx, null]
+          description: Вид файла договора (ПД-1); null — файла нет
+        candidate_returned_at:
+          type: [string, 'null']
+          format: date-time
+          description: Когда кандидат вернул договор с замечанием; сбрасывается при повторной отправке
+        has_signed_scan:
+          type: boolean
+          description: Кандидат загрузил скан подписанного договора
+        signed_scan_at:
+          type: [string, 'null']
+          format: date-time
         rejected_reason:
           type: [string, 'null']
           description: Причина отклонения заявки

@@ -15,6 +15,7 @@ import {
   useUpdateSupplierOrder,
 } from "../../../shared/api/generated/platform-bff";
 import { DateField } from "../../../shared/ui/DateField";
+import { DisabledReason } from "../../../shared/ui/DisabledReason";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { clean, useErrorText, useRefreshStock, withUnit } from "./api";
@@ -51,12 +52,15 @@ function Footer({
   pending,
   danger = false,
   disabled = false,
+  why,
 }: {
   onClose: () => void;
   submit: { label: string; run: () => void };
   pending: boolean;
   danger?: boolean;
   disabled?: boolean;
+  /** id строки с причиной, пока кнопка неактивна */
+  why?: string;
 }) {
   const { t } = useTranslation("stock");
   return [
@@ -69,6 +73,7 @@ function Footer({
       danger={danger}
       loading={pending}
       disabled={disabled}
+      aria-describedby={disabled ? why : undefined}
       onClick={submit.run}
     >
       {submit.label}
@@ -93,6 +98,7 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
         onClose,
         pending: send.isPending,
         disabled: missing,
+        why: `${id}-why`,
         submit: {
           label: t("order.send.submit"),
           run: () => {
@@ -122,6 +128,7 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
             }}
           />
         </FormField>
+        <DisabledReason id={`${id}-why`}>{missing ? t("order.send.reason") : null}</DisabledReason>
         <ErrorNote message={action.error} />
       </div>
     </Dialog>
@@ -225,6 +232,7 @@ export function ConfirmModal({
         onClose,
         pending: confirm.isPending,
         disabled: date === "",
+        why: `${id}-why`,
         submit: {
           label: t("order.confirm.submit"),
           run: () => {
@@ -237,6 +245,9 @@ export function ConfirmModal({
         <FormField id={id} label={t("order.confirm.date")} hint={t("order.confirm.dateHint")}>
           <DateField id={id} value={date} aria-describedby={`${id}-hint`} onChange={setDate} />
         </FormField>
+        <DisabledReason id={`${id}-why`}>
+          {date === "" ? t("order.confirm.reason") : null}
+        </DisabledReason>
         <ErrorNote message={action.error} />
       </div>
     </Dialog>

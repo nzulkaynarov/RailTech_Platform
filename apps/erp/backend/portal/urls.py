@@ -18,6 +18,8 @@ from portal.views import (
     CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
     CompanyPartnerContractPdfView,
+    CompanyPartnerContractReturnView,
+    CompanyPartnerSignedScanView,
     CompanySecurityEventEndSessionView,
     CompanySecurityLogView,
     CompanyView,
@@ -384,6 +386,26 @@ urlpatterns = [
         "company/partner-application/agree/",
         CompanyPartnerApplicationAgreeView.as_view(),
         name="portal-company-partner-application-agree-slash",
+    ),
+    path(
+        "company/partner-application/return",
+        CompanyPartnerContractReturnView.as_view(),
+        name="portal-company-partner-application-return",
+    ),
+    path(
+        "company/partner-application/return/",
+        CompanyPartnerContractReturnView.as_view(),
+        name="portal-company-partner-application-return-slash",
+    ),
+    path(
+        "company/partner-application/signed-scan",
+        CompanyPartnerSignedScanView.as_view(),
+        name="portal-company-partner-application-signed-scan",
+    ),
+    path(
+        "company/partner-application/signed-scan/",
+        CompanyPartnerSignedScanView.as_view(),
+        name="portal-company-partner-application-signed-scan-slash",
     ),
     # Team (Команда клиента)
     path("team", TeamListView.as_view(), name="portal-team"),

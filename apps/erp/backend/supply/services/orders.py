@@ -644,6 +644,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
                 user=None,
                 language=order.supplier.language or None,
                 reply_to=[user.email] if getattr(user, "email", "") else None,
+                ref=("supplier_order", order.pk),  # отказ почты — тому, кто отправил заказ
             )
         except EmailDeliveryError as exc:
             logger.warning("Заказ %s не отправлен: %s", order.number, exc)

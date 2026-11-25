@@ -91,6 +91,8 @@ export interface QuoteDefaultsUpdate {
   contract_sign_before_send?: boolean;
   /** ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
   contract_deviations_allowed?: boolean;
+  /** ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+  contract_four_eyes?: boolean;
   /**
    * ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый
    * @nullable

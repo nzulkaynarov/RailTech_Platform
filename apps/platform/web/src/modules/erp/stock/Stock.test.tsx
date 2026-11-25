@@ -269,6 +269,12 @@ describe("Склад · заказы партнёрам", () => {
     const submit = within(confirm).getByRole("button", { name: "Подтвердить" });
     // Ожидаемая дата заказа (без неё он не ушёл бы, СЦ-10) подставлена — партнёр подтвердил её или новую.
     expect(submit).toBeEnabled();
+    // Б-2: без даты «Подтвердить» неактивна и говорит почему
+    fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "");
+    await waitFor(() => {
+      expect(submit).toBeDisabled();
+    });
+    expect(submit).toHaveAccessibleDescription("Укажите подтверждённую дату поставки.");
     fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "2099-01-15");
     fireEvent.click(submit);
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();
@@ -405,7 +411,11 @@ describe("Склад · заказы партнёрам", () => {
     await screen.findByRole("button", { name: "Отправить партнёру" });
     fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
     const send = await screen.findByRole("dialog");
-    expect(within(send).getByRole("button", { name: "Отправить письмо" })).toBeDisabled();
+    const sendSubmit = within(send).getByRole("button", { name: "Отправить письмо" });
+    expect(sendSubmit).toBeDisabled();
+    expect(sendSubmit).toHaveAccessibleDescription(
+      "Укажите адрес партнёра — без него письмо не уйдёт.",
+    );
     fireEvent.change(within(send).getByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
@@ -489,6 +499,11 @@ describe("Склад · приёмка и отгрузки", () => {
       name: "Отгрузить, «Скрепление рельсовое КБ-65»",
     });
     expect(input).toHaveValue("20");
+    // Б-2: без количества кнопка неактивна, причина названа
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(screen.getByRole("button", { name: "Отгрузить" })).toHaveAccessibleDescription(
+      "Укажите количество хотя бы по одной позиции.",
+    );
     fireEvent.change(input, { target: { value: "8" } });
     fireEvent.change(screen.getByLabelText("Трек-номер"), { target: { value: "TRK-100" } });
     fireEvent.click(screen.getByRole("button", { name: "Отгрузить" }));
@@ -646,7 +661,7 @@ describe("Склад · приёмка и отгрузки", () => {
   });
 });
 
-async function createUnpricedDraft() {
+async function createUnpricedDraft(options: { price?: string } = {}) {
   await openStock("supply@demo.example", "orders");
   fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
   await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
@@ -669,6 +684,14 @@ async function createUnpricedDraft() {
   fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
     target: { value: "1" },
   });
+  if (options.price) {
+    fireEvent.change(
+      within(page).getByRole("textbox", { name: "Цена партнёра за единицу, строка 1" }),
+      {
+        target: { value: options.price },
+      },
+    );
+  }
   fireEvent.click(within(page).getByRole("button", { name: "Создать черновик" }));
 }
 
@@ -714,6 +737,35 @@ describe("Склад · заказ без цены и даты не уходит
 
     expect(await screen.findByRole("button", { name: "Отправить партнёру" })).toBeVisible();
     expect(screen.queryByText(/Без цены/)).toBeNull();
+  });
+
+  it("«Отмена» на странице нового заказа ведёт к заказам, а не на склад (Б-4)", async () => {
+    await openStock("supply@demo.example", "orders");
+    fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    expect(screen.getByRole("link", { name: "Отмена" })).toHaveAttribute(
+      "href",
+      "/erp/stock?view=orders",
+    );
+    expect(screen.getByText(/Без даты и цен заказ партнёру не уйдёт/)).toBeInTheDocument();
+  });
+
+  it("черновик с ценой, но без даты: главная кнопка «Указать дату» открывает «Изменить» (Б-4)", async () => {
+    await createUnpricedDraft({ price: "185000" });
+    const year = String(new Date().getFullYear());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ЗП-${year}-030` }),
+    ).toBeVisible();
+    expect(screen.getByText("Нет ожидаемой даты")).toBeVisible();
+    expect(screen.getByText(/Укажите дату — без неё заказ партнёру не уходит/)).toBeVisible();
+    expect(screen.queryByText(/Внесите в «Изменить»/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Отправить партнёру" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Указать дату" }));
+    const edit = await screen.findByRole("dialog");
+    fillDate(within(edit).getByLabelText("Ожидаемая дата"), FUTURE);
+    fireEvent.click(within(edit).getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByRole("button", { name: "Отправить партнёру" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Указать дату" })).toBeNull();
   });
 
   it("«Запросить цену»: строки без цены уходят партнёру, карточка показывает, что запрос отправлен", async () => {

@@ -1543,6 +1543,36 @@ export const handlers = [
     ),
   ),
   http.post(
+    `${API}/company/partner-application/return`,
+    withSession(
+      async ({ db, request }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'contract_sent') {
+          return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
+        }
+        const body = ((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string };
+        if (!body.notes?.trim()) return error(400, 'RETURN_NOTE_REQUIRED');
+        db.partnerApplication.candidate_notes = body.notes;
+        db.partnerApplication.candidate_returned_at = new Date().toISOString();
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/company/partner-application/signed-scan`,
+    withSession(
+      async ({ db }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'candidate_agreed') {
+          return error(400, 'SCAN_NOT_EXPECTED');
+        }
+        db.partnerApplication.has_signed_scan = true;
+        db.partnerApplication.signed_scan_at = new Date().toISOString();
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
     `${API}/company/partner-application`,
     withSession(
       async ({ db, session, request }) => {

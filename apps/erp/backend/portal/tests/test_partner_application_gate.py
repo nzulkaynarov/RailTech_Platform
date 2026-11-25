@@ -7,7 +7,7 @@
 (г) отклонённый кандидат не становится активным при первом входе;
 (д) исход приглашения виден сотруднику;
 (е) одобрение не снимает приостановку, не перезаписывает модули и сохранённую дату;
-(ж) сбой рендера договора не сохраняет заглушку;
+(ж) (снят ПД-1: договор собирает «Подготовить договор», см. test_partner_contract_pd1.py);
 (з) ИНН длиннее поля компании;
 (и) кандидат с отношением без модулей работает со своей заявкой.
 """
@@ -27,12 +27,8 @@ from parties.models import (
     RelationshipStatus,
 )
 from portal.services.access import activate_on_first_login, company_has_cabinet_access
-from portal.services.partner_contract import (
-    PartnerContractRenderError,
-    build_partner_contract_context,
-    render_partner_contract_pdf,
-)
 from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, break_mail_handoff, make_portal_session
+from portal.tests.partner_contract_helpers import prepare, with_scan
 
 from catalog.tests.desk_world import build_world
 from core.models.notifications import EmailLog
@@ -82,20 +78,23 @@ def make_app(**kwargs) -> PartnerApplication:
         "status": PartnerApplicationStatus.SUBMITTED,
     }
     defaults.update(kwargs)
-    return PartnerApplication.objects.create(**defaults)
+    # ПД-1: договор подготовлен (шаблон без отступлений) — иначе отправлять нечего
+    return prepare(PartnerApplication.objects.create(**defaults))
 
 
 def agreed_app(company, **kwargs) -> PartnerApplication:
     """Заявка, по которой кандидат согласовал договор."""
     from django.utils import timezone
 
-    return make_app(
-        company=company,
-        company_name=company.name,
-        inn=company.inn or "",
-        status=PartnerApplicationStatus.CANDIDATE_AGREED,
-        candidate_agreed_at=timezone.now(),
-        **kwargs,
+    return with_scan(
+        make_app(
+            company=company,
+            company_name=company.name,
+            inn=company.inn or "",
+            status=PartnerApplicationStatus.CANDIDATE_AGREED,
+            candidate_agreed_at=timezone.now(),
+            **kwargs,
+        )
     )
 
 
@@ -312,32 +311,6 @@ class TestApproveGate:
             event_code="admin.partner_application.approved_without_agreement"
         ).exists()
 
-    def test_override_does_not_print_candidate_agreement(self, supply):
-        app = make_app(status=PartnerApplicationStatus.CONTRACT_SENT)
-        post(supply, app, "approve", {"contract_number": "D-1", "override_reason": "договор подписан на бумаге"})
-        app.refresh_from_db()
-
-        context = build_partner_contract_context(app, draft=False)
-
-        assert context["candidate_agreed"] is False
-
-    def test_supply_employee_is_not_printed_as_signatory(self, world):
-        app = make_app(status=PartnerApplicationStatus.APPROVED, reviewed_by=world["users"]["supply"])
-
-        context = build_partner_contract_context(app, draft=False, director_user=world["users"]["supply"])
-
-        assert context["signed_by_director"] is False
-        assert world["users"]["supply"].email not in str(context["director_email"])
-
-    def test_authorized_signatory_is_printed(self, world):
-        director = world["users"]["director"]
-        app = make_app(status=PartnerApplicationStatus.APPROVED, reviewed_by=director)
-
-        context = build_partner_contract_context(app, draft=False, director_user=director)
-
-        assert context["signed_by_director"] is True
-        assert context["director_email"] == director.email
-
     def test_resending_contract_drops_previous_agreement(self, supply):
         company = Company.objects.create(name="Партнёр", inn="7733333334", is_active=True)
         app = agreed_app(company)
@@ -535,9 +508,9 @@ class TestBindingIsNotRewritten:
         rel = CompanyRelationship.objects.create(
             company=company, role=RelationshipRole.PARTNER, status=RelationshipStatus.INVITED, modules=[]
         )
-        app = make_app(inn=company.inn)
+        app = make_app(inn=company.inn, contract_number="NEW-2")  # номер задан при подготовке договора
 
-        response = post(supply, app, "send-contract", {"company_id": company.pk, "contract_number": "NEW-2"})
+        response = post(supply, app, "send-contract", {"company_id": company.pk})
 
         assert response.status_code == 200
         rel.refresh_from_db()
@@ -661,81 +634,6 @@ class TestRejectArchivesCreatedContact:
 
         contact.refresh_from_db()
         assert not contact.is_archived
-
-
-class TestRenderFailure:
-    """(ж) Сбой WeasyPrint — ошибка, заглушка договором не сохраняется."""
-
-    @pytest.fixture
-    def broken_renderer(self, monkeypatch):
-        import weasyprint
-
-        def explode(*args, **kwargs):
-            raise OSError("cairo is gone")
-
-        monkeypatch.setattr(weasyprint, "HTML", explode)
-
-    @pytest.mark.usefixtures("broken_renderer")
-    def test_render_raises_instead_of_stub(self):
-        with pytest.raises(PartnerContractRenderError):
-            render_partner_contract_pdf(make_app(), draft=True)
-
-    @pytest.mark.usefixtures("broken_renderer")
-    def test_send_contract_saves_nothing(self, supply):
-        app = make_app()
-
-        response = post(supply, app, "send-contract")
-
-        assert response.status_code == 400
-        assert response.json()["detail"] == "CONTRACT_RENDER_FAILED"
-        app.refresh_from_db()
-        assert not app.contract_pdf and app.status == PartnerApplicationStatus.SUBMITTED
-        assert mail.outbox == []
-
-    @pytest.mark.usefixtures("broken_renderer")
-    def test_approve_saves_nothing(self, supply):
-        company = Company.objects.create(name="Партнёр", inn="7755555555", is_active=True)
-        app = agreed_app(company)
-
-        response = post(supply, app, "approve", {"contract_number": "D-1"})
-
-        assert response.status_code == 400
-        assert response.json()["detail"] == "CONTRACT_RENDER_FAILED"
-        app.refresh_from_db()
-        assert not app.contract_pdf and app.status == PartnerApplicationStatus.CANDIDATE_AGREED
-        assert not CompanyRelationship.objects.filter(company=company).exists()
-
-    @pytest.mark.usefixtures("broken_renderer")
-    def test_agree_saves_nothing(self, portal_client, client_company, client_contact):
-        app = make_app(
-            source=PartnerApplicationSource.CLIENT_CABINET,
-            company=client_company,
-            applicant_contact=client_contact,
-            status=PartnerApplicationStatus.CONTRACT_SENT,
-        )
-
-        response = portal_client.post(f"{PORTAL}/agree", {"notes": ""}, format="json")
-
-        assert response.status_code == 503
-        assert response.json()["detail"] == "DOCUMENT_PENDING"
-        app.refresh_from_db()
-        assert app.status == PartnerApplicationStatus.CONTRACT_SENT
-        assert app.candidate_agreed_at is None and not app.contract_pdf
-
-    @pytest.mark.usefixtures("broken_renderer")
-    def test_download_does_not_store_stub(self, portal_client, client_company, client_contact):
-        app = make_app(
-            source=PartnerApplicationSource.CLIENT_CABINET,
-            company=client_company,
-            applicant_contact=client_contact,
-            status=PartnerApplicationStatus.CONTRACT_SENT,
-        )
-
-        response = portal_client.get(f"{PORTAL}/contract-pdf")
-
-        assert response.status_code == 503
-        app.refresh_from_db()
-        assert not app.contract_pdf
 
 
 class TestLongInn:

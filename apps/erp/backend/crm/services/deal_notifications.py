@@ -248,7 +248,14 @@ def notify_delivery_overdue(fulfillment) -> int:
     покупатель/продавец почти всегда пустое, так что задача считала обработанные строки, но
     де-факто не извещала никого.
     """
+    from notifications.models import Notification
+
     deal = fulfillment.deal
+    # Один раз на поставку и срок: задача идёт каждый день, а просрочка — одно событие. Новый
+    # ожидаемый срок (перенесли и снова просрочили) — новое уведомление.
+    marker = {"fulfillment_id": fulfillment.pk, "expected": str(fulfillment.expected_delivery_date or "")}
+    if Notification.objects.filter(event_code="fulfillment.overdue", event_params__contains=marker).exists():
+        return 0
     recipients = set(buyer_team_user_ids(deal)) | set(seller_team_user_ids(deal))
     return notify_deal_users(
         recipients,
@@ -263,6 +270,7 @@ def notify_delivery_overdue(fulfillment) -> int:
         event_code="fulfillment.overdue",
         event_params={
             "deal_id": deal.pk,
+            "fulfillment_id": fulfillment.pk,
             "expected": str(fulfillment.expected_delivery_date or ""),
             "status_code": fulfillment.status.code if fulfillment.status_id else "",
         },

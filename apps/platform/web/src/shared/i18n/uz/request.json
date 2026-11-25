@@ -91,7 +91,9 @@
     "title": "Ariza yaratildi",
     "text": "Ariza hisobga olinmoqda; ariza raqami mijoz kartasida paydo böladi.",
     "repeated": "Bu ariza allaqaçon yaratilgan — uni körsatamiz.",
-    "openClient": "Mijoz kartasini oçiş"
+    "waits": "Rezolyutsiya kutilmoqda.",
+    "failed": "Hisobga uzatilmadi: mijoz kartoçkasida qayta yuboring.",
+    "open": "Arizani oçiş"
   },
   "errors": {
     "company": "Kompaniyani tanlang",

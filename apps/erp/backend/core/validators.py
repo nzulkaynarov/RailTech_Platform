@@ -190,3 +190,23 @@ def validate_document_upload(file):
         max_size=DOCUMENT_MAX_SIZE,
         label="Document",
     )
+
+
+ALLOWED_CONTRACT_EXTENSIONS = {".pdf", ".docx"}
+ALLOWED_CONTRACT_CONTENT_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+def validate_contract_upload(file):
+    """Свой файл договора (ПД-1): PDF или DOCX, сигнатура совпадает с расширением, до 20 МБ, не пустой."""
+    if not getattr(file, "size", 0):
+        raise ValidationError("Contract: the file is empty.")
+    _validate_file(
+        file,
+        allowed_extensions=ALLOWED_CONTRACT_EXTENSIONS,
+        allowed_content_types=ALLOWED_CONTRACT_CONTENT_TYPES,
+        max_size=DOCUMENT_MAX_SIZE,
+        label="Contract",
+    )
