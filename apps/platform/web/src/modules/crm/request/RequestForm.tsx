@@ -17,6 +17,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
 import { CompanyPicker, PersonPicker } from "../../../shared/ui/pickers";
 import {
   type RemainingItem,
@@ -193,7 +194,8 @@ export function RequestForm({
   const [personId, setPersonId] = useState("");
 
   const client = useGetCrmClient(state.clientId ?? 0, {
-    query: { enabled: state.clientId !== null },
+    // отметка «Не работать» могла появиться, пока карточка клиента лежала в кэше: форму открываем со свежей
+    query: { enabled: state.clientId !== null, refetchOnMount: "always" },
   });
   const contacts = state.clientId !== null ? (client.data?.contacts ?? []) : [];
   // Пока сотрудник не выбрал контакт сам — основной контакт клиента (Telegram лида уже привязан к нему).
@@ -238,6 +240,7 @@ export function RequestForm({
     leadTelegram: lead?.channel === "telegram" ? (lead.contacts.telegram ?? null) : null,
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
+    doNotWork: Boolean(client.data?.do_not_work),
   };
   // Основание по звонку (СЦ-6): лид со звонка — записка собирается сама при входе на шаг «Запрос», когда согласие уже есть
   // (дано в CRM или отмечено на «Контакте»); без лида (повторный звонок клиента) — по кнопке «Основание — звонок».
@@ -461,6 +464,8 @@ export function RequestForm({
         />
       ) : null}
 
+      {/* над шагами: свёрнутый шаг «Клиент» полосу бы спрятал */}
+      <DoNotWorkStrip mark={client.data?.do_not_work} />
       <StepSections
         headingLevel={4}
         active={active}

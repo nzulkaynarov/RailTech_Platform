@@ -2,6 +2,7 @@ import { Button, Card, Input, Segmented, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
+import { useFreshGeneration } from "../../../app/shell/useFreshGeneration";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { ClientRow } from "../../../shared/api/generated/model";
 import { canEdit, canSee } from "../../../app/access";
@@ -257,6 +258,8 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const creating = selected !== null && params.get("create") === "1";
   // «Создать · Заявка» из окна «Создать» (план 2026-11-12 п. 0.1): клиент выбирается в самой форме.
   const newRequest = selected === null && params.get("create") === "1";
+  // «Создать · Заявка» второй раз, пока форма открыта, начинает форму заново (метка `fresh` меню «Создать»)
+  const freshForm = useFreshGeneration();
 
   const isOpen = (row: ClientRow): boolean =>
     isPartnerOnly(row) ? partner === String(-row.id) : selected === row.id;
@@ -456,7 +459,12 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
       ) : null}
       {newRequest ? (
         <Sheet label={t("request:title")} onClose={close}>
-          <CreateRequest key="create-new" lead={null} clientId={null} onCancel={close} />
+          <CreateRequest
+            key={`create-new-${String(freshForm)}`}
+            lead={null}
+            clientId={null}
+            onCancel={close}
+          />
         </Sheet>
       ) : null}
       {selected !== null ? (
