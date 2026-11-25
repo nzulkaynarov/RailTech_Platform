@@ -152,10 +152,13 @@ class TestBinding:
                 expires_at=datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc),
             )
 
-    def test_a_recipient_outside_the_contacts_gets_a_contact_without_rights(self, invoice, client_company):
-        link, _ = mint("invoice", invoice, email="finance@new.example.uz", name="Финансы")
-        assert link.contact.company_id == client_company.pk
-        assert link.contact.can_act is False and link.contact.is_admin is False
+    def test_a_recipient_outside_the_contacts_gets_no_contact(self, invoice, client_company):
+        from parties.models import Contact
+
+        before = Contact.objects.filter(company=client_company).count()
+        link, raw = mint("invoice", invoice, email="finance@new.example.uz", name="Финансы")
+        assert link.contact is None and Contact.objects.filter(company=client_company).count() == before
+        assert post("code", {"token": raw}).status_code == 403  # кода нет: контакт заводит сотрудник
 
 
 # ── Гость видит клиентскую проекцию своего вида ───────────────────────────────────────────────────────────────────
@@ -421,10 +424,23 @@ class TestLetters:
             email_invoice_issued(invoice)
         assert [item[2] for item in sent] == [client_contact.email]
 
-    def test_recipients_are_the_deal_contact_and_those_who_got_a_document(self, deal, invoice, client_contact):
+    def test_recipients_are_the_deal_contact_and_contacts_who_got_a_document(
+        self, deal, invoice, client_contact, client_company
+    ):
+        from parties.models import Contact
+
+        Contact.objects.create(company=client_company, name="Финансы", email="finance@new.example.uz")
         mint("invoice", invoice, email="finance@new.example.uz", name="Финансы")
         emails = [email for email, _ in doc_links.deal_recipients(deal)]
         assert emails == [client_contact.email, "finance@new.example.uz"]
+
+    def test_a_typo_or_forwarded_address_does_not_receive_the_next_documents(self, deal, invoice, client_contact):
+        """В-1: ссылка без контакта живёт, но адрес получателем следующих документов и писем сделки не становится."""
+        link, _ = mint("invoice", invoice, email="typo@stranger.example", name="Опечатка")
+        assert link.contact is None
+        emails = [email for email, _ in doc_links.deal_recipients(deal)]
+        assert emails == [client_contact.email]
+        assert "typo@stranger.example" not in emails
 
     def test_a_deal_without_a_chosen_contact_falls_back_to_the_primary_contact(self, deal, client_contact):
         deal.contact = None
@@ -439,11 +455,15 @@ class TestLetters:
 
 class TestNotificationsForRecipients:
     def test_a_document_recipient_who_never_signed_in_gets_the_deals_letters(self, invoice, deal, client_company):
+        from parties.models import Contact
         from portal.models import NoticeChannel
         from portal.services import notices
 
+        recipient = Contact.objects.create(
+            company=client_company, name="Финансы", email="finance@new.example.uz", can_act=False
+        )
         link, _ = mint("invoice", invoice, email="finance@new.example.uz", name="Финансы")
-        recipient = link.contact
+        assert link.contact == recipient
         assert recipient.invited_at is None and recipient.last_login_at is None
         assert recipient.pk != deal.contact_id
         # следующее событие сделки (сдвиг срока поставки) — письмо получателю документа, хотя в кабинет он не входил
@@ -460,10 +480,14 @@ class TestNotificationsForRecipients:
         assert notice.channel == NoticeChannel.EMAIL and notice.email_reason == ""
 
     def test_a_revoked_recipient_gets_no_further_letters_or_deal_notifications(self, invoice, deal, client_company):
+        from parties.models import Contact
         from portal.services import notices
 
+        wrong = Contact.objects.create(
+            company=client_company, name="Не тот", email="wrong.person@example.uz", can_act=False
+        )
         link, _ = mint("invoice", invoice, email="wrong.person@example.uz", name="Не тот")
-        wrong = link.contact
+        assert link.contact == wrong
         assert "wrong.person@example.uz" in [email for email, _ in doc_links.deal_recipients(deal)]
         doc_links.revoke_document_links("invoice", invoice, None)
         assert "wrong.person@example.uz" not in [email for email, _ in doc_links.deal_recipients(deal)]

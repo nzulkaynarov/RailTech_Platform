@@ -1919,6 +1919,7 @@
       "answer": "Sörovga javob beriş",
       "confirm": "Buyurtmani tasdiqlaş"
     },
+    "guestNote": "Hujjat böyiça javob beriş uçun jönatuvçiga yozing",
     "codeNote": "Har qanday amal {{email}} manziliga keladigan koddan keyin bajariladi. Bu havola orqali boşqa hujjat va bölimlar oçilmaydi.",
     "memberNote": "Siz {{name}} sifatida kirgansiz — kod kerak emas.",
     "linkUntil": "Havola {{date}} gaça amal qiladi — yuboruvçi uni bekor qilişi mumkin.",
