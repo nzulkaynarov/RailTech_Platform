@@ -3,8 +3,12 @@
 import httpx
 import pytest
 
-from app.domain.errors import Reason, UpstreamUnavailableError, ValidationFailedError
-from app.integrations.erp import ErpRateLimitedError
+from app.domain.errors import (
+    ErpRateLimitedError,
+    Reason,
+    UpstreamUnavailableError,
+    ValidationFailedError,
+)
 from app.integrations.erp_partner import (
     PartnerApplicationPayload,
     _result,
