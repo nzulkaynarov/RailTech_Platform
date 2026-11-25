@@ -207,6 +207,9 @@ def attachments(number: str, message_id: int, raw: list[dict[str, Any]]) -> list
                     if stored
                     else None
                 ),
+                note=reason[:200]
+                if not stored and isinstance(reason := item.get("note"), str)
+                else None,
             )
         )
     return out

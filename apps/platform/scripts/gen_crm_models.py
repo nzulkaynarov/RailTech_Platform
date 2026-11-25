@@ -43,6 +43,8 @@ ROOTS = (
     "ErpPairingOut",
     "TelegramStatusOut",
     "ChatCandidateOut",
+    # ТГ-1б: группы Telegram с секретарём (ADR-0032)
+    "TelegramGroupOut",
     "BotProfileOut",
     "ActionResult",
     "SmtpStatusOut",

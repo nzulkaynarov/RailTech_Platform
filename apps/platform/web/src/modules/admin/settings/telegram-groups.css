@@ -1,0 +1,47 @@
+.pf-tgg-steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+
+.pf-tgg-form {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(200px, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.pf-tgg-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.pf-tgg-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ant-color-split);
+}
+
+.pf-tgg-row:last-child {
+  border-bottom: 0;
+}
+
+.pf-tgg-main {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .pf-tgg-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -180,8 +180,16 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
             "mime": "application/pdf",
             "size": 1200,
             "url": "/api/v1/crm/messages/L-2041/attachments/90/0",
+            "note": None,
         },
-        {"index": 1, "name": "big.zip", "mime": "application/zip", "size": None, "url": None},
+        {
+            "index": 1,
+            "name": "big.zip",
+            "mime": "application/zip",
+            "size": None,
+            "url": None,
+            "note": None,
+        },
     ]
     assert "storage_key" not in response.text
     assert "tg/5001" not in response.text

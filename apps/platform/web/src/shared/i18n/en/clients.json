@@ -236,5 +236,61 @@
       "cropHint": "Drag the photo and pick a zoom. What is inside the circle is what colleagues see.",
       "apply": "Save photo"
     }
+  },
+  "tgGroups": {
+    "title": "Client groups",
+    "connectTitle": "Connect a group",
+    "steps": {
+      "add": "Add the bot to the client group and make it an administrator.",
+      "code": "The bot posts a code in the group.",
+      "enter": "Enter the code and pick the client."
+    },
+    "code": "Code from the group",
+    "client": "Client",
+    "clientPlaceholder": "Name or tax ID",
+    "noClients": "No client found",
+    "connect": "Connect",
+    "connected": "Group connected",
+    "disconnected": "Group disconnected",
+    "pickClient": "Pick a client",
+    "since": "Connected {{date}}",
+    "states": {
+      "waiting_code": "Waiting for code",
+      "code_expired": "Code expired",
+      "connected": "Connected",
+      "needs_admin": "Admin rights needed",
+      "disconnected": "Disconnected",
+      "removed": "Bot removed"
+    },
+    "expiredHint": "New code: the /connect command in the group.",
+    "needsAdminHint": "Without admin rights the bot does not see everything.",
+    "disconnect": "Disconnect",
+    "disconnectLabel": "Disconnect group {{name}}",
+    "confirmTitle": "Disconnect the group?",
+    "confirmText": "Recording of \"{{name}}\" stops. The earlier conversation stays on the client card.",
+    "emptyTitle": "No groups yet",
+    "emptyText": "Add the bot to a client group and it will appear here.",
+    "errors": {
+      "wrongCode": "The code did not match. Check the code in the group.",
+      "forbidden": "You cannot connect groups.",
+      "generic": "Failed. Try again.",
+      "load": "Could not load groups. Reload the page.",
+      "expired": "The code expired or was already used. New code: /connect in the group.",
+      "alreadyBound": "This group is already connected.",
+      "teamChannel": "This is the team channel; it cannot be a client group."
+    },
+    "card": {
+      "title": "Client group",
+      "name": "Group",
+      "since": "Connected on",
+      "state": "State",
+      "open": "Group conversation",
+      "close": "Hide conversation",
+      "replyInGroup": "Replies go in the group itself."
+    },
+    "noAccess": {
+      "title": "Client access needed",
+      "text": "Client groups are seen and connected by staff with access to Clients."
+    }
   }
 }

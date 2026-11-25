@@ -9,6 +9,11 @@ from typing import Annotated, Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 
+class Access(StrEnum):
+    ok = "ok"
+    admin_required = "admin_required"
+
+
 class Action(StrEnum):
     """
     Главное действие по смыслу
@@ -1421,6 +1426,12 @@ class Kind4(StrEnum):
     erp = "erp"
 
 
+class Language(StrEnum):
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
 class LeadDetail(BaseModel):
     assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
     assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
@@ -2244,6 +2255,13 @@ class Status13(StrEnum):
     unknown = "unknown"
 
 
+class Status14(StrEnum):
+    pending = "pending"
+    bound = "bound"
+    unbound = "unbound"
+    removed = "removed"
+
+
 class Status3(StrEnum):
     ok = "ok"
     degraded = "degraded"
@@ -2315,6 +2333,22 @@ class TeamMember(BaseModel):
     position: Annotated[str | None, Field(title="Position")] = None
 
 
+class TelegramGroupOut(BaseModel):
+    access: Annotated[Access, Field(title="Access")]
+    bound_at: Annotated[AwareDatetime | None, Field(title="Bound At")]
+    chat_id: Annotated[int, Field(title="Chat Id")]
+    chat_type: Annotated[str, Field(title="Chat Type")]
+    client_id: Annotated[int | None, Field(title="Client Id")]
+    client_name: Annotated[str | None, Field(title="Client Name")]
+    code_active: Annotated[bool, Field(title="Code Active")]
+    detected_at: Annotated[AwareDatetime, Field(title="Detected At")]
+    language: Annotated[Language | None, Field(title="Language")]
+    lead_id: Annotated[int | None, Field(title="Lead Id")]
+    status: Annotated[Status14, Field(title="Status")]
+    title: Annotated[str, Field(title="Title")]
+    topic_mode: Annotated[TopicMode, Field(title="Topic Mode")]
+
+
 class TelegramStatusOut(BaseModel):
     """
     Значение токена сюда не попадает никогда — только `configured` и `last4`.
@@ -2352,6 +2386,11 @@ class TokenSource(StrEnum):
     db = "db"
     env = "env"
     none = "none"
+
+
+class TopicMode(StrEnum):
+    none = "none"
+    request = "request"
 
 
 class UsernameSource(StrEnum):

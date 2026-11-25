@@ -435,6 +435,8 @@ tags:
     description: Расчёт · Склад — остатки и резервы, заказы поставщикам ЗП, приёмка, отгрузки по проектам (ERP; раздел `erp.stock`); запрос цены у поставщика и резерв строки — в теге `calc`
   - name: leads
     description: Клиенты · Лиды — список по статусу Платформы и карточка лида (прокси к CRM; раздел `crm.leads`)
+  - name: telegram-groups
+    description: Настройки · Telegram · Группы с клиентами и раздел «Группа с клиентом» карточки (прокси к CRM, ADR-0032)
   - name: clients
     description: Клиенты · Клиенты — список и карточка 360°, приглашение в кабинет (прокси к CRM; раздел `crm.clients`)
   - name: requests
@@ -14476,6 +14478,121 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /crm/telegram-groups:
+    get:
+      tags: [telegram-groups]
+      operationId: listCrmTelegramGroups
+      summary: 'Настройки · Telegram · Группы с клиентами: группы, где бот администратор'
+      description: >-
+        CRM `GET /telegram-groups` (ТГ-1б, ADR-0032). Раздел `crm.clients` от чтения (в CRM — `clients:read`). Ждущие код — первыми, с просроченным кодом — последними. `state` считает BFF из `status`, `access` и
+        `code_active` CRM. Кода привязки в ответе нет — он только в группе.
+      responses:
+        '200':
+          description: Группы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroupList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/telegram-groups/bind:
+    post:
+      tags: [telegram-groups]
+      operationId: bindCrmTelegramGroup
+      summary: 'Привязать группу к клиенту по коду из группы'
+      description: >-
+        CRM `POST /telegram-groups/bind`. Раздел `crm.clients` полный (в CRM — `clients:write`). Неверный код — 404,
+        просроченный или уже использованный — 409 (`details.reason` CRM). После привязки секретарь пишет и закрепляет
+        уведомление в группе.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramGroupBindIn'
+      responses:
+        '200':
+          description: Привязанная группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroup'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/telegram-groups/{chat_id}/unbind:
+    post:
+      tags: [telegram-groups]
+      operationId: unbindCrmTelegramGroup
+      summary: 'Отключить группу: запись прекращается, прежняя переписка остаётся у клиента'
+      description: >-
+        CRM `POST /telegram-groups/{chat_id}/unbind`. Раздел `crm.clients` полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: chat_id
+          in: path
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Группа отключена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/clients/{id}/telegram-group:
+    get:
+      tags: [telegram-groups]
+      operationId: getCrmClientTelegramGroup
+      summary: 'Привязанная группа клиента для раздела «Группа с клиентом» в его карточке'
+      description: >-
+        CRM `GET /telegram-groups`, отбор по клиенту и состоянию «привязана». Раздел `crm.clients` от чтения. Нет группы —
+        `group: null`, раздел в карточке не показывается. Переписка группы — лента лида `GET /crm/messages/{lead}/thread`
+        по номеру `group.lead`, только чтение (ответ из Платформы — ТГ-2).
+      parameters:
+        - $ref: '#/components/parameters/ClientIdPath'
+      responses:
+        '200':
+          description: Группа клиента или null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientTelegramGroup'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /crm/requests:
     post:
       tags: [requests]
@@ -27711,7 +27828,7 @@ components:
     MessageChannel:
       type: string
       description: >-
-        Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; у лида без переписки — источник `web`, `email`, `phone`,
+        Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; `group` — группа Telegram с секретарём, ТГ-1; у лида без переписки — источник `web`, `email`, `phone`,
         `referral`); подпись — у экрана
       pattern: '^[a-z][a-z_]{0,15}$'
 
@@ -28112,6 +28229,9 @@ components:
         url:
           type: [string, 'null']
           description: Ссылка BFF на файл (`/api/v1/crm/messages/{lead}/attachments/…`); `null` — файл не сохранён
+        note:
+          type: [string, 'null']
+          description: Почему файл не сохранён, словами CRM («файл больше 20 МБ — откройте в группе»); у сохранённого — `null`
 
     ThreadMessage:
       type: object
@@ -29933,6 +30053,50 @@ components:
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
         do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
         logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
+
+    TelegramGroup:
+      type: object
+      additionalProperties: false
+      required: [chat_id, title, state, client_id, client_name, lead, bound_at, detected_at]
+      properties:
+        chat_id: {type: integer}
+        title: {type: string}
+        state:
+          type: string
+          enum: [waiting_code, code_expired, connected, needs_admin, disconnected, removed]
+          description: 'Ждёт кода · код истёк · подключена · нужны права администратора · отключена · бота убрали'
+        client_id: {type: [integer, 'null']}
+        client_name: {type: [string, 'null']}
+        lead: {type: [string, 'null'], description: 'Номер якорного лида беседы группы `L-NNNN` (лента — `getCrmThread`); null, пока не привязана'}
+        bound_at: {type: [string, 'null'], format: date-time}
+        detected_at: {type: string, format: date-time}
+
+    TelegramGroupList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/TelegramGroup'}
+
+    TelegramGroupBindIn:
+      type: object
+      additionalProperties: false
+      required: [code, client_id]
+      properties:
+        code: {type: string, minLength: 4, maxLength: 16}
+        client_id: {type: integer, minimum: 1}
+
+    ClientTelegramGroup:
+      type: object
+      additionalProperties: false
+      required: [group]
+      properties:
+        group:
+          oneOf:
+            - {$ref: '#/components/schemas/TelegramGroup'}
+            - {type: 'null'}
 
     ClientList:
       type: object

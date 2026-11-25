@@ -15,7 +15,7 @@ function Attachment({ file }: { file: ThreadAttachment }) {
   if (!file.url)
     return (
       <span className="pf-msg-file pf-msg-file--missing">
-        {t("thread.notStored", { name: file.name })}
+        {file.note ? `${file.name} — ${file.note}` : t("thread.notStored", { name: file.name })}
       </span>
     );
   return (
@@ -86,6 +86,9 @@ function Bubble({ entry, lead, canCreate }: { entry: Entry; lead: string; canCre
           <span className="pf-msg-tag-channel">
             {t(message.channel === "email" ? "thread.channelEmail" : "thread.channelCabinet")}
           </span>
+        ) : null}
+        {message.channel === "group" && message.author === "manager" ? (
+          <span className="pf-msg-tag-channel">{t("thread.ours")}</span>
         ) : null}
         <time dateTime={message.created_at}>{fmt.activity(message.created_at)}</time>
       </div>

@@ -114,6 +114,8 @@ class ThreadAttachment(BaseModel):
     mime: str
     size: int | None
     url: str | None
+    # Почему файл не сохранён (слова CRM: «файл больше 20 МБ …»); сохранённый — `None`
+    note: str | None = None
 
 
 class MessageContext(BaseModel):

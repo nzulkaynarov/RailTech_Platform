@@ -37,6 +37,7 @@ import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { reasonError } from "../common/errors";
 import { useRefreshCrm } from "../common/params";
+import { ClientGroupSection } from "./ClientGroupSection";
 import { transferReason } from "./labels";
 
 import "../crm.css";
@@ -466,6 +467,8 @@ function Body({
           <p className="pf-fp-sub">{t("clients:card.noLeads")}</p>
         )}
       </section>
+
+      <ClientGroupSection clientId={card.id} />
 
       <section className="pf-fp-block" aria-labelledby={`pf-client-${String(card.id)}-requests`}>
         <h4 id={`pf-client-${String(card.id)}-requests`}>{t("clients:card.requests")}</h4>

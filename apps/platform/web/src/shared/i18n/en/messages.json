@@ -158,7 +158,8 @@
       "act": "Act {{number}}"
     },
     "contextLabel": "Wrote from the document page: {{label}}",
-    "authorFor": "{{name}} for {{owner}}"
+    "authorFor": "{{name}} for {{owner}}",
+    "ours": "Our staff"
   },
   "composer": {
     "mode": "Who we write to",

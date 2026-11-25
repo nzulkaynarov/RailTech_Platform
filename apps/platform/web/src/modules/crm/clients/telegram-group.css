@@ -1,0 +1,19 @@
+.pf-tgg-card-actions {
+  margin-top: 8px;
+}
+
+.pf-tgg-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  margin-top: 8px;
+}
+
+.pf-tgg-feed .pf-hint {
+  margin: 0;
+}
+
+.pf-tgg-feed .pf-msg-scroll {
+  flex: 0 1 auto;
+}

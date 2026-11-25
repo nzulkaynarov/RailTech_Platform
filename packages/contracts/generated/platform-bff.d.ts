@@ -8003,6 +8003,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/telegram-groups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Настройки · Telegram · Группы с клиентами: группы, где бот администратор
+     * @description CRM `GET /telegram-groups` (ТГ-1б, ADR-0032). Раздел `crm.clients` от чтения (в CRM — `clients:read`). Ждущие код — первыми, с просроченным кодом — последними. `state` считает BFF из `status`, `access` и `code_active` CRM. Кода привязки в ответе нет — он только в группе.
+     */
+    get: operations["listCrmTelegramGroups"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/telegram-groups/bind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Привязать группу к клиенту по коду из группы
+     * @description CRM `POST /telegram-groups/bind`. Раздел `crm.clients` полный (в CRM — `clients:write`). Неверный код — 404, просроченный или уже использованный — 409 (`details.reason` CRM). После привязки секретарь пишет и закрепляет уведомление в группе.
+     */
+    post: operations["bindCrmTelegramGroup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/telegram-groups/{chat_id}/unbind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отключить группу: запись прекращается, прежняя переписка остаётся у клиента
+     * @description CRM `POST /telegram-groups/{chat_id}/unbind`. Раздел `crm.clients` полный.
+     */
+    post: operations["unbindCrmTelegramGroup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}/telegram-group": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Привязанная группа клиента для раздела «Группа с клиентом» в его карточке
+     * @description CRM `GET /telegram-groups`, отбор по клиенту и состоянию «привязана». Раздел `crm.clients` от чтения. Нет группы — `group: null`, раздел в карточке не показывается. Переписка группы — лента лида `GET /crm/messages/{lead}/thread` по номеру `group.lead`, только чтение (ответ из Платформы — ТГ-2).
+     */
+    get: operations["getCrmClientTelegramGroup"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/requests": {
     parameters: {
       query?: never;
@@ -16146,7 +16226,7 @@ export interface components {
      * @enum {string}
      */
     LeadOwnerMode: "bot" | "waiting" | "manager";
-    /** @description Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; у лида без переписки — источник `web`, `email`, `phone`, `referral`); подпись — у экрана */
+    /** @description Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; `group` — группа Telegram с секретарём, ТГ-1; у лида без переписки — источник `web`, `email`, `phone`, `referral`); подпись — у экрана */
     MessageChannel: string;
     /** @description Метка документа у сообщения из кабинета (CHAT-1): клиент написал со страницы сделки, КП, счёта или акта; экран показывает плашку «КП KP-2026-0042» */
     MessageContext: {
@@ -16375,6 +16455,8 @@ export interface components {
       size: number | null;
       /** @description Ссылка BFF на файл (`/api/v1/crm/messages/{lead}/attachments/…`); `null` — файл не сохранён */
       url: string | null;
+      /** @description Почему файл не сохранён, словами CRM («файл больше 20 МБ — откройте в группе»); у сохранённого — `null` */
+      note?: string | null;
     };
     ThreadMessage: {
       id: number;
@@ -17706,6 +17788,39 @@ export interface components {
       do_not_work?: boolean;
       /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
       logo_url?: string | null;
+    };
+    TelegramGroup: {
+      chat_id: number;
+      title: string;
+      /**
+       * @description Ждёт кода · код истёк · подключена · нужны права администратора · отключена · бота убрали
+       * @enum {string}
+       */
+      state:
+        | "waiting_code"
+        | "code_expired"
+        | "connected"
+        | "needs_admin"
+        | "disconnected"
+        | "removed";
+      client_id: number | null;
+      client_name: string | null;
+      /** @description Номер якорного лида беседы группы `L-NNNN` (лента — `getCrmThread`); null, пока не привязана */
+      lead: string | null;
+      /** Format: date-time */
+      bound_at: string | null;
+      /** Format: date-time */
+      detected_at: string;
+    };
+    TelegramGroupList: {
+      items: components["schemas"]["TelegramGroup"][];
+    };
+    TelegramGroupBindIn: {
+      code: string;
+      client_id: number;
+    };
+    ClientTelegramGroup: {
+      group: components["schemas"]["TelegramGroup"] | null;
     };
     ClientList: {
       items: components["schemas"]["ClientRow"][];
@@ -33898,6 +34013,118 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["RequestConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmTelegramGroups: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Группы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramGroupList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  bindCrmTelegramGroup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TelegramGroupBindIn"];
+      };
+    };
+    responses: {
+      /** @description Привязанная группа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramGroup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  unbindCrmTelegramGroup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        chat_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Группа отключена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmClientTelegramGroup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Группа клиента или null */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientTelegramGroup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

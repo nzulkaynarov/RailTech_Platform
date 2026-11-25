@@ -7,6 +7,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { TemplatesView } from "../bot/TemplatesView";
 import { SectionTabs } from "../company/SectionTabs";
 import { TelegramPanel } from "../integrations/TelegramPanel";
+import { TelegramGroups } from "./TelegramGroups";
 import { BotSettingsSections } from "./BotSettingsSections";
 import { SettingsPage } from "./SettingsPage";
 import { useTabParam } from "./useTabParam";
@@ -14,14 +15,14 @@ import { useTabParam } from "./useTabParam";
 import "../company/company.css";
 import "../integrations/integrations.css";
 
-const TABS = ["connection", "texts", "behavior", "templates", "kb"] as const;
+const TABS = ["connection", "groups", "texts", "behavior", "templates", "kb"] as const;
 
 /** Где сама база знаний (документы, пробелы, песочница) — экран Клиенты · База знаний бота. */
 const KB_PATH = "/crm/kb";
 
 /**
  * Каналы связи · Telegram (SET-IA; DECISIONS 2026-10-28 «одна страница канала»): бывший «Telegram-бот» без вложенных вкладок.
- * Один уровень вкладок (`?tab=`): «Подключение» (токен, канал команды, профиль), «Тексты», «Поведение» (поведение бота,
+ * Один уровень вкладок (`?tab=`): «Подключение» (токен, канал команды, профиль), «Группы с клиентами» (ТГ-1б), «Тексты», «Поведение» (поведение бота,
  * квалификация, стоп-слова, конкуренты — формами одна под другой), «Шаблоны ответов», «База знаний». Остальные разделы бота —
  * на страницах своих групп (`BOT_PLACEMENT`). Меняет `admin: full`; директор видит без кнопок.
  */
@@ -38,6 +39,8 @@ export function TelegramPage() {
         <TelegramPanel editable={editable} initialTokenOpen titled={false} />
       </Card>
     );
+  } else if (active === "groups") {
+    body = <TelegramGroups />;
   } else if (active === "templates") {
     body = <TemplatesView editable={editable} />;
   } else if (active === "kb") {

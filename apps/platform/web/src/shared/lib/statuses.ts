@@ -289,6 +289,15 @@ export const STATUS_TONE = {
   instruction: { in_work: GO, executed: OK, cancelled: OFF },
   /** Пункт чек-листа одобрения КП */
   check: { ok: OK, fail: NO, pending: W },
+  /** Группа Telegram с клиентом (ТГ-1б): подключена, ждёт кода, нужны права, код истёк, отключена, бота убрали */
+  tgGroup: {
+    connected: OK,
+    waiting_code: W,
+    needs_admin: W,
+    code_expired: NO,
+    disconnected: OFF,
+    removed: OFF,
+  },
   /** Заявка на партнёрство (PART-ONBOARD-2) */
   partnerApplication: {
     submitted: W,
