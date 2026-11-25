@@ -74,6 +74,7 @@ async def suggest_letter_from_file(
         json={
             "file_id": str(body.file_id),
             **({"received_at": body.received_at.isoformat()} if body.received_at else {}),
+            **({"rules_only": True} if body.rules_only else {}),
         },
         wait_seconds=INTAKE_WAIT_SECONDS,
     )

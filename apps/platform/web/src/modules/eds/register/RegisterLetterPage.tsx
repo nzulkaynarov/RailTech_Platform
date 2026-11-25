@@ -60,6 +60,7 @@ import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplic
 import {
   type AiField,
   applySuggestion,
+  bannerKind,
   byCodeFields,
   decisionOf,
   revertSuggestion,
@@ -375,10 +376,14 @@ export function RegisterLetterPage() {
       : []),
     { label: t("letters:register.review.files"), value: doneFiles.map((a) => a.name).join(", ") },
   ].filter((item) => item.value !== null && item.value !== "");
-  const fileSummary = [
-    doneFiles.map((a) => a.name).join(", "),
-    ai ? t("letters:register.ai.applied", { count: ai.left.size }) : "",
-  ]
+  const bannerText = (state: { left: Set<AiField>; byCode: Set<AiField> }) => {
+    const kind = bannerKind(state.left, state.byCode);
+    if (kind === "ai") return t("letters:register.ai.applied", { count: state.left.size });
+    return t(
+      kind === "rules" ? "letters:register.ai.appliedRules" : "letters:register.ai.appliedMixed",
+    );
+  };
+  const fileSummary = [doneFiles.map((a) => a.name).join(", "), ai ? bannerText(ai) : ""]
     .filter(Boolean)
     .join(" · ");
   const fieldError = (field: RegisterField) =>
@@ -620,11 +625,7 @@ export function RegisterLetterPage() {
                         noAutoFor={restoredFileId}
                         attachments={values.attachments}
                         applied={ai?.left.size ?? 0}
-                        rules={
-                          ai !== null &&
-                          ai.left.size > 0 &&
-                          [...ai.left].every((k) => ai.byCode.has(k))
-                        }
+                        banner={ai ? bannerKind(ai.left, ai.byCode) : "ai"}
                         staleDue={
                           ai !== null &&
                           ai.left.has("documentDue") &&
@@ -633,7 +634,15 @@ export function RegisterLetterPage() {
                         }
                         onRecompute={(due, used) => {
                           setValues((prev) => ({ ...prev, documentDue: due }));
-                          setAi((prev) => (prev ? { ...prev, receivedUsed: used } : prev));
+                          setAi((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  byCode: new Set(prev.byCode).add("documentDue"),
+                                  receivedUsed: used,
+                                }
+                              : prev,
+                          );
                         }}
                         receivedAt={values.receivedAt}
                         today={today}

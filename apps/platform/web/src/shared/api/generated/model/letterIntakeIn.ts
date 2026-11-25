@@ -7,4 +7,6 @@ export interface LetterIntakeIn {
   file_id: string;
   /** Дата поступления письма — от неё считается срок «в течение N дней» */
   received_at?: string | null;
+  /** Только правила кода, без модели (пересчёт срока) */
+  rules_only?: boolean;
 }

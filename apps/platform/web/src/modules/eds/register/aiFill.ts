@@ -83,3 +83,13 @@ export function usableReceivedAt(value: string, today: string): boolean {
   floor.setUTCFullYear(floor.getUTCFullYear() - 1);
   return value >= floor.toISOString().slice(0, 10);
 }
+
+/** Какой текст у плашки «Заполнено из файла»: всё посчитал код, смесь с ответом модели или всё предложила модель. */
+export function bannerKind(
+  left: ReadonlySet<AiField>,
+  byCode: ReadonlySet<AiField>,
+): "ai" | "rules" | "mixed" {
+  const code = [...left].filter((key) => byCode.has(key)).length;
+  if (code === 0) return "ai";
+  return code === left.size ? "rules" : "mixed";
+}

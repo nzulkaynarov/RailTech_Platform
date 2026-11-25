@@ -2692,6 +2692,11 @@ export interface components {
        * @description Дата поступления письма: от неё считается срок «в течение N дней»; нет — от дня регистрации. Позже сегодняшнего дня (дня компании) или старше года — 422 `received_at` (`in_future`, `too_old`)
        */
       received_at?: string;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока от новой даты поступления): платного вызова нет; срока в тексте нет — 409 `nothing_recognized`
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля карточки; `null` — не найдено. ИНН — найден кодом в тексте файла, не моделью */
     LetterIntakeFields: {

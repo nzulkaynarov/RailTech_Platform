@@ -26080,6 +26080,7 @@ components:
           - {type: string, format: date}
           - {type: 'null'}
           description: Дата поступления письма — от неё считается срок «в течение N дней»
+        rules_only: {type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока)'}
 
     LetterIntakeFields:
       type: object

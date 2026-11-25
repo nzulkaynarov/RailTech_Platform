@@ -14867,6 +14867,11 @@ export interface components {
       file_id: string;
       /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
       received_at?: string | null;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока)
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {

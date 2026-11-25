@@ -130,6 +130,9 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
       ).toBeVisible();
       await shot(page, "rules-banner");
       await openStep(page, "Срок, адресат и резолюция");
+      await expect(page.locator("button[aria-expanded]", { hasText: "Файл письма" })).toContainText(
+        "Подставлено из текста письма",
+      );
       await expect(page.getByLabel("Срок по документу")).not.toHaveValue("");
       await expect(page.getByText("Из текста письма", { exact: true })).toBeVisible();
       await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(0);
@@ -154,11 +157,17 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
     // срок посчитал код, остальные шесть полей предложила модель (у ИНН своей метки на экране нет)
     await expect(page.getByText("Из текста письма", { exact: true })).toHaveCount(1);
     await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(6);
+    await expect(page.locator("button[aria-expanded]", { hasText: "Файл письма" })).toContainText(
+      "проверьте отмеченные поля",
+    );
+    await expect(
+      page.locator("button[aria-expanded]", { hasText: "Файл письма" }),
+    ).not.toContainText("Предложено ИИ");
     await shot(page, "mixed-labels");
     await expectNoViolations(page, "смешанный ответ");
   });
 
-  test("дата поступления изменилась — срок от кода предлагают пересчитать, правленый руками не трогают", async ({
+  test("дата поступления изменилась — срок от кода предлагают пересчитать (без модели), правленый руками не трогают", async ({
     page,
   }) => {
     await signInAt(page, "registrar@demo.example", 1440);
@@ -182,6 +191,13 @@ test.describe("СЦ-11 · Входящее: регистрация и ответ
     await openStep(page, "Срок, адресат и резолюция");
     const [y, m, d] = day(4).split("-");
     await expect(page.getByLabel("Срок по документу")).toHaveValue(`${d}.${m}.${y}`);
+    // срок поправили руками — смена даты поступления его больше не трогает и пересчёт не предлагает
+    await expect(async () => {
+      await fillDate(page.getByLabel("Срок по документу"), day(20));
+    }).toPass();
+    await fillDate(await reveal(page.getByLabel("Дата поступления")), day(-2));
+    await openStep(page, "Файл письма");
+    await expect(page.getByRole("button", { name: "Пересчитать срок" })).toHaveCount(0);
   });
 
   test("карточка письма не по сделке без полей заявки и клиента; ответ «На № …» отправителя", async ({

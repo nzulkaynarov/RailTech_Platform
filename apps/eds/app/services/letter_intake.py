@@ -336,6 +336,8 @@ async def suggest(
     employee: Employee,
     file_id: uuid.UUID,
     received_at: date | None = None,
+    *,
+    rules_only: bool = False,
 ) -> LetterIntakeSuggestion:
     """Предложить поля карточки по файлу письма. Вызов модели — вне транзакции, журнал — своей транзакцией."""
     today = clock.company_date(clock.now())
@@ -358,7 +360,9 @@ async def suggest(
     # Модель недоступна или лимит исчерпан — не отказ: правила кода (срок по тексту) работают без модели (СЦ-11).
     blocked: tuple[str, str] | None = None
     budget = Decimal(str(settings.ai_daily_budget_usd))
-    if not gateway.available(settings):
+    if rules_only:  # «Пересчитать срок»: модель не зовём совсем
+        blocked = ("nothing_recognized", "В тексте письма срока не нашлось — введите его сами.")
+    elif not gateway.available(settings):
         blocked = ("ai_unavailable", "Помощник не настроен — заполните вручную.")
     elif budget > 0 and spent >= budget:  # 0 — без лимита (как у ERP)
         blocked = ("ai_budget_exceeded", "Дневной лимит помощника исчерпан — заполните вручную.")

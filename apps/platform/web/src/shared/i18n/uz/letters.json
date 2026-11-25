@@ -434,6 +434,7 @@
       "staleDue": "Qabul qilish sanasi özgardi — muddat eski sanadan hisoblangan.",
       "recompute": "Muddatni qayta hisoblaş",
       "appliedRules": "Xat matnidan qöyildi — belgilangan maydonlarni tekşiring.",
+      "appliedMixed": "Fayldan töldirildi — belgilangan maydonlarni tekşiring.",
       "applied_one": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
       "applied_few": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",
       "applied_many": "Fayldan töldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekşiring.",

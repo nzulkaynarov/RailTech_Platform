@@ -84,7 +84,7 @@ function DealSuggestion({
 export function AiFillBar({
   attachments,
   applied,
-  rules = false,
+  banner = "ai",
   receivedAt = "",
   today = "",
   staleDue = false,
@@ -98,8 +98,8 @@ export function AiFillBar({
   attachments: readonly Attachment[];
   /** Сколько полей заполнено из файла; 0 — предложения нет */
   applied: number;
-  /** Предложение посчитал код по тексту письма, модель не использовалась */
-  rules?: boolean;
+  /** Текст плашки: всё предложила модель, всё посчитал код или смесь */
+  banner?: "ai" | "rules" | "mixed";
   /** Дата поступления формы (ГГГГ-ММ-ДД): от неё считается срок «в течение N дней» */
   receivedAt?: string;
   today?: string;
@@ -147,7 +147,11 @@ export function AiFillBar({
     setPending(true);
     setFailure(null);
     try {
-      const next = await call();
+      const next = await suggestLetterFromFile({
+        file_id: file.id,
+        ...(usable ? { received_at: receivedAt } : {}),
+        rules_only: true,
+      });
       if (next.fields.document_due) onRecompute?.(next.fields.document_due, receivedAt);
     } catch (error) {
       setFailure(t(`register.ai.errors.${errorKey(error)}`));
@@ -214,7 +218,9 @@ export function AiFillBar({
           showIcon
           role="status"
           message={
-            rules ? t("register.ai.appliedRules") : t("register.ai.applied", { count: applied })
+            banner === "ai"
+              ? t("register.ai.applied", { count: applied })
+              : t(banner === "rules" ? "register.ai.appliedRules" : "register.ai.appliedMixed")
           }
           action={
             <Button size="small" onClick={onRevert}>

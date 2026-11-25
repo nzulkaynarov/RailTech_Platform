@@ -5,7 +5,7 @@
 (`httpx.MockTransport`), платных вызовов нет."""
 
 import json
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -110,11 +110,20 @@ def model(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> FakeModel:
 
 
 async def intake(
-    client: httpx.AsyncClient, who: Person, content: bytes, received_at: str | None = None, **kw: Any
+    client: httpx.AsyncClient,
+    who: Person,
+    content: bytes,
+    received_at: str | None = None,
+    rules_only: bool = False,
+    **kw: Any,
 ) -> httpx.Response:
     uploaded = await upload(client, who, content, **kw)
     assert uploaded.status_code == 201, uploaded.text
-    body = {"file_id": uploaded.json()["id"], **({"received_at": received_at} if received_at else {})}
+    body = {
+        "file_id": uploaded.json()["id"],
+        **({"received_at": received_at} if received_at else {}),
+        **({"rules_only": True} if rules_only else {}),
+    }
     return await client.post("/api/v1/letter-intake", json=body, headers=who.headers)
 
 
@@ -635,3 +644,41 @@ async def test_receipt_date_out_of_range_is_rejected(
 
 def test_due_at_the_calendar_edge_is_no_suggestion_not_a_crash() -> None:
     assert letter_intake.due_from_text("в течение 5 дней", date(9999, 12, 31)) is None
+
+
+UZ_DUE = ["Tax Committee", "Reply 5 ish kuni ichida please"]
+
+
+async def test_recompute_by_rules_never_calls_the_model(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+) -> None:
+    """СЦ-11: «Пересчитать срок» — только правила кода: модель не зовётся, срок помечен `by_code`; без срока — 409."""
+    done = await intake(client, staff["registrar"], make_pdf(UZ_DUE), received_at="2026-10-20", rules_only=True)
+    assert done.status_code == 200, done.text
+    body = done.json()
+    assert (body["alias"], body["by_code"]) == ("rules", ["document_due"])
+    assert body["fields"]["document_due"] == "2026-10-27"
+    nothing = await intake(client, staff["registrar"], make_pdf(LETTER_LINES), rules_only=True)
+    assert_error(nothing, 409, "CONFLICT", reason="nothing_recognized")
+    assert model.bodies == []
+
+
+@pytest.mark.parametrize(
+    ("received", "status", "reason"),
+    [
+        ("2026-11-25", 200, None),  # день компании: в Ташкенте уже 25-е, хотя в UTC ещё 24-е
+        ("2026-11-26", 422, "in_future"),
+        ("2025-11-25", 200, None),  # ровно год назад
+        ("2025-11-24", 422, "too_old"),
+    ],
+)
+async def test_receipt_date_boundaries_follow_the_company_day(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, clock: Any,
+    received: str, status: int, reason: str | None,
+) -> None:  # fmt: skip
+    """СЦ-11: 20:30 UTC 24.11 — в Ташкенте 01:30 25.11; границы окна считаются по дню компании, не по UTC."""
+    clock.current = datetime(2026, 11, 24, 20, 30, tzinfo=UTC)
+    response = await intake(client, staff["registrar"], make_pdf(UZ_DUE), received_at=received)
+    assert response.status_code == status, response.text
+    if reason is not None:
+        assert [f["message"] for f in response.json()["details"]["fields"]] == [reason]
