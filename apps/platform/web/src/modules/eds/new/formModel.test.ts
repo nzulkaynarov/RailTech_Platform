@@ -185,6 +185,19 @@ describe("formModel", () => {
     expect(toUpdateBody(form, { submit: false, send: true })).not.toHaveProperty("send");
   });
 
+  it("«счёт придёт позже» уходит в запросе, пока файла счёта нет, и возвращается из документа (Б-9)", () => {
+    const memo: FormValues = { ...FILLED, amount: "1 500 000", invoiceLater: true };
+    expect(toCreateBody(memo, false).invoice_later).toBe(true);
+    expect(toUpdateBody(memo, false).invoice_later).toBe(true);
+    // приложили счёт — отметка не нужна; без суммы и у письма её нет
+    const withFile: FormValues = {
+      ...memo,
+      attachments: [{ key: "a", name: "schet.pdf", size: 1, status: "done", id: "f-1" }],
+    };
+    expect(toCreateBody(withFile, false).invoice_later).toBe(false);
+    expect(toCreateBody({ ...memo, amount: "" }, false).invoice_later).toBe(false);
+  });
+
   it("тело запроса: деньги строкой с двумя знаками, пустое — null, письмо несёт адресата и не несёт сумму", () => {
     const form: FormValues = {
       ...FILLED,
@@ -204,6 +217,7 @@ describe("formModel", () => {
       text: "Прошу согласовать.",
       amount: { amount: "1500000.00", currency: "UZS" },
       due_date: "2026-11-05",
+      invoice_later: false,
       file_ids: ["f-1"],
       erp_deal_id: 904,
       approvers: [],
@@ -220,6 +234,7 @@ describe("formModel", () => {
       text: "Прошу согласовать.",
       amount: null,
       due_date: null,
+      invoice_later: false,
       file_ids: [],
       erp_deal_id: null,
       submit: false,
@@ -274,6 +289,7 @@ describe("formModel", () => {
       addressee: null,
       amount: { amount: "1200000.00", currency: "UZS" },
       due_date: "2026-11-05",
+      invoice_later: true,
       files: [{ id: "f-1", name: "schet.pdf", content_type: "application/pdf", size: 10 }],
       deal: { erp_deal_id: 904, number: "ЗВ-2026-104" },
       recipient: null,
@@ -285,6 +301,7 @@ describe("formModel", () => {
     });
     expect(values.amount).toBe("1200000");
     expect(values.dueDate).toBe("2026-11-05");
+    expect(values.invoiceLater).toBe(true);
     expect(values.deal).toEqual({
       erp_deal_id: 904,
       label: "ЗВ-2026-104",

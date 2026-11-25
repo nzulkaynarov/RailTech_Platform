@@ -271,6 +271,7 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     watchers: (doc.watchers ?? []).map(staffPerson),
     amount: doc.amount,
     due_date: doc.due_date,
+    invoice_later: doc.invoice_later === true,
     files: doc.file_ids.flatMap((id) => {
       const file = state.files[id];
       return file ? [file] : [];
@@ -459,6 +460,7 @@ interface FormBody {
   text?: string;
   amount?: { amount: string; currency: string } | null;
   due_date?: string | null;
+  invoice_later?: boolean;
   file_ids?: string[];
   erp_deal_id?: number | null;
   recipient?: EdsRecipientIn | null;
@@ -490,6 +492,7 @@ function applyForm(doc: MockDocument, body: FormBody): void {
   if (body.text !== undefined) doc.text = body.text.trim();
   if ("amount" in body) doc.amount = body.amount ?? null;
   if ("due_date" in body) doc.due_date = body.due_date ?? null;
+  if (body.invoice_later !== undefined) doc.invoice_later = body.invoice_later;
   if ("erp_deal_id" in body) doc.erp_deal_id = body.erp_deal_id ?? null;
   if (body.recipient !== undefined && doc.kind === "letter_out") {
     const company = body.recipient ? addresseeById(body.recipient.company_id) : undefined;

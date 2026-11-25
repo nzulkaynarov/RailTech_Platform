@@ -306,6 +306,7 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         amount=Decimal(data.amount.amount) if data.amount else None,
         currency=data.amount.currency if data.amount else None,
         due_date=data.due_date,
+        invoice_later=data.invoice_later,
         source_message_id=data.source_message_id,
         erp_deal_id=data.erp_deal_id,
         deal_number=await deal_number_for(session, data.erp_deal_id),
@@ -340,6 +341,8 @@ def _apply_edits(document: Document, edits: DocumentSubmitIn) -> None:
         document.currency = edits.amount.currency if edits.amount else None
     if "due_date" in edits.model_fields_set:
         document.due_date = edits.due_date
+    if edits.invoice_later is not None:
+        document.invoice_later = edits.invoice_later
 
 
 async def _snapshot(session: AsyncSession, document: Document, employee: Employee) -> None:

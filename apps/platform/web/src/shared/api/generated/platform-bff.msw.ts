@@ -3216,6 +3216,7 @@ export const getCreateEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -3535,6 +3536,7 @@ export const getGetEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -3848,6 +3850,7 @@ export const getUpdateEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -8681,6 +8684,7 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9024,6 +9028,7 @@ export const getRemindEdsDocumentSignerResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9367,6 +9372,7 @@ export const getWithdrawEdsDocumentFromSigningResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -9710,6 +9716,7 @@ export const getChangeEdsDocumentSignerResponseMock = (
     null,
   ]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10050,6 +10057,7 @@ export const getWaiveEdsDocumentMailResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10375,6 +10383,7 @@ export const getSendEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -10694,6 +10703,7 @@ export const getSignEdsDocumentResponseMock = (
   ]),
   amount: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     name: faker.string.alpha({ length: { min: 10, max: 255 } }),
@@ -13247,6 +13257,7 @@ export const getGetPaymentMemoResponseMock = (
   },
   amount: faker.helpers.arrayElement([{ ...getGetPaymentMemoResponsePaymentMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   deal: faker.helpers.arrayElement([{ ...getGetPaymentMemoResponseEdsDealRefMock() }, null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
@@ -13344,6 +13355,7 @@ export const getPayPaymentMemoResponseMock = (
   },
   amount: faker.helpers.arrayElement([{ ...getPayPaymentMemoResponsePaymentMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  invoice_later: faker.datatype.boolean(),
   deal: faker.helpers.arrayElement([{ ...getPayPaymentMemoResponseEdsDealRefMock() }, null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),

@@ -262,6 +262,7 @@ interface Payload {
   text: string;
   amount: { amount: string; currency: string } | null;
   due_date: string | null;
+  invoice_later: boolean;
   file_ids: string[];
   erp_deal_id: number | null;
   recipient?: { company_id: string; contact_id: string | null };
@@ -305,6 +306,12 @@ export function toPayload(
     text,
     amount: amount ? { amount, currency: HOME_CURRENCY } : null,
     due_date: !letter && values.dueDate !== "" ? values.dueDate : null,
+    // отметка живёт, только пока у служебки с суммой нет счёта; приложили файл — она не нужна
+    invoice_later:
+      values.invoiceLater &&
+      !letter &&
+      amount !== null &&
+      !values.attachments.some((a) => a.status === "done"),
     file_ids: values.attachments.flatMap((a) => (a.status === "done" && a.id ? [a.id] : [])),
     erp_deal_id: values.deal?.erp_deal_id ?? null,
     ...(letter && body
@@ -386,7 +393,7 @@ export function fromDocument(doc: EdsDocument): FormValues {
       id: file.id,
       existing: true,
     })),
-    invoiceLater: false,
+    invoiceLater: doc.invoice_later === true,
     inReplyTo: "",
     // Письмо без тела (до P4) открывается с его текстом в одном абзаце.
     body: doc.letter?.body
