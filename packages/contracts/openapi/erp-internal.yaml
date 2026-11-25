@@ -25818,6 +25818,14 @@ components:
 
             * `block` - Не создавать новые КП и сделки
             * `warn` - Только предупреждать
+        contract_foreign_by_agreement:
+          type: boolean
+          title: Нерезидент продлевается соглашением
+          description: 'Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение.'
+        contract_gating_kinds:
+          title: Какие договоры ограничивают новые сделки
+          description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
+            не закрывает.'
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -35118,6 +35126,14 @@ components:
 
             * `block` - Не создавать новые КП и сделки
             * `warn` - Только предупреждать
+        contract_foreign_by_agreement:
+          type: boolean
+          title: Нерезидент продлевается соглашением
+          description: 'Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение.'
+        contract_gating_kinds:
+          title: Какие договоры ограничивают новые сделки
+          description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
+            не закрывает.'
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов

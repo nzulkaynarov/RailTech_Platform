@@ -54,6 +54,8 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "contract_remind_last_days",
     "contract_foreign_remind_days",
     "contract_expired_action",
+    "contract_foreign_by_agreement",
+    "contract_gating_kinds",
   ],
   catalog: [
     "catalog_price_visibility",
@@ -320,6 +322,33 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
             </Form.Item>
           ) : null,
         )}
+        {shows("contract_foreign_by_agreement") ? (
+          <Form.Item
+            name="contract_foreign_by_agreement"
+            label={t("quote.contract_foreign_by_agreement")}
+            extra={t("quote.contract_foreign_by_agreementHint")}
+            valuePropName="checked"
+            className="pf-co-wide"
+          >
+            <Switch />
+          </Form.Item>
+        ) : null}
+        {shows("contract_gating_kinds") ? (
+          <Form.Item
+            name="contract_gating_kinds"
+            label={t("quote.contract_gating_kinds")}
+            extra={t("quote.contract_gating_kindsHint")}
+            className="pf-co-wide"
+          >
+            <Select
+              mode="multiple"
+              options={(["partner", "supply", "services"] as const).map((value) => ({
+                value,
+                label: t(`quote.gatingKind.${value}`),
+              }))}
+            />
+          </Form.Item>
+        ) : null}
         {shows("contract_expired_action") ? (
           <Form.Item
             name="contract_expired_action"

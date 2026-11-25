@@ -188,6 +188,21 @@ class CompanySettings(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(365)],
         verbose_name=_("Иностранный контрагент: напомнить о доп. соглашении за дней до конца срока"),
     )
+    contract_foreign_by_agreement = models.BooleanField(
+        default=True,
+        verbose_name=_("Нерезидент продлевается соглашением"),
+        help_text=_(
+            "Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение."
+        ),
+    )
+    contract_gating_kinds = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Какие договоры ограничивают новые сделки"),
+        help_text=_(
+            "Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает."
+        ),
+    )
     contract_expired_action = models.CharField(
         max_length=8,
         choices=ContractExpiredAction.choices,

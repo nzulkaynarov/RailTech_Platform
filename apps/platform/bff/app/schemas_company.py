@@ -533,6 +533,8 @@ class QuoteDefaults(BaseModel):
     contract_remind_last_days: int = 7
     contract_foreign_remind_days: int = 45
     contract_expired_action: Literal["block", "warn"] = "block"
+    contract_foreign_by_agreement: bool = True
+    contract_gating_kinds: list[Literal["partner", "supply", "services"]] = []
 
 
 class QuoteDefaultsUpdate(Patch):
@@ -582,6 +584,8 @@ class QuoteDefaultsUpdate(Patch):
     contract_remind_last_days: int | None = Field(default=None, ge=1, le=365)
     contract_foreign_remind_days: int | None = Field(default=None, ge=1, le=365)
     contract_expired_action: Literal["block", "warn"] | None = None
+    contract_foreign_by_agreement: bool | None = None
+    contract_gating_kinds: list[Literal["partner", "supply", "services"]] | None = None
 
 
 def _pick(value: Any, allowed: tuple[str, ...], default: str) -> str:
@@ -626,6 +630,12 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "contract_remind_first_days": whole(raw.get("contract_remind_first_days"), 30),
         "contract_remind_last_days": whole(raw.get("contract_remind_last_days"), 7),
         "contract_foreign_remind_days": whole(raw.get("contract_foreign_remind_days"), 45),
+        "contract_foreign_by_agreement": raw.get("contract_foreign_by_agreement") is not False,
+        "contract_gating_kinds": [
+            k
+            for k in (raw.get("contract_gating_kinds") or [])
+            if k in ("partner", "supply", "services")
+        ],
         "contract_expired_action": _pick(
             raw.get("contract_expired_action"), ("block", "warn"), "block"
         ),

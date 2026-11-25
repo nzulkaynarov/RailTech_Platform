@@ -109,5 +109,15 @@ class Migration(migrations.Migration):
                 verbose_name="Срок договора по умолчанию",
             ),
         ),
+        migrations.AddField(
+            model_name='companysettings',
+            name='contract_foreign_by_agreement',
+            field=models.BooleanField(default=True, help_text='Страна контрагента отличается от страны компании: вместо автопродления — напоминание и соглашение.', verbose_name='Нерезидент продлевается соглашением'),
+        ),
+        migrations.AddField(
+            model_name='companysettings',
+            name='contract_gating_kinds',
+            field=models.JSONField(blank=True, default=list, help_text='Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает.', verbose_name='Какие договоры ограничивают новые сделки'),
+        ),
         migrations.RunPython(seed_terms_beat, drop_terms_beat),
     ]

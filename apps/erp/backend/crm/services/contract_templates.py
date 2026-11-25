@@ -82,6 +82,8 @@ def contract_rules(company) -> dict:
         "remind_last_days": 7 if row is None else row.contract_remind_last_days,
         "foreign_remind_days": 45 if row is None else row.contract_foreign_remind_days,
         "expired_action": ContractExpiredAction.BLOCK if row is None else row.contract_expired_action,
+        "foreign_by_agreement": True if row is None else row.contract_foreign_by_agreement,
+        "gating_kinds": [] if row is None else list(row.contract_gating_kinds or []),
     }
 
 

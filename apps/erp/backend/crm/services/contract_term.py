@@ -30,16 +30,19 @@ from ..models import ActivityLog, Contract
 logger = logging.getLogger(__name__)
 
 EXPIRED_CODE = "COUNTERPARTY_CONTRACT_EXPIRED"
-HOME_COUNTRY = "UZ"
 
 
 # ── Правила: компания + шаблон ─────────────────────────────────────────────────────────────────────────────────────
 
 
-def is_foreign(company) -> bool:
-    """Контрагент-нерезидент: страна указана и это не Узбекистан. Страна не указана — как у резидента."""
-    country = getattr(company, "country", None)
-    return bool(country is not None and (country.code or "").upper() not in ("", HOME_COUNTRY))
+def is_foreign(company, seller_company=None) -> bool:
+    """Нерезидент: страна контрагента и страна компании указаны и различаются. Страны нет — как у резидента."""
+    from core.tenant import own_company
+
+    seller = seller_company or own_company()
+    theirs = getattr(company, "country_id", None)
+    ours = getattr(seller, "country_id", None)
+    return bool(theirs and ours and theirs != ours)
 
 
 def term_rules(seller_company, template, counterparty) -> dict:
@@ -54,8 +57,8 @@ def term_rules(seller_company, template, counterparty) -> dict:
     mode = (template.renewal_mode if template is not None else "") or (
         ContractRenewalMode.AUTO if base["auto_renew"] else ContractRenewalMode.NONE
     )
-    foreign = is_foreign(counterparty)
-    if foreign and mode == ContractRenewalMode.AUTO:
+    foreign = is_foreign(counterparty, seller_company)
+    if foreign and base["foreign_by_agreement"] and mode == ContractRenewalMode.AUTO:
         mode = ContractRenewalMode.BY_AGREEMENT
     if rule == ContractTermRule.OPEN:
         mode = ContractRenewalMode.NONE
@@ -443,18 +446,36 @@ def in_force(contract, today: dt.date) -> bool:
     return contract.valid_until is None or contract.valid_until >= today
 
 
-def expired_state(company, today: Optional[dt.date] = None) -> Optional[dict]:
-    """Все подписанные договоры контрагента со сроком закончились и ни один не действует: `{contract_id, number, valid_until}`.
+def gates_new_deals(contract, kinds) -> bool:
+    """Договор такого вида ограничивает новые сделки (настройка `contract_gating_kinds`; по умолчанию — никакой)."""
+    template = contract.template
+    if template is None or not kinds:
+        return False
+    return (template.counterparty_kind == "partner" and "partner" in kinds) or template.subject in kinds
 
-    Нет подписанных договоров со сроком (первая сделка, договоры до ДС-1) — `None`: блокировать нечего."""
+
+def expired_state(company, today: Optional[dt.date] = None, kinds=None) -> Optional[dict]:
+    """Договоры контрагента, которые ограничивают новые сделки (`kinds`), все закончились: `{contract_id, number, valid_until}`.
+
+    Договор по сделке новое КП не закрывает (возвращающийся клиент получит новый договор по новой сделке): без настройки
+    `contract_gating_kinds` ответ всегда `None`. Нет подписанных договоров таких видов — `None`."""
+    from core.tenant import own_company
+
+    from .contract_templates import contract_rules
+
     if company is None:
         return None
     today = today or timezone.localdate()
-    signed = list(
-        Contract.objects.filter(deal__company=company, status__code=ContractStatusCode.SIGNED)
+    if kinds is None:
+        kinds = contract_rules(own_company())["gating_kinds"]
+    signed = [
+        c
+        for c in Contract.objects.filter(deal__company=company, status__code=ContractStatusCode.SIGNED)
         .exclude(valid_from__isnull=True)
+        .select_related("template")
         .order_by("-valid_until", "-pk")
-    )
+        if gates_new_deals(c, kinds)
+    ]
     if not signed or any(in_force(c, today) for c in signed):
         return None
     last = max(signed, key=lambda c: (c.valid_until or dt.date.min, c.pk))
@@ -467,10 +488,21 @@ def new_work_error(company, seller_company=None) -> Optional[str]:
 
     from .contract_templates import contract_rules
 
-    if expired_state(company) is None:
+    rules = contract_rules(seller_company or own_company())
+    if expired_state(company, kinds=rules["gating_kinds"]) is None:
         return None
-    action = contract_rules(seller_company or own_company())["expired_action"]
+    action = rules["expired_action"]
     return EXPIRED_CODE if action == "block" else None
+
+
+def new_document_error(contract, today: Optional[dt.date] = None) -> Optional[str]:
+    """Срок ЭТОГО договора вышел: новые документы под ним (допсоглашения, спецификации, счета) — `CONTRACT_TERM_OVER`
+    при правиле «не создавать», иначе `None`. Начатые документы и оплаты не зависят от срока."""
+    from .contract_templates import contract_rules
+
+    if contract.valid_until is None or in_force(contract, today or timezone.localdate()):
+        return None
+    return "CONTRACT_TERM_OVER" if contract_rules(_seller(contract))["expired_action"] == "block" else None
 
 
 # ── Новая редакция шаблона ─────────────────────────────────────────────────────────────────────────────────────────
@@ -666,7 +698,8 @@ def counterparty_term(company, today: Optional[dt.date] = None) -> Optional[dict
 
     from .contract_templates import contract_rules
 
-    blocks = expired and contract_rules(own_company())["expired_action"] == "block"
+    rules = contract_rules(own_company())
+    blocks = expired and gates_new_deals(pick, rules["gating_kinds"]) and rules["expired_action"] == "block"
     return {
         "contract_id": pick.pk,
         "deal_id": pick.deal_id,

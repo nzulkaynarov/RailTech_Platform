@@ -189,6 +189,8 @@ function seed(): CompanyMock {
       contract_remind_last_days: 7,
       contract_foreign_remind_days: 45,
       contract_expired_action: "block",
+      contract_foreign_by_agreement: true,
+      contract_gating_kinds: [],
     },
     chargeTypes: [
       { id: "1", code: "FREIGHT", name: "Фрахт" },

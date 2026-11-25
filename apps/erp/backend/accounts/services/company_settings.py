@@ -177,11 +177,18 @@ def update_company_settings(
                 return None, "BAD_CHOICE"
             setattr(settings_row, field, data[field])
             changed.append(field)
-    if "contract_auto_renew" in data:
-        if not isinstance(data.get("contract_auto_renew"), bool):
-            return None, "BAD_BOOLEAN"
-        settings_row.contract_auto_renew = data["contract_auto_renew"]
-        changed.append("contract_auto_renew")
+    for flag in ("contract_auto_renew", "contract_foreign_by_agreement"):
+        if flag in data:
+            if not isinstance(data.get(flag), bool):
+                return None, "BAD_BOOLEAN"
+            setattr(settings_row, flag, data[flag])
+            changed.append(flag)
+    if "contract_gating_kinds" in data:
+        kinds = data.get("contract_gating_kinds")
+        if not isinstance(kinds, list) or any(k not in ("partner", "supply", "services") for k in kinds):
+            return None, "BAD_CHOICE"
+        settings_row.contract_gating_kinds = sorted(set(kinds))
+        changed.append("contract_gating_kinds")
     for field, low, high in (
         ("contract_notice_days", 0, 365),
         ("contract_next_year_from_day", 1, 31),

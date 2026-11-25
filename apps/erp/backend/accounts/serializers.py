@@ -72,6 +72,8 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "contract_remind_last_days",
             "contract_foreign_remind_days",
             "contract_expired_action",
+            "contract_foreign_by_agreement",
+            "contract_gating_kinds",
             "doc_number_prefix",
             "created_at",
             "updated_at",
@@ -132,6 +134,8 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
             "contract_remind_last_days",
             "contract_foreign_remind_days",
             "contract_expired_action",
+            "contract_foreign_by_agreement",
+            "contract_gating_kinds",
             "doc_number_prefix",
         ]
         extra_kwargs = {"min_margin_percent": {"required": False}, "target_margin_percent": {"required": False}}

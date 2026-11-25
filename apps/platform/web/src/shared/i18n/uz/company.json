@@ -333,6 +333,15 @@
     "expiredAction": {
       "block": "Şartnoma uzaytirilmaguça yangi TT yaratilmaydi",
       "warn": "Faqat ogohlantiriş"
+    },
+    "contract_foreign_by_agreement": "Norezident kelişuv bilan uzaytiriladi",
+    "contract_foreign_by_agreementHint": "Kontragent mamlakati kompaniya mamlakatidan farq qiladi: özi uzayişi örniga eslatma va qöşimça kelişuv.",
+    "contract_gating_kinds": "Muddat tugagaç qaysi şartnomalar yangi bitimlarni çeklaydi",
+    "contract_gating_kindsHint": "Odatda heç qaysi: qaytgan mijoz yangi TT va yangi şartnoma oladi. Muddati yangi TTlarni töxtatadigan turlarni tanlang.",
+    "gatingKind": {
+      "partner": "Hamkorlik (ramka)",
+      "supply": "Yetkazib beriş",
+      "services": "Xizmatlar"
     }
   },
   "charges": {

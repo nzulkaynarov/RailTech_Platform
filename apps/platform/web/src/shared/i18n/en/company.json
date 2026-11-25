@@ -333,6 +333,15 @@
     "expiredAction": {
       "block": "No new quotes until the contract is renewed",
       "warn": "Only warn"
+    },
+    "contract_foreign_by_agreement": "Non-resident renews by agreement",
+    "contract_foreign_by_agreementHint": "The counterparty country differs from the company country: a reminder and a supplementary agreement instead of automatic renewal.",
+    "contract_gating_kinds": "Which contracts limit new deals after the term ends",
+    "contract_gating_kindsHint": "None by default: a returning client gets a new quote and a new contract. Pick the kinds whose expiry should stop new quotes.",
+    "gatingKind": {
+      "partner": "Partner (framework)",
+      "supply": "Supply",
+      "services": "Services"
     }
   },
   "charges": {

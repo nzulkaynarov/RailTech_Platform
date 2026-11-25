@@ -5,6 +5,7 @@
 import type { DecimalString } from "./decimalString";
 import type { QuoteDefaultsCatalogPriceVisibility } from "./quoteDefaultsCatalogPriceVisibility";
 import type { QuoteDefaultsContractExpiredAction } from "./quoteDefaultsContractExpiredAction";
+import type { QuoteDefaultsContractGatingKindsItem } from "./quoteDefaultsContractGatingKindsItem";
 import type { QuoteDefaultsContractTermRule } from "./quoteDefaultsContractTermRule";
 
 /**
@@ -137,6 +138,10 @@ export interface QuoteDefaults {
    * @maximum 365
    */
   contract_foreign_remind_days?: number;
+  /** ДС-1: нерезидент (страна контрагента отличается от страны компании) продлевается соглашением, а не сам (по умолчанию да) */
+  contract_foreign_by_agreement?: boolean;
+  /** ДС-1: какие виды договоров после окончания срока ограничивают новые сделки; по умолчанию пусто — срок договора по сделке новое КП не закрывает */
+  contract_gating_kinds?: QuoteDefaultsContractGatingKindsItem[];
   /** ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда */
   contract_expired_action?: QuoteDefaultsContractExpiredAction;
 }

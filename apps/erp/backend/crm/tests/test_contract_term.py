@@ -24,6 +24,14 @@ pytestmark = pytest.mark.django_db
 D = dt.date
 
 
+def _foreign(pw):  # noqa: F811
+    """Страна компании — Узбекистан, страна контрагента — Германия: нерезидент определяется сравнением стран."""
+    pw.own.country = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan"})[0]
+    pw.own.save()
+    pw.client.country = Country.objects.get_or_create(code="DE", defaults={"name": "Germany"})[0]
+    pw.client.save()
+
+
 def signed(pw, signed_on=D(2026, 3, 10), **fields):  # noqa: F811
     """Подписанный договор со сроком, вычисленным из правила на `signed_on`."""
     contract = contract_in(pw, S.SIGNED, **fields)
@@ -75,9 +83,9 @@ def test_template_overrides_the_company_rule(pw):  # noqa: F811
 
 
 def test_foreign_counterparty_is_renewed_by_agreement_not_automatically(pw):  # noqa: F811
-    pw.client.country = Country.objects.get_or_create(code="DE", defaults={"name": "Germany"})[0]
-    pw.client.save()
-    contract = signed(pw)
+    _foreign(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     assert contract.renewal_mode == "by_agreement" and contract.term_foreign
     svc.run_daily(D(2027, 1, 5))
     contract.refresh_from_db()
@@ -105,7 +113,8 @@ def test_attach_scan_sets_the_term(pw):  # noqa: F811
 
 
 def test_auto_renewal_moves_the_term_and_is_idempotent(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     assert svc.run_daily(D(2026, 12, 31))["renewed"] == 0  # последний день срока ещё действует
     assert svc.run_daily(D(2027, 1, 2))["renewed"] == 1
     contract.refresh_from_db()
@@ -121,7 +130,8 @@ def test_auto_renewal_moves_the_term_and_is_idempotent(pw):  # noqa: F811
 
 
 def test_declined_contract_is_not_renewed(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     _, error = svc.decline_renewal(contract.pk, "client", today=D(2026, 11, 1))
     assert error is None
     svc.run_daily(D(2027, 1, 2))
@@ -153,8 +163,7 @@ def test_late_job_sends_only_the_most_urgent_reminder(pw):  # noqa: F811
 
 
 def test_foreign_reminder_goes_45_days_before_the_end(pw):  # noqa: F811
-    pw.client.country = Country.objects.get_or_create(code="DE", defaults={"name": "Germany"})[0]
-    pw.client.save()
+    _foreign(pw)
     signed(pw)
     assert svc.run_daily(D(2026, 11, 15))["reminded"] == 0
     assert svc.run_daily(D(2026, 11, 16))["reminded"] == 1  # 31.12 − 45 = 16.11
@@ -162,7 +171,8 @@ def test_foreign_reminder_goes_45_days_before_the_end(pw):  # noqa: F811
 
 
 def test_declined_contract_gets_no_reminders(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     svc.decline_renewal(contract.pk, "client", today=D(2026, 10, 1))
     assert svc.run_daily(D(2026, 11, 5))["reminded"] == 0
 
@@ -171,7 +181,8 @@ def test_declined_contract_gets_no_reminders(pw):  # noqa: F811
 
 
 def test_decline_is_allowed_until_the_last_notice_day_only(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     assert svc.decline_renewal(contract.pk, "client", today=D(2026, 12, 2)) == (None, "TERM_NOTICE_PASSED")
     contract, error = svc.decline_renewal(contract.pk, "client", today=D(2026, 12, 1))
     assert error is None and contract.renewal_declined_by == "client"
@@ -189,7 +200,8 @@ def test_company_side_decline_needs_the_contract_manage_permission(pw):  # noqa:
 
 
 def test_manual_renewal_of_an_expired_contract_starts_a_new_term_today(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     svc.decline_renewal(contract.pk, "client", today=D(2026, 11, 1))
     renewed, error = svc.renew_by_agreement(contract.pk, pw.accountant, today=D(2027, 2, 10), agreement_number="DS-1")
     assert error is None
@@ -201,7 +213,8 @@ def test_manual_renewal_of_an_expired_contract_starts_a_new_term_today(pw):  # n
 
 
 def test_expired_counterparty_is_blocked_for_a_new_quote_but_started_deals_are_not(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1), renewal_mode="none")
     assert svc.expired_state(pw.client)["number"] == contract.number
     from integration.tests import world as w
@@ -214,7 +227,8 @@ def test_expired_counterparty_is_blocked_for_a_new_quote_but_started_deals_are_n
 
 
 def test_warn_mode_does_not_block(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1), renewal_mode="none")
     rules(pw, contract_expired_action="warn")
     assert svc.new_work_error(pw.client, pw.own) is None
@@ -239,7 +253,7 @@ def timezone_today():
 # ── новая редакция шаблона ─────────────────────────────────────────────────────────────────────────────────────────
 
 
-def _template(pw, edition, previous=None, status=TemplateApproval.APPROVED):  # noqa: F811
+def _template(pw, edition, previous=None, status=TemplateApproval.APPROVED, kind="client"):  # noqa: F811
     return DocumentTemplate.objects.create(
         company=pw.own,
         name="Договор",
@@ -248,7 +262,7 @@ def _template(pw, edition, previous=None, status=TemplateApproval.APPROVED):  # 
         approval_status=status,
         edition=edition,
         previous_edition=previous,
-        counterparty_kind="client",
+        counterparty_kind=kind,
         subject="supply",
         is_active=status == TemplateApproval.APPROVED,
     )
@@ -320,7 +334,8 @@ def test_template_term_fields_are_editable_in_draft_and_locked_after_approval(pw
 
 
 def test_counterparty_card_shows_term_and_whether_new_work_is_blocked(pw):  # noqa: F811
-    contract = signed(pw)
+    rules(pw, contract_gating_kinds=["partner"])
+    contract = signed(pw, template=_template(pw, 1, kind="partner"))
     live = svc.counterparty_term(pw.client, D(2026, 6, 1))
     assert (live["number"], live["state"], live["blocks_new_work"]) == (contract.number, "renews", False)
     Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1), renewal_mode="none")
@@ -345,3 +360,48 @@ def test_send_new_edition_creates_a_second_contract_and_closes_the_old_one_when_
     contract.refresh_from_db()
     assert contract.valid_until == D(2026, 8, 31) and contract.renewal_mode == "none"
     assert [c.pk for c, _ in svc.on_old_edition(pw.own, D(2026, 9, 2))] == []
+
+
+# ── возвращающийся клиент и настройки ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_returning_client_with_an_ended_deal_contract_gets_a_new_quote(pw):  # noqa: F811
+    """Договор по сделке закончился, настройка по умолчанию: новое КП и новая сделка клиента не блокируются."""
+    from integration.tests import world as w
+
+    contract = signed(pw, template=_template(pw, 1))
+    Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1), renewal_mode="none")
+    assert svc.expired_state(pw.client) is None and svc.new_work_error(pw.client) is None
+    fresh = w.make_deal(pw.client)
+    _, _, _, error = draft_quote._run_draft_quote_gates(fresh.pk, pw.admin)
+    assert error != svc.EXPIRED_CODE
+
+
+def test_only_the_chosen_kinds_gate_new_deals(pw):  # noqa: F811
+    contract = signed(pw, template=_template(pw, 1))  # договор клиента по поставке
+    Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1), renewal_mode="none")
+    rules(pw, contract_gating_kinds=["partner"])
+    assert svc.expired_state(pw.client) is None  # клиентский договор вид «partner» не затрагивает
+    rules(pw, contract_gating_kinds=["supply"])
+    assert svc.expired_state(pw.client)["number"] == contract.number
+
+
+def test_the_contract_that_ended_stops_only_its_own_new_documents(pw):  # noqa: F811
+    contract = signed(pw)
+    Contract.objects.filter(pk=contract.pk).update(valid_until=D(2020, 1, 1))
+    contract.refresh_from_db()
+    assert svc.new_document_error(contract, D(2026, 1, 1)) == "CONTRACT_TERM_OVER"
+    rules(pw, contract_expired_action="warn")
+    assert svc.new_document_error(contract, D(2026, 1, 1)) is None
+
+
+def test_non_resident_rule_is_a_setting_and_compares_countries(pw):  # noqa: F811
+    _foreign(pw)
+    assert signed(pw).renewal_mode == "by_agreement"
+    rules(pw, contract_foreign_by_agreement=False)
+    pw.own.country = pw.client.country  # одна страна — резидент
+    pw.own.save()
+    contract = contract_in(pw, S.SIGNED)
+    svc.apply_at_signing(contract, signed_on=D(2026, 3, 10))
+    contract.refresh_from_db()
+    assert contract.renewal_mode == "auto" and not contract.term_foreign

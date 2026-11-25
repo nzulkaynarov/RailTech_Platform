@@ -18268,6 +18268,11 @@ export const getGetQuoteDefaultsResponseMock = (
     faker.number.int({ min: 1, max: 365 }),
     undefined,
   ]),
+  contract_foreign_by_agreement: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_gating_kinds: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["partner", "supply", "services"] as const),
+    undefined,
+  ]),
   contract_expired_action: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["block", "warn"] as const),
     undefined,
@@ -18343,6 +18348,11 @@ export const getUpdateQuoteDefaultsResponseMock = (
   ]),
   contract_foreign_remind_days: faker.helpers.arrayElement([
     faker.number.int({ min: 1, max: 365 }),
+    undefined,
+  ]),
+  contract_foreign_by_agreement: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  contract_gating_kinds: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["partner", "supply", "services"] as const),
     undefined,
   ]),
   contract_expired_action: faker.helpers.arrayElement([
