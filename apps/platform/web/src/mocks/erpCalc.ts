@@ -65,6 +65,14 @@ export function resetCalcMock(): void {
   }
 }
 
+/** Для тестов: перевести расчёт в нужное состояние (одобрен, отклонён директором и т. п.). */
+export function patchCalcMock(number: string, patch: Partial<MockCalc>): void {
+  const calcs = read();
+  const found = calcs.find((c) => c.number === number);
+  if (found) Object.assign(found, patch);
+  write(calcs);
+}
+
 /** Похожая позиция каталога (как `catalog.candidates.suggest_card` в ERP, упрощённо): то же первое слово и общий код с
  * цифрами, но не то же название. */
 function similarCard(name: string): (typeof CATALOG)[number] | null {
