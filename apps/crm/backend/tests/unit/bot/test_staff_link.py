@@ -120,6 +120,6 @@ async def test_no_second_message_without_a_link() -> None:
         message,
         CODE,
         FakeLinks(LinkOutcome("linked")),
-        FakeChannel(None),  # type: ignore[arg-type]
+        FakeChannel(None),
     )
     assert len(message.answers) == 1
