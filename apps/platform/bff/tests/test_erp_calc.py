@@ -555,6 +555,66 @@ async def test_lost_needs_a_reason_and_is_proxied(
     assert json.loads(route.calls[0].request.content) == {"reason": "Ушёл к конкуренту"}
 
 
+async def test_close_reasons_and_close_request_are_proxied_with_erp_refusals(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER_ALL"])
+    erp.get(f"{CALC}/close-reasons/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    {
+                        "code": "OTHER",
+                        "name": {
+                            "ru": "Другое — комментарий",
+                            "uz": "Boshqa — izoh",
+                            "en": "Other",
+                        },
+                        "requires_comment": True,
+                        "allowed_after_quote_sent": True,
+                    }
+                ]
+            },
+        )
+    )
+    listed = await web.client.get("/api/v1/erp/calc-close-reasons")
+    assert listed.status_code == 200
+    check(listed, "/erp/calc-close-reasons", "get")
+    assert listed.json()["items"][0]["code"] == "OTHER"
+
+    closed = sheet(
+        deal={**deal(), "stage_code": "CLOSED_LOST"},
+        close={"allowed": False, "quote_sent": False, "reason": "OTHER", "comment": "Передали"},
+    )
+    route = erp.post(f"{CALC}/104/close/").mock(
+        side_effect=[
+            httpx.Response(200, json=closed),
+            httpx.Response(409, json={"detail": "REASON_NOT_ALLOWED_AFTER_QUOTE"}),
+            httpx.Response(400, json={"detail": "COMMENT_REQUIRED"}),
+            httpx.Response(403, json={"detail": "ROLE_NOT_PERMITTED"}),
+        ]
+    )
+    ok = await call(
+        web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "OTHER", "comment": " Передали "}
+    )
+    assert ok.status_code == 200
+    check(ok, "/erp/calc/{number}/close", "post")
+    assert ok.json()["step"] == "LOST"
+    assert ok.json()["close"]["reason"] == "OTHER"
+    assert json.loads(route.calls[0].request.content) == {"reason": "OTHER", "comment": "Передали"}
+
+    conflict = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert conflict.status_code == 409
+    assert conflict.json()["details"]["reason"] == "reason_not_allowed_after_quote"
+    check(conflict, "/erp/calc/{number}/close", "post")
+    invalid = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "OTHER"})
+    assert invalid.status_code == 422
+    assert invalid.json()["details"]["fields"] == ["comment"]
+    forbidden = await call(web, "POST", f"/erp/calc/{ENCODED}/close", {"reason": "TEST"})
+    assert forbidden.status_code == 403
+
+
 async def test_markup_without_cost_margin_is_refused_and_with_it_is_proxied(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:

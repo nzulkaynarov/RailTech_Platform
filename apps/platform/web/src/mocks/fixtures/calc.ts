@@ -62,6 +62,9 @@ export interface MockCalc {
   /** Кто отклонил КП при `state = rejected` (D26G-3) и почему */
   rejectedBy?: "client" | "director" | null;
   rejectReason?: string | null;
+  /** «Закрыть заявку» (ЛХ-2): код причины и комментарий */
+  closeReason?: string;
+  closeComment?: string;
   /** Условия КП (план 0.5): нет — умолчания компании мока */
   terms?: {
     payment_terms: string | null;

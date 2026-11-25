@@ -7255,6 +7255,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc-close-reasons": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Причины «Закрыть заявку» (справочник)
+     * @description ERP `GET /calc/close-reasons/`: действующие причины из справочника `request-close-reasons` (данные, правятся в «Настройки · Справочники») с правилами — нужен ли комментарий и допустима ли причина, когда КП уже у клиента. Раздел `erp.calc` — чтение.
+     */
+    get: operations["listCalcCloseReasons"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Закрыть заявку» на любом шаге до проекта
+     * @description ERP `POST /calc/{deal_id}/close/` (ЛХ-2). Причина — код из `GET /erp/calc-close-reasons`, комментарий обязателен у причины с `requires_comment`. Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной, резервы снимаются, из очередей «Заявки в расчёте» заявка уходит. «Оформлена по ошибке» и «Тест» без отправленных клиенту документов скрывают заявку из списков по умолчанию (записи и журнал остаются, удаления нет). КП уже у клиента — только причины, допустимые после отправки (иначе 409 `reason_not_allowed_after_quote`); отправленное КП закрывается. Право — ответственный заявки или держатель зоны продаж (`deal.manage`), иначе 403. Проект (после принятия КП) и уже закрытая заявка — 409 `request_not_closable`. Раздел `erp.calc` — полный.
+     */
+    post: operations["closeCalcRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/calc/{number}/parse": {
     parameters: {
       query?: never;
@@ -16778,6 +16818,35 @@ export interface components {
       /** @description Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный) */
       stock?: boolean;
     };
+    /** @description «Закрыть заявку» (ЛХ-2) — что можно и чем заявка закрыта */
+    CalcClose: {
+      /** @description Заявка до проекта, не закрыта, и сотрудник — ответственный или держатель зоны продаж */
+      allowed: boolean;
+      /** @description КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent` */
+      quote_sent: boolean;
+      /** @description Код причины, если заявка закрыта через «Закрыть заявку» */
+      reason: string | null;
+      comment: string | null;
+    };
+    CalcCloseIn: {
+      /** @description Код причины из `GET /erp/calc-close-reasons` */
+      reason: string;
+      /** @description Комментарий; обязателен у причины с `requires_comment` */
+      comment?: string;
+    };
+    CalcCloseReason: {
+      code: string;
+      name: {
+        ru: string;
+        uz: string;
+        en: string;
+      };
+      requires_comment: boolean;
+      allowed_after_quote_sent: boolean;
+    };
+    CalcCloseReasonList: {
+      items: components["schemas"]["CalcCloseReason"][];
+    };
     CalcSheet: {
       /** @example ЗВ-2026-104 */
       number: string;
@@ -16792,6 +16861,7 @@ export interface components {
       totals: components["schemas"]["CalcTotals"];
       visas: components["schemas"]["CalcVisaGroups"];
       ready: components["schemas"]["CalcReady"];
+      close?: components["schemas"]["CalcClose"];
       rights: components["schemas"]["CalcRights"];
     };
     CalcLineIn: {
@@ -19594,7 +19664,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
+    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `request_not_closable`, `reason_not_allowed_after_quote`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
     CalcConflict: {
       headers: {
         [name: string]: unknown;
@@ -32661,6 +32731,65 @@ export interface operations {
     };
     responses: {
       /** @description Заявка закрыта с отказом */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCalcCloseReasons: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Причины по порядку справочника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcCloseReasonList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  closeCalcRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcCloseIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка закрыта */
       200: {
         headers: {
           [name: string]: unknown;

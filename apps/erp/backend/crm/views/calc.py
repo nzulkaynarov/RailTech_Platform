@@ -15,6 +15,8 @@ from core.permissions import RoleGatedViewMixin
 
 from ..serializers.calc import (
     CalcCatalogSerializer,
+    CalcCloseInSerializer,
+    CalcCloseReasonListSerializer,
     CalcCopyInSerializer,
     CalcCopyResultSerializer,
     CalcDealRefListSerializer,
@@ -348,6 +350,47 @@ class CalcLostView(RoleGatedViewMixin, APIView):
             return _invalid(serializer)
         try:
             return Response(calc.lose(deal_id, request.user, serializer.validated_data["reason"]))
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcCloseView(APIView):
+    """POST /api/v1/calc/<deal_id>/close/ — «Закрыть заявку» на любом шаге до проекта, причина из справочника."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_close",
+        summary="Закрыть заявку с причиной из справочника (ЛХ-2)",
+        tags=TAGS,
+        request=CalcCloseInSerializer,
+        responses={200: CalcSheetSerializer, **ERRORS},
+    )
+    def post(self, request, deal_id: int):
+        serializer = CalcCloseInSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid(serializer)
+        try:
+            data = serializer.validated_data
+            return Response(calc.close_request(deal_id, request.user, data["reason"], data["comment"]))
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcCloseReasonsView(APIView):
+    """GET /api/v1/calc/close-reasons/ — действующие причины закрытия заявки."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_close_reasons",
+        summary="Причины закрытия заявки (справочник `request-close-reasons`)",
+        tags=TAGS,
+        responses={200: CalcCloseReasonListSerializer, 403: ERRORS[403]},
+    )
+    def get(self, request):
+        try:
+            return Response({"results": calc.close_reasons(request.user)})
         except CalcError as exc:
             return _fail(exc)
 

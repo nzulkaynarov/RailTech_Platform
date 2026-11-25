@@ -263,6 +263,55 @@ function groups(calc: MockCalc) {
 const canRevise = (calc: MockCalc) =>
   calc.state === "rejected" && calc.rejectedBy === "client" && calc.stage === "CALCULATION";
 
+/** Справочник причин «Закрыть заявку» (ERP `request-close-reasons`, ЛХ-2). */
+const CLOSE_REASONS = [
+  {
+    code: "ERROR",
+    ru: "Оформлена по ошибке",
+    uz: "Xato rasmiylashtirilgan",
+    en: "Created by mistake",
+    comment: false,
+    afterQuote: false,
+  },
+  {
+    code: "DUPLICATE",
+    ru: "Дубль",
+    uz: "Dublikat",
+    en: "Duplicate",
+    comment: false,
+    afterQuote: false,
+  },
+  { code: "TEST", ru: "Тест", uz: "Test", en: "Test", comment: false, afterQuote: false },
+  {
+    code: "CHANGED_MIND",
+    ru: "Клиент передумал",
+    uz: "Mijoz fikrini o‘zgartirdi",
+    en: "Client changed their mind",
+    comment: false,
+    afterQuote: true,
+  },
+  {
+    code: "NO_REPLY",
+    ru: "Клиент не отвечает",
+    uz: "Mijoz javob bermayapti",
+    en: "Client does not reply",
+    comment: false,
+    afterQuote: true,
+  },
+  {
+    code: "OTHER",
+    ru: "Другое — комментарий",
+    uz: "Boshqa — izoh",
+    en: "Other — comment",
+    comment: true,
+    afterQuote: true,
+  },
+] as const;
+
+/** КП уже было у клиента (как ERP `quote_sent_to_client`): шаг «КП» или отклонено клиентом. */
+const quoteSent = (calc: MockCalc) =>
+  calc.stage === "QUOTE" || (calc.state === "rejected" && calc.rejectedBy === "client");
+
 const editableOf = (calc: MockCalc) =>
   calc.started && (calc.state === "in_progress" || calc.state === "returned");
 
@@ -335,6 +384,12 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     },
     visas: groups(calc),
     ready: { allowed: blocker === null, blocker, missing },
+    close: {
+      allowed: calc.stage !== "LOST" && level(user, "erp.calc") === "full",
+      quote_sent: quoteSent(calc),
+      reason: calc.closeReason ?? null,
+      comment: calc.closeComment ?? null,
+    },
     rights: {
       goods: canZone(user, "goods"),
       services: canZone(user, "services"),
@@ -866,6 +921,57 @@ export const erpCalcHandlers = [
       );
     }
     calc.stage = "LOST";
+    write(calcs);
+    return HttpResponse.json<CalcSheet>(present(calc, held.user));
+  }),
+
+  http.get("*/api/v1/erp/calc-close-reasons", () => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    return HttpResponse.json({
+      items: CLOSE_REASONS.map((row) => ({
+        code: row.code,
+        name: { ru: row.ru, uz: row.uz, en: row.en },
+        requires_comment: row.comment,
+        allowed_after_quote_sent: row.afterQuote,
+      })),
+    });
+  }),
+
+  // ЛХ-2: «Закрыть заявку» на любом шаге до проекта, причина из справочника
+  http.post("*/api/v1/erp/calc/:number/close", async ({ params, request }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json()) as { reason?: string; comment?: string };
+    const reason = CLOSE_REASONS.find((row) => row.code === body.reason);
+    if (!reason) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+        reason: "reason_unknown",
+        fields: ["reason"],
+      });
+    }
+    const comment = (body.comment ?? "").trim();
+    if (reason.comment && !comment) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+        reason: "comment_required",
+        fields: ["comment"],
+      });
+    }
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    if (calc.stage === "LOST") {
+      return conflict("request_not_closable", "Заявку уже нельзя закрыть.");
+    }
+    if (quoteSent(calc) && !reason.afterQuote) {
+      return conflict(
+        "reason_not_allowed_after_quote",
+        "КП уже у клиента: выберите другую причину.",
+      );
+    }
+    calc.stage = "LOST";
+    calc.closeReason = reason.code;
+    calc.closeComment = comment;
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, held.user));
   }),

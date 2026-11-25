@@ -10,7 +10,7 @@ ERP-09 номер составляет BFF, `app.feeds.numbers`), вырезан
 
 import datetime as dt
 from collections.abc import Collection, Mapping
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -190,6 +190,37 @@ class CalcReady(BaseModel):
     missing: int
 
 
+class CalcClose(BaseModel):
+    allowed: bool
+    quote_sent: bool
+    reason: str | None
+    comment: str | None
+
+
+class CalcCloseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Annotated[str, Field(min_length=1, max_length=50)]
+    comment: Annotated[str, Field(max_length=2000)] = ""
+
+
+class CalcCloseReasonName(BaseModel):
+    ru: str
+    uz: str
+    en: str
+
+
+class CalcCloseReason(BaseModel):
+    code: str
+    name: CalcCloseReasonName
+    requires_comment: bool
+    allowed_after_quote_sent: bool
+
+
+class CalcCloseReasonList(BaseModel):
+    items: list[CalcCloseReason]
+
+
 class CalcRights(BaseModel):
     goods: bool
     services: bool
@@ -211,6 +242,7 @@ class CalcSheet(BaseModel):
     totals: CalcTotals
     visas: CalcVisaGroups
     ready: CalcReady
+    close: CalcClose | None = None
     rights: CalcRights
 
 
@@ -474,6 +506,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
         visas=CalcVisaGroups(**raw["visas"]),
         ready=CalcReady(**raw["ready"]),
         rights=CalcRights(**{**raw["rights"], "cost": bool(raw["rights"]["cost"]) and cost}),
+        **({"close": CalcClose(**raw["close"])} if isinstance(raw.get("close"), dict) else {}),
     )
 
 

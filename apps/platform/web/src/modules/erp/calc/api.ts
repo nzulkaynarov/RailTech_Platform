@@ -54,6 +54,10 @@ const KNOWN = new Set([
   "deal_not_in_calculation",
   "quote_not_rejected_by_client",
   "reason_required",
+  "reason_unknown",
+  "comment_required",
+  "request_not_closable",
+  "reason_not_allowed_after_quote",
 ]);
 
 /** Отказ словами: подкод (`details.reason`) из словаря, иначе по статусу, иначе текст BFF. */

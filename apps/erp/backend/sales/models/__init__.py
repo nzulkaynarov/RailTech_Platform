@@ -10,7 +10,7 @@ from .contracts import Contract
 from .deals import ActivityLog, Deal, DealNumberCounter
 from .delivery import DeliveryLine, DeliveryLineStatus
 from .fulfillment import Fulfillment
-from .lookups import ChargeType, ContractStatus, DealStage, FulfillmentStatus, QuoteStatus
+from .lookups import ChargeType, ContractStatus, DealCloseReason, DealStage, FulfillmentStatus, QuoteStatus
 from .quotes import Quote, QuoteItem, QuoteItemHistory, QuoteItemQuerySet
 
 __all__ = [
@@ -27,6 +27,7 @@ __all__ = [
     "Contract",
     "ContractStatus",
     "Deal",
+    "DealCloseReason",
     "DealNumberCounter",
     "DealStage",
     "DeliveryLine",

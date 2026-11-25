@@ -9340,6 +9340,106 @@
                 }
             }
         },
+        "/api/v1/calc/{deal_id}/close/": {
+            "post": {
+                "operationId": "calc_close",
+                "description": "POST /api/v1/calc/<deal_id>/close/ — «Закрыть заявку» на любом шаге до проекта, причина из справочника.",
+                "summary": "Закрыть заявку с причиной из справочника (ЛХ-2)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCloseInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCloseInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCloseInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcSheet"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/calc/{deal_id}/copy/": {
             "post": {
                 "operationId": "calc_copy",
@@ -10488,6 +10588,46 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CalcCatalog"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/calc/close-reasons/": {
+            "get": {
+                "operationId": "calc_close_reasons",
+                "description": "GET /api/v1/calc/close-reasons/ — действующие причины закрытия заявки.",
+                "summary": "Причины закрытия заявки (справочник `request-close-reasons`)",
+                "tags": [
+                    "Calc"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcCloseReasonList"
                                 }
                             }
                         },
@@ -40089,6 +40229,94 @@
                     "supplier_name"
                 ]
             },
+            "CalcCloseInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Код причины из справочника `request-close-reasons`",
+                        "maxLength": 50
+                    },
+                    "comment": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
+            "CalcCloseReason": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "description": "Названия ru, uz, en"
+                    },
+                    "requires_comment": {
+                        "type": "boolean"
+                    },
+                    "allowed_after_quote_sent": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "allowed_after_quote_sent",
+                    "code",
+                    "name",
+                    "requires_comment"
+                ]
+            },
+            "CalcCloseReasonList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CalcCloseReason"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "CalcCloseState": {
+                "type": "object",
+                "properties": {
+                    "allowed": {
+                        "type": "boolean",
+                        "description": "Заявку можно закрыть: до проекта и по праву ответственного или `deal.manage`"
+                    },
+                    "quote_sent": {
+                        "type": "boolean",
+                        "description": "КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код причины закрытия, если заявка закрыта через «Закрыть заявку»"
+                    },
+                    "comment": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "allowed",
+                    "comment",
+                    "quote_sent",
+                    "reason"
+                ]
+            },
             "CalcCopyInRequest": {
                 "type": "object",
                 "properties": {
@@ -40137,6 +40365,9 @@
                     "ready": {
                         "$ref": "#/components/schemas/CalcReady"
                     },
+                    "close": {
+                        "$ref": "#/components/schemas/CalcCloseState"
+                    },
                     "rights": {
                         "$ref": "#/components/schemas/CalcRights"
                     },
@@ -40152,6 +40383,7 @@
                     }
                 },
                 "required": [
+                    "close",
                     "created",
                     "deal",
                     "lines",
@@ -40547,6 +40779,9 @@
                     "ready": {
                         "$ref": "#/components/schemas/CalcReady"
                     },
+                    "close": {
+                        "$ref": "#/components/schemas/CalcCloseState"
+                    },
                     "rights": {
                         "$ref": "#/components/schemas/CalcRights"
                     },
@@ -40558,6 +40793,7 @@
                     }
                 },
                 "required": [
+                    "close",
                     "created",
                     "deal",
                     "lines",
@@ -40842,11 +41078,15 @@
                     "ready": {
                         "$ref": "#/components/schemas/CalcReady"
                     },
+                    "close": {
+                        "$ref": "#/components/schemas/CalcCloseState"
+                    },
                     "rights": {
                         "$ref": "#/components/schemas/CalcRights"
                     }
                 },
                 "required": [
+                    "close",
                     "deal",
                     "lines",
                     "quote",

@@ -7,7 +7,7 @@ from django.db import models
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from .lookups import DealStage
+from .lookups import DealCloseReason, DealStage
 
 
 @pghistory.track(
@@ -129,6 +129,21 @@ class Deal(models.Model):
     crm_request_id = models.BigIntegerField(
         null=True, blank=True, unique=True, editable=False, verbose_name=_("Заявка CRM")
     )
+
+    # «Закрыть заявку» (ЛХ-2): причина из справочника, комментарий и факты закрытия. Строки журнала и событие `deal.lost`
+    # остаются; `hidden_in_lists` скрывает заявку из списков по умолчанию (ошибка, тест — клиенту ничего не уходило).
+    close_reason = models.ForeignKey(
+        DealCloseReason,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="deals",
+        verbose_name=_("Причина закрытия"),
+    )
+    close_comment = models.TextField(blank=True, default="", verbose_name=_("Комментарий к закрытию"))
+    closed_from_stage = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Стадия до закрытия"))
+    closed_after_quote_sent = models.BooleanField(default=False, verbose_name=_("КП было у клиента при закрытии"))
+    hidden_in_lists = models.BooleanField(default=False, db_index=True, verbose_name=_("Скрыта из списков"))
 
     created_at = models.DateTimeField(
         auto_now_add=True,

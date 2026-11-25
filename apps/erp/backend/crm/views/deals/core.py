@@ -113,6 +113,10 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
 
         from accounts.services.permissions import sees_all_deals
 
+        # Закрытые «по ошибке» и «тест» (ЛХ-2) скрыты из списка по умолчанию; по номеру и карточке открываются.
+        if self.action == "list" and self.request.query_params.get("include_hidden") not in ("1", "true"):
+            queryset = queryset.filter(hidden_in_lists=False)
+
         # Продавец один — своя компания (BUSINESS §3.3): администратор и сотрудник компании-владельца
         # видят все сделки, что с ними можно делать — решают права роли в сервисах.
         if sees_all_deals(user):

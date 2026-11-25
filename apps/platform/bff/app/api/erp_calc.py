@@ -22,6 +22,9 @@ from app.feeds.numbers import deal_number
 from app.schemas_erp_calc import (
     CalcCatalogItem,
     CalcCatalogPage,
+    CalcCloseIn,
+    CalcCloseReason,
+    CalcCloseReasonList,
     CalcCopyIn,
     CalcCopyResult,
     CalcLinePatch,
@@ -63,6 +66,8 @@ _FIELD_OF = {
     "CLIENT_PRICE_BELOW_COST": "client_price",
     "MARKUP_OUT_OF_RANGE": "client_price",
     "REASON_REQUIRED": "reason",
+    "REASON_UNKNOWN": "reason",
+    "COMMENT_REQUIRED": "comment",
     "SERVICE_COST_FROM_CREW": "purchase_price",
     "GOODS_HAVE_NO_CREW": "crew_rate",
     "NAME_REQUIRED": "name",
@@ -94,6 +99,10 @@ _MESSAGES = {
     "QUOTE_NOT_REJECTED_BY_CLIENT": (
         "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте."
     ),
+    "REQUEST_NOT_CLOSABLE": (
+        "Заявку уже нельзя закрыть: она закрыта или стала проектом. Обновите экран."
+    ),
+    "REASON_NOT_ALLOWED_AFTER_QUOTE": "КП уже у клиента: выберите другую причину.",
     "AI_DISABLED": "ИИ-разбор выключен в настройках моделей. Добавьте строки вручную.",
     "REQUEST_TEXT_EMPTY": "В заявке нет текста для разбора. Вставьте текст в поле.",
 }
@@ -524,6 +533,38 @@ async def lose(authed: Builder, number: Number, body: Annotated[CalcLostIn, Body
             details={"reason": "reason_required", "fields": ["reason"]},
         )
     return await _sheet(authed, number, "POST", "lost/", {"reason": reason})
+
+
+@router.get(
+    "/calc-close-reasons",
+    response_model=CalcCloseReasonList,
+    operation_id="listCalcCloseReasons",
+)
+async def list_close_reasons(authed: Reader) -> CalcCloseReasonList:
+    """Причины «Закрыть заявку»: справочник ERP `request-close-reasons` как есть."""
+    data = await _erp(authed).call_calc("GET", "close-reasons/")
+    return CalcCloseReasonList(
+        items=[CalcCloseReason.model_validate(row) for row in data.get("results", [])]
+    )
+
+
+@router.post(
+    "/calc/{number}/close",
+    response_model=CalcSheet,
+    response_model_exclude_unset=True,
+    operation_id="closeCalcRequest",
+)
+async def close_request(
+    authed: Builder, number: Number, body: Annotated[CalcCloseIn, Body()]
+) -> CalcSheet:
+    """«Закрыть заявку» на любом шаге до проекта (ЛХ-2): причину, право и правила решает ERP."""
+    return await _sheet(
+        authed,
+        number,
+        "POST",
+        "close/",
+        {"reason": body.reason.strip(), "comment": body.comment.strip()},
+    )
 
 
 @router.post(

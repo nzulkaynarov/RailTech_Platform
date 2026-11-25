@@ -281,7 +281,11 @@
     "deal_not_in_calculation": "The request is closed or past costing.",
     "quote_not_rejected_by_client": "A new version and a lost request are available once the client rejects the quote.",
     "reason_required": "Give the reason.",
-    "amount_too_large": "A line amount converted at today’s rate is too large. Check the purchase currency: an amount in UZS sits on a line in another currency."
+    "amount_too_large": "A line amount converted at today’s rate is too large. Check the purchase currency: an amount in UZS sits on a line in another currency.",
+    "reason_unknown": "Pick a reason from the list.",
+    "comment_required": "Enter a comment.",
+    "request_not_closable": "The request can no longer be closed: it is closed or became a project.",
+    "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason."
   },
   "load": {
     "retry": "Retry",
@@ -335,5 +339,20 @@
     "days": "{{count}} d",
     "save": "Save",
     "validUntilPast": "The date cannot be in the past."
+  },
+  "close": {
+    "button": "Close request",
+    "title": "Close request {{number}}",
+    "text": "The request leaves the queues; its history stays in the journal.",
+    "reason": "Reason",
+    "comment": "Comment",
+    "commentRequired": "A comment is required for this reason.",
+    "quoteSent": "The quote is already with the client: only client-related reasons are available.",
+    "reasonsError": "Reasons did not load. Try again later.",
+    "submit": "Close request",
+    "cancel": "Cancel",
+    "done": "Request closed",
+    "closed": "Request closed: {{reason}}",
+    "closedNext": "It left the queues and shows to the client as closed."
   }
 }

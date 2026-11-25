@@ -1,6 +1,8 @@
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.models import AbstractLookup
+from core.models.master_data import LocalizedNames
 
 
 class DealStage(AbstractLookup):
@@ -59,3 +61,22 @@ __all__ = [
     "FulfillmentStatus",
     "QuoteStatus",
 ]
+
+
+class DealCloseReason(LocalizedNames, AbstractLookup):
+    """Причины «Закрыть заявку» (ЛХ-2): справочник как данные, правится в «Настройки · Справочники».
+
+    Флаги — правила причины, а не код: `requires_comment` — без комментария не закрыть; `allowed_after_quote_sent` —
+    причина допустима, когда КП уже у клиента; `hide_when_unsent` — заявка без отправленных клиенту документов
+    скрывается из списков по умолчанию (запись и журнал остаются).
+    """
+
+    requires_comment = models.BooleanField(default=False, verbose_name=_("Нужен комментарий"))
+    allowed_after_quote_sent = models.BooleanField(default=False, verbose_name=_("Допустима после отправки КП"))
+    hide_when_unsent = models.BooleanField(
+        default=False, verbose_name=_("Скрывать из списков, если клиенту ничего не отправлено")
+    )
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Причина закрытия заявки")
+        verbose_name_plural = _("Справочник: Причины закрытия заявок")

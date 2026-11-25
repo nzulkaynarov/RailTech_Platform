@@ -174,6 +174,39 @@ def _catalog_specs() -> tuple["Spec", ...]:
     )
 
 
+def _sales_specs() -> tuple["Spec", ...]:
+    from sales.models import DealCloseReason
+
+    return (
+        Spec(
+            "request-close-reasons",
+            DealCloseReason,
+            ("Причины закрытия заявки", "Ariza yopilish sabablari", "Request close reasons"),
+            attrs=(
+                Attr(
+                    "requires_comment",
+                    "boolean",
+                    ("Нужен комментарий", "Izoh majburiy", "Comment required"),
+                ),
+                Attr(
+                    "allowed_after_quote_sent",
+                    "boolean",
+                    ("Допустима после отправки КП", "TT yuborilgandan keyin mumkin", "Allowed after quote sent"),
+                ),
+                Attr(
+                    "hide_when_unsent",
+                    "boolean",
+                    (
+                        "Скрывать из списков, если клиенту ничего не отправлено",
+                        "Mijozga hech narsa yuborilmagan bo‘lsa, ro‘yxatlardan yashirish",
+                        "Hide from lists if nothing was sent to the client",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
 SPECS: dict[str, Spec] = {
     spec.kind: spec
     for spec in (
@@ -245,7 +278,7 @@ def _names(values: tuple[str, str, str]) -> dict[str, str]:
 def specs() -> dict[str, Spec]:
     """Все виды: справочники «Расчёта» и каталога. Виды каталога подключаются при первом обращении — модели каталога
     импортируются после загрузки приложений."""
-    return {**SPECS, **{spec.kind: spec for spec in _catalog_specs()}}
+    return {**SPECS, **{spec.kind: spec for spec in (*_catalog_specs(), *_sales_specs())}}
 
 
 def _key(spec: Spec, row: models.Model) -> str:

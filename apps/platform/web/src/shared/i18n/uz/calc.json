@@ -281,7 +281,11 @@
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqiçda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz keçiş mijoz TTni rad etgandan keyin mavjud.",
     "reason_required": "Sababni kiriting.",
-    "amount_too_large": "Kurs böyiça qator summasi juda katta. Xarid valyutasini tekşiring: sömdagi summa boşqa valyutadagi qatorda turibdi."
+    "amount_too_large": "Kurs böyiça qator summasi juda katta. Xarid valyutasini tekşiring: sömdagi summa boşqa valyutadagi qatorda turibdi.",
+    "reason_unknown": "Ro‘yxatdan sababni tanlang.",
+    "comment_required": "Izoh kiriting.",
+    "request_not_closable": "Arizani endi yopib bo‘lmaydi: u yopilgan yoki loyihaga aylangan.",
+    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang."
   },
   "load": {
     "retry": "Qayta uriniş",
@@ -335,5 +339,20 @@
     "days": "{{count}} kun",
     "save": "Saqlaş",
     "validUntilPast": "Sana ötgan kun bölişi mumkin emas."
+  },
+  "close": {
+    "button": "Arizani yopiş",
+    "title": "{{number}} arizasini yopiş",
+    "text": "Ariza navbatlardan çiqadi, tarix jurnalda qoladi.",
+    "reason": "Sabab",
+    "comment": "Izoh",
+    "commentRequired": "Bu sabab uçun izoh majburiy.",
+    "quoteSent": "TT mijozda: faqat mijoz qaroriga oid sabablar mumkin.",
+    "reasonsError": "Sabablar yuklanmadi. Keyinroq qayta uriniş.",
+    "submit": "Arizani yopiş",
+    "cancel": "Bekor qiliş",
+    "done": "Ariza yopildi",
+    "closed": "Ariza yopildi: {{reason}}",
+    "closedNext": "U navbatlardan çiqdi, mijozga yopilgan deb ko‘rsatiladi."
   }
 }

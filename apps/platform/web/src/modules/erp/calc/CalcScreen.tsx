@@ -29,6 +29,7 @@ import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
 import { RequestFiles } from "./RequestFiles";
 import { ClientRejection } from "./Rejection";
+import { CloseRequestButton, ClosedNote } from "./CloseRequest";
 import { TaskSlot } from "./TaskPanel";
 import { TermsCard, TermsForm } from "./Terms";
 
@@ -262,6 +263,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 {t("sheet.requestPrice")}
               </Button>
             ) : null}
+            <CloseRequestButton sheet={sheet} />
             {mobile ? (
               <Button
                 onClick={() => {
@@ -285,6 +287,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
       <section className="pf-card pf-calc-steps" aria-label={t("sheet.steps")}>
         <RequestSteps stage={sheet.step} number={sheet.number} />
       </section>
+      <ClosedNote sheet={sheet} />
       <Banner sheet={sheet} />
       {sheet.quote === null ? (
         <NotStarted sheet={sheet} />

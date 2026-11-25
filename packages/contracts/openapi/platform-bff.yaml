@@ -13365,6 +13365,59 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc-close-reasons:
+    get:
+      tags: [calc]
+      operationId: listCalcCloseReasons
+      summary: 'Расчёт · Причины «Закрыть заявку» (справочник)'
+      description: >-
+        ERP `GET /calc/close-reasons/`: действующие причины из справочника `request-close-reasons` (данные, правятся в
+        «Настройки · Справочники») с правилами — нужен ли комментарий и допустима ли причина, когда КП уже у клиента.
+        Раздел `erp.calc` — чтение.
+      responses:
+        '200':
+          description: Причины по порядку справочника
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcCloseReasonList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/close:
+    post:
+      tags: [calc]
+      operationId: closeCalcRequest
+      summary: 'Расчёт · «Закрыть заявку» на любом шаге до проекта'
+      description: >-
+        ERP `POST /calc/{deal_id}/close/` (ЛХ-2). Причина — код из `GET /erp/calc-close-reasons`, комментарий обязателен у
+        причины с `requires_comment`. Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной, резервы
+        снимаются, из очередей «Заявки в расчёте» заявка уходит. «Оформлена по ошибке» и «Тест» без отправленных клиенту
+        документов скрывают заявку из списков по умолчанию (записи и журнал остаются, удаления нет). КП уже у клиента —
+        только причины, допустимые после отправки (иначе 409 `reason_not_allowed_after_quote`); отправленное КП закрывается.
+        Право — ответственный заявки или держатель зоны продаж (`deal.manage`), иначе 403. Проект (после принятия КП) и уже
+        закрытая заявка — 409 `request_not_closable`. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcCloseIn'}
+      responses:
+        '200':
+          description: Заявка закрыта
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/calc/{number}/parse:
     post:
       tags: [calc]
@@ -17946,7 +17999,7 @@ components:
       description: >-
         409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
         (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
-        `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
+        `no_lines`, `quote_below_cost`, `fx_rate_missing`, `request_not_closable`, `reason_not_allowed_after_quote`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
       content:
         application/json:
           schema:
@@ -28710,6 +28763,51 @@ components:
         cost: {type: boolean, description: Видеть себестоимость и наценку по строкам}
         stock: {type: boolean, description: 'Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный)'}
 
+    CalcClose:
+      type: object
+      additionalProperties: false
+      required: [allowed, quote_sent, reason, comment]
+      description: «Закрыть заявку» (ЛХ-2) — что можно и чем заявка закрыта
+      properties:
+        allowed: {type: boolean, description: 'Заявка до проекта, не закрыта, и сотрудник — ответственный или держатель зоны продаж'}
+        quote_sent: {type: boolean, description: 'КП уже было у клиента: допустимы только причины с `allowed_after_quote_sent`'}
+        reason: {type: [string, 'null'], description: 'Код причины, если заявка закрыта через «Закрыть заявку»'}
+        comment: {type: [string, 'null']}
+
+    CalcCloseIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 50, description: Код причины из `GET /erp/calc-close-reasons`}
+        comment: {type: string, maxLength: 2000, description: Комментарий; обязателен у причины с `requires_comment`}
+
+    CalcCloseReason:
+      type: object
+      additionalProperties: false
+      required: [code, name, requires_comment, allowed_after_quote_sent]
+      properties:
+        code: {type: string}
+        name:
+          type: object
+          additionalProperties: false
+          required: [ru, uz, en]
+          properties:
+            ru: {type: string}
+            uz: {type: string}
+            en: {type: string}
+        requires_comment: {type: boolean}
+        allowed_after_quote_sent: {type: boolean}
+
+    CalcCloseReasonList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CalcCloseReason'}
+
     CalcSheet:
       type: object
       additionalProperties: false
@@ -28732,6 +28830,7 @@ components:
         totals: {$ref: '#/components/schemas/CalcTotals'}
         visas: {$ref: '#/components/schemas/CalcVisaGroups'}
         ready: {$ref: '#/components/schemas/CalcReady'}
+        close: {$ref: '#/components/schemas/CalcClose'}
         rights: {$ref: '#/components/schemas/CalcRights'}
 
     CalcLineIn:
