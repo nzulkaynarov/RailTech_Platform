@@ -651,6 +651,8 @@
       "overdueCount_other": "{{count}} ta hisob-faktura muddati ötgan",
       "overdueDays_one": "{{count}} kun keçikkan",
       "overdueDays_other": "{{count}} kun keçikkan",
+      "lateDays_one": "{{count}} kun",
+      "lateDays_other": "{{count}} kun",
       "columns": {
         "invoice": "Hisob-faktura",
         "status": "Holat",
@@ -1139,6 +1141,7 @@
       "toRequests": "Arizalarga",
       "titleFallback": "Loyiha",
       "reorder": "Loyihani takrorlaş",
+      "decide": "Javob beriş",
       "stages": {
         "title": "Loyiha bosqiçlari",
         "request": "Ariza",

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.124.0
+  version: 0.125.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -21670,7 +21670,7 @@ components:
           type: string
         client_status:
           description: 'Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу'
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           description: 'Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось'
@@ -22069,7 +22069,7 @@ components:
           enum: [CONTRACT, PAYMENT, DONE]
           type: string
         client_status:
-          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          enum: [contract_preparing, contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
           type: string
         total:
           oneOf:
@@ -30147,7 +30147,7 @@ components:
 
     ClientSees:
       type: string
-      enum: [in_work, awaiting_decision, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
+      enum: [in_work, awaiting_decision, contract_preparing, contract_review, contract_signing, awaiting_payment, checking_payment, fulfilling, awaiting_acceptance, done, rejected, quote_expired]
       description: Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
 
     ClientRequestRow:

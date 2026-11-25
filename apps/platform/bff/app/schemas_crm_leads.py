@@ -36,6 +36,7 @@ DocumentType = Literal["contract", "proposal", "letter", "invoice", "act", "othe
 ClientSees = Literal[
     "in_work",
     "awaiting_decision",
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",

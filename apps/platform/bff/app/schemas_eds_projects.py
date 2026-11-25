@@ -16,6 +16,7 @@ from app.schemas_do_not_work import DoNotWork
 
 ProjectStage = Literal["CONTRACT", "PAYMENT", "DONE"]
 ClientStatus = Literal[
+    "contract_preparing",
     "contract_review",
     "contract_signing",
     "awaiting_payment",
@@ -395,6 +396,21 @@ class RawRow(_Raw):
     problems: list[ProjectProblem] = Field(default_factory=list)
     act_blocker: ActBlocker | None = None  # без учёта прав (ERP: no_invoice, act_exists, forbidden)
     act_needs_delivery: bool = False  # ERP: акт иначе можно, но товар не доставлен (СЦ-9)
+
+    @model_validator(mode="after")
+    def _derive_contract_preparing(self) -> Self:
+        """«Согласуйте редакцию договора» — только пока проект договора у клиента.
+
+        Факт — `sent_to_client` и слово не «отклонён». Нет договора, он не отправлен или отклонён:
+        клиенту согласовывать нечего, редакцию готовит продавец, слово ERP `contract_review` тут
+        неправда (СЦ-8). Слово в ERP не меняем: enum erp-internal уже ≥ 1.0.
+        """
+        contract = self.documents.contract
+        if self.client_status == "contract_review" and (
+            contract is None or not contract.sent_to_client or contract.status == "rejected"
+        ):
+            self.client_status = "contract_preparing"
+        return self
 
     @model_validator(mode="after")
     def _derive_not_delivered(self) -> Self:

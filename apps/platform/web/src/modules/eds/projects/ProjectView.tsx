@@ -185,7 +185,9 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
         <DocRow
           number="—"
           type={t("card.documents.act")}
-          status={<span className="pf-hint">{actHint(card.act_blocker, t)}</span>}
+          status={
+            <span className="pf-hint">{actHint(card.act_blocker, t, contract !== null)}</span>
+          }
           action={canIssueAct ? <ActIssueButton objectId={objectId} /> : null}
         />
       )}
@@ -194,10 +196,15 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
 }
 
 /** Статус строки «Акт» из факта `act_blocker` (почему акт нельзя выпустить), а не общая фраза. */
-function actHint(blocker: ProjectCard["act_blocker"], t: TFunction<"projects">): string {
+function actHint(
+  blocker: ProjectCard["act_blocker"],
+  t: TFunction<"projects">,
+  hasContract: boolean,
+): string {
   switch (blocker) {
     case "no_invoice":
-      return t("act.none.noInvoice");
+      // До договора счёта не будет и просить его выставить нельзя (ui-standard §14.2)
+      return hasContract ? t("act.none.noInvoice") : t("card.documents.actMissing");
     case "forbidden":
       return t("act.none.forbidden");
     case "not_delivered":
@@ -215,9 +222,6 @@ function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) 
   const f = card.fulfillment;
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.execution.title")}</h2>}>
-      <p className="pf-hint" style={{ marginTop: 0 }}>
-        {t("card.execution.hint")}
-      </p>
       <div className="pf-proj-exec">
         <section aria-label={t("card.execution.shipment")}>
           <h3 className="pf-dec-subhead">{t("card.execution.shipment")}</h3>
@@ -306,14 +310,14 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
         subtitle={card.title}
         extra={
           <div className="pf-dec-row">
-            <StatusTag kind="stage" status={card.step}>
-              {t(`clientStatus.${card.client_status}`)}
-            </StatusTag>
-            {problems.map((p) => (
-              <StatusTag key={p} tone="red">
-                {t(`problem.${p}`)}
+            {problems.length > 0 ? (
+              // Один статус в шапке (СЦ-8): проблема важнее слова для клиента; где проект по пути — показывает шкала.
+              <StatusTag tone="red">{problems.map((p) => t(`problem.${p}`)).join(" · ")}</StatusTag>
+            ) : (
+              <StatusTag kind="stage" status={card.step}>
+                {t(`clientStatus.${card.client_status}`)}
               </StatusTag>
-            ))}
+            )}
             {writer ? null : <StatusTag tone="default">{t("card.readOnly")}</StatusTag>}
           </div>
         }
