@@ -28,13 +28,7 @@ from parties.models import (
 from portal import projections
 from portal.authentication import PortalAuthentication
 from portal.client_ip import client_ip as _client_ip
-from portal.exceptions import (
-    PortalBadRequest,
-    PortalConflict,
-    PortalUnavailable,
-    PortalValidationError,
-    portal_exception_handler,
-)
+from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import (
     PortalDocumentVerification,
     PortalSecurityEvent,
@@ -1656,49 +1650,41 @@ class CompanyPartnerApplicationView(BasePortalView):
 
 
 class CompanyPartnerContractPdfView(BasePortalView):
-    """GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии."""
+    """GET /company/partner-application/contract-pdf — договор заявки компании сессии (ПД-1: файл из статуса «отправлен»).
+
+    Кандидат видит только то, что ему отправили: до отправки файла для него нет (404)."""
 
     required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
 
     def get(self, request):
-        from django.core.files.base import ContentFile
-        from portal.services.partner_contract import PartnerContractRenderError, render_partner_contract_pdf
+        from portal.desk import service_partner_contract as contract_step
+        from portal.desk.service import AccessError
 
         app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
-        if not app:
+        if not app or app.status not in (
+            PartnerApplicationStatus.CONTRACT_SENT,
+            PartnerApplicationStatus.CANDIDATE_AGREED,
+            PartnerApplicationStatus.APPROVED,
+        ):
             raise exceptions.NotFound("NOT_FOUND")
-
-        is_draft = app.status != PartnerApplicationStatus.APPROVED
         try:
-            if not app.contract_pdf:
-                pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
-                filename = f"Partner_Contract_{app.contract_number or app.pk}_{'draft' if is_draft else 'signed'}.pdf"
-                app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=True)
-            else:
-                try:
-                    pdf_bytes = app.contract_pdf.read()
-                except Exception:
-                    pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
-        except PartnerContractRenderError:
-            raise PortalUnavailable("DOCUMENT_PENDING") from None
-
-        response = HttpResponse(pdf_bytes, content_type="application/pdf")
-        filename = f"Partner_Contract_{app.contract_number or app.pk}.pdf"
-        response["Content-Disposition"] = f'inline; filename="{filename}"'
+            data, content_type, name = contract_step.read_file(contract_step.current_document(app))
+        except AccessError:
+            raise exceptions.NotFound("NOT_FOUND") from None
+        response = HttpResponse(data, content_type=content_type)
+        ext = name.rsplit(".", 1)[-1] if "." in name else "pdf"
+        response["Content-Disposition"] = f'inline; filename="Partner_Contract_{app.contract_number or app.pk}.{ext}"'
         return response
 
 
 class CompanyPartnerApplicationAgreeView(BasePortalView):
-    """POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии."""
+    """POST /company/partner-application/agree — согласование договора кандидатом компании сессии."""
 
     required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
 
     def post(self, request):
         if not getattr(request.portal_contact, "can_act", False):
             raise exceptions.PermissionDenied(detail="FORBIDDEN")
-
-        from django.core.files.base import ContentFile
-        from portal.services.partner_contract import PartnerContractRenderError, render_partner_contract_pdf
 
         with transaction.atomic():
             # Блокировка против отклонения или повторной отправки договора сотрудником в этот же момент (FX-1).
@@ -1714,18 +1700,69 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
             notes = (request.data.get("notes") or "").strip()
             app.status = PartnerApplicationStatus.CANDIDATE_AGREED
             app.candidate_agreed_at = timezone.now()
+            app.candidate_returned_at = None
             if notes:
                 app.candidate_notes = notes
-
-            # Перерендерим проект договора с отметкой о согласовании кандидатом
-            try:
-                pdf_bytes = render_partner_contract_pdf(app, draft=True)
-            except PartnerContractRenderError:
-                raise PortalUnavailable("DOCUMENT_PENDING") from None
-            filename = f"Partner_Contract_{app.contract_number or app.pk}_agreed.pdf"
-            app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=False)
             app.save()
 
+        return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)
+
+
+class CompanyPartnerContractReturnView(BasePortalView):
+    """POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1)."""
+
+    required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
+
+    def post(self, request):
+        from portal.desk import service_partner_contract as contract_step
+        from portal.desk.service import AccessError
+
+        if not getattr(request.portal_contact, "can_act", False):
+            raise exceptions.PermissionDenied(detail="FORBIDDEN")
+        with transaction.atomic():
+            app = (
+                PartnerApplication.objects.select_for_update()
+                .filter(company=request.portal_company, status=PartnerApplicationStatus.CONTRACT_SENT)
+                .order_by("-created_at")
+                .first()
+            )
+            if not app:
+                raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
+            try:
+                contract_step.candidate_return(app, request.data.get("notes") or "")
+            except AccessError as error:
+                raise PortalBadRequest(error.code) from None
+        return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)
+
+
+class CompanyPartnerSignedScanView(BasePortalView):
+    """POST /company/partner-application/signed-scan — скан подписанного договора после согласия кандидата (ПД-1)."""
+
+    required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        from portal.desk import service_partner_contract as contract_step
+        from portal.desk.service import AccessError
+
+        if not getattr(request.portal_contact, "can_act", False):
+            raise exceptions.PermissionDenied(detail="FORBIDDEN")
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise PortalValidationError("VALIDATION_ERROR")
+        with transaction.atomic():
+            app = (
+                PartnerApplication.objects.select_for_update()
+                .filter(company=request.portal_company, status=PartnerApplicationStatus.CANDIDATE_AGREED)
+                .order_by("-created_at")
+                .first()
+            )
+            if not app:
+                raise PortalBadRequest("SCAN_NOT_EXPECTED")
+            try:
+                contract_step.candidate_upload_scan(app, upload)
+            except AccessError as error:
+                raise PortalBadRequest(error.code) from None
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)
 
 

@@ -5,7 +5,8 @@
 - Сопоставление с существующими контрагентами по ИНН или рег. номеру. Совпадение — предложение человеку, не автопривязка
   (правило PART-CRM, DECISIONS 2026-11-04): ИНН анкеты никем не проверен, а привязка даёт контакту вход и `can_act` в чужой
   компании. Пока сотрудник не выбрал `company_id` или `create_new_company`, ни отправка договора, ни одобрение не проходят;
-- Отправка проекта договора (`contract_sent`);
+- Подготовка договора (`service_partner_contract`: утверждённый шаблон либо свой файл, согласование держателем «Право»)
+  и его отправка кандидату (`contract_sent`): кандидат получает вход в кабинет при любом источнике заявки (ПД-1);
 - Одобрение заявки (`approved`): только после согласия кандидата (`candidate_agreed`) либо явным обходом с причиной в журнале;
   создание/привязка компании (`parties.Company`), активация отношения `partner` с модулями `my_products` и
   `catalog_requests`, фиксация номера и даты договора, связывание с CRM (`PART-CRM`) и отправка приглашения;
@@ -34,9 +35,9 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
+from portal.desk import service_partner_contract as contract_step
 from portal.desk.service import LANGUAGES, AccessError, _person
 from portal.services.invitation import invite_contact
-from portal.services.partner_contract import PartnerContractRenderError
 from portal.services.roles import PARTNER_DEFAULT_TOGGLEABLE
 
 from catalog.desk.audit import record
@@ -144,15 +145,6 @@ def _applicant_contact(app: PartnerApplication, company: Company, user) -> Conta
     return contact
 
 
-def _render_contract(app: PartnerApplication, **kwargs) -> bytes:
-    from portal.services.partner_contract import render_partner_contract_pdf
-
-    try:
-        return render_partner_contract_pdf(app, **kwargs)
-    except PartnerContractRenderError:
-        raise AccessError("CONTRACT_RENDER_FAILED") from None
-
-
 def _invite_deliveries(apps) -> dict[str, str]:
     """Итог последнего письма-приглашения по адресам заявок: `queued`, `sent`, `failed` (одним запросом)."""
     emails = {app.email.lower() for app in apps if app.source != PartnerApplicationSource.CLIENT_CABINET and app.email}
@@ -170,7 +162,7 @@ def _invite_deliveries(apps) -> dict[str, str]:
     return deliveries
 
 
-def _app_dict(app: PartnerApplication, deliveries: dict[str, str]) -> dict:
+def _app_dict(app: PartnerApplication, deliveries: dict[str, str], viewer=None) -> dict:
     matching_company_id = app.company_id
     matching_company_name = app.company.name if app.company else None
     company_match_pending = None
@@ -203,7 +195,8 @@ def _app_dict(app: PartnerApplication, deliveries: dict[str, str]) -> dict:
         "contract_draft_sent_at": app.contract_draft_sent_at,
         "candidate_agreed_at": app.candidate_agreed_at,
         "candidate_notes": app.candidate_notes,
-        "has_contract_pdf": bool(app.contract_pdf),
+        "has_contract_pdf": bool(contract_step.current_document(app)),
+        **contract_step.contract_facts(app, viewer=viewer),
         "rejected_reason": app.rejected_reason,
         "created_at": app.created_at,
         "reviewed_at": app.reviewed_at,
@@ -214,8 +207,18 @@ def _app_dict(app: PartnerApplication, deliveries: dict[str, str]) -> dict:
     }
 
 
-def list_applications(status_filter: str | None = None) -> dict:
-    qs = PartnerApplication.objects.all().select_related("company", "reviewed_by").order_by("-created_at")
+def list_applications(status_filter: str | None = None, viewer=None) -> dict:
+    qs = (
+        PartnerApplication.objects.all()
+        .select_related(
+            "company",
+            "reviewed_by",
+            "contract_template",
+            "contract_approval_requested_by",
+            "contract_approval_decided_by",
+        )
+        .order_by("-created_at")
+    )
     if status_filter:
         qs = qs.filter(status=status_filter)
     # Ждут сотрудника: новые и согласованные кандидатом
@@ -225,7 +228,7 @@ def list_applications(status_filter: str | None = None) -> dict:
     apps = list(qs)
     deliveries = _invite_deliveries(apps)
     return {
-        "items": [_app_dict(app, deliveries) for app in apps],
+        "items": [_app_dict(app, deliveries, viewer) for app in apps],
         "pending_count": pending_count,
     }
 
@@ -262,7 +265,7 @@ def create_from_letter(data: dict, user) -> dict:
         after={"status": app.status, "source_ref": app.source_ref},
         detail=app.company_name,
     )
-    return get_application(app.pk)
+    return get_application(app.pk, user)
 
 
 @transaction.atomic
@@ -313,11 +316,22 @@ def create_from_lead(data: dict) -> tuple[PartnerApplication, bool]:
     return app, True
 
 
-def get_application(pk: int) -> dict:
-    app = PartnerApplication.objects.filter(pk=pk).select_related("company", "reviewed_by", "applicant_contact").first()
+def get_application(pk: int, viewer=None) -> dict:
+    app = (
+        PartnerApplication.objects.filter(pk=pk)
+        .select_related(
+            "company",
+            "reviewed_by",
+            "applicant_contact",
+            "contract_template",
+            "contract_approval_requested_by",
+            "contract_approval_decided_by",
+        )
+        .first()
+    )
     if app is None:
         raise AccessError("NOT_FOUND", 404)
-    data = _app_dict(app, _invite_deliveries([app]))
+    data = _app_dict(app, _invite_deliveries([app]), viewer)
     data["company_id"] = app.company_id
     data["applicant_contact_id"] = app.applicant_contact_id
     data["reviewed_by"] = _person(app.reviewed_by)
@@ -325,9 +339,10 @@ def get_application(pk: int) -> dict:
 
 
 def send_contract(pk: int, data: dict, user) -> dict:
-    from django.core.files.base import ContentFile
-    from portal.services.partner_contract import generate_partner_contract_number
+    """Отправка подготовленного договора кандидату (ПД-1): нечего отправлять или он ждёт решения «Право» — отказ с причиной.
 
+    Кандидат получает вход в кабинет при любом источнике заявки, кроме кабинета клиента (там он уже внутри): компания и
+    контакт заводятся или привязываются по решению сотрудника, письмо уходит на языке контакта."""
     with transaction.atomic():
         app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
         if app is None:
@@ -338,28 +353,15 @@ def send_contract(pk: int, data: dict, user) -> dict:
             raise AccessError(
                 "COMPANY_MISMATCH"
             )  # привязка решена: молча игнорировать выбор сотрудника нельзя (B-FX1-1)
-
-        contract_number = (data.get("contract_number") or "").strip()
-        contract_date = data.get("contract_date")
-        if not contract_number and not app.contract_number:
-            contract_number = generate_partner_contract_number(app.pk)
-        if contract_number:
-            app.contract_number = contract_number
-        if contract_date:
-            app.contract_date = contract_date
-        elif not app.contract_date:
-            app.contract_date = timezone.localdate()
-
-        app.status = PartnerApplicationStatus.CONTRACT_SENT
-        app.contract_draft_sent_at = timezone.now()
-        app.candidate_agreed_at = None  # договор отправлен заново — прежнее согласие к нему не относится
-        app.reviewed_by = user
-        app.reviewed_at = timezone.now()
+        blocker = contract_step.send_blocker(app)
+        if blocker:
+            raise AccessError(blocker)
 
         invited_contact = None
-        # Заявка из внешнего входа: кандидату нужен вход, чтобы прочитать и согласовать договор
-        # (внешний вход, входящее письмо, лид CRM; кабинетному клиенту вход уже есть)
+        # Кандидату нужен вход, чтобы прочитать и согласовать договор; из кабинета клиента он уже вошёл
         if app.source != PartnerApplicationSource.CLIENT_CABINET:
+            if not (app.email or "").strip():
+                raise AccessError("CANDIDATE_EMAIL_REQUIRED")
             if not app.company_id:
                 company = _chosen_company(app, data) or _create_company(app, app.kind)
                 contact = _applicant_contact(app, company, user)
@@ -390,17 +392,18 @@ def send_contract(pk: int, data: dict, user) -> dict:
                     rel.save(update_fields=["contract_number", "contract_date"])
             invited_contact = app.applicant_contact
 
-        # Сначала договор: при сбое рендера ни заглушки, ни письма со ссылкой на договор
-        pdf_bytes = _render_contract(app, draft=True)
+        app.status = PartnerApplicationStatus.CONTRACT_SENT
+        app.contract_draft_sent_at = timezone.now()
+        app.candidate_agreed_at = None  # договор отправлен заново — прежнее согласие к нему не относится
+        app.candidate_returned_at = None
+        app.reviewed_by = user
+        app.reviewed_at = timezone.now()
 
         if invited_contact is not None:
             # Письмо со ссылкой для входа; не ушло — вся операция откатывается, сотрудник видит причину (FX-1)
             outcome = invite_contact(invited_contact, actor=user, channel="email", language=invited_contact.language)
             if outcome.error:
                 raise AccessError(outcome.error)
-
-        pdf_filename = f"Partner_Contract_{app.contract_number or app.pk}_draft.pdf"
-        app.contract_pdf.save(pdf_filename, ContentFile(pdf_bytes), save=False)
         app.save()
 
         record(
@@ -408,12 +411,12 @@ def send_contract(pk: int, data: dict, user) -> dict:
             entity="partner_application",
             instance=app,
             event="contract_sent",
-            action="Проект договора отправлен кандидату",
+            action="Договор отправлен кандидату",
             before=None,
-            after={"status": app.status, "contract_number": app.contract_number},
+            after={"status": app.status, "contract_number": app.contract_number, "source": app.contract_source},
             detail=app.company_name,
         )
-    return get_application(app.pk)
+    return get_application(app.pk, user)
 
 
 def approve_application(pk: int, data: dict, user) -> dict:
@@ -437,6 +440,11 @@ def approve_application(pk: int, data: dict, user) -> dict:
             may_bypass = app.status == PartnerApplicationStatus.CONTRACT_SENT and override_reason
             if bypassed_agreement and not may_bypass:
                 raise AccessError("CANDIDATE_AGREEMENT_REQUIRED", 400)
+
+            # ПД-1: договор подготовлен в системе — подтверждается скан подписанного; без скана только явный обход с причиной
+            scan_bypassed = bool(app.contract_source) and not app.signed_scan
+            if scan_bypassed and not override_reason:
+                raise AccessError("SIGNED_SCAN_REQUIRED", 400)
 
             # 1. Компания: выбранная сотрудником, уже привязанная или новая
             target_kind = kind if kind in PartnerKind.values else app.kind
@@ -494,7 +502,7 @@ def approve_application(pk: int, data: dict, user) -> dict:
                     rel.activated_at = now
                 rel.save()
 
-            # 4. Завершение заявки и рендер договора: при сбое рендера заявка не одобрена и письма нет
+            # 4. Завершение заявки
             app.company = company
             app.applicant_contact = contact
             app.status = PartnerApplicationStatus.APPROVED
@@ -502,10 +510,6 @@ def approve_application(pk: int, data: dict, user) -> dict:
             app.contract_date = contract_date
             app.reviewed_by = user
             app.reviewed_at = now
-
-            from django.core.files.base import ContentFile
-
-            signed_pdf = _render_contract(app, draft=False, director_user=user)
 
             # 5. Приглашение и интеграция с CRM
             if app.source != PartnerApplicationSource.CLIENT_CABINET and not contact.last_login_at:
@@ -515,18 +519,22 @@ def approve_application(pk: int, data: dict, user) -> dict:
 
             request_client_in_crm(company, user)
 
-            pdf_filename = f"Partner_Contract_{contract_number}_signed.pdf"
-            app.contract_pdf.save(pdf_filename, ContentFile(signed_pdf), save=False)
             app.save()
 
             after = {"status": app.status, "company": company.pk, "contract_number": contract_number}
-            if bypassed_agreement:
+            if scan_bypassed:
+                after["scan_bypassed"] = override_reason
+            if bypassed_agreement or scan_bypassed:
                 record(
                     user,
                     entity="partner_application",
                     instance=app,
-                    event="approved_without_agreement",
-                    action="Заявка кандидата в партнёры одобрена без согласия кандидата",
+                    event="approved_without_agreement" if bypassed_agreement else "approved_without_scan",
+                    action=(
+                        "Заявка кандидата в партнёры одобрена без согласия кандидата"
+                        if bypassed_agreement
+                        else "Заявка кандидата в партнёры одобрена без скана подписанного договора"
+                    ),
                     before=None,
                     after={**after, "override_reason": override_reason},
                     detail=app.company_name,
@@ -547,7 +555,7 @@ def approve_application(pk: int, data: dict, user) -> dict:
         code = str(undo)
         raise AccessError(code) from None
 
-    return get_application(app.pk)
+    return get_application(app.pk, user)
 
 
 def _close_candidate_access(app: PartnerApplication) -> None:
@@ -611,4 +619,4 @@ def reject_application(pk: int, data: dict, user) -> dict:
             after={"status": app.status, "rejected_reason": rejected_reason},
             detail=app.company_name,
         )
-    return get_application(app.pk)
+    return get_application(app.pk, user)

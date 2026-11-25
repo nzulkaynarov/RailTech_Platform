@@ -15,6 +15,11 @@ PartnerApplicationKind = Literal["", "manufacturer", "supplier", "principal", "o
 Language = Literal["ru", "uz", "en"]
 CompanyMatchPending = Literal["inn", "registration_number"]
 InviteDelivery = Literal["queued", "sent", "failed"]
+ContractSource = Literal["", "template", "upload"]
+ContractApproval = Literal["", "requested", "approved", "returned"]
+ContractBlocker = Literal[
+    "CONTRACT_NOT_PREPARED", "CONTRACT_APPROVAL_PENDING", "CONTRACT_APPROVAL_RETURNED"
+]
 
 
 class Out(BaseModel):
@@ -44,6 +49,25 @@ class PartnerApplicationItem(Out):
     matching_company_name: str | None
     company_match_pending: CompanyMatchPending | None
     invite_delivery: InviteDelivery | None
+    # ПД-1: договорная часть карточки — всё выведено ERP из фактов заявки
+    contract_source: ContractSource
+    contract_template_id: str | None
+    contract_template_name: str | None
+    contract_template_edition: int | None
+    contract_language: str
+    contract_deviation_text: str
+    contract_approval: ContractApproval
+    contract_approval_requested_by: str | None
+    contract_approval_decided_by: str | None
+    contract_approval_note: str
+    contract_blocker: ContractBlocker | None
+    contract_approvers: list[str]
+    can_decide_contract: bool
+    decision_needs_confirmation: bool
+    candidate_notes: str
+    candidate_returned_at: str | None
+    has_signed_scan: bool
+    signed_scan_at: str | None
 
 
 class PartnerApplicationListResponse(Out):
@@ -52,6 +76,8 @@ class PartnerApplicationListResponse(Out):
 
 
 class PartnerApplicationSendContractRequest(Body):
+    """Отправка подготовленного договора: номер и дата заданы при подготовке (ПД-1)."""
+
     contract_number: str | None = Field(default=None, max_length=64)
     contract_date: str | None = None
     company_id: str | None = None
@@ -81,6 +107,38 @@ class PartnerApplicationCreateRequest(Body):
     source_ref: str = Field(min_length=1, max_length=32)
 
 
+class PartnerContractPrepareRequest(Body):
+    """«Подготовить договор» из шаблона библиотеки; свой файл — отдельным запросом multipart."""
+
+    template_id: str | None = None
+    language: Language | None = None
+    deviation_text: str | None = Field(default=None, max_length=4000)
+    contract_number: str | None = Field(default=None, max_length=64)
+    contract_date: str | None = None
+
+
+class PartnerContractDecisionRequest(Body):
+    decision: Literal["approve", "return"]
+    confirm_self: bool | None = None
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class PartnerContractTemplateOption(Out):
+    id: str
+    name: str
+    edition: int
+    languages: list[Language]
+    is_default: bool
+
+
+class PartnerContractOptions(Out):
+    templates: list[PartnerContractTemplateOption]
+    default_template_id: str | None
+    deviations_allowed: bool
+    approvers: list[str]
+    can_decide: bool
+
+
 class PartnerApplicationRejectRequest(Body):
     rejected_reason: str = Field(min_length=1, max_length=1000)
 
@@ -96,7 +154,7 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
     status: PartnerApplicationStatus = raw_status if raw_status in allowed_statuses else "submitted"
     raw_source = raw.get("source")
     source: PartnerApplicationSource = (
-        raw_source if raw_source in ("public", "client_cabinet", "letter") else "public"
+        raw_source if raw_source in ("public", "client_cabinet", "letter", "lead") else "public"
     )
     if raw.get("from_lead") is True:  # ERP отдаёт заявку из лида как письмо с признаком (ЛП-1)
         source = "lead"
@@ -130,6 +188,36 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
             raw.get("company_match_pending"), ("inn", "registration_number")
         ),
         invite_delivery=_one_of(raw.get("invite_delivery"), ("queued", "sent", "failed")),
+        contract_source=_one_of(raw.get("contract_source"), ("template", "upload")) or "",
+        contract_template_id=(
+            str(raw["contract_template_id"])
+            if raw.get("contract_template_id") is not None
+            else None
+        ),
+        contract_template_name=raw.get("contract_template_name") or None,
+        contract_template_edition=raw.get("contract_template_edition"),
+        contract_language=text(raw.get("contract_language")),
+        contract_deviation_text=text(raw.get("contract_deviation_text")),
+        contract_approval=_one_of(
+            raw.get("contract_approval"), ("requested", "approved", "returned")
+        )
+        or "",
+        contract_approval_requested_by=raw.get("contract_approval_requested_by") or None,
+        contract_approval_decided_by=raw.get("contract_approval_decided_by") or None,
+        contract_approval_note=text(raw.get("contract_approval_note")),
+        contract_blocker=_one_of(
+            raw.get("contract_blocker"),
+            ("CONTRACT_NOT_PREPARED", "CONTRACT_APPROVAL_PENDING", "CONTRACT_APPROVAL_RETURNED"),
+        ),
+        contract_approvers=[str(name) for name in raw.get("contract_approvers") or []],
+        can_decide_contract=bool(raw.get("can_decide_contract")),
+        decision_needs_confirmation=bool(raw.get("decision_needs_confirmation")),
+        candidate_notes=text(raw.get("candidate_notes")),
+        candidate_returned_at=(
+            str(raw["candidate_returned_at"]) if raw.get("candidate_returned_at") else None
+        ),
+        has_signed_scan=bool(raw.get("has_signed_scan")),
+        signed_scan_at=str(raw["signed_scan_at"]) if raw.get("signed_scan_at") else None,
     )
 
 
@@ -138,4 +226,26 @@ def to_partner_applications_list(raw: Mapping[str, Any]) -> PartnerApplicationLi
     return PartnerApplicationListResponse(
         items=items,
         pending_count=int(raw.get("pending_count") or 0),
+    )
+
+
+def to_contract_options(raw: Mapping[str, Any]) -> PartnerContractOptions:
+    templates = [
+        PartnerContractTemplateOption(
+            id=ident(item.get("id")),
+            name=text(item.get("name")),
+            edition=int(item.get("edition") or 1),
+            languages=[lang for lang in item.get("languages") or [] if lang in ("ru", "uz", "en")]
+            or ["ru"],
+            is_default=bool(item.get("is_default")),
+        )
+        for item in raw.get("templates") or []
+    ]
+    default_id = raw.get("default_template_id")
+    return PartnerContractOptions(
+        templates=templates,
+        default_template_id=str(default_id) if default_id is not None else None,
+        deviations_allowed=bool(raw.get("deviations_allowed", True)),
+        approvers=[str(name) for name in raw.get("approvers") or []],
+        can_decide=bool(raw.get("can_decide")),
     )

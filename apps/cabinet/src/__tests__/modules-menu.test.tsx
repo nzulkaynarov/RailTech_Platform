@@ -331,6 +331,14 @@ describe('меню из /me.modules', () => {
       expect((await axe(container)).violations).toEqual([]);
     });
 
+    it('с разделом «Письма» в модулях кандидат всё равно попадает на карточку договора (ПД-1)', async () => {
+      signedIn('actor', 'demo', { ...CANDIDATE, modules: ['messages', 'profile', 'letters'] });
+      setMockPartnerApplication(CONTRACT_SENT);
+      const { router } = renderApp('/');
+      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/');
+    });
+
     it('раздел «Компания» приводит к той же карточке', async () => {
       signedIn('actor', 'demo', CANDIDATE);
       setMockPartnerApplication(CONTRACT_SENT);

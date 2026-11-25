@@ -132,6 +132,14 @@ class CompanySettings(models.Model):
         verbose_name=_("Отступления от шаблона по заявке"),
         help_text=_("Выключено — «Запросить отступление» недоступно."),
     )
+    contract_four_eyes = models.BooleanField(
+        default=True,
+        verbose_name=_("Решение по своему договору — другим держателем «Права»"),
+        help_text=_(
+            "Включено — подготовивший договор партнёра не решает по нему сам; единственный держатель права решает "
+            "самостоятельно с подтверждением и записью в журнале."
+        ),
+    )
     default_client_contract_template = models.ForeignKey(
         "documents.DocumentTemplate",
         on_delete=models.SET_NULL,

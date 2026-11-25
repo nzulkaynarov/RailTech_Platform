@@ -946,7 +946,7 @@
         },
         "appliedAt": "Submitted on {{date}}",
         "contractNumber": "Contract",
-        "downloadDraftPdf": "Download draft contract (PDF)",
+        "downloadDraftPdf": "Open contract",
         "agreeContractBtn": "Agree to draft contract",
         "agreeDialogTitle": "Draft contract agreement",
         "agreeDialogDesc": "By confirming, you accept the partner contract terms.",
@@ -965,7 +965,20 @@
         "dialogTitle": "Partner Status Application",
         "dialogDesc": "Specify your partnership kind and product categories. We will prepare the partner agreement.",
         "dialogSubmit": "Submit Application",
-        "dialogSuccess": "Application successfully submitted for review."
+        "dialogSuccess": "Application successfully submitted for review.",
+        "returnedDesc": "You returned the contract with a remark. We will prepare a new version and let you know.",
+        "returnContractBtn": "Return with a remark",
+        "returnDialogTitle": "Return the contract with a remark",
+        "returnDialogDesc": "Write what should change. We will prepare a new version of the contract.",
+        "returnNotesLabel": "Remark on the contract",
+        "returnSubmit": "Return contract",
+        "returnSuccess": "Remark sent. We will prepare a new version of the contract.",
+        "scanNeeded": "Sign the contract and upload the signed scan.",
+        "scanReceived": "Scan received. We will confirm the contract and open the partner cabinet.",
+        "scanUpload": "Upload scan",
+        "scanReplace": "Replace scan",
+        "scanInput": "Scan of the signed contract",
+        "scanSuccess": "Scan received."
       },
       "bankChange": {
         "title": "Bank details change request",
@@ -1425,7 +1438,10 @@
     "DOC_LINK_EXPIRED": "The link has expired — ask the sender for a new one.",
     "DOC_LINK_SUPERSEDED": "There is a newer version — open the link from the latest e-mail.",
     "CODE_RESEND_TOO_SOON": "A new code can be requested after 45 seconds.",
-    "GENERATING": "The file is still being prepared — try again in a few seconds."
+    "GENERATING": "The file is still being prepared — try again in a few seconds.",
+    "SCAN_NOT_EXPECTED": "The scan is not expected now.",
+    "SCAN_INVALID": "The file was not accepted: a PDF or an image up to 20 MB.",
+    "RETURN_NOTE_REQUIRED": "Write a remark."
   },
   "widgets": {
     "actionRequired": {

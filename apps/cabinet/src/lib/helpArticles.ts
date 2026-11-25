@@ -21,6 +21,44 @@ export interface HelpArticle {
 
 export const HELP_ARTICLES: HelpArticle[] = [
   {
+    id: 'partner-contract',
+    category: 'general',
+    routePatterns: ['/company'],
+    title: {
+      ru: 'Партнёрский договор: прочитать, согласовать, вернуть, загрузить скан',
+      uz: 'Hamkorlik şartnomasi: öqiş, kelişiş, qaytariş, skan yuklaş',
+      en: 'Partner contract: read, agree, return, upload the scan',
+    },
+    summary: {
+      ru: 'Что делать, когда мы отправили вам партнёрский договор.',
+      uz: 'Sizga hamkorlik şartnomasi yuborilganda nima qiliş kerak.',
+      en: 'What to do when we have sent you a partner contract.',
+    },
+    content: {
+      ru: [
+        'Откройте «Компания» — карточка «Партнёрский договор». Кнопка «Открыть договор» показывает файл, который мы отправили.',
+        'Если всё устраивает, нажмите «Согласовать проект договора». Если нет — «Вернуть с замечанием» и напишите, что изменить: мы подготовим новую версию.',
+        'После согласия подпишите договор и загрузите скан: «Загрузить скан» (PDF или изображение). Скан можно заменить.',
+        'Когда мы подтвердим договор, в меню откроются разделы партнёра.',
+        'Согласовать, вернуть и загрузить скан может представитель с правом подтверждать действия.',
+      ],
+      uz: [
+        '«Kompaniya» böliminda «Hamkorlik şartnomasi» kartasini oçing. «Şartnomani oçiş» tugmasi biz yuborgan faylni körsatadi.',
+        'Hammasi mos bölsa, «Şartnoma loyihasini kelişiş»ni bosing. Aks holda «Izoh bilan qaytariş» orqali nimani özgartiriş kerakligini yozing: yangi versiyani tayyorlaymiz.',
+        'Kelişgaçdan keyin şartnomani imzolang va skanni yuklang: «Skanni yuklaş» (PDF yoki rasm). Skanni almaştiriş mumkin.',
+        'Şartnomani tasdiqlaganimizda, menyuda hamkor bölimlari oçiladi.',
+        'Kelişiş, qaytariş va skan yuklaşni harakatlarni tasdiqlaş huquqi bor vakil bajaradi.',
+      ],
+      en: [
+        'Open “Company” and find the “Partner contract” card. “Open contract” shows the file we sent.',
+        'If it suits you, press “Agree the draft contract”. If not, use “Return with a remark” and write what to change: we will prepare a new version.',
+        'After you agree, sign the contract and upload the scan with “Upload scan” (PDF or image). You can replace the scan.',
+        'Once we confirm the contract, the partner sections open in the menu.',
+        'Agreeing, returning and uploading the scan is done by a representative who may confirm actions.',
+      ],
+    },
+  },
+  {
     id: 'quotes-accept',
     category: 'quotes',
     routePatterns: ['/', '/quotes'],

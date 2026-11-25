@@ -946,7 +946,7 @@
         },
         "appliedAt": "{{date}} da topşirilgan",
         "contractNumber": "Şartnoma",
-        "downloadDraftPdf": "Şartnoma loyihasini yuklab oliş (PDF)",
+        "downloadDraftPdf": "Şartnomani oçiş",
         "agreeContractBtn": "Şartnoma loyihasini maʼqullaş",
         "agreeDialogTitle": "Şartnoma loyihasini maʼqullaş",
         "agreeDialogDesc": "Tasdiqlab, hamkorlik şartnomasi şartlariga rozilik bildirasiz.",
@@ -965,7 +965,20 @@
         "dialogTitle": "Hamkor maqomiga ariza",
         "dialogDesc": "Hamkorlik turi va mahsulot toifalarini körsating. Biz hamkorlik şartnomasini tayyorlaymiz.",
         "dialogSubmit": "Arizani yuboriş",
-        "dialogSuccess": "Ariza muvaffaqiyatli körib çiqişga yuborildi."
+        "dialogSuccess": "Ariza muvaffaqiyatli körib çiqişga yuborildi.",
+        "returnedDesc": "Siz şartnomani izoh bilan qaytardingiz. Yangi versiyani tayyorlab, xabar beramiz.",
+        "returnContractBtn": "Izoh bilan qaytariş",
+        "returnDialogTitle": "Şartnomani izoh bilan qaytariş",
+        "returnDialogDesc": "Nimani özgartiriş kerakligini yozing. Şartnomaning yangi versiyasini tayyorlaymiz.",
+        "returnNotesLabel": "Şartnomaga izoh",
+        "returnSubmit": "Şartnomani qaytariş",
+        "returnSuccess": "Izoh yuborildi. Şartnomaning yangi versiyasini tayyorlaymiz.",
+        "scanNeeded": "Şartnomani imzolang va imzolangan skanni yuklang.",
+        "scanReceived": "Skan olindi. Şartnomani tasdiqlab, hamkor kabinetini oçamiz.",
+        "scanUpload": "Skanni yuklaş",
+        "scanReplace": "Skanni almaştiriş",
+        "scanInput": "Imzolangan şartnoma skani",
+        "scanSuccess": "Skan olindi."
       },
       "bankChange": {
         "title": "Bank rekvizitlarini özgartiriş sörovi",
@@ -1425,7 +1438,10 @@
     "DOC_LINK_EXPIRED": "Havola muddati tugagan — yuboruvçidan yangisini sörang.",
     "DOC_LINK_SUPERSEDED": "Yangi versiya bor — oxirgi xatdagi havolani oçing.",
     "CODE_RESEND_TOO_SOON": "Yangi kodni 45 soniyadan keyin söraş mumkin.",
-    "GENERATING": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining."
+    "GENERATING": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining.",
+    "SCAN_NOT_EXPECTED": "Hozir skan kutilmayapti.",
+    "SCAN_INVALID": "Fayl mos kelmadi: 20 MB gaça PDF yoki rasm kerak.",
+    "RETURN_NOTE_REQUIRED": "Izoh yozing."
   },
   "widgets": {
     "actionRequired": {

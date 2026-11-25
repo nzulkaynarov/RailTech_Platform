@@ -1,8 +1,9 @@
-import { Button, Input, Radio, Segmented, Select } from "antd";
+import { Alert, Button, Input, Radio, Segmented, Select } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router";
 
 import { useAuth } from "../../../app/auth/useAuth";
 import { canEdit } from "../../../app/access";
@@ -12,12 +13,14 @@ import type {
   PartnerApplicationStatus,
 } from "../../../shared/api/generated/model";
 import {
+  getDownloadPartnerApplicationDocumentUrl,
   getListPartnerApplicationsQueryKey,
   useApprovePartnerApplication,
   useListPartnerApplications,
   useRejectPartnerApplication,
   useSendContractPartnerApplication,
 } from "../../../shared/api/generated/platform-bff";
+import { downloadFile } from "../../../shared/api/download";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -25,6 +28,11 @@ import { FilterBar } from "../../../shared/ui/FilterBar";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormPanel } from "./common";
+import {
+  ContractDecisionModal,
+  PrepareContractModal,
+  TEMPLATE_LIBRARY_PATH,
+} from "./PartnerContractModals";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 
@@ -59,6 +67,8 @@ export function PartnerApplicationsPanel() {
     status: filter === "all" ? undefined : filter,
   });
 
+  const [prepareRow, setPrepareRow] = useState<PartnerApplicationItem | null>(null);
+  const [decisionRow, setDecisionRow] = useState<PartnerApplicationItem | null>(null);
   const [sendContractRow, setSendContractRow] = useState<PartnerApplicationItem | null>(null);
   const [approveRow, setApproveRow] = useState<PartnerApplicationItem | null>(null);
   const [rejectRow, setRejectRow] = useState<PartnerApplicationItem | null>(null);
@@ -123,16 +133,7 @@ export function PartnerApplicationsPanel() {
     {
       key: "contract",
       title: t("partnerApplications.columns.contract"),
-      render: (row) => (
-        <div>
-          {row.contract_number ? (
-            <div>№ {row.contract_number}</div>
-          ) : (
-            <span className="pf-cat-sub">—</span>
-          )}
-          {row.contract_date ? <span className="pf-cat-sub">{date(row.contract_date)}</span> : null}
-        </div>
-      ),
+      render: (row) => <ContractCell row={row} />,
     },
     {
       key: "status",
@@ -165,27 +166,56 @@ export function PartnerApplicationsPanel() {
       title: t("partnerApplications.columns.actions"),
       width: 220,
       render: (row) => {
-        if (!canManage || row.status === "approved" || row.status === "rejected") {
-          return null;
-        }
+        if (row.status === "approved" || row.status === "rejected") return null;
+        const canPrepare =
+          row.status === "submitted" ||
+          (row.status === "contract_sent" && row.candidate_returned_at !== null);
+        const canSend = row.status === "submitted" && row.contract_blocker === null;
+        const canResend = row.status === "contract_sent" && row.invite_delivery === "failed";
         return (
           <div className="pf-cat-actions">
-            {row.status === "submitted" ||
-            (row.status === "contract_sent" && row.invite_delivery === "failed") ? (
+            {row.can_decide_contract && row.contract_approval === "requested" ? (
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => {
+                  setDecisionRow(row);
+                }}
+              >
+                {t("partnerApplications.actions.decide")}
+              </Button>
+            ) : null}
+            {canManage && canPrepare ? (
               <Button
                 size="small"
+                type={row.contract_source === "" ? "primary" : "default"}
+                onClick={() => {
+                  setPrepareRow(row);
+                }}
+              >
+                {t(
+                  row.contract_source === ""
+                    ? "partnerApplications.actions.prepare"
+                    : "partnerApplications.actions.prepareAgain",
+                )}
+              </Button>
+            ) : null}
+            {canManage && (canSend || canResend) ? (
+              <Button
+                size="small"
+                type={canSend ? "primary" : "default"}
                 onClick={() => {
                   setSendContractRow(row);
                 }}
               >
                 {t(
-                  row.status === "submitted"
+                  canSend
                     ? "partnerApplications.actions.sendContract"
                     : "partnerApplications.actions.resendContract",
                 )}
               </Button>
             ) : null}
-            {row.status === "submitted" ? null : (
+            {canManage && row.status !== "submitted" ? (
               <Button
                 type={row.status === "candidate_agreed" ? "primary" : "default"}
                 size="small"
@@ -199,16 +229,18 @@ export function PartnerApplicationsPanel() {
                     : "partnerApplications.actions.approveWithoutAgreement",
                 )}
               </Button>
-            )}
-            <Button
-              danger
-              size="small"
-              onClick={() => {
-                setRejectRow(row);
-              }}
-            >
-              {t("partnerApplications.actions.reject")}
-            </Button>
+            ) : null}
+            {canManage ? (
+              <Button
+                danger
+                size="small"
+                onClick={() => {
+                  setRejectRow(row);
+                }}
+              >
+                {t("partnerApplications.actions.reject")}
+              </Button>
+            ) : null}
           </div>
         );
       },
@@ -249,6 +281,32 @@ export function PartnerApplicationsPanel() {
           )
         }
       </QueryState>
+
+      {prepareRow ? (
+        <PrepareContractModal
+          item={prepareRow}
+          onDone={() => {
+            invalidate();
+            setPrepareRow(null);
+          }}
+          onClose={() => {
+            setPrepareRow(null);
+          }}
+        />
+      ) : null}
+
+      {decisionRow ? (
+        <ContractDecisionModal
+          item={decisionRow}
+          onDone={() => {
+            invalidate();
+            setDecisionRow(null);
+          }}
+          onClose={() => {
+            setDecisionRow(null);
+          }}
+        />
+      ) : null}
 
       {sendContractRow ? (
         <SendContractModal
@@ -345,6 +403,110 @@ function CompanyMatchChoice({
   );
 }
 
+/**
+ * Договор в строке: номер и дата, откуда он и кто решает — словами, из фактов заявки. Что дальше, названо одной строкой:
+ * не подготовлен (со ссылкой на библиотеку шаблонов), ждёт решения «Право», возвращён, готов к отправке, у кандидата.
+ */
+function ContractCell({ row }: { row: PartnerApplicationItem }) {
+  const { t } = useTranslation("catalog");
+  const { date } = useFormat();
+  const open = (which: "contract" | "scan") => {
+    void downloadFile(
+      getDownloadPartnerApplicationDocumentUrl(row.id, { which }),
+      `${which}-${row.id}`,
+    ).catch(() => undefined);
+  };
+  const approvalLine =
+    row.contract_approval === "requested"
+      ? t("partnerApplications.contractLine.requested", {
+          who:
+            row.contract_approvers.length > 0
+              ? row.contract_approvers.join(", ")
+              : t("partnerApplications.noApprovers"),
+        })
+      : row.contract_approval === "approved"
+        ? t("partnerApplications.contractLine.approved", {
+            who: row.contract_approval_decided_by ?? "",
+          })
+        : row.contract_approval === "returned"
+          ? t("partnerApplications.contractLine.returned", { note: row.contract_approval_note })
+          : null;
+  return (
+    <div>
+      {row.contract_number ? <div>№ {row.contract_number}</div> : null}
+      {row.contract_date ? <span className="pf-cat-sub">{date(row.contract_date)}</span> : null}
+      {row.contract_source === "template" ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.template", {
+            name: row.contract_template_name ?? "",
+            edition: row.contract_template_edition ?? 1,
+            language: t(
+              `partnerApplications.prepareModal.languages.${row.contract_language || "ru"}`,
+            ),
+          })}
+        </span>
+      ) : null}
+      {row.contract_source === "upload" ? (
+        <span className="pf-cat-sub">{t("partnerApplications.contractLine.upload")}</span>
+      ) : null}
+      {approvalLine ? <span className="pf-cat-sub">{approvalLine}</span> : null}
+      {row.status === "submitted" && row.contract_blocker === "CONTRACT_NOT_PREPARED" ? (
+        <>
+          <span className="pf-cat-sub pf-cat-danger">
+            {t("partnerApplications.contractLine.notPrepared")}
+          </span>
+          <span className="pf-cat-sub">
+            <Link to={TEMPLATE_LIBRARY_PATH}>{t("partnerApplications.contractLine.library")}</Link>
+          </span>
+        </>
+      ) : null}
+      {row.status === "submitted" && row.contract_blocker === null ? (
+        <span className="pf-cat-sub">{t("partnerApplications.contractLine.ready")}</span>
+      ) : null}
+      {row.status === "contract_sent" && row.candidate_returned_at ? (
+        <span className="pf-cat-sub pf-cat-danger">
+          {t("partnerApplications.contractLine.candidateReturned", { note: row.candidate_notes })}
+        </span>
+      ) : null}
+      {row.status === "contract_sent" && !row.candidate_returned_at ? (
+        <span className="pf-cat-sub">{t("partnerApplications.contractLine.waitingCandidate")}</span>
+      ) : null}
+      {row.status === "candidate_agreed" ? (
+        <span className="pf-cat-sub">
+          {row.has_signed_scan
+            ? t("partnerApplications.contractLine.scanReady", {
+                date: row.signed_scan_at ? date(row.signed_scan_at) : "",
+              })
+            : t("partnerApplications.contractLine.waitingScan")}
+        </span>
+      ) : null}
+      {row.contract_source ? (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => {
+            open("contract");
+          }}
+        >
+          {t("partnerApplications.contractLine.openContract")}
+        </Button>
+      ) : null}
+      {row.has_signed_scan ? (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => {
+            open("scan");
+          }}
+        >
+          {t("partnerApplications.contractLine.openScan")}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Отправка подготовленного договора: номер, дата и текст уже зафиксированы; здесь только вопрос о найденной компании. */
 function SendContractModal({
   item,
   onDone,
@@ -355,10 +517,6 @@ function SendContractModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation("catalog");
-  const numId = useId();
-  const dateId = useId();
-  const [contractNumber, setContractNumber] = useState(item.contract_number || "");
-  const [contractDate, setContractDate] = useState(item.contract_date || "");
   const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
   const needsChoice = Boolean(item.company_match_pending);
 
@@ -378,38 +536,23 @@ function SendContractModal({
       onOk={() => {
         sendContract.mutate({
           id: item.id,
-          data: {
-            contract_number: contractNumber.trim() || undefined,
-            contract_date: contractDate || undefined,
-            ...companyDecision(item, companyChoice),
-          },
+          data: { ...companyDecision(item, companyChoice) },
         });
       }}
       onCancel={onClose}
     >
-      <p>{t("partnerApplications.sendContractModal.hint")}</p>
+      <p>{t("partnerApplications.sendContractModal.hint", { email: item.email })}</p>
       {needsChoice ? (
         <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
       ) : null}
-      <FormField id={numId} label={t("partnerApplications.contractNumber")}>
-        <Input
-          id={numId}
-          value={contractNumber}
-          onChange={(e) => {
-            setContractNumber(e.target.value);
-          }}
-          placeholder={t("partnerApplications.contractNumberPlaceholder")}
+      {item.email.trim() === "" ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="alert"
+          message={t("partnerApplications.sendContractModal.noEmail")}
         />
-      </FormField>
-      <FormField id={dateId} label={t("partnerApplications.contractDate")}>
-        <DateField
-          id={dateId}
-          value={contractDate}
-          onChange={(val) => {
-            setContractDate(val);
-          }}
-        />
-      </FormField>
+      ) : null}
     </FormPanel>
   );
 }
@@ -436,6 +579,9 @@ function ApproveModal({
   const [overrideReason, setOverrideReason] = useState("");
   const needsChoice = Boolean(item.company_match_pending);
   const withoutAgreement = item.status === "contract_sent";
+  // Договор подготовлен в системе: подтверждается скан подписанного; без него — только причина в журнал (ПД-1)
+  const withoutScan = item.contract_source !== "" && !item.has_signed_scan;
+  const needsReason = withoutAgreement || withoutScan;
 
   const approve = useApprovePartnerApplication({
     mutation: {
@@ -455,7 +601,7 @@ function ApproveModal({
       disabled={
         !contractNumber.trim() ||
         (needsChoice && !companyChoice) ||
-        (withoutAgreement && !overrideReason.trim())
+        (needsReason && !overrideReason.trim())
       }
       onOk={() => {
         approve.mutate({
@@ -465,7 +611,7 @@ function ApproveModal({
             contract_date: contractDate || undefined,
             kind,
             ...companyDecision(item, companyChoice),
-            ...(withoutAgreement ? { override_reason: overrideReason.trim() } : {}),
+            ...(needsReason ? { override_reason: overrideReason.trim() } : {}),
           },
         });
       }}
@@ -475,7 +621,9 @@ function ApproveModal({
         {t(
           withoutAgreement
             ? "partnerApplications.approveModal.hintOverride"
-            : "partnerApplications.approveModal.hint",
+            : withoutScan
+              ? "partnerApplications.approveModal.hintNoScan"
+              : "partnerApplications.approveModal.hint",
         )}
       </p>
 
@@ -483,7 +631,7 @@ function ApproveModal({
         <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
       ) : null}
 
-      {withoutAgreement ? (
+      {needsReason ? (
         <FormField id={reasonId} label={t("partnerApplications.approveModal.overrideLabel")}>
           <Input.TextArea
             id={reasonId}

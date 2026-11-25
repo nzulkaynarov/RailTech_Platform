@@ -148,7 +148,45 @@ class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
 # --- Заявки на партнёрство (PART-ONBOARD-2) ---
 
 
-class DeskPartnerApplicationListItem(serializers.Serializer):
+class DeskPartnerContractFacts(serializers.Serializer):
+    """ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки."""
+
+    contract_source = serializers.ChoiceField(
+        choices=["", "template", "upload"],
+        help_text="Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен.",
+    )
+    contract_template_id = serializers.IntegerField(allow_null=True)
+    contract_template_name = serializers.CharField(allow_null=True)
+    contract_template_edition = serializers.IntegerField(allow_null=True)
+    contract_language = serializers.CharField(allow_blank=True)
+    contract_deviation_text = serializers.CharField(allow_blank=True)
+    contract_approval = serializers.ChoiceField(
+        choices=["", "requested", "approved", "returned"],
+        help_text="Согласование держателем «Право»: пусто — не требуется (шаблон без отступлений).",
+    )
+    contract_approval_requested_by = serializers.CharField(allow_null=True)
+    contract_approval_decided_by = serializers.CharField(allow_null=True)
+    contract_approval_note = serializers.CharField(allow_blank=True)
+    contract_blocker = serializers.ChoiceField(
+        choices=["CONTRACT_NOT_PREPARED", "CONTRACT_APPROVAL_PENDING", "CONTRACT_APPROVAL_RETURNED"],
+        allow_null=True,
+        help_text="Что мешает отправить договор (только пока заявка в статусе submitted); null — можно отправлять.",
+    )
+    candidate_returned_at = serializers.DateTimeField(allow_null=True)
+    has_signed_scan = serializers.BooleanField()
+    signed_scan_at = serializers.DateTimeField(allow_null=True)
+    can_decide_contract = serializers.BooleanField(
+        help_text="Зритель вправе решить: держатель права утверждать договоры; подготовивший — только если нет другого."
+    )
+    decision_needs_confirmation = serializers.BooleanField(
+        help_text="Зритель — единственный держатель права и сам подготовил договор: решение с подтверждением."
+    )
+    contract_approvers = serializers.ListField(
+        child=serializers.CharField(), help_text="Кто решает, пока согласование ждёт решения."
+    )
+
+
+class DeskPartnerApplicationListItem(DeskPartnerContractFacts):
     id = serializers.IntegerField()
     source = serializers.ChoiceField(
         choices=["public", "client_cabinet", "letter"],
@@ -226,8 +264,17 @@ class DeskPartnerApplicationListResponse(serializers.Serializer):
 
 
 class DeskPartnerApplicationSendContractIn(serializers.Serializer):
-    contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
-    contract_date = serializers.DateField(required=False, allow_null=True)
+    """Отправка подготовленного договора (ПД-1): номер и дата заданы при подготовке и здесь не меняются."""
+
+    contract_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=64,
+        help_text="Не используется: номер задаётся при подготовке договора.",
+    )
+    contract_date = serializers.DateField(
+        required=False, allow_null=True, help_text="Не используется: дата задаётся при подготовке договора."
+    )
     company_id = serializers.IntegerField(
         required=False, allow_null=True, help_text="Сотрудник подтвердил: заявка от этой существующей компании."
     )
@@ -257,6 +304,45 @@ class DeskPartnerApplicationApproveIn(serializers.Serializer):
         max_length=1000,
         help_text="Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.",
     )
+
+
+class DeskPartnerTemplateOption(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    edition = serializers.IntegerField()
+    languages = serializers.ListField(child=serializers.ChoiceField(choices=["ru", "en", "uz"]))
+    is_default = serializers.BooleanField()
+
+
+class DeskPartnerContractOptions(serializers.Serializer):
+    """Что выбрать при «Подготовить договор»: утверждённые партнёрские шаблоны библиотеки и правила компании."""
+
+    templates = DeskPartnerTemplateOption(many=True)
+    default_template_id = serializers.IntegerField(allow_null=True)
+    deviations_allowed = serializers.BooleanField()
+    approvers = serializers.ListField(child=serializers.CharField(), help_text="Держатели зоны «Право» по имени.")
+    can_decide = serializers.BooleanField()
+
+
+class DeskPartnerContractPrepareIn(serializers.Serializer):
+    """Договор из шаблона (`template_id` или умолчание настроек) либо свой файл (`file`: PDF или DOCX, multipart)."""
+
+    template_id = serializers.IntegerField(required=False, allow_null=True)
+    language = serializers.ChoiceField(choices=["ru", "en", "uz"], required=False)
+    deviation_text = serializers.CharField(required=False, allow_blank=True, max_length=4000)
+    contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    contract_date = serializers.DateField(required=False, allow_null=True)
+    file = serializers.FileField(required=False, help_text="Свой файл договора: PDF или DOCX, до 20 МБ.")
+
+
+class DeskPartnerContractDecisionIn(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=["approve", "return"])
+    confirm_self = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Подтверждение самостоятельного решения единственным держателем «Права».",
+    )
+    note = serializers.CharField(required=False, allow_blank=True, max_length=1000)
 
 
 class DeskPartnerApplicationRejectIn(serializers.Serializer):

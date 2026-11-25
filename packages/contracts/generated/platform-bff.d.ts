@@ -9199,6 +9199,106 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/partner-applications/contract-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Заявка в партнёры: из чего готовить договор
+     * @description ERP `GET catalog/partner-applications/contract-options/`. Утверждённые партнёрские шаблоны библиотеки (по умолчанию — из настроек компании), языки каждого, правило отступлений и кто решает (держатели зоны «Право»). Пустой список шаблонов — договор готовится только своим файлом, а ссылка на библиотеку названа в интерфейсе.
+     */
+    get: operations["getPartnerContractOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/prepare-contract": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: подготовить договор из шаблона
+     * @description ERP `POST catalog/partner-applications/{id}/prepare-contract/` — право `supply.manage`. Договор по утверждённому шаблону библиотеки (`template_id` или умолчание настроек) на языке договора. Без отступлений — готов к отправке; с текстом отступления — запрос держателю «Право». Нет утверждённых шаблонов — 422 `no_approved_partner_template`, встроенного образца нет.
+     */
+    post: operations["preparePartnerContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/prepare-contract-file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: загрузить свой файл договора
+     * @description ERP `POST catalog/partner-applications/{id}/prepare-contract/` (multipart) — право `supply.manage`. BFF читает тело до 21 МБ и передаёт ERP как есть; файл — PDF или DOCX до 20 МБ, содержимое сверяется с расширением. Свой файл всегда идёт на решение держателя «Право».
+     */
+    post: operations["uploadPartnerContractFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/contract-decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: решение по договору (зона «Право»)
+     * @description ERP `POST catalog/partner-applications/{id}/contract-decision/` — решает держатель зоны «Право» (`eds.visa.legal` полный; право `contract.approve_template` проверяет ERP), иначе 403; подготовивший договор сам не решает (`SELF_APPROVAL_NOT_ALLOWED`). `approve` — договор можно отправлять (одобренное отступление входит в текст), `return` — на доработку, замечание обязательно.
+     */
+    post: operations["decidePartnerContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/document": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Заявка в партнёры: договор или скан подписанного
+     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+     */
+    get: operations["downloadPartnerApplicationDocument"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers/{id}/offers/{offer_id}": {
     parameters: {
       query?: never;
@@ -13892,6 +13992,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -13946,6 +14048,8 @@ export interface components {
       contract_sign_before_send?: boolean;
       /** @description ДОК-10: «Запросить отступление» от шаблона доступно (по умолчанию да) */
       contract_deviations_allowed?: boolean;
+      /** @description ПД-1: по своему договору партнёра решает другой держатель «Права»; единственный держатель решает с подтверждением (по умолчанию да) */
+      contract_four_eyes?: boolean;
       /** @description ДОК-10: шаблон договора по умолчанию для клиента — только утверждённый */
       default_client_contract_template?: number | null;
       /** @description ДОК-10: шаблон договора по умолчанию для партнёра — только утверждённый */
@@ -19123,6 +19227,104 @@ export interface components {
        * @enum {string|null}
        */
       invite_delivery: "queued" | "sent" | "failed" | null;
+      /**
+       * @description Откуда договор: шаблон библиотеки или свой файл; пусто — не подготовлен (ПД-1)
+       * @enum {string}
+       */
+      contract_source: "" | "template" | "upload";
+      contract_template_id: string | null;
+      contract_template_name: string | null;
+      contract_template_edition: number | null;
+      /** @description ru, en или uz; пусто — не подготовлен */
+      contract_language: string;
+      /** @description Чем договор отличается от шаблона; пусто — без отступлений */
+      contract_deviation_text: string;
+      /**
+       * @description Решение держателя «Право»; пусто — согласование не нужно (шаблон без отступлений)
+       * @enum {string}
+       */
+      contract_approval: "" | "requested" | "approved" | "returned";
+      contract_approval_requested_by: string | null;
+      contract_approval_decided_by: string | null;
+      contract_approval_note: string;
+      /**
+       * @description Что мешает отправить договор (пока заявка подана); null — можно отправлять
+       * @enum {string|null}
+       */
+      contract_blocker:
+        | "CONTRACT_NOT_PREPARED"
+        | "CONTRACT_APPROVAL_PENDING"
+        | "CONTRACT_APPROVAL_RETURNED"
+        | null;
+      /** @description Кто решает, пока согласование ждёт решения */
+      contract_approvers: string[];
+      /** @description Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя */
+      can_decide_contract: boolean;
+      /** @description Зритель — единственный держатель и сам подготовил договор: решение с подтверждением */
+      decision_needs_confirmation: boolean;
+      /** @description Замечание кандидата к договору */
+      candidate_notes: string;
+      /**
+       * Format: date-time
+       * @description Когда кандидат вернул договор с замечанием
+       */
+      candidate_returned_at: string | null;
+      /** @description Кандидат загрузил скан подписанного договора */
+      has_signed_scan: boolean;
+      /** Format: date-time */
+      signed_scan_at: string | null;
+    };
+    PartnerContractPrepareRequest: {
+      /** @description Шаблон библиотеки; пусто — умолчание из настроек компании */
+      template_id?: string | null;
+      /**
+       * @description Язык договора; пусто — язык кандидата
+       * @enum {string}
+       */
+      language?: "ru" | "uz" | "en";
+      /** @description Чем договор отличается от шаблона; текст идёт на решение «Право» и после одобрения входит в договор */
+      deviation_text?: string | null;
+      contract_number?: string | null;
+      /** Format: date */
+      contract_date?: string | null;
+    };
+    PartnerContractFileUpload: {
+      /**
+       * Format: binary
+       * @description До 20 МБ: PDF или DOCX
+       */
+      file: string;
+      /** @enum {string} */
+      language?: "ru" | "uz" | "en";
+      deviation_text?: string;
+      contract_number?: string;
+      /** Format: date */
+      contract_date?: string;
+    };
+    PartnerContractDecisionRequest: {
+      /** @enum {string} */
+      decision: "approve" | "return";
+      /** @description Подтверждение самостоятельного решения единственным держателем */
+      confirm_self?: boolean | null;
+      /** @description Замечание; при `return` обязательно */
+      note?: string | null;
+    };
+    PartnerContractOptions: {
+      templates: components["schemas"]["PartnerContractTemplateOption"][];
+      default_template_id: string | null;
+      /** @description Правило компании: свой файл и отступления допустимы */
+      deviations_allowed: boolean;
+      /** @description Держатели зоны «Право» по имени */
+      approvers: string[];
+      can_decide: boolean;
+    };
+    PartnerContractTemplateOption: {
+      id: string;
+      name: string;
+      edition: number;
+      /** @description Языки, на которых у шаблона есть текст; русский есть всегда */
+      languages: ("ru" | "uz" | "en")[];
+      is_default: boolean;
     };
     PartnerApplicationListResponse: {
       items: components["schemas"]["PartnerApplicationItem"][];
@@ -36449,6 +36651,172 @@ export interface operations {
         };
       };
       400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getPartnerContractOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Параметры подготовки договора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerContractOptions"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  preparePartnerContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerContractPrepareRequest"];
+      };
+    };
+    responses: {
+      /** @description Договор подготовлен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadPartnerContractFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PartnerContractFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл принят, договор ждёт решения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decidePartnerContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerContractDecisionRequest"];
+      };
+    };
+    responses: {
+      /** @description Решение записано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadPartnerApplicationDocument: {
+    parameters: {
+      query?: {
+        which?: "contract" | "scan";
+      };
+      header?: never;
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
