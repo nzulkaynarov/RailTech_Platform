@@ -101,6 +101,7 @@ def _journal(contract, event_code: str, action: str, *, actor=None, contact=None
 # ── Подписание ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
+@transaction.atomic
 def apply_at_signing(contract, *, signed_on: Optional[dt.date] = None) -> None:
     """Договор подписан: вычислить срок из правила и записать на договор. Повтор — без изменений (срок уже стоит)."""
     if contract.valid_until is not None or contract.term_rule:
