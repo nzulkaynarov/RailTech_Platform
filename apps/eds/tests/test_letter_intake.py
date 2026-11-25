@@ -5,6 +5,7 @@
 (`httpx.MockTransport`), платных вызовов нет."""
 
 import json
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -77,9 +78,17 @@ class FakeModel:
         self.bodies: list[dict[str, Any]] = []
         self.answer: dict[str, Any] = ANSWER
         self.status = 200
+        self.failure: str | None = None  # "500" · "timeout" · "junk" — настоящие сбои модели (не лимит)
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.bodies.append(json.loads(request.content))
+        if self.failure == "timeout":
+            raise httpx.ReadTimeout("model is silent", request=request)
+        if self.failure == "500":
+            return httpx.Response(500, text="upstream exploded")
+        if self.failure == "junk":
+            junk = {"choices": [{"message": {"content": "not json at all"}, "finish_reason": "stop"}]}
+            return httpx.Response(200, json=junk)
         if self.status != 200:
             return httpx.Response(self.status, json={"error": {"type": "budget_exceeded"}})
         return httpx.Response(
@@ -100,10 +109,22 @@ def model(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> FakeModel:
     return fake
 
 
-async def intake(client: httpx.AsyncClient, who: Person, content: bytes, **kw: Any) -> httpx.Response:
+async def intake(
+    client: httpx.AsyncClient,
+    who: Person,
+    content: bytes,
+    received_at: str | None = None,
+    rules_only: bool = False,
+    **kw: Any,
+) -> httpx.Response:
     uploaded = await upload(client, who, content, **kw)
     assert uploaded.status_code == 201, uploaded.text
-    return await client.post("/api/v1/letter-intake", json={"file_id": uploaded.json()["id"]}, headers=who.headers)
+    body = {
+        "file_id": uploaded.json()["id"],
+        **({"received_at": received_at} if received_at else {}),
+        **({"rules_only": True} if rules_only else {}),
+    }
+    return await client.post("/api/v1/letter-intake", json=body, headers=who.headers)
 
 
 async def deliver_policy(
@@ -487,3 +508,177 @@ def test_relative_due_in_the_letter_text_is_suggested_by_code() -> None:
         {**ANSWER, "document_due": "2026-11-25"}, masked=None, kinds=set(), raw="в течение 5 рабочих дней", today=today
     )
     assert explicit.document_due == date(2026, 11, 25)
+
+
+async def test_due_from_the_text_is_suggested_without_the_model(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, settings: Settings,
+    monkeypatch: pytest.MonkeyPatch, container: Container,
+) -> None:  # fmt: skip
+    """СЦ-11: срок «N ish kuni ichida» считает код — при выключенной модели и при её сбое он всё равно предложен."""
+    lines = [
+        "Tax Committee of Demo District",
+        "Explanations are due 5 ish kuni ichida from receipt of this notice.",
+        *LETTER_LINES[:1],
+    ]
+    monkeypatch.setattr(settings, "litellm_api_key", SecretStr(""))
+    off = await intake(client, staff["registrar"], make_pdf(lines))
+    assert off.status_code == 200, off.text
+    body = off.json()
+    validate("LetterIntakeSuggestion", body)
+    assert (body["alias"], body["source"]) == ("rules", "text")
+    assert body["fields"]["document_due"] is not None
+    assert model.bodies == []  # платного вызова не было
+
+    monkeypatch.setattr(settings, "litellm_api_key", SecretStr("sk-test-eds-key"))
+    model.status = 500
+    down = await intake(client, staff["registrar"], make_pdf(lines))
+    assert down.status_code == 200, down.text
+    assert down.json()["alias"] == "rules" and down.json()["fields"]["document_due"] == body["fields"]["document_due"]
+    # дата поступления из формы — точка отсчёта срока (5 рабочих дней от субботы 2026-01-10 — пятница 16-го)
+    dated = await intake(client, staff["registrar"], make_pdf(lines), received_at="2026-01-10")
+    assert dated.status_code == 200 and dated.json()["fields"]["document_due"] == "2026-01-16"
+    # текст без срока по-прежнему отправляет заполнять вручную
+    plain = await intake(client, staff["registrar"], make_pdf(LETTER_LINES))
+    assert_error(plain, 409, "CONFLICT", reason="ai_budget_exceeded")
+
+
+_WORDS = [
+    "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять", "десять", "одиннадцать",
+    "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать",
+    "девятнадцать", "двадцать", "двадцать один", "двадцать два", "двадцать три", "двадцать четыре",
+    "двадцать пять", "двадцать шесть", "двадцать семь", "двадцать восемь", "двадцать девять", "тридцать",
+]  # fmt: skip
+_GENITIVE = [
+    "одного", "двух", "трёх", "четырёх", "пяти", "шести", "семи", "восьми", "девяти", "десяти", "одиннадцати",
+    "двенадцати", "тринадцати", "четырнадцати", "пятнадцати", "шестнадцати", "семнадцати", "восемнадцати",
+    "девятнадцати", "двадцати", "двадцати одного", "двадцати двух", "двадцати трёх", "двадцати четырёх",
+    "двадцати пяти", "двадцати шести", "двадцати семи", "двадцати восьми", "двадцати девяти", "тридцати",
+]  # fmt: skip
+FRIDAY = date(2026, 11, 20)
+
+
+def _after(days: int, *, working: bool = False) -> date:
+    """Ожидание независимо от кода: рабочие дни идут по одному, календарный срок с выходного — на понедельник."""
+    day = FRIDAY
+    if working:
+        while days:
+            day += timedelta(days=1)
+            days -= day.weekday() < 5
+        return day
+    day += timedelta(days=days)
+    return day + timedelta(days=(7 - day.weekday()) % 7 if day.weekday() >= 5 else 0)
+
+
+@pytest.mark.parametrize("n", range(1, 31))
+@pytest.mark.parametrize("kind", ["календарных", "рабочих"])
+def test_due_numerals_1_to_30_in_every_form(n: int, kind: str) -> None:
+    """СЦ-11: числа 1–30 цифрами, «5-ти», словом в именительном и родительном падеже, «(…)» после цифры."""
+    working = kind == "рабочих"
+    expected = _after(n, working=working)
+    forms = [f"{n}", f"{n}-ти", f"{_WORDS[n - 1]}", f"{_GENITIVE[n - 1]}", f"{n} ({_GENITIVE[n - 1]})"]
+    for form in forms:
+        text = f"Просим ответить в течение {form} {kind} дней с даты получения."
+        assert letter_intake.due_from_text(text, FRIDAY) == expected, text
+
+
+def test_due_numerals_outside_the_table_give_no_suggestion() -> None:
+    assert letter_intake.due_from_text("в течение сорока дней", FRIDAY) is None
+    assert letter_intake.due_from_text("в течение пять пять дней", FRIDAY) is None  # не число
+    assert letter_intake.due_from_text("в течение 95 дней", FRIDAY) is None
+
+
+def test_due_is_counted_from_the_receipt_date_when_there_is_one() -> None:
+    """СЦ-11: срок отсчитывается от даты поступления письма, а без неё — от дня регистрации."""
+    today, received = date(2026, 11, 25), date(2026, 11, 20)  # письмо пришло в пятницу, регистрируют в среду
+    raw = "в течение 5 рабочих дней"
+    with_received = letter_intake.rules_fields(raw, today, base=received)
+    without = letter_intake.rules_fields(raw, today)
+    assert with_received is not None and without is not None
+    assert with_received.document_due == date(2026, 11, 27)
+    assert without.document_due == date(2026, 12, 2)
+    cleaned = letter_intake.clean({}, masked=None, kinds=set(), raw=raw, today=today, base=received)
+    assert cleaned.document_due == date(2026, 11, 27)
+
+
+@pytest.mark.parametrize("failure", ["500", "timeout", "junk"])
+async def test_real_model_failure_still_gives_the_due_date_by_rules(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, failure: str
+) -> None:
+    """СЦ-11: сбой модели (500 без лимита, тишина, не-JSON) — не «заполните вручную», а срок по тексту от кода."""
+    model.failure = failure
+    lines = ["Tax Committee of Demo District", "Explanations are due 5 ish kuni ichida from receipt of this notice."]
+    response = await intake(client, staff["registrar"], make_pdf(lines))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["alias"] == "rules" and body["by_code"] == ["document_due"]
+    assert model.bodies  # модель звали, она не ответила
+
+
+async def test_by_code_marks_what_the_code_computed_next_to_the_model_answer(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+) -> None:
+    """СЦ-11: модель срок не назвала датой — срок и ИНН помечены `by_code`, остальное остаётся за моделью."""
+    model.answer = {**ANSWER, "document_due": None}
+    lines = ["Tax Committee of Demo District", "To: Demo Rail LLC, INN 301234567", "Reply 5 ish kuni ichida please"]
+    mixed = await intake(client, staff["registrar"], make_pdf(lines))
+    body = mixed.json()
+    assert body["alias"] == "intake-model"
+    assert body["fields"]["subject"] and body["fields"]["document_due"]
+    assert sorted(body["by_code"]) == ["document_due", "sender_inn"]
+    model.answer = ANSWER  # модель сама назвала дату срока — срок её, ИНН по-прежнему кода
+    named = await intake(client, staff["registrar"], make_pdf(lines))
+    assert named.json()["by_code"] == ["sender_inn"]
+
+
+@pytest.mark.parametrize("received", ["2999-01-01", "9999-12-31", "2001-01-01"])
+async def test_receipt_date_out_of_range_is_rejected(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, received: str
+) -> None:
+    """СЦ-11: дата поступления из будущего, у предела календаря (раньше — 500) или старше года — 422, а не расчёт."""
+    lines = ["Tax Committee", "Reply 5 ish kuni ichida please"]
+    response = await intake(client, staff["registrar"], make_pdf(lines), received_at=received)
+    assert_error(response, 422, "VALIDATION_FAILED")
+    assert "received_at" in json.dumps(response.json()["details"])
+    assert model.bodies == []
+
+
+def test_due_at_the_calendar_edge_is_no_suggestion_not_a_crash() -> None:
+    assert letter_intake.due_from_text("в течение 5 дней", date(9999, 12, 31)) is None
+
+
+UZ_DUE = ["Tax Committee", "Reply 5 ish kuni ichida please"]
+
+
+async def test_recompute_by_rules_never_calls_the_model(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+) -> None:
+    """СЦ-11: «Пересчитать срок» — только правила кода: модель не зовётся, срок помечен `by_code`; без срока — 409."""
+    done = await intake(client, staff["registrar"], make_pdf(UZ_DUE), received_at="2026-10-20", rules_only=True)
+    assert done.status_code == 200, done.text
+    body = done.json()
+    assert (body["alias"], body["by_code"]) == ("rules", ["document_due"])
+    assert body["fields"]["document_due"] == "2026-10-27"
+    nothing = await intake(client, staff["registrar"], make_pdf(LETTER_LINES), rules_only=True)
+    assert_error(nothing, 409, "CONFLICT", reason="nothing_recognized")
+    assert model.bodies == []
+
+
+@pytest.mark.parametrize(
+    ("received", "status", "reason"),
+    [
+        ("2026-11-25", 200, None),  # день компании: в Ташкенте уже 25-е, хотя в UTC ещё 24-е
+        ("2026-11-26", 422, "in_future"),
+        ("2025-11-25", 200, None),  # ровно год назад
+        ("2025-11-24", 422, "too_old"),
+    ],
+)
+async def test_receipt_date_boundaries_follow_the_company_day(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, clock: Any,
+    received: str, status: int, reason: str | None,
+) -> None:  # fmt: skip
+    """СЦ-11: 20:30 UTC 24.11 — в Ташкенте 01:30 25.11; границы окна считаются по дню компании, не по UTC."""
+    clock.current = datetime(2026, 11, 24, 20, 30, tzinfo=UTC)
+    response = await intake(client, staff["registrar"], make_pdf(UZ_DUE), received_at=received)
+    assert response.status_code == status, response.text
+    if reason is not None:
+        assert [f["message"] for f in response.json()["details"]["fields"]] == [reason]

@@ -26075,6 +26075,12 @@ components:
       required: [file_id]
       properties:
         file_id: {type: string, format: uuid}
+        received_at:
+          anyOf:
+          - {type: string, format: date}
+          - {type: 'null'}
+          description: Дата поступления письма — от неё считается срок «в течение N дней»
+        rules_only: {type: boolean, default: false, description: 'Только правила кода, без модели (пересчёт срока)'}
 
     LetterIntakeFields:
       type: object
@@ -26124,7 +26130,10 @@ components:
         fields: {$ref: '#/components/schemas/LetterIntakeFields'}
         alias: {type: string}
         prompt_version: {type: string}
-
+        by_code:
+          type: array
+          items: {type: string, enum: [sender_inn, document_due]}
+          description: Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма»
     AiDecisionIn:
       type: object
       additionalProperties: false

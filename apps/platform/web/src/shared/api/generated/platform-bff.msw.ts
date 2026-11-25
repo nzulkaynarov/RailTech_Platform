@@ -26538,6 +26538,10 @@ export const getSuggestLetterFromFileResponseMock = (
   },
   alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
   prompt_version: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  by_code: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["sender_inn", "document_due"] as const),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 

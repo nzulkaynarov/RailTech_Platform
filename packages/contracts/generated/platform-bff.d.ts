@@ -14867,6 +14867,13 @@ export interface components {
     LetterIntakeIn: {
       /** Format: uuid */
       file_id: string;
+      /** @description Дата поступления письма — от неё считается срок «в течение N дней» */
+      received_at?: string | null;
+      /**
+       * @description Только правила кода, без модели (пересчёт срока)
+       * @default false
+       */
+      rules_only: boolean;
     };
     /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
     LetterIntakeFields: {
@@ -14912,6 +14919,8 @@ export interface components {
       fields: components["schemas"]["LetterIntakeFields"];
       alias: string;
       prompt_version: string;
+      /** @description Поля, которые посчитал код, а не модель (срок «в течение N дней», ИНН); экран метит их «Из текста письма» */
+      by_code?: ("sender_inn" | "document_due")[];
     };
     AiDecisionIn: {
       /** @enum {string} */
