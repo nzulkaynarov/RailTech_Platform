@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import any_, literal, select
+from sqlalchemy import any_, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Document, Employee, SigningAuthority
@@ -40,7 +40,7 @@ from app.schemas.signing import (
     SigningResolution,
 )
 from app.security.permissions import EdsPermission as P
-from app.services import docflow_settings
+from app.services import access, docflow_settings
 
 MAX_DEPUTY_CHAIN = 5
 _RANK = {BASIS_CHARTER: 0, BASIS_ORDER: 1, BASIS_POWER_OF_ATTORNEY: 2}
@@ -388,15 +388,19 @@ async def resolve(
 
 
 async def draft_openers(session: AsyncSession, ids: Collection[int]) -> set[int]:
-    """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register`
-    (без него черновик недоступен — `access.document_visible`)."""
+    """Кто из `ids` видит и вправе подписать переданный черновик ИСХ: активный держатель `letters.register` или
+    держатель полномочия подписи на «исходящее письмо» (`access.signer_handed_draft`: черновик, переданный на подпись,
+    доступен тому, кому его поручают, — раздел регистрации для этого не нужен)."""
     if not ids:
         return set()
     rows = await session.execute(
         select(Employee.crm_user_id).where(
             Employee.crm_user_id.in_(ids),
             Employee.is_active.is_(True),
-            literal(P.LETTERS_REGISTER.value) == any_(Employee.permissions_eds),
+            or_(
+                literal(P.LETTERS_REGISTER.value) == any_(Employee.permissions_eds),
+                access.holds_letter_authority(Employee.crm_user_id),
+            ),
         )
     )
     return {int(uid) for uid in rows.scalars()}

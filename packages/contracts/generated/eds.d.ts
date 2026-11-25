@@ -1342,6 +1342,8 @@ export interface paths {
      *     статус переходит в `sent`, рендерится итоговый PDF/A без плашки «ПРОЕКТ», закрываются связанные поручения
      *     по входящему письму, публикуется событие `uz.railtech.eds.document.signed.v1`, и при `dispatch_method = email`
      *     и `send = true` запускается отправка адресату.
+     *     Раздел прав (`letters.register`, `memos.approve`) не нужен: подписывает тот, у кого есть действующее полномочие
+     *     в реестре; иначе 403 `no_permission` или `no_authority`.
      */
     post: operations["signDocument"];
     delete?: never;

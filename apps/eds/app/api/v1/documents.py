@@ -42,7 +42,8 @@ Reader = Annotated[
     Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ, deputy=True)),
 ]
 Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE, P.LETTERS_REGISTER))]
-Signer = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.MEMOS_APPROVE))]
+# Подпись письма: полномочие из реестра (проверяет `documents.sign_check`), раздел прав не нужен.
+Signer = Annotated[Employee, Depends(require_permission())]
 Accountant = Annotated[Employee, Depends(require_permission(P.PAYMENTS_CONFIRM))]
 Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
 AnyEmployee = Annotated[Employee, Depends(require_permission())]

@@ -495,9 +495,12 @@ async def sign_check(session: AsyncSession, employee: Employee, document: Docume
     signer = signing_resolve.pick_letter_signer(
         result, document.author_crm_user_id, openers, document.chosen_signer_crm_user_id, author_may_sign=may_sign_own
     )
-    if not (access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
-        return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
     own = signing_resolve.signer_check(result, employee.crm_user_id)
+    # Право подписи письма — полномочие из реестра «Права подписи»; разделы `letters.register` и `memos.approve` для
+    # держателя полномочия не нужны (иначе реестр выдаёт полномочие, а подписать нельзя).
+    holder = own.allowed and own.candidate is not None
+    if not (holder or access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.MEMOS_APPROVE)):
+        return SignCheck(False, "no_permission", "Подписывать письма может сотрудник с правом подписи.", signer, None)
     if not own.allowed or own.candidate is None:
         return SignCheck(False, own.reason or "no_authority", own.message, signer, None)
     # Тот же круг, что и у вычисленного подписанта (ГЛ-0): иначе автор становится подписантом и получает отказ

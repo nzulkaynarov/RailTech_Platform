@@ -8,12 +8,12 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import ColumnElement, and_, any_, exists, literal, not_, or_, select, true
+from sqlalchemy import ColumnElement, SQLColumnExpression, and_, any_, exists, func, literal, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app import clock
-from app.models import ApprovalRoute, ApprovalStep, Document, Employee
+from app.models import ApprovalRoute, ApprovalStep, Document, Employee, SigningAuthority
 from app.security.permissions import EdsPermission, known_permissions
 
 # --- замещение (СЦ-9 P11, решение владельца 2026-11-21 (2)) -----------------------------------------------------------
@@ -166,6 +166,30 @@ def participates_in(employee: Employee) -> ColumnElement[bool]:
     return or_(step_is_mine(employee), ApprovalStep.decided_by == employee.crm_user_id)
 
 
+def holds_letter_authority(crm_user_id: SQLColumnExpression[int] | int) -> ColumnElement[bool]:
+    """У сотрудника есть не отозванное и не истёкшее полномочие подписи «исходящее письмо» (реестр «Права подписи»)."""
+    return exists(
+        select(1).where(
+            SigningAuthority.crm_user_id == crm_user_id,
+            SigningAuthority.revoked_at.is_(None),
+            or_(SigningAuthority.valid_to.is_(None), SigningAuthority.valid_to >= func.current_date()),
+            literal("letter_out") == any_(SigningAuthority.kinds),
+        )
+    )
+
+
+def signer_handed_draft(employee: Employee) -> ColumnElement[bool]:
+    """Письмо, переданное на подпись, видит и тот, кому его поручают: выбранный подписант и держатель полномочия на
+    «исходящее письмо» — даже без `letters.register` и `letters.read` (иначе реестр подписи не работает: письмо к
+    нему не приходит, а «Подписать некому»). Чужие черновики, не переданные на подпись, по-прежнему закрыты."""
+    return and_(
+        Document.kind == "letter_out",
+        Document.registration_requested_at.is_not(None),
+        Document.status.in_(("draft", "returned")),
+        or_(Document.chosen_signer_crm_user_id == employee.crm_user_id, holds_letter_authority(employee.crm_user_id)),
+    )
+
+
 def document_visible(employee: Employee) -> ColumnElement[bool]:
     """Условие видимости для запроса по `Document` — один предикат для реестра, `/documents`, карточки и файлов (D1-10).
 
@@ -185,8 +209,9 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
     # Своё письмо автор видит и без `letters.read` (исполнитель готовит ответ, P4).
     letters_ok = true() if can_read_letters(employee) else or_(Document.kind != "letter_out", mine)
     base = and_(not_foreign_draft, letters_ok)
+    signer = signer_handed_draft(employee)
     if has(employee, EdsPermission.REGISTRY_READ):
-        return base
+        return or_(base, signer)
     in_route = exists(
         select(1)
         .select_from(ApprovalStep)
@@ -195,7 +220,7 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
     )
     # Пункт 1.6: получатель копии видит документ (не решает).
     watching = Document.watchers.contains([employee.crm_user_id])
-    return and_(base, or_(mine, in_route, handed_over, watching))
+    return or_(and_(base, or_(mine, in_route, handed_over, watching)), signer)
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:
