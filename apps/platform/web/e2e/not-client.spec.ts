@@ -28,6 +28,7 @@ for (const width of [1512, 1440, 390] as const) {
       await expectNoViolations(page, "карточка клиента до исправления");
 
       await page.getByRole("button", { name: "Не клиент" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Снять роль" }).click();
 
       await expect(roles.getByText("Клиент", { exact: true })).toBeHidden();
       await expect(page.getByRole("tab", { name: "Заявки и проекты" })).toBeHidden();

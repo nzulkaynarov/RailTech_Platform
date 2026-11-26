@@ -190,7 +190,8 @@
       "confirm": "Baribir olib tashlaş",
       "cancel": "Bekor qiliş",
       "done": "Mijoz roli olib tashlandi. Yopilgan arizalar: {{count}}.",
-      "failed": "Rolni olib tashlab bölmadi. Qayta urinib köring."
+      "failed": "Rolni olib tashlab bölmadi. Qayta urinib köring.",
+      "apply": "Rolni olib tashlaş"
     },
     "people": {
       "title": "Odamlar",

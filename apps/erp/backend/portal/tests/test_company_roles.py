@@ -179,8 +179,14 @@ def test_not_client_removes_the_mistaken_role_end_to_end(world):
     assert contact.pk not in [p["id"] for p in clients]
     assert [p["roles"] for p in partners if p["id"] == contact.pk] == [["partner"]]
     # повтор безопасен
+    stamp = company.client_role_removed_at
+    entries = ActivityLog.objects.filter(entity_type="company", entity_id=company.pk).count()
     again = world["clients"]["supply"].post(f"{ORG}{company.pk}/not-client/")
     assert again.status_code == 200 and again.json()["result"]["requests_closed"] == []
+    # повтор не двигает дату и не пишет второй записи в журнал
+    company.refresh_from_db()
+    assert company.client_role_removed_at == stamp
+    assert ActivityLog.objects.filter(entity_type="company", entity_id=company.pk).count() == entries
 
 
 def test_real_history_warns_but_does_not_block(world):

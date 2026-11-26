@@ -191,7 +191,8 @@ function Loaded({
   });
   const startNotClient = () => {
     void notClientPlan.refetch().then((plan) => {
-      if (plan.data?.has_history) setWarn(plan.data);
+      if (plan.data?.has_history || (plan.data?.requests_to_close.length ?? 0) > 0)
+        setWarn(plan.data ?? null);
       else notClient.mutate({ id: card.id });
     });
   };
@@ -370,7 +371,9 @@ function Loaded({
       {warn ? (
         <Dialog
           title={t("counterparty.notClient.title")}
-          okLabel={t("counterparty.notClient.confirm")}
+          okLabel={t(
+            warn.has_history ? "counterparty.notClient.confirm" : "counterparty.notClient.apply",
+          )}
           cancelLabel={t("counterparty.notClient.cancel")}
           danger
           loading={notClient.isPending}
@@ -381,15 +384,19 @@ function Loaded({
             setWarn(null);
           }}
         >
-          <p>{t("counterparty.notClient.ask")}</p>
           <p>
-            {t("counterparty.notClient.history", {
-              quotes: warn.history.quotes_sent,
-              contracts: warn.history.contracts,
-              invoices: warn.history.invoices,
-              projects: warn.history.projects,
-            })}
+            {t(warn.has_history ? "counterparty.notClient.ask" : "counterparty.notClient.text")}
           </p>
+          {warn.has_history ? (
+            <p>
+              {t("counterparty.notClient.history", {
+                quotes: warn.history.quotes_sent,
+                contracts: warn.history.contracts,
+                invoices: warn.history.invoices,
+                projects: warn.history.projects,
+              })}
+            </p>
+          ) : null}
           {warn.requests_kept.length > 0 ? (
             <p>{t("counterparty.notClient.kept", { list: warn.requests_kept.join(", ") })}</p>
           ) : null}

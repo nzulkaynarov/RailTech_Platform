@@ -452,21 +452,24 @@ describe("Роли контрагента и «Не клиент»", () => {
     ).toBeVisible();
   });
 
-  it("«Не клиент» без настоящей истории: одно действие, роль и вкладка клиента уходят, компания выходит из «Клиентов»", async () => {
+  it("«Не клиент» с открытой заявкой: подтверждение со списком заявок (необратимо); роль и вкладка клиента уходят, компания выходит из «Клиентов»", async () => {
     const panel = await open("director@demo.example", "/crm/clients/4?panel=open&tab=card");
     const roles = await within(panel).findByRole("list", { name: "Роли" });
     expect(within(roles).getByText("Клиент")).toBeVisible();
     expect(within(panel).getByRole("tab", { name: "Заявки и проекты" })).toBeVisible();
 
     fireEvent.click(within(panel).getByRole("button", { name: "Не клиент" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/Закроются как заведённые по ошибке: RQ-2026-009/),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Снять роль" }));
 
     await waitFor(() => {
       expect(within(panel).queryByRole("tab", { name: "Заявки и проекты" })).toBeNull();
     });
     expect(within(panel).queryByRole("button", { name: "Не клиент" })).toBeNull();
     expect(within(roles).queryByText("Клиент")).toBeNull();
-    // ничего не спрашивали: диалога нет
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("«Не клиент» у компании с настоящей историей: предупреждение списком, решает сотрудник", async () => {

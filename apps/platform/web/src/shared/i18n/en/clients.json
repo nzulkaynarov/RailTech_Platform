@@ -190,7 +190,8 @@
       "confirm": "Remove the role anyway",
       "cancel": "Cancel",
       "done": "Client role removed. Requests closed: {{count}}.",
-      "failed": "Could not remove the role. Try again."
+      "failed": "Could not remove the role. Try again.",
+      "apply": "Remove the role"
     },
     "people": {
       "title": "People",

@@ -210,6 +210,10 @@ def remove_client_role(company: Company, *, actor=None, dry_run: bool = False) -
     plan["dry_run"] = dry_run
     if dry_run:
         return plan
+    if company.client_role_removed_at is not None and not plan["is_client"] and not plan["has_client_type"]:
+        # повтор: роль уже снята — ни даты, ни второй записи в журнале
+        plan.update(dry_run=False, requests_closed=[], candidate_entry=False, remaining_roles=role_states(company))
+        return plan
     closed: list[str] = []
     reason = DealCloseReason.objects.filter(code=MISTAKE_REASON).first()
     already = not plan["is_client"] and not plan["has_client_type"]

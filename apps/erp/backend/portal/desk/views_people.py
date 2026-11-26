@@ -336,7 +336,7 @@ class OrganizationsDeskViewSet(DeskViewSet):
     lookup_value_regex = r"\d+"
     # «Организацию» заводит любой сотрудник бэк-офиса — прямо из письма (ADR-0028 п. 5)
     required_permissions = {
-        "roles": "supply.manage",
+        "roles": ("deal.manage", "supply.manage"),
         "create": SELF_SERVICE,
         # СУЩ-2.7: реквизиты контрагента правит менеджер или снабжение — их ведёт ERP
         "partial_update": ("deal.manage", "supply.manage"),
