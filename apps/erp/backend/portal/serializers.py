@@ -658,6 +658,31 @@ class ContractSerializer(DealLinkedSerializer):
     signed_by_company_at = serializers.DateTimeField(source="manager_signed_at", read_only=True, allow_null=True)
     document_id = serializers.SerializerMethodField()
     term = serializers.SerializerMethodField()
+    remark = serializers.SerializerMethodField()
+    can_download_docx = serializers.SerializerMethodField()
+
+    def get_remark(self, contract) -> Optional[dict]:
+        """ДП-1: замечания клиента на согласовании или наш ответ на последние (`null` — замечаний нет или приняты)."""
+        from crm.constants import ContractStatusCode
+
+        if contract.status_code != ContractStatusCode.PENDING_CLIENT:
+            return None
+        remark = contract.remarks.first()  # новые первыми
+        if remark is None or remark.resolution == "accepted":
+            return None
+        return {
+            "state": "review" if not remark.resolution else "answered",
+            "comment": remark.comment,
+            "response": remark.response or None,
+            "file_name": remark.file_name or None,
+            "created_at": remark.created_at,
+            "answered_at": remark.resolved_at,
+        }
+
+    def get_can_download_docx(self, contract) -> bool:
+        from crm.constants import ContractStatusCode
+
+        return contract.status_code == ContractStatusCode.PENDING_CLIENT
 
     def get_term(self, contract) -> Optional[dict]:
         """ДС-1: срок подписанного договора без внутренних полей (правило, шаблон, счётчики продлений)."""

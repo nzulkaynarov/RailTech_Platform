@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.contract_term import ContractRenewalMode, ContractTermRule, DeclinedBy
 from core.models import Currency
-from core.storage import contract_pdf_path, contract_signed_path, get_private_storage
+from core.storage import contract_pdf_path, contract_remark_path, contract_signed_path, get_private_storage
 
 from .lookups import ContractStatus
 
@@ -228,3 +228,61 @@ class Contract(models.Model):
     @property
     def is_fully_signed(self) -> bool:
         return self.status_code == "SIGNED" and bool(self.client_signed_at and self.manager_signed_at)
+
+
+class ContractRemark(models.Model):
+    """ДП-1: замечания контрагента к редакции договора («Есть замечания», один ответ: комментарий + своя редакция DOCX/XLSX).
+
+    Факты, из которых карточка и Кабинет выводят «что дальше»: `resolution` пуст — замечания на согласовании у наших
+    ответственных (`ContractRemarkVote`), `accepted` — редакция контрагента принята (договор «Согласован»), `countered` —
+    мы ответили своей редакцией (`response`), договор остаётся у контрагента. Файл — вложение и точка правды; разбор
+    (`summary`, `items`) считается при получении и хранится вместе с замечанием.
+    """
+
+    ACCEPTED = "accepted"
+    COUNTERED = "countered"
+
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name="remarks")
+    edition = models.PositiveSmallIntegerField(default=1, verbose_name=_("Редакция, к которой замечания"))
+    comment = models.TextField(verbose_name=_("Комментарий контрагента"))
+    file = models.FileField(
+        upload_to=contract_remark_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Редакция контрагента"),
+    )
+    file_name = models.CharField(max_length=255, blank=True, default="")
+    author_name = models.CharField(max_length=200, blank=True, default="")
+    summary = models.JSONField(default=dict, blank=True, verbose_name=_("Краткий разбор"))
+    items = models.JSONField(default=list, blank=True, verbose_name=_("Что изменилось по пунктам"))
+    resolution = models.CharField(max_length=16, blank=True, default="", db_index=True)
+    response = models.TextField(blank=True, default="", verbose_name=_("Наш ответ контрагенту"))
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = _("Замечания к договору")
+        verbose_name_plural = _("Замечания к договору")
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["contract"], condition=models.Q(resolution=""), name="contract_one_open_remark"
+            )
+        ]
+
+
+class ContractRemarkVote(models.Model):
+    """Ответ одного из ответственных за договор на замечания: «Согласен» или «Не согласен» (с комментарием)."""
+
+    remark = models.ForeignKey(ContractRemark, on_delete=models.CASCADE, related_name="votes")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    agree = models.BooleanField()
+    comment = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["remark", "user"], name="contract_remark_one_vote_per_user")]

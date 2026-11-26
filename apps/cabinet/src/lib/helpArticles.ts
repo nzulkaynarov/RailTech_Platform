@@ -150,17 +150,17 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     content: {
       ru: [
-        'Откройте «Договоры»: у договора «Ждёт вашего согласования» нажмите «Согласовать».',
+        'Откройте «Договоры»: у договора «Ждёт вашего согласования» нажмите «Принять редакцию».',
         'Согласование подтверждает текст договора. Подписание — отдельный шаг: мы выставим договор на подписание и сообщим, когда он подписан.',
         'Акт — в «Актах»: нажмите «Принять», если всё в порядке, или «Вернуть» и опишите причину.',
       ],
       uz: [
-        '«Şartnomalar» bölimini oçing: «Kelişişingizni kutmoqda» holatidagi şartnomada «Kelişiş» tugmasini bosing.',
+        '«Şartnomalar» bölimini oçing: «Kelişişingizni kutmoqda» holatidagi şartnomada «Tahrirni qabul qiliş» tugmasini bosing.',
         'Kelişiş şartnoma matnini tasdiqlaydi. Imzolaş — alohida qadam: biz şartnomani imzolaşga qöyamiz va imzolanganda xabar beramiz.',
         'Dalolatnoma «Dalolatnomalar» bölimida: hammasi joyida bölsa «Qabul qiliş», aks holda «Qaytariş» tugmasini bosing va sababini yozing.',
       ],
       en: [
-        'Open “Contracts”: for a contract marked “Awaiting your agreement” press “Agree”.',
+        'Open “Contracts”: for a contract marked “Awaiting your agreement” press “Accept the edition”.',
         'Agreeing confirms the text of the contract. Signing is a separate step: we will send the contract for signing and tell you when it is signed.',
         'An act is under “Acts”: press “Accept” if everything is fine, or “Return” and describe the reason.',
       ],
