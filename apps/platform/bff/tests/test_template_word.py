@@ -295,6 +295,7 @@ async def test_sample_from_a_stored_template_takes_the_text_of_its_language(
         assert response.status_code == 202, response.text
         assert json.loads(route.calls.last.request.content) == {
             "template_kind": "CONTRACT",
+            "template_id": 12,
             "body_html": text,
             "language": language,
         }

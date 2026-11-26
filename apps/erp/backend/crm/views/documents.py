@@ -386,7 +386,11 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         from crm.services import contract_templates as svc
 
         self._assert_owned(self.get_object())
-        return self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        response = self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        if response.status_code == 200:
+            # Предупреждение, не запрет: подстановки, которых система не знает, остаются в договоре как есть
+            response.data["unknown_placeholders"] = svc.unknown_placeholders(self.get_object())
+        return response
 
     @extend_schema(
         summary="Approve a contract template (holder of contract.approve_template)",

@@ -200,6 +200,20 @@ def new_edition(template, user) -> Tuple[Optional[DocumentTemplate], Optional[st
     return copy, None
 
 
+def unknown_placeholders(template) -> list[str]:
+    """Подстановки текста шаблона (все языки), которых система не знает: в договор они попали бы как есть."""
+    from .document_blocks import preview_block_stubs
+    from .document_placeholders import RESOLVERS, extract_placeholders
+
+    known = set(RESOLVERS) | set(preview_block_stubs())
+    seen: list[str] = []
+    for body in (template.body_html, template.body_html_uz, template.body_html_en):
+        for code in extract_placeholders(body or ""):
+            if code not in known and code not in seen:
+                seen.append(code)
+    return seen
+
+
 @transaction.atomic
 def submit_for_approval(template, user) -> Tuple[Optional[DocumentTemplate], Optional[str]]:
     from .document_blocks import missing_required_blocks
@@ -214,6 +228,7 @@ def submit_for_approval(template, user) -> Tuple[Optional[DocumentTemplate], Opt
         return None, "TEMPLATE_COUNTERPARTY_REQUIRED"
     if missing_required_blocks(CONTRACT_KIND, template.body_html):
         return None, "TEMPLATE_MISSING_REQUIRED_BLOCKS"
+    # Неизвестные подстановки — предупреждение, не запрет (`unknown_placeholders`; список ответ «на утверждение» отдаёт)
     template.approval_status = TemplateApproval.ON_APPROVAL
     template.submitted_at = timezone.now()
     template.save(update_fields=["approval_status", "submitted_at", "updated_at"])

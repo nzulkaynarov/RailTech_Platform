@@ -9,4 +9,5 @@ export type DownloadPartnerApplicationDocumentWhich =
 export const DownloadPartnerApplicationDocumentWhich = {
   contract: "contract",
   scan: "scan",
+  candidate: "candidate",
 } as const;

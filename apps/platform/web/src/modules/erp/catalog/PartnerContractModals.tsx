@@ -315,10 +315,35 @@ export function ContractDecisionModal({
       onCancel={onClose}
     >
       <p>
-        {item.contract_source === "upload"
-          ? t("partnerApplications.decisionModal.hintFile")
-          : t("partnerApplications.decisionModal.hintDeviation")}
+        {item.has_candidate_file
+          ? t("partnerApplications.decisionModal.hintRemarks")
+          : item.contract_source === "upload"
+            ? t("partnerApplications.decisionModal.hintFile")
+            : t("partnerApplications.decisionModal.hintDeviation")}
       </p>
+      {item.contract_disagreement ? (
+        <Alert
+          type="warning"
+          showIcon
+          message={t("partnerApplications.decisionModal.hintDirector")}
+        />
+      ) : null}
+      {item.has_candidate_file ? (
+        <Button
+          type="link"
+          onClick={() => {
+            void downloadFile(
+              getDownloadPartnerApplicationDocumentUrl(item.id, { which: "candidate" }),
+              `candidate-${item.id}`,
+            ).catch(() => undefined);
+          }}
+        >
+          {t("partnerApplications.contractLine.openCandidateFile")}
+        </Button>
+      ) : null}
+      {item.candidate_notes ? (
+        <blockquote className="pf-hint">{item.candidate_notes}</blockquote>
+      ) : null}
       <Button
         type="link"
         onClick={() => {

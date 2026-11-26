@@ -15,7 +15,7 @@ export interface DocumentSampleIn {
   kind?: DocumentKind;
   template_kind?: DocumentTemplateKind;
   body_html?: string;
-  /** Сохранённый шаблон вместо `body_html` (текст на языке `language`, пусто — русский); вид берётся у шаблона */
+  /** Сохранённый шаблон: вместо `body_html` — его текст на языке `language` (пусто — русский), вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — название и подписи сторон образца договора */
   template_id?: CompanyItemRef;
   /** Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
   draft?: BrandProfileUpdate;

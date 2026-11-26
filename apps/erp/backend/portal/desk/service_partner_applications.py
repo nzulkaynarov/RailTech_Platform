@@ -359,9 +359,9 @@ def send_contract(pk: int, data: dict, user) -> dict:
 
         invited_contact = None
         # Кандидату нужен вход, чтобы прочитать и согласовать договор; из кабинета клиента он уже вошёл
+        # ПК-1: путь не останавливается на отсутствии почты — компания и контакт заводятся, приглашение в Кабинет уходит
+        # позже (`invite_candidate`), когда адрес появится; сотрудник видит это в карточке.
         if app.source != PartnerApplicationSource.CLIENT_CABINET:
-            if not (app.email or "").strip():
-                raise AccessError("CANDIDATE_EMAIL_REQUIRED")
             if not app.company_id:
                 company = _chosen_company(app, data) or _create_company(app, app.kind)
                 contact = _applicant_contact(app, company, user)
@@ -390,7 +390,7 @@ def send_contract(pk: int, data: dict, user) -> dict:
                     rel.contract_number = app.contract_number
                     rel.contract_date = app.contract_date
                     rel.save(update_fields=["contract_number", "contract_date"])
-            invited_contact = app.applicant_contact
+            invited_contact = app.applicant_contact if (app.email or "").strip() else None
 
         app.status = PartnerApplicationStatus.CONTRACT_SENT
         app.contract_draft_sent_at = timezone.now()
@@ -419,6 +419,45 @@ def send_contract(pk: int, data: dict, user) -> dict:
     return get_application(app.pk, user)
 
 
+def invite_candidate(pk: int, data: dict, user) -> dict:
+    """«Пригласить в Кабинет» позже (ПК-1): почты не было, когда договор отправили, — теперь она есть.
+
+    Адрес из запроса записывается в заявку и контакт кандидата; приглашение уходит письмом. Договор в Кабинете кандидат
+    увидит после входа."""
+    email = (data.get("email") or "").strip().lower()
+    with transaction.atomic():
+        app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
+        if app is None:
+            raise AccessError("NOT_FOUND", 404)
+        if app.status in (PartnerApplicationStatus.APPROVED, PartnerApplicationStatus.REJECTED):
+            raise AccessError("APPLICATION_ALREADY_DECIDED", 400)
+        contact = app.applicant_contact
+        if contact is None or not app.company_id:
+            raise AccessError("CONTRACT_NOT_SENT", 400)
+        email = email or (app.email or "").strip().lower()
+        if not email:
+            raise AccessError("CANDIDATE_EMAIL_REQUIRED", 400)
+        app.email = email
+        app.save(update_fields=["email", "updated_at"])
+        if (contact.email or "").strip().lower() != email:
+            contact.email = email
+            contact.save(update_fields=["email"])
+        outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
+        if outcome.error:
+            raise AccessError(outcome.error)
+        record(
+            user,
+            entity="partner_application",
+            instance=app,
+            event="candidate_invited",
+            action="Кандидат приглашён в Кабинет",
+            before=None,
+            after={"email_set": True},
+            detail=app.company_name,
+        )
+    return get_application(app.pk, user)
+
+
 def approve_application(pk: int, data: dict, user) -> dict:
     contract_number = (data.get("contract_number") or "").strip()
     if not contract_number:
@@ -441,10 +480,10 @@ def approve_application(pk: int, data: dict, user) -> dict:
             if bypassed_agreement and not may_bypass:
                 raise AccessError("CANDIDATE_AGREEMENT_REQUIRED", 400)
 
-            # ПД-1: договор подготовлен в системе — подтверждается скан подписанного; без скана только явный обход с причиной
-            scan_bypassed = bool(app.contract_source) and not app.signed_scan
-            if scan_bypassed and not override_reason:
-                raise AccessError("SIGNED_SCAN_REQUIRED", 400)
+            # ПК-1: «Отметить: подписан» — скан ИЛИ заметка (скан не обязателен); договор подготовлен в системе
+            signed_note = (data.get("signed_note") or "").strip()[:1000]
+            if app.contract_source and not app.signed_scan and not (signed_note or override_reason):
+                raise AccessError("SIGNED_PROOF_REQUIRED", 400)
 
             # 1. Компания: выбранная сотрудником, уже привязанная или новая
             target_kind = kind if kind in PartnerKind.values else app.kind
@@ -510,9 +549,19 @@ def approve_application(pk: int, data: dict, user) -> dict:
             app.contract_date = contract_date
             app.reviewed_by = user
             app.reviewed_at = now
+            app.signed_note = signed_note
+            app.signed_marked_at = now
+            # Срок договора считается в момент отметки по правилу компании (ДС-1, тот же сервис, что у клиентов)
+            from crm.services.contract_term import apply_to_partner_application
+
+            apply_to_partner_application(app, signed_on=timezone.localdate())
 
             # 5. Приглашение и интеграция с CRM
-            if app.source != PartnerApplicationSource.CLIENT_CABINET and not contact.last_login_at:
+            if (
+                app.source != PartnerApplicationSource.CLIENT_CABINET
+                and not contact.last_login_at
+                and (contact.email or "").strip()
+            ):
                 outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
                 if outcome.error and "ALREADY" not in outcome.error:
                     raise _Undo(outcome.error)
@@ -522,19 +571,15 @@ def approve_application(pk: int, data: dict, user) -> dict:
             app.save()
 
             after = {"status": app.status, "company": company.pk, "contract_number": contract_number}
-            if scan_bypassed:
-                after["scan_bypassed"] = override_reason
-            if bypassed_agreement or scan_bypassed:
+            if signed_note:
+                after["signed_note"] = signed_note
+            if bypassed_agreement:
                 record(
                     user,
                     entity="partner_application",
                     instance=app,
-                    event="approved_without_agreement" if bypassed_agreement else "approved_without_scan",
-                    action=(
-                        "Заявка кандидата в партнёры одобрена без согласия кандидата"
-                        if bypassed_agreement
-                        else "Заявка кандидата в партнёры одобрена без скана подписанного договора"
-                    ),
+                    event="approved_without_agreement",
+                    action="Заявка кандидата в партнёры одобрена без согласия кандидата",
                     before=None,
                     after={**after, "override_reason": override_reason},
                     detail=app.company_name,

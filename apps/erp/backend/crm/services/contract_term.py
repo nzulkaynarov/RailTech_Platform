@@ -104,14 +104,41 @@ def _journal(contract, event_code: str, action: str, *, actor=None, contact=None
 # ── Подписание ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
+def compute_term(seller_company, template, counterparty, signed_on: dt.date) -> tuple:
+    """Правила компании и первый срок для договора, подписанного `signed_on`: `(rules, Term)`.
+
+    Единственное место, где срок вычисляется из правила: договор клиента (`apply_at_signing`), договор партнёра
+    (`apply_to_partner_application`) и дозаполнение прежних договоров (`backfill_contract_terms`)."""
+    rules = term_rules(seller_company, template, counterparty)
+    term = first_term(signed_on, rules["rule"], notice_days=rules["notice_days"], boundary_day=rules["boundary_day"])
+    return rules, term
+
+
+@transaction.atomic
+def apply_to_partner_application(app, *, signed_on: Optional[dt.date] = None) -> None:
+    """ПК-1: договор партнёра отмечен «подписан» — срок по тому же правилу, что у клиентов. Повтор — без изменений."""
+    if app.contract_valid_until is not None or app.contract_term_rule:
+        return
+    from core.tenant import own_company
+
+    signed_on = signed_on or timezone.localdate()
+    counterparty = app.company
+    rules, term = compute_term(own_company(), app.contract_template, counterparty, signed_on)
+    app.contract_valid_from = term.valid_from
+    app.contract_valid_until = term.valid_until
+    app.contract_last_notice_date = term.last_notice_date
+    app.contract_term_rule = rules["rule"]
+    app.contract_renewal_mode = rules["mode"]
+    app.contract_notice_days = rules["notice_days"]
+
+
 @transaction.atomic
 def apply_at_signing(contract, *, signed_on: Optional[dt.date] = None) -> None:
     """Договор подписан: вычислить срок из правила и записать на договор. Повтор — без изменений (срок уже стоит)."""
     if contract.valid_until is not None or contract.term_rule:
         return
     signed_on = signed_on or timezone.localdate()
-    rules = _rules_of(contract)
-    term = first_term(signed_on, rules["rule"], notice_days=rules["notice_days"], boundary_day=rules["boundary_day"])
+    rules, term = compute_term(_seller(contract), contract.template, contract.deal.company, signed_on)
     contract.valid_from = term.valid_from
     contract.valid_until = term.valid_until
     contract.last_notice_date = term.last_notice_date

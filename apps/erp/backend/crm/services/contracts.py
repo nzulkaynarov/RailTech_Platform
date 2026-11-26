@@ -318,6 +318,7 @@ def _render_contract_pdf(contract) -> None:
             brand,
             draft=is_draft,
             body_html=frozen_body or (contract_template.body_html if contract_template is not None else CONTRACT_BODY),
+            template=contract.template,
         )
         save_rendered_pdf(contract, f"Contract_{contract.number}.pdf", ContentFile(pdf))
         remember_pdf_state("contract", contract.pk, is_draft)

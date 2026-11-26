@@ -472,7 +472,11 @@ function DocumentEditor({
         <div className="pf-co-panel">
           <h3 className="pf-co-title">{t("templates.documents.previewTitle")}</h3>
           <SamplePdf
-            request={{ template_kind: kind, body_html: text }}
+            request={{
+              template_kind: kind,
+              body_html: text,
+              ...(row && !row.is_sample ? { template_id: row.id } : {}),
+            }}
             title={t("templates.documents.previewFrame")}
             onWarnings={setUnknown}
             language={language}

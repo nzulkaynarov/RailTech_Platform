@@ -397,6 +397,7 @@ import type {
   OffsiteCheck,
   PartnerApplicationApproveRequest,
   PartnerApplicationCreateRequest,
+  PartnerApplicationInviteRequest,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
@@ -408,6 +409,7 @@ import type {
   PartnerHandoffIn,
   PartnerHandoffView,
   PartnerRequestDecision,
+  PartnerSignedScanUpload,
   PasswordConfirm,
   PaymentBoard,
   PaymentCard,
@@ -67905,6 +67907,256 @@ export const useDecidePartnerContract = <
   return useMutation(getDecidePartnerContractMutationOptions(options), queryClient);
 };
 
+export const getInvitePartnerCandidateUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/invite`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/invite/` — право `supply.manage`. ПК-1. Договор можно отправить и без почты кандидата; когда адрес появился — он в `email` (или уже записан в заявке), и приглашение уходит письмом. Нет адреса — 422 `candidate_email_required`.
+ * @summary Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
+ */
+export const invitePartnerCandidate = async (
+  id: CompanyItemRef,
+  partnerApplicationInviteRequest?: PartnerApplicationInviteRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getInvitePartnerCandidateUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationInviteRequest),
+  });
+};
+
+export const getInvitePartnerCandidateMutationKey = () => ["invitePartnerCandidate"] as const;
+
+export const getInvitePartnerCandidateMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof invitePartnerCandidate>>,
+    TError,
+    InvitePartnerCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>,
+  TError,
+  InvitePartnerCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getInvitePartnerCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof invitePartnerCandidate>>,
+    InvitePartnerCandidateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return invitePartnerCandidate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InvitePartnerCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>
+>;
+export type InvitePartnerCandidateMutationBody = PartnerApplicationInviteRequest | undefined;
+export type InvitePartnerCandidateMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type InvitePartnerCandidateMutationVariables = {
+  id: CompanyItemRef;
+  data?: PartnerApplicationInviteRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
+ */
+export const useInvitePartnerCandidate = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof invitePartnerCandidate>>,
+      TError,
+      InvitePartnerCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>,
+  TError,
+  InvitePartnerCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getInvitePartnerCandidateMutationOptions(options), queryClient);
+};
+
+export const getUploadPartnerSignedScanUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/signed-scan`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/signed-scan/` (multipart) — право `supply.manage`. ПК-1. Скан не обязателен, отметка «подписан» принимает скан ИЛИ заметку (`signed_note` в `approvePartnerApplication`). PDF или изображение; содержимое сверяется с расширением.
+ * @summary Расчёт · Заявка в партнёры: скан подписанного договора
+ */
+export const uploadPartnerSignedScan = async (
+  id: CompanyItemRef,
+  partnerSignedScanUpload: PartnerSignedScanUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const formData = new FormData();
+  formData.append(`file`, partnerSignedScanUpload.file);
+
+  return http<PartnerApplicationItem>(getUploadPartnerSignedScanUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadPartnerSignedScanMutationKey = () => ["uploadPartnerSignedScan"] as const;
+
+export const getUploadPartnerSignedScanMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+    TError,
+    UploadPartnerSignedScanMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+  TError,
+  UploadPartnerSignedScanMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadPartnerSignedScanMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+    UploadPartnerSignedScanMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadPartnerSignedScan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPartnerSignedScanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>
+>;
+export type UploadPartnerSignedScanMutationBody = PartnerSignedScanUpload;
+export type UploadPartnerSignedScanMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | BackendUnavailableResponse
+>;
+export type UploadPartnerSignedScanMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerSignedScanUpload;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: скан подписанного договора
+ */
+export const useUploadPartnerSignedScan = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+      TError,
+      UploadPartnerSignedScanMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+  TError,
+  UploadPartnerSignedScanMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadPartnerSignedScanMutationOptions(options), queryClient);
+};
+
 export const getDownloadPartnerApplicationDocumentUrl = (
   id: CompanyItemRef,
   params?: DownloadPartnerApplicationDocumentParams,
@@ -67925,7 +68177,7 @@ export const getDownloadPartnerApplicationDocumentUrl = (
 };
 
 /**
- * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+ * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат. Вложением, с `nosniff`; файл в памяти BFF не копится.
  * @summary Расчёт · Заявка в партнёры: договор или скан подписанного
  */
 export const downloadPartnerApplicationDocument = async (

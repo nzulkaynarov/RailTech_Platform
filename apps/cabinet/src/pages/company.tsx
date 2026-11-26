@@ -13,7 +13,6 @@ import {
   useCompany,
   useCompanyPartnerApplication,
   useReturnCompanyPartnerContract,
-  useUploadCompanyPartnerSignedScan,
   useCompanySecurityLog,
   useDeleteCompanyLogo,
   useUploadCompanyLogo,
@@ -1067,9 +1066,9 @@ export function PartnerApplicationCard() {
   const submitMutation = useSubmitCompanyPartnerApplication();
   const agreeMutation = useAgreeCompanyPartnerContract();
   const returnMutation = useReturnCompanyPartnerContract();
-  const scanMutation = useUploadCompanyPartnerSignedScan();
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [returnNotes, setReturnNotes] = useState('');
+  const [returnFile, setReturnFile] = useState<File | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [agreeDialogOpen, setAgreeDialogOpen] = useState(false);
   const [agreeNotes, setAgreeNotes] = useState('');
@@ -1131,11 +1130,12 @@ export function PartnerApplicationCard() {
 
     const handleReturn = () => {
       returnMutation.mutate(
-        { notes: returnNotes.trim() },
+        { notes: returnNotes.trim(), file: returnFile },
         {
           onSuccess: () => {
             setReturnDialogOpen(false);
             setReturnNotes('');
+            setReturnFile(null);
             toast.success(t('pages.company.partner.returnSuccess'));
           },
         },
@@ -1215,36 +1215,6 @@ export function PartnerApplicationCard() {
                   </CanAct>
                 )}
 
-                {app.status === 'candidate_agreed' && (
-                  <CanAct
-                    fallback={
-                      <p className="text-xs text-muted-foreground">{t('pages.company.partner.onlyCanAct')}</p>
-                    }
-                  >
-                    <div className="flex flex-col gap-2">
-                      <p className="text-sm text-muted-foreground">
-                        {app.has_signed_scan ? t('pages.company.partner.scanReceived') : t('pages.company.partner.scanNeeded')}
-                      </p>
-                      <FilePickerButton
-                        accept=".pdf,.jpg,.jpeg,.png,.webp"
-                        label={app.has_signed_scan ? t('pages.company.partner.scanReplace') : t('pages.company.partner.scanUpload')}
-                        inputLabel={t('pages.company.partner.scanInput')}
-                        disabled={scanMutation.isPending}
-                        onPick={(file) =>
-                          scanMutation.mutate(file, {
-                            onSuccess: () => toast.success(t('pages.company.partner.scanSuccess')),
-                          })
-                        }
-                      />
-                      {scanMutation.error ? (
-                        <p role="alert" className="text-sm text-destructive">
-                          {t(apiErrorKey(scanMutation.error))}
-                        </p>
-                      ) : null}
-                    </div>
-                  </CanAct>
-                )}
-
                 {app.status === 'approved' && (
                   <Button asChild>
                     <Link to="/my-products">{t('pages.company.partner.toMyProducts')}</Link>
@@ -1261,7 +1231,7 @@ export function PartnerApplicationCard() {
           title={t('pages.company.partner.returnDialogTitle')}
           description={t('pages.company.partner.returnDialogDesc')}
           confirmLabel={t('pages.company.partner.returnSubmit')}
-          confirmDisabled={returnNotes.trim() === ''}
+          confirmDisabled={returnNotes.trim() === '' && returnFile === null}
           pending={returnMutation.isPending}
           error={returnMutation.error}
           onSubmit={handleReturn}
@@ -1269,6 +1239,17 @@ export function PartnerApplicationCard() {
           <div className="flex flex-col gap-2 pt-2">
             <Label htmlFor="return-notes">{t('pages.company.partner.returnNotesLabel')}</Label>
             <Textarea id="return-notes" value={returnNotes} onChange={(e) => setReturnNotes(e.target.value)} maxLength={1000} />
+            <p className="text-xs text-muted-foreground">{t('pages.company.partner.returnFileHint')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <FilePickerButton
+                accept=".docx,.pdf"
+                label={returnFile ? t('pages.company.partner.returnFileReplace') : t('pages.company.partner.returnFileAttach')}
+                inputLabel={t('pages.company.partner.returnFileInput')}
+                disabled={returnMutation.isPending}
+                onPick={setReturnFile}
+              />
+              {returnFile ? <span className="text-sm">{returnFile.name}</span> : null}
+            </div>
           </div>
         </ActionDialog>
 

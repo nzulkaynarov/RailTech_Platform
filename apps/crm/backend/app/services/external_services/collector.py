@@ -418,7 +418,8 @@ class _Run:
     async def offsite_backup(self) -> CheckResult:
         """Внешняя копия на Google Drive (OPS-GDRIVE): отметка сервиса offsite-backup, без Drive."""
         facts = await offsite_reader.read(self.d.storage, self.d.config.s3_bucket_offsite)
-        return offsite_rules.offsite_backup(facts, self.now)
+        tz = (await self.d.settings.get()).business_hours.timezone
+        return offsite_rules.offsite_backup(facts, self.now, tz)
 
     async def redis_broker(self) -> CheckResult:
         return await self._redis(infra_rules.REDIS_BROKER, self.d.config.redis_broker_url)

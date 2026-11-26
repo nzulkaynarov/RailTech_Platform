@@ -9,7 +9,7 @@
    preflight, а CORS пускает лишь origin Cabinet;
 2. его тело — `application/json` (то же самое по типу содержимого: форма JSON отправить не может).
 
-Исключение по типу — `POST /uploads` и `POST /partner/price-list`: файл не уложить в JSON (Q-14), остаётся
+Исключение по типу — `POST /uploads`, `POST /partner/price-list` и `POST /company/partner-application/return`: файл не уложить в JSON (Q-14), остаётся
 `multipart/form-data`; от межсайтовой формы его защищает пункт 1.
 
 Ошибки: 400 `IDEMPOTENCY_KEY_REQUIRED`, 415 `UNSUPPORTED_MEDIA_TYPE` — формат `{"detail": "<CODE>"}`.
@@ -31,6 +31,8 @@ UPLOADS_PATHS = frozenset(
         "/api/portal/v1/partner/price-list/",
         "/api/portal/v1/company/partner-application/signed-scan",  # ПД-1: скан подписанного договора кандидата
         "/api/portal/v1/company/partner-application/signed-scan/",
+        "/api/portal/v1/company/partner-application/return",  # ПК-1: «Есть замечания» с редакцией кандидата (DOCX)
+        "/api/portal/v1/company/partner-application/return/",
     }
 )
 PARTNER_PRODUCT_DOCUMENTS_RE = re.compile(r"^/api/portal/v1/partner/products/\d+/documents/?$")
