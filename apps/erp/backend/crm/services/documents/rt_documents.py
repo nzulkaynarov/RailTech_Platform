@@ -185,9 +185,7 @@ def _party(title: str, name: str, lines: list[str]) -> list[dict[str, Any]]:
     return [_para(_text(title, bold=True)), _para(_text(name or "—", bold=True)), *[_para(line) for line in lines]]
 
 
-def _parties(
-    seller, profile, buyer, buyer_title: str | None = None, seller_title: str | None = None
-) -> dict[str, Any]:
+def _parties(seller, profile, buyer, buyer_title: str | None = None, seller_title: str | None = None) -> dict[str, Any]:
     """Две колонки без линий: «Поставщик» и «Плательщик» (у акта — «Покупатель») — как в прежних счёте и акте."""
     seller_name = (getattr(profile, "legal_name", "") or getattr(seller, "name", "") or "").strip()
     seller_inn = (getattr(profile, "inn", "") or getattr(seller, "inn", "") or "").strip()
@@ -825,7 +823,9 @@ def contract_pdf(
             if (contract.notes or "").strip()
             else [_para()]
         ),
-        "doc.requisites_and_signatures": _contract_tail(contract, seller, profile, "11" if extra_terms else "10", frame),
+        "doc.requisites_and_signatures": _contract_tail(
+            contract, seller, profile, "11" if extra_terms else "10", frame
+        ),
     }
     vat_rate = getattr(quote, "vat_rate", None) if quote is not None else None
     scalars = _draft_scalars(
