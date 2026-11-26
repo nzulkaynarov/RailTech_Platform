@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Alert, App, Button, Card, Input, Pagination, Segmented } from "antd";
+import { Alert, Button, Card, Input, Pagination, Segmented } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -35,6 +35,7 @@ import { VisaIndicators } from "./VisaIndicators";
 import "./calc.css";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 import { TimeLeft } from "../../../shared/ui/TimeLeft";
+import { useNotify } from "../../../shared/notify/NotifyProvider";
 
 /**
  * Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
@@ -300,7 +301,7 @@ function draftName(item: ListedDraft, fallback: string): string {
 function Drafts() {
   const { t } = useTranslation("calc");
   const { me } = useAuth();
-  const { message } = App.useApp();
+  const notify = useNotify();
   const { date } = useFormat();
   const { mobile } = useViewport();
   const userId = me.id;
@@ -354,25 +355,17 @@ function Drafts() {
                 clearRequestDraft(userId, item.scope);
                 setVersion((v) => v + 1);
                 const key = `draft-${item.scope}`;
-                void message.open({
+                notify.push({
                   key,
-                  type: "success",
-                  content: (
-                    <span>
-                      {t("list.drafts.removed")}{" "}
-                      <Button
-                        type="link"
-                        size="small"
-                        onClick={() => {
-                          restoreRequestDraft(userId, item.scope, item.draft);
-                          setVersion((v) => v + 1);
-                          message.destroy(key);
-                        }}
-                      >
-                        {t("list.drafts.undo")}
-                      </Button>
-                    </span>
-                  ),
+                  title: t("list.drafts.removed"),
+                  duration: 6,
+                  action: {
+                    label: t("list.drafts.undo"),
+                    onClick: () => {
+                      restoreRequestDraft(userId, item.scope, item.draft);
+                      setVersion((v) => v + 1);
+                    },
+                  },
                 });
               }}
             >

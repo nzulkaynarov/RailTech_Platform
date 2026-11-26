@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Segmented } from "antd";
+import { Alert, Button, Segmented } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +26,7 @@ import {
   downloadTemplatePdf,
   templateFileName,
 } from "./templateWord";
+import { useNotify } from "../../../shared/notify/NotifyProvider";
 
 /** Что нужно знать о шаблоне для файла: номер и название — в имени, `is_locked` — в подсказке. */
 export interface WordTemplate {
@@ -258,7 +259,7 @@ export function useTemplateWord(
   onApplied?: (next: DocumentTemplate) => void,
 ) {
   const { t } = useTranslation("company");
-  const { message } = App.useApp();
+  const notify = useNotify();
   const queryClient = useQueryClient();
   const opener = useRef<HTMLButtonElement>(null);
   const [target, setTarget] = useState<WordTemplate | null>(null);
@@ -282,7 +283,7 @@ export function useTemplateWord(
         templateFileName(row.name, row.edition, language, "docx"),
       );
     } catch (error) {
-      void message.error(wordErrorText(t, error));
+      notify.error(wordErrorText(t, error));
     } finally {
       setBusy(null);
     }
@@ -292,7 +293,7 @@ export function useTemplateWord(
     try {
       await downloadTemplatePdf(row, language);
     } catch (error) {
-      void message.error(
+      notify.error(
         error instanceof ApiError ? wordErrorText(t, error) : t("templates.word.pdfFailed"),
       );
     } finally {
@@ -314,7 +315,7 @@ export function useTemplateWord(
         onSuccess: setCheck,
         onError: (error) => {
           setFile(null);
-          void message.error(wordErrorText(t, error));
+          notify.error(wordErrorText(t, error));
         },
       },
     );
@@ -336,7 +337,7 @@ export function useTemplateWord(
           void queryClient.invalidateQueries({ queryKey: getListDocumentTemplatesQueryKey() });
           void queryClient.invalidateQueries({ queryKey: getListContractTemplatesQueryKey() });
           reset();
-          void message.success(t("templates.word.applied"));
+          notify.success(t("templates.word.applied"));
           onApplied?.(next);
         },
       },
