@@ -71,7 +71,7 @@ function ContractTermLine({ term }: { term: Contract['term'] }) {
 }
 
 export function ContractsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const contracts = useContracts();
   const sign = useSignContract();
   const decline = useDeclineContractRenewal();
@@ -148,7 +148,7 @@ export function ContractsPage() {
               header: t('common.actions'),
               cell: (row) => (
                 <>
-                  {contractAwaitsClient(row.status) && row.remark?.state !== 'review' && !i18n.language.startsWith('uz') ? (
+                  {contractAwaitsClient(row.status) && row.remark?.state !== 'review' ? (
                     <CanAct>
                       <Button size="sm" variant="outline" onClick={() => setRemarking(row)} aria-label={t('pages.contracts.remarks.openNamed', { number: row.number })}>
                         {t('pages.contracts.remarks.open')}

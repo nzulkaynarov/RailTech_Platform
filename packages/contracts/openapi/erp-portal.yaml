@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.24.0
+  version: 0.25.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -5979,7 +5979,7 @@ components:
         сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
         с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
         безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
-        `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
+        `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`), `contract_remark_answered` — компания ответила на замечания клиента (ДП-1; `number`, `text`), `contract_awaiting_signature` — редакция принята, договор будет выставлен на подписание (`number`).
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -6000,6 +6000,8 @@ components:
         - new_device_login
         - contract_renewed
         - contract_renewal_declined
+        - contract_remark_answered
+        - contract_awaiting_signature
 
     NotificationGroup:
       type: string

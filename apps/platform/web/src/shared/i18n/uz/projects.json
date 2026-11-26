@@ -449,7 +449,8 @@
       "summary": {
         "changed": "Özgargan: {{points}}-band",
         "added": "Qöşilgan: {{points}}-band",
-        "removed": "Öçirilgan: {{points}}-band"
+        "removed": "Öçirilgan: {{points}}-band",
+        "more": "va yana {{count}} ta"
       },
       "votes": {
         "title": "Kelişuv: {{total}} tadan {{done}} ta javob berdi",
@@ -463,14 +464,16 @@
         "needWords": "Nimaga rozi emasligingizni yozing."
       },
       "decide": {
-        "who": "Kelişmovçilikda hal qiladi: {{names}}",
+        "who": "Hal qiluvçi ovoz: {{names}}",
         "accept": "Kontragent tahririni qabul qiliş",
         "counter": "Öz tahririmiz bilan javob beriş",
         "counterLabel": "Kontragentga nima javob beramiz",
         "counterHint": "Kontragent javobni Kabinetda köradi.",
-        "send": "Javobni yuboriş"
+        "send": "Javobni yuboriş",
+        "nobody": "Hal qiluvçi ovoz tayinlanmagan: xodim kartoçkasida («Xodimlar») şartnoma imzolaş huquqini bering — u izohlarni yopadi.",
+        "nobodyLink": "Xodimlar"
       },
-      "next": "Hamma javob berib, rozi bölsa, kontragent tahriri qabul qilinadi va şartnoma «Imzolaş kutilmoqda» bölad."
+      "next": "Hamma javob berib, rozi bölsa, kontragent tahriri özi qabul qilinadi. Hal qiluvçi ovoz izohlarni istalgan paytda yopa oladi."
     }
   },
   "act": {

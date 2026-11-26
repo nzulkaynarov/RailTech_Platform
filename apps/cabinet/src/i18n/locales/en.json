@@ -634,11 +634,11 @@
       },
       "notSigned": "Not yet",
       "willBeSent": "The contract will be sent for signing",
-      "sign": "Agree",
-      "signNamed": "Agree contract {{number}}",
-      "signTitle": "Agree contract {{number}}",
+      "sign": "Accept the edition",
+      "signNamed": "Accept the edition of contract {{number}}",
+      "signTitle": "Accept the edition of contract {{number}}",
       "signText": "You confirm, on behalf of your company, that you agree with the contract text. We will send the contract for signing and tell you when it is signed.",
-      "signConfirm": "Agree contract",
+      "signConfirm": "Accept the edition",
       "signedClient": "Contract {{number}} is agreed. It will be sent for signing.",
       "signedBoth": "Contract {{number}} is signed by both parties.",
       "term": {
@@ -1844,7 +1844,9 @@
       "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}",
       "new_device_login": "{{name}} signed in from a new device",
       "contract_renewed": "Contract {{number}} renewed until {{until}}",
-      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}"
+      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}",
+      "contract_remark_answered": "Our reply to your remarks on contract {{number}}: {{text}}",
+      "contract_awaiting_signature": "Contract {{number}} will be issued for signature"
     }
   },
   "verify": {

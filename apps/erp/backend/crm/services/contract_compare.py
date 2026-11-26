@@ -22,7 +22,45 @@ POINT_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s")
 #: Предел списка в ответе: договор на сотни абзацев не должен раздувать карточку.
 MAX_ITEMS = 200
 _WORD = re.compile(r"\s+|\S+")
-EMPTY_SUMMARY = {"changed": [], "added": [], "removed": [], "total": 0}
+EMPTY_SUMMARY = {"changed": [], "added": [], "removed": [], "total": 0, "more": 0}
+
+#: Пределы разбора чужого файла: договор на сотни абзацев — норма, тысячи — не договор, а попытка занять сервер.
+MAX_PARAGRAPHS = 1500
+MAX_PARAGRAPH_CHARS = 2000
+#: В кратком разборе — не больше стольких пунктов на вид, остальное — «и ещё N».
+SUMMARY_POINTS = 30
+#: Заменённый кусок больше этого числа пар сравнивается только по номерам пунктов.
+MAX_PAIR_CELLS = 10_000
+#: Подсветка слов — не более чем для стольких изменённых пунктов.
+MAX_SEGMENTED = 100
+#: Архив DOCX/XLSX (zip): сколько частей, сколько всего после распаковки и во сколько раз одна часть может сжиматься.
+MAX_ARCHIVE_MEMBERS = 2000
+MAX_ARCHIVE_BYTES = 50 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 100
+
+
+class HostileFile(ValueError):
+    """Файл не разбирается: архив-бомба или слишком большой после распаковки."""
+
+
+def check_archive(content: bytes) -> None:
+    """Проверка zip-архива ДО python-docx: части, общий размер после распаковки, степень сжатия одной части."""
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(BytesIO(content)) as archive:
+            members = archive.infolist()
+    except zipfile.BadZipFile as error:
+        raise HostileFile("not a zip archive") from error
+    if len(members) > MAX_ARCHIVE_MEMBERS:
+        raise HostileFile("too many parts")
+    total = 0
+    for member in members:
+        total += member.file_size
+        if member.file_size > 1024 * 1024 and member.file_size > member.compress_size * MAX_COMPRESSION_RATIO:
+            raise HostileFile("suspicious compression ratio")
+    if total > MAX_ARCHIVE_BYTES:
+        raise HostileFile("too large after unpacking")
 
 
 def _norm(text: str) -> str:
@@ -169,6 +207,16 @@ def _pair(old: list[str], new: list[str]) -> dict[int, int]:
     """Какой абзац «заменён» каким: тот же номер пункта либо достаточно похожий текст; остальные — добавлены/удалены."""
     pairs: dict[int, int] = {}
     taken: set[int] = set()
+    if (
+        len(old) * len(new) > MAX_PAIR_CELLS
+    ):  # большой заменённый кусок: только по номеру пункта, без попарного сходства
+        by_point = {_point(t): m for m, t in reversed(list(enumerate(old))) if _point(t)}
+        for k, text in enumerate(new):
+            m = by_point.get(_point(text))
+            if m is not None and m not in taken:
+                pairs[k] = m
+                taken.add(m)
+        return pairs
     for k, text in enumerate(new):
         point = _point(text)
         best, best_ratio = None, 0.0
@@ -209,7 +257,7 @@ def compare(ours: list[str], theirs: list[str]) -> dict:
                         "kind": "changed",
                         "ours": before,
                         "theirs": text,
-                        "segments": _segments(before, text),
+                        "segments": _segments(before, text) if len(items) < MAX_SEGMENTED else [],
                     }
                 )
             else:
@@ -219,10 +267,11 @@ def compare(ours: list[str], theirs: list[str]) -> dict:
                 items.append(
                     {"point": _point(text) or "", "kind": "removed", "ours": text, "theirs": "", "segments": []}
                 )
-    summary = {
-        kind: [i["point"] for i in items if i["kind"] == kind and i["point"]]
-        for kind in ("changed", "added", "removed")
-    }
+    summary: dict = {"more": 0}
+    for kind in ("changed", "added", "removed"):
+        points = [i["point"] for i in items if i["kind"] == kind and i["point"]]
+        summary[kind] = points[:SUMMARY_POINTS]
+        summary["more"] += max(0, len(points) - SUMMARY_POINTS)
     summary["total"] = len(items)
     return {"items": items[:MAX_ITEMS], "summary": summary}
 
@@ -234,9 +283,14 @@ def compare_upload(contract, file_obj, name: str) -> dict:
         return unreadable
     try:
         file_obj.seek(0)
+        check_archive(file_obj.read())
+        file_obj.seek(0)
         theirs = docx_paragraphs(file_obj)
         file_obj.seek(0)
-        result = compare(contract_paragraphs(contract), theirs)
+        ours = contract_paragraphs(contract)
+        if len(theirs) > MAX_PARAGRAPHS or len(ours) > MAX_PARAGRAPHS:
+            return unreadable  # слишком большой файл: вложение остаётся, автоматического разбора нет
+        result = compare([x[:MAX_PARAGRAPH_CHARS] for x in ours], [x[:MAX_PARAGRAPH_CHARS] for x in theirs])
     except Exception:  # файл с правильной сигнатурой, но не читается как Word: вложение остаётся, разбора нет
         return unreadable
     return {**result, "comparable": True}

@@ -322,7 +322,7 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             ),
             tr(
                 "договор ожидает подписания",
-                "şartnoma imzolaş kütmoqda",
+                "şartnoma imzolaş kutmoqda",
                 "the contract awaits signing",
             ),
         )

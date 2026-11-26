@@ -634,11 +634,11 @@
       },
       "notSigned": "Hali yöq",
       "willBeSent": "Şartnoma imzolaşga qöyiladi",
-      "sign": "Kelişiş",
-      "signNamed": "{{number}} şartnomasini kelişiş",
-      "signTitle": "{{number}} şartnomasini kelişiş",
+      "sign": "Tahrirni qabul qiliş",
+      "signNamed": "{{number}} şartnomasi tahririni qabul qiliş",
+      "signTitle": "{{number}} şartnomasi tahririni qabul qiliş",
       "signText": "Kompaniya nomidan şartnoma matni bilan rozi ekaningizni tasdiqlaysiz. Şartnomani imzolaşga qöyamiz va imzolanganda xabar beramiz.",
-      "signConfirm": "Şartnomani kelişiş",
+      "signConfirm": "Tahrirni qabul qiliş",
       "signedClient": "{{number}} şartnomasi kelişildi. U imzolaşga qöyiladi.",
       "signedBoth": "{{number}} şartnomasi ikki tomon tomonidan imzolandi.",
       "term": {
@@ -653,7 +653,7 @@
         },
         "decline": "Uzaytirişdan boş tortiş",
         "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
-        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin.",
+        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mumkin.",
         "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
         "restore": "Uzaytirişni qaytariş",
         "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."
@@ -1483,7 +1483,7 @@
     "SCAN_NOT_EXPECTED": "Hozir skan kutilmayapti.",
     "SCAN_INVALID": "Fayl mos kelmadi: 20 MB gaça PDF yoki rasm kerak.",
     "RETURN_NOTE_REQUIRED": "Izoh yozing.",
-    "REMARK_OPEN": "Izohlaringiz hali körilmoqda — javobni kütib turing.",
+    "REMARK_OPEN": "Izohlaringiz hali körilmoqda — javobni kutib turing.",
     "CONTRACT_REMARK_NOT_ALLOWED": "Bu şartnoma böyiça izoh yuborib bölmaydi.",
     "COMMENT_REQUIRED": "Nimani özgartiriş kerakligini yozing."
   },
@@ -1844,7 +1844,9 @@
       "bank_requisites_change_rejected": "Bank rekvizitlarini özgartiriş sörovi rad etildi: {{reason}}",
       "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi",
       "contract_renewed": "{{number}} şartnomasi {{until}}gaça uzaytirildi",
-      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi"
+      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi",
+      "contract_remark_answered": "Izohlaringizga javobimiz ({{number}}): {{text}}",
+      "contract_awaiting_signature": "{{number}} şartnomasi imzoga qöyiladi"
     }
   },
   "verify": {

@@ -871,11 +871,12 @@ export function remarkOf(c: MutableContract, writer: boolean): ProjectContractRe
   if (!c.remark || c.status !== "project") return null;
   const awaiting = c.remark_awaiting ?? [];
   const dispute = awaiting.length === 0 && c.remark.votes.some((v) => !v.agree);
+  const deciders = c.remark.deciders;
   return {
     ...c.remark,
     awaiting,
     dispute,
-    actions: writer ? (dispute ? ["vote", "decide"] : ["vote"]) : [],
+    actions: writer ? (deciders.length > 0 ? ["vote", "decide"] : ["vote"]) : [],
   };
 }
 

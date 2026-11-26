@@ -22,7 +22,7 @@ for (const width of WIDTHS) {
       const block = page.getByTestId("contract-remark");
       await expect(block.getByText("Замечания контрагента", { exact: true })).toBeVisible();
       await expect(block.getByTestId("remark-summary")).toContainText("Изменены п. 2.2, 3.1");
-      await expect(block.getByText("При разногласии решает: Д. Назаров")).toBeVisible();
+      await expect(block.getByText("Решающий голос: Д. Назаров")).toBeVisible();
       await block.scrollIntoViewIfNeeded();
       await settledScreenshot(page, "dp1-remarks");
       await expectNoViolations(page, "замечания контрагента");

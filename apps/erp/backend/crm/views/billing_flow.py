@@ -36,7 +36,6 @@ _HTTP = {
     "CONTRACT_NEEDS_OUR_SIGNATURE": 409,
     # ДП-1: замечания контрагента
     "REMARK_NOT_OPEN": 409,
-    "REMARK_NO_DISPUTE": 409,
     "REMARK_FORBIDDEN": 403,
     "REMARK_DECISION_FORBIDDEN": 403,
 }

@@ -449,7 +449,8 @@
       "summary": {
         "changed": "Changed cl. {{points}}",
         "added": "Added cl. {{points}}",
-        "removed": "Removed cl. {{points}}"
+        "removed": "Removed cl. {{points}}",
+        "more": "and {{count}} more"
       },
       "votes": {
         "title": "Review: {{done}} of {{total}} answered",
@@ -463,14 +464,16 @@
         "needWords": "Say what you disagree with."
       },
       "decide": {
-        "who": "On disagreement decides: {{names}}",
+        "who": "Deciding vote: {{names}}",
         "accept": "Accept the counterparty's edition",
         "counter": "Reply with our edition",
         "counterLabel": "What we reply to the counterparty",
         "counterHint": "The counterparty will see the reply in the Cabinet.",
-        "send": "Send the reply"
+        "send": "Send the reply",
+        "nobody": "No one holds the deciding vote: grant an employee the right to sign contracts in the employee card (\"Employees\") — they will close the remarks.",
+        "nobodyLink": "Employees"
       },
-      "next": "When everyone has answered and agrees, the counterparty's edition is accepted and the contract becomes “Awaiting signature”."
+      "next": "When everyone has answered and agrees, the counterparty edition is accepted by itself. The deciding vote can close the remarks at any time."
     }
   },
   "act": {
