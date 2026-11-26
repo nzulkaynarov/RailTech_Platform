@@ -95,6 +95,53 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(screen.getByText("ООО «Восток Снаб»")).toBeVisible();
   });
 
+  it("после согласованной редакции кандидата в строке есть «Отправить договор» (ПК-1)", async () => {
+    server.use(
+      http.get("*/erp/catalog/partner-applications", () =>
+        HttpResponse.json({
+          pending_count: 1,
+          items: [
+            {
+              id: "311",
+              source: "public",
+              status: "contract_sent",
+              kind: "supplier",
+              company_name: "ООО «Возврат-Партнёр»",
+              inn: "",
+              contact_name: "Олим",
+              email: "o@vozvrat.example",
+              phone: "",
+              language: "ru",
+              categories_description: "Крепёж",
+              contract_number: "ПД-2026/311",
+              contract_date: "2026-11-25",
+              rejected_reason: "",
+              created_at: "2026-11-25T09:30:00+05:00",
+              reviewed_at: null,
+              matching_company_id: null,
+              matching_company_name: null,
+              company_match_pending: null,
+              invite_delivery: "sent",
+              contract_source: "upload",
+              contract_approval: "approved",
+              contract_blocker: null,
+              candidate_returned_at: "2026-11-26T09:00:00+05:00",
+              contract_approvers: [],
+              contract_waiting_for: [],
+              contract_votes: [],
+            },
+          ],
+        }),
+      ),
+    );
+    signIn("supply@demo.example");
+    renderAt("/crm/clients?kind=applications");
+    const row = (await screen.findByText("ООО «Возврат-Партнёр»")).closest("tr");
+    if (!row) throw new Error("Row not found");
+    await clickRowAction(row, "Отправить договор");
+    expect(await screen.findByRole("dialog", { name: /Отправка договора/ })).toBeVisible();
+  });
+
   it("снабжение отправляет подготовленный договор кандидату", async () => {
     await openApplications("supply@demo.example");
 

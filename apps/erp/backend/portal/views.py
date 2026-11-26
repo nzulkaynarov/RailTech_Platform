@@ -21,6 +21,7 @@ from parties.models import (
     PartnerApplication,
     PartnerApplicationSource,
     PartnerApplicationStatus,
+    PartnerContractApproval,
     RelationshipRole,
     RelationshipStatus,
     active_contact_q,
@@ -1803,6 +1804,9 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
                 .first()
             )
             if not app:
+                raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
+            # Редакция кандидата ещё на согласовании у нас: принять договор рано, сначала ответ от нас (ПК-1)
+            if app.contract_approval == PartnerContractApproval.REQUESTED:
                 raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
 
             notes = (request.data.get("notes") or "").strip()

@@ -211,7 +211,7 @@ class TestPrepareFromTemplate:
 
         assert "Nanjing Jichuang Co." in ru and "91320000MA1" in ru and "PA-1" in ru and "Предмет" in ru
         assert "Partner Nanjing Jichuang Co., agreement PA-1." in en and "Предмет" not in en
-        assert "Party 2" in en  # реквизиты на языке договора
+        assert "Partner" in en  # реквизиты на языке договора
 
     def test_unknown_place_in_template_refuses_instead_of_printing_a_token(self, world, supply):
         tpl = template(world, body=BODY + "{{partner.bank_iban}}")

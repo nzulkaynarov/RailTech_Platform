@@ -128,25 +128,21 @@ def test_submit_needs_required_blocks_and_counterparty(pw):  # noqa: F811
     assert error is None and template.approval_status == TemplateApproval.ON_APPROVAL and template.submitted_at
 
 
-def test_template_with_unknown_placeholders_is_not_sent_for_approval(pw):  # noqa: F811
-    """ПК-1: подстановка, которой система не знает, осталась бы в договоре как есть; на утверждение такой текст не уходит."""
+def test_template_with_unknown_placeholders_goes_for_approval_with_a_warning(pw, approver):  # noqa: F811
+    """Решение владельца: предупреждаем, а не блокируем — неизвестные подстановки называются, шаблон уходит."""
     bad = make_template(pw, status=TemplateApproval.DRAFT, body=BODY + "<p>{{counterparty.passport}}</p>")
     assert svc.unknown_placeholders(bad) == ["counterparty.passport"]
-    assert svc.submit_for_approval(bad, pw.accountant) == (None, "TEMPLATE_UNKNOWN_PLACEHOLDERS")
-    bad.refresh_from_db()
-    assert bad.approval_status == TemplateApproval.DRAFT
-    bad.body_html = BODY
-    bad.save()
-    assert svc.unknown_placeholders(bad) == []
     template, error = svc.submit_for_approval(bad, pw.accountant)
     assert error is None and template.approval_status == TemplateApproval.ON_APPROVAL
+    assert svc.unknown_placeholders(make_template(pw, status=TemplateApproval.DRAFT)) == []
 
 
-def test_refusal_names_the_unknown_placeholders(pw, approver):  # noqa: F811
+def test_submit_response_names_the_unknown_placeholders(pw, approver):  # noqa: F811
     bad = make_template(pw, status=TemplateApproval.DRAFT, body=BODY + "<p>{{foo.bar}}</p>")
     response = api(approver).post(f"{TPL}{bad.pk}/submit/")
-    assert response.status_code == 400
-    assert response.json() == {"detail": "TEMPLATE_UNKNOWN_PLACEHOLDERS", "unknown_placeholders": ["foo.bar"]}
+    assert response.status_code == 200
+    assert response.json()["approval_status"] == "on_approval"
+    assert response.json()["unknown_placeholders"] == ["foo.bar"]
 
 
 # ── закреплённый текст и редакции ────────────────────────────────────────────────────────────────────────────────
