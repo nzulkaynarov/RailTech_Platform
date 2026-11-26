@@ -254,7 +254,7 @@ export function RequestForm({
         const note = t("request:template.note", { number: template });
         const body = card.request.text.slice(0, 4900).trim();
         setState((prev) => ({ ...prev, summary: body ? `${body}\n\n${note}` : note }));
-        const first = card.request.files[0];
+        const first = card.request.files?.[0];
         if (!first) {
           setState((prev) => ({ ...prev, letter: null }));
           return;
