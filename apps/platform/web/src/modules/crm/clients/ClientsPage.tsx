@@ -33,6 +33,7 @@ import "../../eds/payments/payments.css";
 import "../../erp/catalog/catalog.css";
 import "../crm.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
 const COLS = {
@@ -270,8 +271,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const close = () => {
     if (objectId !== undefined) {
       const next = new URLSearchParams(params);
-      for (const key of ["client", "partner", "create", "template", "panel", "tab"])
-        next.delete(key);
+      for (const key of ["client", "partner", "create", "template", "panel", "tab"]) next.delete(key);
       const text = next.toString();
       void navigate(`/crm/clients${text ? `?${text}` : ""}`, { replace: true });
       return;
@@ -344,151 +344,156 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     },
   ];
   return (
-    <div className="pf-crm">
-      <PageHeader
-        title={title}
-        extra={
-          canEdit(me, "erp.stock") ? (
-            <Button
-              onClick={() => {
+    <PageFrame layout="registry">
+      <div className="pf-crm">
+        <PageHeader
+          title={title}
+          extra={
+            canEdit(me, "erp.stock") ? (
+              <Button
+                onClick={() => {
+                  change({
+                    client: null,
+                    partner: "new",
+                    create: null,
+                    panel: mobile ? null : "open",
+                    tab: mobile ? null : "card",
+                  });
+                }}
+              >
+                {t("clients:addPartner")}
+              </Button>
+            ) : undefined
+          }
+        />
+        <FilterBar tools>
+          <Segmented
+            aria-label={t("clients:kinds.filter")}
+            value={kind}
+            options={shownKinds.map((value) => ({ value, label: kindLabel(value) }))}
+            onChange={(value) => {
+              change({ kind: value === "all" ? null : value });
+            }}
+          />
+          {queue ? null : (
+            <FilterField id="pf-clients-q" label={t("clients:search.label")} grow>
+              <Input.Search
+                id="pf-clients-q"
+                defaultValue={q}
+                allowClear
+                placeholder={t("clients:search.placeholder")}
+                onSearch={(value) => {
+                  change({ q: value.trim() ? value.trim() : null });
+                }}
+              />
+            </FilterField>
+          )}
+        </FilterBar>
+        {kind === "applications" ? <PartnerApplicationsPanel /> : null}
+        {kind === "bank_changes" ? <BankChangesPanel /> : null}
+        {queue ? null : (
+          <Card styles={{ body: { padding: 0 } }}>
+            <QueryState query={seesClients ? list : partnersOnly} labels={labels} rows={20}>
+              {(data) =>
+                rowsOf(data.items).length === 0 ? (
+                  <EmptyState
+                    title={t(q ? "clients:empty.filteredTitle" : "clients:empty.title")}
+                    text={t(q ? "clients:empty.filteredText" : "clients:empty.text")}
+                  />
+                ) : mobile ? (
+                  <ul className="pf-crm-list" aria-label={t("clients:listLabel")}>
+                    {rowsOf(data.items).map((row) => (
+                      <li key={row.id} className="pf-crm-item" data-selected={isOpen(row)}>
+                        <div className="pf-crm-item-head">
+                          <RelationTag kind={relationOf(row)} />
+                          <StateTag row={row} terms={termsOf.get(String(-row.id))} />
+                        </div>
+                        <CompanyCell
+                          name={row.name}
+                          inn={row.inn}
+                          innLabel={t("clients:columns.inn")}
+                          logoUrl={row.logo_url}
+                          title={<NameLink row={row} params={params} selected={isOpen(row)} />}
+                        />
+                        <div className="pf-crm-item-meta">
+                          <span>
+                            {t("clients:columns.requests")}: {row.open_requests}
+                          </span>
+                          <Activity row={row} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <DataTable
+                    tableId="crm.clients"
+                    caption={t("clients:caption")}
+                    scrollLabel={t("clients:tableScroll")}
+                    className="pf-crm-table"
+                    flexMin={240}
+                    columns={columns}
+                    rows={rowsOf(data.items)}
+                    rowKey={(row) => String(row.id)}
+                    rowAttrs={(row) => ({
+                      "data-selected": isOpen(row),
+                    })}
+                  />
+                )
+              }
+            </QueryState>
+          </Card>
+        )}
+        {partner !== null ? (
+          <Sheet label={t("clients:counterparty.label")} onClose={close}>
+            <CounterpartyCard key={`p-${partner}`} companyId={partner} onClose={close} />
+          </Sheet>
+        ) : null}
+        {addingPartner ? (
+          <Sheet label={t("catalog:supplierForm.addTitle")} onClose={close}>
+            <SupplierForm
+              onClose={close}
+              onSaved={(saved) => {
                 change({
-                  client: null,
-                  partner: "new",
-                  create: null,
+                  partner: saved.id,
                   panel: mobile ? null : "open",
                   tab: mobile ? null : "card",
                 });
               }}
-            >
-              {t("clients:addPartner")}
-            </Button>
-          ) : undefined
-        }
-      />
-      <FilterBar tools>
-        <Segmented
-          aria-label={t("clients:kinds.filter")}
-          value={kind}
-          options={shownKinds.map((value) => ({ value, label: kindLabel(value) }))}
-          onChange={(value) => {
-            change({ kind: value === "all" ? null : value });
-          }}
-        />
-        {queue ? null : (
-          <FilterField id="pf-clients-q" label={t("clients:search.label")} grow>
-            <Input.Search
-              id="pf-clients-q"
-              defaultValue={q}
-              allowClear
-              placeholder={t("clients:search.placeholder")}
-              onSearch={(value) => {
-                change({ q: value.trim() ? value.trim() : null });
-              }}
             />
-          </FilterField>
-        )}
-      </FilterBar>
-      {kind === "applications" ? <PartnerApplicationsPanel /> : null}
-      {kind === "bank_changes" ? <BankChangesPanel /> : null}
-      {queue ? null : (
-        <Card styles={{ body: { padding: 0 } }}>
-          <QueryState query={seesClients ? list : partnersOnly} labels={labels} rows={20}>
-            {(data) =>
-              rowsOf(data.items).length === 0 ? (
-                <EmptyState
-                  title={t(q ? "clients:empty.filteredTitle" : "clients:empty.title")}
-                  text={t(q ? "clients:empty.filteredText" : "clients:empty.text")}
-                />
-              ) : mobile ? (
-                <ul className="pf-crm-list" aria-label={t("clients:listLabel")}>
-                  {rowsOf(data.items).map((row) => (
-                    <li key={row.id} className="pf-crm-item" data-selected={isOpen(row)}>
-                      <div className="pf-crm-item-head">
-                        <RelationTag kind={relationOf(row)} />
-                        <StateTag row={row} terms={termsOf.get(String(-row.id))} />
-                      </div>
-                      <CompanyCell
-                        name={row.name}
-                        inn={row.inn}
-                        innLabel={t("clients:columns.inn")}
-                        logoUrl={row.logo_url}
-                        title={<NameLink row={row} params={params} selected={isOpen(row)} />}
-                      />
-                      <div className="pf-crm-item-meta">
-                        <span>
-                          {t("clients:columns.requests")}: {row.open_requests}
-                        </span>
-                        <Activity row={row} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <DataTable
-                  tableId="crm.clients"
-                  caption={t("clients:caption")}
-                  scrollLabel={t("clients:tableScroll")}
-                  className="pf-crm-table"
-                  flexMin={240}
-                  columns={columns}
-                  rows={rowsOf(data.items)}
-                  rowKey={(row) => String(row.id)}
-                  rowAttrs={(row) => ({
-                    "data-selected": isOpen(row),
-                  })}
-                />
-              )
-            }
-          </QueryState>
-        </Card>
-      )}
-      {partner !== null ? (
-        <Sheet label={t("clients:counterparty.label")} onClose={close}>
-          <CounterpartyCard key={`p-${partner}`} companyId={partner} onClose={close} />
-        </Sheet>
-      ) : null}
-      {addingPartner ? (
-        <Sheet label={t("catalog:supplierForm.addTitle")} onClose={close}>
-          <SupplierForm
-            onClose={close}
-            onSaved={(saved) => {
-              change({
-                partner: saved.id,
-                panel: mobile ? null : "open",
-                tab: mobile ? null : "card",
-              });
-            }}
-          />
-        </Sheet>
-      ) : null}
-      {newRequest ? (
-        <Sheet label={t("request:title")} onClose={close}>
-          <CreateRequest
-            key={`create-new-${String(freshForm)}`}
-            lead={null}
-            clientId={null}
-            template={params.get("template")}
-            onCancel={close}
-          />
-        </Sheet>
-      ) : null}
-      {selected !== null ? (
-        <Sheet label={t(creating ? "request:title" : "clients:counterparty.label")} onClose={close}>
-          {creating ? (
+          </Sheet>
+        ) : null}
+        {newRequest ? (
+          <Sheet label={t("request:title")} onClose={close}>
             <CreateRequest
-              key={`create-${String(selected)}`}
+              key={`create-new-${String(freshForm)}`}
               lead={null}
-              clientId={selected}
+              clientId={null}
               template={params.get("template")}
-              onCancel={() => {
-                change({ create: null, template: null });
-              }}
+              onCancel={close}
             />
-          ) : (
-            <CounterpartyCard key={`c-${String(selected)}`} clientId={selected} onClose={close} />
-          )}
-        </Sheet>
-      ) : null}
-    </div>
+          </Sheet>
+        ) : null}
+        {selected !== null ? (
+          <Sheet
+            label={t(creating ? "request:title" : "clients:counterparty.label")}
+            onClose={close}
+          >
+            {creating ? (
+              <CreateRequest
+                key={`create-${String(selected)}`}
+                lead={null}
+                clientId={selected}
+                template={params.get("template")}
+                onCancel={() => {
+                  change({ create: null, template: null });
+                }}
+              />
+            ) : (
+              <CounterpartyCard key={`c-${String(selected)}`} clientId={selected} onClose={close} />
+            )}
+          </Sheet>
+        ) : null}
+      </div>
+    </PageFrame>
   );
 }

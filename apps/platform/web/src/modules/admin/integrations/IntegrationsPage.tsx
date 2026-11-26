@@ -39,6 +39,7 @@ import { useRefreshIntegrations } from "./refresh";
 import { ServicesPanel } from "./ServicesPanel";
 import { StoragePanel } from "./StoragePanel";
 import { SystemPanel } from "./SystemPanel";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "./integrations.css";
 
@@ -405,7 +406,7 @@ export function IntegrationsPage() {
   }
 
   return (
-    <div className="pf-int">
+    <PageFrame layout="registry" className="pf-int">
       <PageHeader
         title={title}
         readOnly={!editable}
@@ -423,6 +424,6 @@ export function IntegrationsPage() {
           <CardPanel card={selected} editable={editable} />
         </PanelPortal>
       ) : null}
-    </div>
+    </PageFrame>
   );
 }

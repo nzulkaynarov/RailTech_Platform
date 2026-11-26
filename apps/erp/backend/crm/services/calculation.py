@@ -472,6 +472,9 @@ def _draft_or_409(deal: Deal, *, lock: bool = True) -> Quote:
     quote = calc_quote(deal)
     if quote is None:
         raise CalcError("CALC_NOT_STARTED", 409)
+    if deal.stage_id and deal.stage.code in CLOSED_STAGES:
+        # закрытая заявка и заявка, ушедшая дальше расчёта, — только просмотр (ЗАЯВ-1)
+        raise CalcError("DEAL_NOT_IN_CALCULATION", 409, stage=deal.stage.code)
     if lock:
         quote = Quote.objects.select_for_update(of=("self",)).select_related("status", "deal").get(pk=quote.pk)
     code = quote_edit_lock_code(quote)

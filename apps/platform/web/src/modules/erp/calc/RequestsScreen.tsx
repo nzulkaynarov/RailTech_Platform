@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
+import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { CalcRequestRow } from "../../../shared/api/generated/model";
@@ -115,6 +116,9 @@ function openPath(params: URLSearchParams, number: string): string {
 function CopyLink({ row }: { row: CalcRequestRow }) {
   const { t } = useTranslation("calc");
   const { mobile } = useViewport();
+  const { me } = useAuth();
+  // Новую заявку создаёт тот, у кого «Контрагенты» на запись: остальным кнопка — тупик (403 при создании)
+  if (!canEdit(me, "crm.clients")) return null;
   return (
     <LinkButton
       size="small"
@@ -385,11 +389,13 @@ function Drafts() {
         title={t("list.drafts.emptyTitle")}
         text={t("list.drafts.emptyText")}
         action={
-          <LinkButton
-            to={mobile ? "/crm/clients?create=1" : "/crm/clients?create=1&panel=open&tab=card"}
-          >
-            {t("list.drafts.emptyAction")}
-          </LinkButton>
+          canEdit(me, "crm.clients") ? (
+            <LinkButton
+              to={mobile ? "/crm/clients?create=1" : "/crm/clients?create=1&panel=open&tab=card"}
+            >
+              {t("list.drafts.emptyAction")}
+            </LinkButton>
+          ) : undefined
         }
       />
     );

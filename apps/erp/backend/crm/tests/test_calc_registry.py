@@ -75,3 +75,13 @@ def test_request_card_names_crm_client_for_copy(world):  # noqa: F811
     CrmClientMapping.objects.create(company=world["deal"].company, crm_client_id=77)
     api = _api(world["supply"])
     assert api.get(_url(world, "request/")).json()["request"]["crm_client_id"] == 77
+
+
+def test_closed_request_refuses_line_and_terms_edits(world):  # noqa: F811
+    api = _api(world["supply"])
+    assert api.post(_url(world, "start/")).status_code == 200
+    _close(world)
+    added = api.post(_url(world, "lines/"), {"lines": [{"name": "Болт", "quantity": "1"}]}, format="json")
+    assert added.status_code == 409 and added.json()["detail"] == "DEAL_NOT_IN_CALCULATION"
+    terms = api.patch(_url(world, "terms/"), {"payment_terms": "100%"}, format="json")
+    assert terms.status_code == 409 and terms.json()["detail"] == "DEAL_NOT_IN_CALCULATION"

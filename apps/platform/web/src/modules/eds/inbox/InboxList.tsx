@@ -32,6 +32,7 @@ import { NameCode } from "../../../shared/ui/NameCode";
 import { PersonRefCell } from "../../PersonRefCell";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { TimeLeft } from "../../../shared/ui/TimeLeft";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PAGE = 25;
 /**
@@ -408,61 +409,63 @@ export function InboxList() {
   }
 
   return (
-    <div className="pf-letters">
-      <PageHeader
-        title={title}
-        extra={
-          canRegister ? (
-            <LinkButton type="primary" to="/eds/register">
-              {t("letters:register.action")}
-            </LinkButton>
-          ) : undefined
-        }
-      />
-      <FilterBar tools>
-        <Segmented
-          aria-label={t("letters:list.filter.label")}
-          value={filter}
-          options={MAIN_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
-          onChange={(value) => {
-            setFilter(value);
-          }}
+    <PageFrame layout="registry">
+      <div className="pf-letters">
+        <PageHeader
+          title={title}
+          extra={
+            canRegister ? (
+              <LinkButton type="primary" to="/eds/register">
+                {t("letters:register.action")}
+              </LinkButton>
+            ) : undefined
+          }
         />
-        <FilterField id="pf-letters-status" label={t("letters:list.filter.more")} width={240}>
-          <Select
-            id="pf-letters-status"
-            allowClear
-            value={MORE_FILTERS.includes(filter) ? filter : undefined}
-            placeholder={t("letters:list.filter.more")}
-            options={MORE_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
-            onChange={(value: Filter | undefined) => {
-              setFilter(value ?? "awaiting_resolution");
+        <FilterBar tools>
+          <Segmented
+            aria-label={t("letters:list.filter.label")}
+            value={filter}
+            options={MAIN_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+            onChange={(value) => {
+              setFilter(value);
             }}
           />
-        </FilterField>
-        <FilterField id="pf-letters-kind" label={t("letters:listKind.label")} width={240}>
-          <Select
-            id="pf-letters-kind"
-            allowClear
-            value={kind ?? undefined}
-            placeholder={t("letters:listKind.all")}
-            loading={kinds.isPending}
-            options={(kinds.data?.items ?? []).map((item) => ({
-              value: item.code,
-              label: localName(item.name, i18n.language),
-            }))}
-            onChange={(value: string | undefined) => {
-              setKind(value);
-            }}
-          />
-        </FilterField>
-      </FilterBar>
-      <Card styles={{ body: { padding: 0 } }}>
-        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
-          {body}
-        </DataBlock>
-      </Card>
-      {selected ? <ResolutionSlot letterRef={selected} brief /> : null}
-    </div>
+          <FilterField id="pf-letters-status" label={t("letters:list.filter.more")} width={240}>
+            <Select
+              id="pf-letters-status"
+              allowClear
+              value={MORE_FILTERS.includes(filter) ? filter : undefined}
+              placeholder={t("letters:list.filter.more")}
+              options={MORE_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+              onChange={(value: Filter | undefined) => {
+                setFilter(value ?? "awaiting_resolution");
+              }}
+            />
+          </FilterField>
+          <FilterField id="pf-letters-kind" label={t("letters:listKind.label")} width={240}>
+            <Select
+              id="pf-letters-kind"
+              allowClear
+              value={kind ?? undefined}
+              placeholder={t("letters:listKind.all")}
+              loading={kinds.isPending}
+              options={(kinds.data?.items ?? []).map((item) => ({
+                value: item.code,
+                label: localName(item.name, i18n.language),
+              }))}
+              onChange={(value: string | undefined) => {
+                setKind(value);
+              }}
+            />
+          </FilterField>
+        </FilterBar>
+        <Card styles={{ body: { padding: 0 } }}>
+          <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+            {body}
+          </DataBlock>
+        </Card>
+        {selected ? <ResolutionSlot letterRef={selected} brief /> : null}
+      </div>
+    </PageFrame>
   );
 }

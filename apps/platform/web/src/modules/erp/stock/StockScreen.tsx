@@ -11,6 +11,7 @@ import { OrdersTab } from "./OrdersTab";
 import { ReceiptsTab } from "./ReceiptsTab";
 import { ShipmentsTab } from "./ShipmentsTab";
 import { TraceTab } from "./TraceTab";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../calc/calc.css";
 import "./stock.css";
@@ -46,12 +47,14 @@ export function StockScreen() {
   useDocumentTitle(purchases ? purchasesTitle : t("title"));
   if (purchases) {
     return (
-      <div className="pf-calc pf-stock">
-        <PageHeader title={purchasesTitle} />
-        <DataBlock>
-          <OrdersTab />
-        </DataBlock>
-      </div>
+      <PageFrame layout="registry">
+        <div className="pf-calc pf-stock">
+          <PageHeader title={purchasesTitle} />
+          <DataBlock>
+            <OrdersTab />
+          </DataBlock>
+        </div>
+      </PageFrame>
     );
   }
   return (
