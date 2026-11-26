@@ -19,6 +19,7 @@ from app.api.eds_documents import FileStream
 from app.deps import Authed, require, require_any
 from app.eds_projects import ErpProjects, project_error
 from app.errors import PlatformError
+from app.file_names import content_disposition, document_file_name
 from app.rbac import allows
 from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
@@ -85,19 +86,16 @@ async def _scan_body(request: Request) -> tuple[bytes, str]:
     return bytes(body), content_type
 
 
-_SAFE_EXTENSIONS = frozenset({"pdf", "jpg", "jpeg", "png", "webp", "docx", "xlsx"})
 _ERP_DECIDES = frozenset({"decide_deviation", "remark_vote", "remark_decide"})
 
 
-def _attachment_name(kind: str, doc_id: int, variant: str, upstream: httpx.Headers) -> str:
-    """`attachment; filename="contract-12-scan.pdf"`; расширение — из белого списка."""
+def _extension(variant: str, upstream: httpx.Headers) -> str:
+    """Расширение скана — из имени файла ERP (белый список — в `file_names`); PDF — всегда `pdf`."""
+    if variant == "pdf":
+        return "pdf"
     given = upstream.get("content-disposition") or ""
     found = re.search(r'filename\*?=(?:UTF-8\'\')?"?[^";]*\.([A-Za-z0-9]{2,5})"?\s*(?:;|$)', given)
-    ext = found.group(1).lower() if found else ""
-    if ext not in _SAFE_EXTENSIONS:
-        ext = "pdf" if variant == "pdf" else ""
-    name = f"{kind}-{doc_id}-{variant}" + (f".{ext}" if ext else "")
-    return f'attachment; filename="{name}"'
+    return found.group(1).lower() if found else "bin"
 
 
 # --- список и карточка -------------------------------------------------------------------------
@@ -287,7 +285,7 @@ async def download_file(
 ) -> Response:
     variant_: FileVariant = variant
     erp = _erp(authed)
-    path = await erp.file_path(ref, kind, doc_id, variant_)
+    path, title = await erp.file_ref(ref, kind, doc_id, variant_)
     upstream = await authed.call("erp", "GET", path, stream=True)
     if upstream.status_code == 202:
         try:
@@ -307,10 +305,18 @@ async def download_file(
         finally:
             await upstream.aclose()
     # Скан загрузил человек: тип не доверяется, файл скачивается, а не открывается.
-    # Имя — своё (вид, id, вариант, расширение из белого списка), не из ответа ERP;
+    # Имя — по единому правилу `app.file_names` (вид, номер, дата, контрагент), не из ответа ERP;
     # содержимое не исполняется: `sandbox`.
     headers = {
-        "Content-Disposition": _attachment_name(kind, doc_id, variant_, upstream.headers),
+        "Content-Disposition": content_disposition(
+            document_file_name(
+                title.kind,
+                title.number,
+                title.date,
+                title.counterparty,
+                _extension(variant_, upstream.headers),
+            )
+        ),
         "Content-Security-Policy": "default-src 'none'; sandbox",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",

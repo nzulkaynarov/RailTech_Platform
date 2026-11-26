@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import DocumentViewer from "./DocumentViewer/DocumentViewer";
 
 /**
@@ -9,6 +11,7 @@ export default function PdfViewer({
   name,
   type,
   onDownload,
+  about,
   panelDownload,
 }: {
   data: ArrayBuffer;
@@ -17,6 +20,8 @@ export default function PdfViewer({
   type?: string;
   /** Своё скачивание (имя файла от сервера); без него — из полученных байт */
   onDownload?: () => void;
+  /** «О документе» в слое на весь экран */
+  about?: ReactNode;
   /** `false` — в панели нет своего «Скачать» (его уже даёт экран) */
   panelDownload?: boolean;
 }) {
@@ -26,6 +31,7 @@ export default function PdfViewer({
       name={name}
       {...(type ? { type } : {})}
       {...(onDownload ? { onDownload } : {})}
+      {...(about ? { about } : {})}
       {...(panelDownload === false ? { panelDownload } : {})}
       mode="panel"
     />

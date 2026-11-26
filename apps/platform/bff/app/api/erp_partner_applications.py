@@ -14,6 +14,7 @@ from app.api.erp_docs import _read_limited
 from app.clients.erp_company import ErpCompany, erp_error
 from app.deps import Authed, require, require_any
 from app.errors import PlatformError
+from app.file_names import content_disposition, document_file_name
 from app.schemas_partner_applications import (
     PartnerApplicationApproveRequest,
     PartnerApplicationCreateRequest,
@@ -292,7 +293,9 @@ async def download_document(
         (e for key, e in _EXTENSIONS.items() if key in kind), "bin"
     )  # тип приходит от ERP по расширению файла
     headers = {
-        "Content-Disposition": f'attachment; filename="partner-{which}-{id}.{ext}"',
+        "Content-Disposition": content_disposition(
+            document_file_name(f"Заявка партнёра ({which})", str(id), ext=ext)
+        ),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
         "Content-Security-Policy": "default-src 'none'; sandbox",

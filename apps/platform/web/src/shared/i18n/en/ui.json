@@ -106,7 +106,18 @@
     "pageLabel": "\"{{name}}\", page {{page}} of {{total}}",
     "pagesCount": "PDF · {{count}} pages",
     "region": "Pages of file \"{{name}}\"",
-    "error": "Could not open the file for viewing. Download it instead."
+    "error": "Could not open the file for viewing. Download it instead.",
+    "about": "About the document",
+    "open": "Open",
+    "notReady": "The file is still being prepared — try again in a few seconds.",
+    "noPreview": "Preview of this file type is coming later. Download it instead.",
+    "fields": {
+      "kind": "Type",
+      "number": "Number",
+      "date": "Date",
+      "status": "Status",
+      "client": "Counterparty"
+    }
   },
   "bodyEditor": {
     "addRow": "+ row",

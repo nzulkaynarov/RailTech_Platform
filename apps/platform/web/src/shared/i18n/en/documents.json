@@ -133,6 +133,7 @@
     "files": "Attachments",
     "noFiles": "No attachments.",
     "download": "Download: {{name}}",
+    "open": "Open: {{name}}",
     "downloadFailed": "Could not download the file: {{reason}}",
     "route": "Route",
     "routeAuthor": "Author · {{name}}",

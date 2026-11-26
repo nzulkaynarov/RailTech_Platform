@@ -33,6 +33,7 @@ import {
 import { companyToday } from "../shared/lib/dates";
 import { buildMe, readSession } from "./mockSession";
 import { markOfName } from "./doNotWorkMarks";
+import contractSampleUrl from "./fixtures/contract-sample.pdf?url";
 
 /**
  * Моки EDS · Проекты (D2-5, BFF 0.26.0). Права — как в BFF: чтение — `eds.projects` (менеджер, снабженец, гл. инженер, директор,
@@ -942,13 +943,19 @@ export const edsProjectsHandlers = [
 
   // --- файлы ------------------------------------------------------------------------------------------------
 
-  http.get("*/eds/projects/:ref/files/:kind/:docId", ({ request }) => {
+  http.get("*/eds/projects/:ref/files/:kind/:docId", async ({ request }) => {
     const ok = guard("read");
     if (ok.error) return ok.error;
     const p = findProject(refOf(request));
     if (!p) return notFound();
     const variant = new URL(request.url).searchParams.get("variant") ?? "pdf";
-    const bytes = new TextEncoder().encode("%PDF-1.4 demo\n");
+    // настоящий PDF из четырёх страниц: просмотр показывает страницы, а не ошибку
+    let bytes: ArrayBuffer | Uint8Array = new TextEncoder().encode("%PDF-1.4 demo\n");
+    try {
+      bytes = await (await fetch(contractSampleUrl)).arrayBuffer();
+    } catch {
+      // без файла — прежняя заглушка
+    }
     return new HttpResponse(bytes, {
       headers: {
         "Content-Type": variant === "scan" ? "application/octet-stream" : "application/pdf",

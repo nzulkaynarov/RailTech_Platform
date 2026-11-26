@@ -133,6 +133,7 @@
     "files": "Ilovalar",
     "noFiles": "Ilovalar yöq.",
     "download": "Yuklab oliş: {{name}}",
+    "open": "Oçiş: {{name}}",
     "downloadFailed": "Faylni yuklab bölmadi: {{reason}}",
     "route": "Yönaliş",
     "routeAuthor": "Muallif · {{name}}",

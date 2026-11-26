@@ -1,9 +1,9 @@
-import { App, Button } from "antd";
+import { Button } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { FileNotReadyError, downloadFile } from "../../../shared/api/download";
-import { reasonText } from "./errors";
+import type { DefinitionItem } from "../../../shared/ui/DefinitionList";
+import { DocumentPeek } from "../../../shared/ui/DocumentViewer/DocumentPeek";
 
 export interface FileItem {
   url: string;
@@ -13,42 +13,46 @@ export interface FileItem {
 }
 
 /**
- * Файлы документа проекта (наш PDF и скан подписанного) кнопками-ссылками. Файл берётся запросом с cookie сессии
- * (`downloadFile`): PDF ещё готовится (202) — сообщение «повторите через несколько секунд», а не файл-пустышка с JSON.
+ * Файлы документа проекта (наш PDF и скан подписанного): одно действие на файл — открыть в боковом окне просмотра
+ * (`DocumentPeek`); «Скачать» и «На весь экран» — внутри просмотра. Файл ещё готовится (202) — слова «повторите через
+ * несколько секунд» и кнопка «Скачать» в самом окне. `about` — «О документе» для слоя на весь экран.
  */
-export function FileLinks({ items }: { items: readonly (FileItem | null)[] }) {
+export function FileLinks({
+  items,
+  about,
+}: {
+  items: readonly (FileItem | null)[];
+  about?: readonly DefinitionItem[];
+}) {
   const { t } = useTranslation("projects");
-  const { message } = App.useApp();
-  const [busy, setBusy] = useState<string | null>(null);
+  const [opened, setOpened] = useState<FileItem | null>(null);
   const shown = items.filter((item): item is FileItem => item !== null);
   if (shown.length === 0) return null;
-
-  const download = async (item: FileItem) => {
-    setBusy(item.url);
-    try {
-      await downloadFile(item.url, item.name);
-    } catch (error) {
-      void message.error(
-        error instanceof FileNotReadyError ? t("files.generating") : reasonText(t, error),
-      );
-    } finally {
-      setBusy(null);
-    }
-  };
   return (
     <div className="pf-fp-row" role="group" aria-label={t("card.documents.title")}>
       {shown.map((item) => (
         <Button
           key={item.url}
           size="small"
-          loading={busy === item.url}
+          aria-haspopup="dialog"
           onClick={() => {
-            void download(item);
+            setOpened(item);
           }}
         >
           {item.label}
         </Button>
       ))}
+      {opened ? (
+        <DocumentPeek
+          url={opened.url}
+          title={opened.label}
+          fallbackName={opened.name}
+          {...(about ? { about } : {})}
+          onClose={() => {
+            setOpened(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

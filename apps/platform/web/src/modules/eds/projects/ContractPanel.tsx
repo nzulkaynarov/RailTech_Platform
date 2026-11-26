@@ -26,6 +26,8 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { OnBehalfFields } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
+import { ProjectStatusTag } from "./status";
+import { useAboutDocument } from "./aboutDocument";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm } from "./forms";
 import { ContractTemplateBlock } from "./ContractTemplateBlock";
@@ -127,6 +129,7 @@ function ContractBody({
   const apply = useApplyCard(objectId);
   const ref = projectRef(objectId);
   const contract = card.contract;
+  const about = useAboutDocument();
   // A2: «Согласован клиентом» — как клиент сообщил и кто со стороны клиента (обязательно).
   const agreedIds = { channel: useId(), person: useId() };
   const [channel, setChannel] = useState<OnBehalfChannel | null>(null);
@@ -288,6 +291,13 @@ function ContractBody({
           ]}
         />
         <FileLinks
+          about={about({
+            kind: t("card.documents.contract"),
+            number: contract.number,
+            on: contract.created_at,
+            status: <ProjectStatusTag kind="contract" status={contract.status} />,
+            client: card.client_name,
+          })}
           items={[
             contract.has_pdf
               ? {

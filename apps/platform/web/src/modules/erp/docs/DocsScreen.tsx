@@ -358,7 +358,7 @@ function DocDrawer({
   return (
     <Drawer
       open
-      width={mobile ? "100%" : 760}
+      width={mobile ? "100%" : 640}
       onClose={onClose}
       title={doc?.title ?? t("docs.card")}
     >

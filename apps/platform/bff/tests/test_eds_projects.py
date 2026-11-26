@@ -10,6 +10,7 @@ ERP — на respx (`eds_projects_support`), ответы BFF проверяют
 
 import json
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -799,15 +800,17 @@ async def test_files_are_attachments_with_our_own_name_and_a_sandbox_policy(
         headers={"Content-Disposition": 'inline; filename="../../x<script>.html"'},
     )
     erp.answer("GET", rf"contracts/{CONTRACT_ID}/download-signed/", hostile)
-    for variant, name in (
-        ("pdf", f"contract-{CONTRACT_ID}-pdf.pdf"),
-        ("scan", f"contract-{CONTRACT_ID}-scan"),
-    ):
+    for variant, kind in (("pdf", "Договор № "), ("scan", "Договор (скан) № ")):
         response = await web.client.get(
             f"{BASE}/{NUMBER}/files/contract/{CONTRACT_ID}?variant={variant}"
         )
         assert response.status_code == 200
-        assert response.headers["content-disposition"] == f'attachment; filename="{name}"', variant
+        disposition = response.headers["content-disposition"]
+        assert disposition.startswith("attachment; filename="), variant
+        # одно правило имени (app.file_names); расширение скана — только из белого списка
+        full = unquote(disposition.split("filename*=UTF-8''")[1])
+        assert full.startswith(kind), variant
+        assert full.endswith(".pdf" if variant == "pdf" else ".bin"), variant
         assert response.headers["content-security-policy"] == "default-src 'none'; sandbox"
         assert response.headers["x-content-type-options"] == "nosniff"
         assert "<script" not in response.headers["content-disposition"]

@@ -382,7 +382,7 @@ describe("EDS · Документы: карточка в боковом окне
     );
   });
 
-  it("документ с суммой и вложением: маршрут автор → директор → бухгалтер, файл скачивается по кнопке", async () => {
+  it("документ с суммой и вложением: маршрут автор → директор → бухгалтер, файл открывается в просмотре", async () => {
     await openDocuments("manager@demo.example", "?scope=mine");
 
     fireEvent.click(
@@ -394,7 +394,7 @@ describe("EDS · Документы: карточка в боковом окне
     expect(within(panel).getByText("Бухгалтер — дальше по маршруту")).toBeVisible();
     expect(within(panel).getByText("4 800 000 сум")).toBeVisible();
     expect(
-      within(panel).getByRole("button", { name: "Скачать: schet-kanctovary.pdf" }),
+      within(panel).getByRole("button", { name: "Открыть: schet-kanctovary.pdf" }),
     ).toBeVisible();
     expect(within(panel).queryByRole("link", { name: "Продолжить" })).toBeNull();
   });

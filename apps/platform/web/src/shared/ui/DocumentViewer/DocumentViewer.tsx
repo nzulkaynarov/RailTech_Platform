@@ -1,5 +1,5 @@
-import { Modal } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Modal } from "antd";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useMediaQuery } from "../../../app/shell/useViewport";
@@ -28,6 +28,8 @@ export interface DocumentViewerProps {
   initialPage?: number;
   /** Своё скачивание (например, с именем файла от сервера); без него файл сохраняется из уже полученных байт */
   onDownload?: () => void;
+  /** «О документе»: правая колонка слоя на весь экран (вид, номер, дата, статус, контрагент — что известно) */
+  about?: ReactNode;
   /** `false` — в панели нет своего «Скачать» (его уже даёт экран); на весь экран кнопка есть всегда */
   panelDownload?: boolean;
 }
@@ -134,6 +136,7 @@ function PdfSurface({
   mode,
   initialPage = 1,
   onDownload,
+  about,
   panelDownload,
   onPage,
   onFull,
@@ -171,6 +174,7 @@ function PdfSurface({
       }}
       onFull={onFull}
       onClose={onClose}
+      about={mode === "full" ? about : undefined}
       showDownload={mode === "full" || panelDownload !== false}
       thumbs={
         thumbsShown && pdf && api.pages > 1 ? (
@@ -199,6 +203,7 @@ function ImageSurface({
   type,
   mode,
   onDownload,
+  about,
   panelDownload,
   onFull,
   onClose,
@@ -253,6 +258,7 @@ function ImageSurface({
       }}
       onFull={onFull}
       onClose={onClose}
+      about={mode === "full" ? about : undefined}
       showDownload={mode === "full" || panelDownload !== false}
       thumbs={null}
       onStageClick={phone && mode === "panel" ? onFull : undefined}
@@ -294,6 +300,7 @@ function Frame({
   onDownload,
   onFull,
   onClose,
+  about,
   showDownload,
   thumbs,
   onStageClick,
@@ -306,6 +313,7 @@ function Frame({
   onDownload: () => void;
   onFull?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  about?: React.ReactNode;
   showDownload: boolean;
   thumbs: React.ReactNode;
   onStageClick?: (() => void) | undefined;
@@ -313,6 +321,7 @@ function Frame({
 }) {
   const { t } = useTranslation("ui");
   const root = useRef<HTMLDivElement>(null);
+  const [aboutOpen, setAboutOpen] = useState(true);
   // Клавиши: + и − масштаб, 0 — по ширине, ← → страницы, Ctrl F — поиск (в слое на весь экран и в панели в фокусе)
   const onKeyDown = (event: React.KeyboardEvent) => {
     const target = event.target as HTMLElement;
@@ -345,6 +354,17 @@ function Frame({
             <strong>{name}</strong>
             <span>{api.pages > 0 ? t("documentViewer.pagesCount", { count: api.pages }) : ""}</span>
           </div>
+          {about ? (
+            <Button
+              size="small"
+              aria-pressed={aboutOpen}
+              onClick={() => {
+                setAboutOpen((open) => !open);
+              }}
+            >
+              {t("documentViewer.about")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <ViewerToolbar
@@ -361,6 +381,12 @@ function Frame({
         <div className="pf-dv-stage" onClick={onStageClick} data-state={api.status}>
           {children}
         </div>
+        {about && aboutOpen ? (
+          <aside className="pf-dv-about" aria-label={t("documentViewer.about")}>
+            <h2 className="pf-dv-about-title">{t("documentViewer.about")}</h2>
+            {about}
+          </aside>
+        ) : null}
       </div>
       {api.status === "error" ? (
         <p className="pf-hint" role="alert">

@@ -133,6 +133,7 @@
     "files": "Вложения",
     "noFiles": "Вложений нет.",
     "download": "Скачать: {{name}}",
+    "open": "Открыть: {{name}}",
     "downloadFailed": "Не удалось скачать файл: {{reason}}",
     "route": "Маршрут",
     "routeAuthor": "Автор · {{name}}",
