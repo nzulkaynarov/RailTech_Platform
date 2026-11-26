@@ -113,9 +113,11 @@ describe("Настройки · Каналы · Почта · Типы вход�
     expect(await rowOf("Запрос клиента")).toBeVisible();
     cleanup();
     renderApp("/admin/dictionaries");
-    const nav = await screen.findByRole("navigation", { name: "Справочники по разделам" });
-    expect(within(nav).queryByText("Почта")).toBeNull();
-    expect(within(nav).queryByRole("link", { name: "Типы входящих писем" })).toBeNull();
+    const picker = await screen.findByRole("combobox", { name: "Справочники по разделам" });
+    fireEvent.mouseDown(picker);
+    expect(await screen.findByTitle("Продажи")).toBeInTheDocument();
+    expect(screen.queryByTitle("Типы входящих писем")).toBeNull();
+    expect(screen.queryByTitle("Почта")).toBeNull();
   });
 
   it("директор страницу «Почта» не видит: канал — фундамент администратора (ЕВ-2а)", async () => {

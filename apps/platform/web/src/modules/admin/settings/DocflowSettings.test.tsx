@@ -12,6 +12,7 @@ import { resetFeedMocks } from "../../../mocks/feedHandlers";
 import { readDocflowSettings, resetLetterIntakeMock } from "../../../mocks/letterIntake";
 import { endSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
+import { chooseOption } from "../../../test/fields";
 import i18n from "../../../shared/i18n";
 import { renderApp, signInAs } from "../../../test/renderApp";
 import { setViewportWidth } from "../../../test/viewport";
@@ -52,9 +53,9 @@ describe("Настройки · Процессы · Справочники пи�
     expect(tax).toHaveTextContent("Действует");
     expect(await rowOf("Письмо банка")).toHaveTextContent("по общему правилу");
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Правила работы" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "Справочники" })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
     // Письмо банка есть у демо-писем — удалить нельзя, только скрыть.
     expect(await rowActionItems("Письмо банка")).not.toContain("Удалить");
@@ -86,7 +87,10 @@ describe("Настройки · Процессы · Справочники пи�
     signInAs("admin@demo.example");
     renderApp("/admin/docflow");
     await heading();
-    fireEvent.click(await screen.findByRole("link", { name: "Способы получения" }));
+    await chooseOption(
+      await screen.findByRole("combobox", { name: "Справочники по разделам" }),
+      "Способы получения",
+    );
     const post = await rowOf("Почта");
     await pickRowAction("Почта", "Скрыть", post);
     await waitFor(async () => {
@@ -113,7 +117,10 @@ describe("Настройки · Процессы · Справочники пи�
     signInAs("admin@demo.example");
     renderApp("/admin/docflow");
     await heading();
-    fireEvent.click(await screen.findByRole("link", { name: "Виды резолюции" }));
+    await chooseOption(
+      await screen.findByRole("combobox", { name: "Справочники по разделам" }),
+      "Виды резолюции",
+    );
     const row = await rowOf("Для сведения");
     expect(await rowActionItems("Для сведения", row)).toEqual(["Изменить"]);
   });

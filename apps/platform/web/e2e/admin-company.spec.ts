@@ -86,13 +86,9 @@ async function choose(page: Page, select: Locator, text: string): Promise<void> 
   ).toContainText(text);
 }
 
-/** Справочник слева на «Процессы · Справочники»; на телефоне список — выпадающий (SET-IA). */
+/** Справочник — выпадающий список над содержимым «Справочников» при любой ширине (НАСТ-1: второго меню слева нет). */
 async function pickList(page: Page, name: string): Promise<void> {
-  if ((page.viewportSize()?.width ?? 1440) < 768) {
-    await chooseOption(page.getByLabel("Справочники по разделам"), name);
-    return;
-  }
-  await page.getByRole("link", { name, exact: true }).click();
+  await chooseOption(page.getByLabel("Справочники по разделам"), name);
 }
 
 const toast = (page: Page, text: string) => page.locator(".ant-message").getByText(text);
@@ -114,7 +110,7 @@ test.describe("Компания: права и меню", () => {
     await spaGoto(page, "/admin");
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Компания", exact: true })
+      .getByRole("link", { name: "Реквизиты и бланк", exact: true })
       .click();
     await expect(page).toHaveURL(/\/admin\/company/);
     await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();
