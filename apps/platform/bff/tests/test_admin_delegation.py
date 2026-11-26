@@ -183,7 +183,7 @@ async def test_cannot_delegate_more_than_granter_has(
     await web.login(["ADMIN"])  # у ADMIN нет crm.leads
 
     response = await web.send(
-        "PUT", "/api/v1/admin/users/11/delegation", json={"codes": ["leads.work"]}
+        "PUT", "/api/v1/admin/users/12/delegation", json={"codes": ["leads.work"]}
     )
 
     assert response.status_code == 403

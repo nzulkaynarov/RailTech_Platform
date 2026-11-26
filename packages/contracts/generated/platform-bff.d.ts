@@ -4236,6 +4236,50 @@ export interface paths {
     patch: operations["updateEmployee"];
     trace?: never;
   };
+  "/admin/delegation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Действия делегирования по областям и наборы по должности (СОТР-2)
+     * @description Раздел `admin` — чтение. Действия — данные (`platform-rbac-capabilities.yaml`): глагол и область; набор по должности — роль компании и действия, которые она даёт. Личные наборы сотрудников (служебные роли) в списке наборов не показываются.
+     */
+    get: operations["getDelegationCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/delegation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Что делегировано сотруднику
+     * @description Раздел `admin` — чтение. Действие включено, если все его разделы у сотрудника на нужном уровне или выше.
+     */
+    get: operations["getEmployeeDelegation"];
+    /**
+     * Сохранить, что делегировано сотруднику
+     * @description Раздел `admin` — полный. `codes` — все включённые действия: личный набор сотрудника собирается из них (разделы вне каталога действий сохраняются как есть) и становится его единственной ролью в CRM; права в CRM, ERP и EDS вычисляет CRM. Больше, чем есть у самого выдающего (в том числе себе), выдать нельзя — 403 `FORBIDDEN`, `details.reason = delegation_exceeds_own`. Выдача нового права требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). Последнего администратора или директора лишить нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. Неизвестное действие или пустой набор — 422 `VALIDATION_FAILED`.
+     */
+    put: operations["setEmployeeDelegation"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/users/{id}/reset-password/email": {
     parameters: {
       query?: never;
@@ -11756,6 +11800,47 @@ export interface components {
       transfer_to_user_id?: string;
       /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */
       deputy?: components["schemas"]["DeputyUpdate"] | null;
+    };
+    /** @description Подпись на трёх языках */
+    DelegationLabel: {
+      ru: string;
+      uz: string;
+      en: string;
+    };
+    DelegationArea: {
+      code: string;
+      label: components["schemas"]["DelegationLabel"];
+    };
+    DelegationAction: {
+      /** @description Код действия (`platform-rbac-capabilities.yaml`) */
+      code: string;
+      /** @description Код области */
+      area: string;
+      label: components["schemas"]["DelegationLabel"];
+    };
+    /** @description Набор по должности — роль компании и действия, которые она даёт */
+    DelegationPreset: {
+      id: components["schemas"]["RoleId"];
+      name: string;
+      codes: string[];
+    };
+    DelegationCatalog: {
+      areas: components["schemas"]["DelegationArea"][];
+      actions: components["schemas"]["DelegationAction"][];
+      presets: components["schemas"]["DelegationPreset"][];
+    };
+    EmployeeDelegation: {
+      /** @description Включённые действия */
+      codes: string[];
+      /** @description Набор по должности, название которого совпадает с должностью сотрудника */
+      suggested_preset_id?: components["schemas"]["RoleId"] | null;
+    };
+    EmployeeDelegationUpdate: {
+      codes: string[];
+      /** @description Набор по должности, с которого начали (от него берутся ограничения полей) */
+      preset_id?: components["schemas"]["RoleId"] | null;
+      /** @description Кому передать лиды в работе, если сотрудник теряет работу с лидами (как у `updateEmployee`) */
+      transfer_to_user_id?: string | null;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
@@ -27827,6 +27912,107 @@ export interface operations {
         };
       };
       /** @description `ROLES_REQUIRED` — пустой набор `role_ids` (`details.fields = [role_ids]`); `VALIDATION_FAILED` — прочие поля (`details.fields`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  getDelegationCatalog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Каталог */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DelegationCatalog"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getEmployeeDelegation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Включённые действия */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeDelegation"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  setEmployeeDelegation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Свежий код второго фактора (ДВ-4б): токен из `POST /me/second-factor/step-up`, действует 5 минут. Нужен при выдаче роли и подтверждении новых банковских реквизитов; без него или с просроченным — 403 `STEP_UP_REQUIRED` (`details.reason = second_factor_not_enrolled` — фактор ещё не включён) */
+        "X-Step-Up-Token"?: components["parameters"]["StepUpToken"];
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmployeeDelegationUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeDelegation"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT` (`details.reason = user_has_active_leads` — повтор с `transfer_to_user_id`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `VALIDATION_FAILED` (`details.fields`) */
       422: {
         headers: {
           [name: string]: unknown;
