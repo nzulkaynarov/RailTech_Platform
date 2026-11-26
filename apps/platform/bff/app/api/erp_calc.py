@@ -88,7 +88,7 @@ _MESSAGES = {
         "Не все строки подтверждены: «Расчёт готов» станет доступна после виз всех строк."
     ),
     "QUOTE_NOT_DRAFT": (
-        "Расчёт уже у директора: строки не правятся, пока он не вернёт КП на доработку."
+        "Расчёт уже на одобрении: строки не правятся, пока КП не вернут на доработку."
     ),
     "QUOTE_FROZEN": "КП уже отправлено клиенту: строки не правятся.",
     "LINE_INCOMPLETE": "Сначала заполните закупку и цену клиенту.",
@@ -96,7 +96,7 @@ _MESSAGES = {
     "PURCHASE_REQUIRED": "Сначала укажите закупку: от неё считается наценка.",
     "CALC_NOT_STARTED": "Расчёт ещё не начат.",
     "DEAL_NOT_IN_CALCULATION": (
-        "Заявка закрыта или ушла дальше расчёта: КП директору отсюда не отправить."
+        "Заявка закрыта или ушла дальше расчёта: КП на одобрение отсюда не отправить."
     ),
     "QUOTE_NOT_REJECTED_BY_CLIENT": (
         "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте."
@@ -630,7 +630,7 @@ async def parse_file(request: Request, authed: Builder, number: Number) -> CalcP
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Файл нужно передать формой multipart.",
+            "Приложите файл к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )

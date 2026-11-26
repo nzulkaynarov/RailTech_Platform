@@ -28,15 +28,7 @@ const WIDTH_EXCEPTIONS: Record<string, number> = {
 };
 
 /** Страницы, ещё стоящие вне каркаса (см. «Оставшиеся» в PR КАРКАС-1). */
-const OUTSIDE_FRAME: readonly string[] = [
-  "src/modules/admin/articles/ArticlesPage.tsx",
-  "src/modules/admin/audit/AuditPage.tsx",
-  "src/modules/admin/integrations/IntegrationsPage.tsx",
-  "src/modules/admin/org/OrgPage.tsx",
-  "src/modules/admin/roles/RolesPage.tsx",
-  "src/modules/admin/setup/SetupWizardPage.tsx",
-  "src/modules/admin/tickets/TicketsPage.tsx",
-];
+const OUTSIDE_FRAME: readonly string[] = [];
 
 function wideRules(css: string): number {
   const flat = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, "");

@@ -24,7 +24,7 @@ import { fileUrl, projectRef } from "./api";
 import { FileLinks } from "./FileLinks";
 import { DeliveryActions } from "./DeliveryMarks";
 import { useStateLabels } from "./labels";
-import { ActStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
+import { ActStatusTag, ContractStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
 import { ActIssueButton, ActPanel } from "./ActPanel";
 import { ContractCreateButton, ContractPanel } from "./ContractPanel";
 import { DocumentClientLink } from "./DocumentClientLink";
@@ -145,13 +145,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
           <DocRow
             number={contract.number}
             type={t("card.documents.contractType")}
-            status={
-              <ProjectStatusTag kind="contract" status={contract.status}>
-                {contract.status === "project" && contract.sent_to_client
-                  ? `${t("status.contract.project")} · ${t("contract.toClientYes")}`
-                  : undefined}
-              </ProjectStatusTag>
-            }
+            status={<ContractStatusTag contract={contract} />}
           />
           <li className="pf-doc pf-doc--detail">
             <ContractPanel card={card} objectId={objectId} />

@@ -58,8 +58,8 @@
     "DEFAULT": "The action failed. Please retry.",
     "FORBIDDEN": "This action is not allowed for your role.",
     "ERP_FORBIDDEN": "Not allowed: you need the right to manage the catalogue or partners.",
-    "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them (supply, director).",
-    "CREW_RATES_REQUIRED": "Crew rates can only be changed by the chief engineer, supply or the director.",
+    "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them.",
+    "CREW_RATES_REQUIRED": "Crew rates can only be changed by those who can see them.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "This record already exists. Refresh the list.",
     "NOT_FOUND": "The record is gone. Refresh the list.",
@@ -121,7 +121,7 @@
       "offer_source_invalid": "Choose the price source.",
       "role_not_permitted": "Insufficient permissions.",
       "contact_exists": "The company already has a contact with this address.",
-      "contact_email_ambiguous": "This address is already used by a contact of another cabinet company. Use a different address.",
+      "contact_email_ambiguous": "This address is already used by a contact of another account company. Use a different address.",
       "email_delivery_failed": "The e-mail was not sent. Check the mail service and try again — access is unchanged.",
       "module_not_allowed": "This section cannot be enabled for a partner.",
       "contact_name_required": "Enter the contact's full name.",
@@ -237,7 +237,7 @@
       "addSteps": [
         "The item appears in the catalogue as a draft.",
         "It can be chosen in costing and have files linked.",
-        "Supply adds partner prices."
+        "Partner prices are added by those who can see them."
       ],
       "editSteps": [
         "Changes are saved in the item card.",
@@ -287,7 +287,7 @@
     "form": {
       "title": "Offer: {{name}}",
       "price": "Purchase price, {{currency}}",
-      "noPrice": "You neither see nor change the partner price: it is open to supply and the director.",
+      "noPrice": "You neither see nor change the partner price: you have no access to prices.",
       "quota": "Quota, pcs",
       "quotaHint": "How many units the partner will ship at this price.",
       "min": "Minimum order, pcs",
@@ -360,7 +360,7 @@
       "rate": "Rate, {{currency}}",
       "rateHint": "Empty — no rate set.",
       "unit": "Rate",
-      "noRate": "You neither see nor change the crew rate: it is open to the chief engineer, supply and the director.",
+      "noRate": "You neither see nor change the crew rate: you have no access to rates.",
       "note": "Note",
       "active": "Works",
       "addSteps": [
@@ -410,8 +410,8 @@
       "why": "Why it is needed",
       "whyHint": "Briefly: which items will go there.",
       "steps": [
-        "The request goes to the director in “Category requests”.",
-        "The director creates the category and links it, or refuses with a reason.",
+        "The request goes to “Category requests”.",
+        "The category will be created and linked, or refused with a reason.",
         "You get a notification about the decision."
       ]
     }
@@ -420,7 +420,7 @@
     "parts": "Reference list",
     "rates": {
       "title": "Exchange rates",
-      "hint": "Rates to UZS: automatically from the central bank, or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
+      "hint": "Rates to UZS: loaded from the central bank or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
       "filter": "Currency",
       "any": "All currencies",
       "table": "Exchange rates to UZS",
@@ -449,7 +449,7 @@
       "onlyActive": "Only valid ones",
       "add": "Add code",
       "table": "HS codes",
-      "editNamed": "Edit code {{code}}",
+      "editNamed": "Edit code {{hs}}",
       "active": "Valid",
       "closed": "Closed",
       "until": "until {{date}}",
@@ -466,7 +466,7 @@
       },
       "form": {
         "addTitle": "Add HS code",
-        "editTitle": "Code {{code}}",
+        "editTitle": "Code {{hs}}",
         "add": "Add",
         "code": "Code",
         "codeHint": "2, 4, 6, 8 or 10 digits. The code cannot be changed after adding.",
@@ -634,7 +634,7 @@
       "reject": "Reject",
       "approved": "Document approved.",
       "rejected": "Document rejected.",
-      "note": "A partner sent this file from the cabinet. Clients cannot see it until you approve it."
+      "note": "A partner sent this file from the account. Clients cannot see it until you approve it."
     }
   },
   "supplierForm": {
@@ -668,7 +668,7 @@
     }
   },
   "cabinetAccess": {
-    "title": "Cabinet access",
+    "title": "Account access",
     "status": {
       "none": "Not opened",
       "invited": "Invited",
@@ -679,9 +679,9 @@
       "client": "Client",
       "partner": "Partner"
     },
-    "rolesLine": "In the cabinet: {{roles}}",
-    "closed": "Cabinet closed: the partner cannot sign in.",
-    "notOpened": "The cabinet has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
+    "rolesLine": "In the account: {{roles}}",
+    "closed": "Account closed: the partner cannot sign in.",
+    "notOpened": "The account has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
     "invitedBy": "Invited by",
     "firstLogin": "First sign-in",
     "noLogin": "has not signed in yet",
@@ -714,9 +714,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Held after a client handoff: check the tax ID in the partner's card and on the Client, then press “Invite again”. No link was created, the partner's requests are kept here.",
+        "held": "Tax ID check needed: check the tax ID in the partner's card and on the Client, then press “Invite again”. No link was created, the partner's requests are kept here.",
         "unverified": "The link was created by a client handoff by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
-        "conflict": "A client already exists with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the partner's card and on the Client, fix the wrong one and invite the partner again."
+        "conflict": "A client with these details is already linked to another company, nothing was changed. Check the tax ID in the partner's and the client's cards, fix the wrong one and invite the partner again."
       }
     },
     "rights": "What the partner will see",
@@ -741,7 +741,7 @@
     },
     "contacts": "Company contacts",
     "contactsTable": "Partner contacts",
-    "noContacts": "No contacts yet. Add the person who will get the invitation: the cabinet is entered by e-mail only.",
+    "noContacts": "No contacts yet. Add the person who will get the invitation: the account is entered by e-mail only.",
     "contact": {
       "name": "Full name",
       "email": "E-mail",
@@ -767,7 +767,7 @@
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
     "inviteForm": {
-      "title": "Invite to the cabinet"
+      "title": "Invite to the account"
     },
     "suspend": "Suspend access",
     "readOnly": "Only staff allowed to manage partners can invite and change rights.",
@@ -784,7 +784,7 @@
       "canAct": "Can approve"
     },
     "suspendForm": {
-      "title": "Suspend cabinet access",
+      "title": "Suspend account access",
       "ok": "Suspend",
       "text": "The partner cannot sign in until you invite them again.",
       "steps": [
@@ -1101,15 +1101,15 @@
       "rejected": "Rejected"
     },
     "status": {
-      "submitted": "Submitted",
+      "submitted": "Under review",
       "contract_sent": "Contract sent",
-      "candidate_agreed": "Agreed by candidate",
+      "candidate_agreed": "Awaiting signature",
       "approved": "Approved",
       "rejected": "Rejected"
     },
     "source": {
       "public": "Public form",
-      "client_cabinet": "Client cabinet",
+      "client_cabinet": "Client account",
       "letter": "Incoming letter",
       "lead": "Lead"
     },
@@ -1138,7 +1138,7 @@
       "sendContract": "Send contract",
       "resendContract": "Send contract again",
       "approve": "Mark as signed",
-      "invite": "Invite to the Cabinet",
+      "invite": "Invite to the account",
       "more": "More",
       "approveWithoutAgreement": "Mark as signed without agreement",
       "reject": "Reject",
@@ -1153,18 +1153,18 @@
     },
     "sendContractModal": {
       "title": "Send contract: {{name}}",
-      "hint": "The contract goes to the candidate, and {{email}} gets an email with cabinet sign-in.",
+      "hint": "The contract goes to the candidate, and {{email}} gets an email with account sign-in.",
       "ok": "Send contract",
       "steps": [
         "Application status will change to “Contract sent”",
         "The candidate will receive the partner contract draft",
-        "The candidate contact will receive an email with cabinet sign-in"
+        "The candidate contact will receive an email with account sign-in"
       ],
-      "noEmail": "The candidate has no e-mail: the contract will be sent, and the Cabinet invitation can follow when an address appears."
+      "noEmail": "The candidate has no e-mail: the contract will be sent, and the account invitation can follow when an address appears."
     },
     "approveModal": {
       "title": "Contract signed: {{name}}",
-      "hint": "Attach the scan of the signed contract or leave a note — the scan is optional. The contract term is calculated now, the company gets the partner cabinet and the contact an invitation.",
+      "hint": "Attach the scan of the signed contract or leave a note — the scan is optional. The contract term is calculated now, the company gets the partner account and the contact an invitation.",
       "needFields": "Enter the contract number, the counterparty signature (scan or note) and the company choice to enable the button.",
       "needReason": "The button becomes available once you give a reason.",
       "scanLabel": "Signed scan",
@@ -1185,8 +1185,8 @@
       ]
     },
     "inviteModal": {
-      "title": "Invitation to the Cabinet: {{name}}",
-      "hint": "The contract is already with the candidate in the application. Enter the e-mail — the invitation with the Cabinet sign-in goes there.",
+      "title": "Invitation to the account: {{name}}",
+      "hint": "The contract is already with the candidate in the application. Enter the e-mail — the invitation with the account sign-in goes there.",
       "email": "Candidate e-mail",
       "ok": "Send the invitation"
     },
@@ -1213,7 +1213,7 @@
       "votedApprove": "Agreed: {{who}}",
       "waitingFor": "Waiting for: {{who}}",
       "disagreement": "There is an objection, {{who}} decides",
-      "noEmail": "No e-mail: the Cabinet invitation comes later",
+      "noEmail": "No e-mail: the account invitation comes later",
       "validUntil": "Valid until {{date}}",
       "signedNote": "note: {{note}}",
       "openCandidateFile": "Candidate's edition",
@@ -1271,12 +1271,12 @@
       },
       "selfConfirm": "There are no other holders — the decision will be recorded as self-made",
       "hintRemarks": "The candidate returned the contract with remarks and their own edition. Everyone responsible agrees.",
-      "hintDirector": "There is an objection: the director decides."
+      "hintDirector": "There is an objection: the approver decides."
     },
     "archiveModal": {
       "title": "Already signed on paper: {{name}}",
       "ok": "Record",
-      "hint": "The partner signed the documents earlier. The application becomes approved at once; nothing is sent to the Cabinet or by e-mail.",
+      "hint": "The partner signed the documents earlier. The application becomes approved; nothing is sent to the account or by e-mail.",
       "signedOn": "Signed on",
       "signedOnHint": "The real date from the paper: the term counts from it.",
       "numberPlaceholder": "The old number; empty — a new one is assigned",

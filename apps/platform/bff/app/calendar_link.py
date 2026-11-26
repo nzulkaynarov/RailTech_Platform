@@ -29,7 +29,7 @@ from app.feeds.models import QueueItem
 
 TTL_SECONDS = 30 * 24 * 3600
 COMPANY_TZ = ZoneInfo("Asia/Tashkent")
-CALENDAR_NAME = "RailTech — сроки"
+CALENDAR_NAME = "Сроки"
 MAX_EVENTS = 300
 # Календарные клиенты опрашивают раз в час-сутки; кэш на минуту гасит лишние повторы
 CACHE_CONTROL = "private, max-age=300"

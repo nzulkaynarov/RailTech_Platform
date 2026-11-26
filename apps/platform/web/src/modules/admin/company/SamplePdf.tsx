@@ -1,9 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { Button, Segmented } from "antd";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../../shared/api/errors";
 import type {
   DocumentSampleIn,
   DocumentSampleInLanguage,
@@ -14,6 +12,7 @@ import {
   requestDocumentSample,
   useGetDocumentSample,
 } from "../../../shared/api/generated/platform-bff";
+import { useRenderedPdf } from "../../../shared/ui/DocumentViewer/useRenderedPdf";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { companyErrorText } from "./errors";
 
@@ -102,24 +101,12 @@ export function SamplePdf({
     },
   });
   const ready = state.data?.status === "ready";
-  const bytes = useQuery({
-    enabled: Boolean(id) && ready,
+  const { data: shown } = useRenderedPdf({
+    id,
+    ready,
     queryKey: getDownloadDocumentSampleQueryKey(id ?? ""),
-    staleTime: Infinity,
-    queryFn: async (): Promise<ArrayBuffer> => {
-      const response = await fetch(getDownloadDocumentSampleUrl(id ?? ""), {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        throw new ApiError(response.status, "HTTP_ERROR", `HTTP ${String(response.status)}`);
-      }
-      return response.arrayBuffer();
-    },
+    url: getDownloadDocumentSampleUrl(id ?? ""),
   });
-
-  // Пока строится новый образец, на экране прежний.
-  const [shown, setShown] = useState<ArrayBuffer | null>(null);
-  if (bytes.data && bytes.data !== shown) setShown(bytes.data);
 
   const warnings = ready ? state.data?.warnings : undefined;
   const warningsKey = (warnings ?? []).join("|");

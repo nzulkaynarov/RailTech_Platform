@@ -85,7 +85,7 @@ describe("Проект: карточка", () => {
     expect(docs).toHaveTextContent("СЧ-2026/131");
     expect(docs).toHaveTextContent("Оплачен");
     expect(docs).toHaveTextContent("АКТ-2026/051");
-    expect(docs).toHaveTextContent("Выпущен");
+    expect(docs).toHaveTextContent("Выставлен");
 
     const execution = screen.getByRole("heading", { name: "Исполнение" }).closest(".ant-card");
     expect(execution).toHaveTextContent("Отгружено");
@@ -300,7 +300,7 @@ describe("Проект: договор (строка документа)", () =>
     fireEvent.click(within(panel).getByRole("button", { name: "На подпись" }));
     await waitFor(() => {
       expect(within(panel).getByTestId("contract-send-blocker")).toHaveTextContent(
-        "Нужны визы: бухгалтер, юрист",
+        "Нужны визы: финансы, право",
       );
     });
     expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
@@ -312,7 +312,7 @@ describe("Проект: договор (строка документа)", () =>
     writeProject({ ...returned, contract: { ...returned.contract, visas: "returned" } });
     const { panel } = await openCard("accountant@demo.example", 111);
     const blocker = await within(panel).findByTestId("contract-send-blocker");
-    expect(blocker).toHaveTextContent("Визы возвращены: бухгалтер");
+    expect(blocker).toHaveTextContent("Визы возвращены: финансы");
     expect(blocker).toHaveTextContent("Замечание: Нет графика платежей");
     expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
   });
@@ -323,7 +323,7 @@ describe("Проект: договор (строка документа)", () =>
     writeProject({ ...found, contract: { ...found.contract, visas: "no_holder" } });
     const { panel } = await openCard("all@demo.example", 111);
     const noHolder = await within(panel).findByTestId("contract-send-blocker");
-    expect(noHolder).toHaveTextContent("Некому поставить визу: юрист");
+    expect(noHolder).toHaveTextContent("Некому поставить визу: право");
     expect(within(noHolder).getByRole("link", { name: "Сотрудники" })).toHaveAttribute(
       "href",
       "/admin/org",
@@ -336,9 +336,9 @@ describe("Проект: договор (строка документа)", () =>
     writeProject({ ...found, contract: { ...found.contract, visas: "no_holder" } });
     const { panel } = await openCard("accountant@demo.example", 111);
     const noHolder = await within(panel).findByTestId("contract-send-blocker");
-    expect(noHolder).toHaveTextContent("Некому поставить визу: юрист");
+    expect(noHolder).toHaveTextContent("Некому поставить визу: право");
     expect(within(noHolder).queryByRole("link")).toBeNull();
-    expect(noHolder).toHaveTextContent("Попросите администратора назначить роль: юрист.");
+    expect(noHolder).toHaveTextContent("Попросите администратора назначить роль: право.");
   });
 
   it("Х-1: визы собираются — «На подпись» не предлагается (повтор отказал бы), причина по факту открытого запроса", async () => {
@@ -347,7 +347,7 @@ describe("Проект: договор (строка документа)", () =>
     writeProject({ ...found, contract: { ...found.contract, visas: "pending" } });
     const { panel } = await openCard("accountant@demo.example", 111);
     expect(await within(panel).findByTestId("contract-send-blocker")).toHaveTextContent(
-      "Нужны визы: бухгалтер, юрист",
+      "Нужны визы: финансы, право",
     );
     expect(within(panel).queryByRole("button", { name: "На подпись" })).toBeNull();
   });
@@ -381,7 +381,7 @@ describe("Проект: договор (строка документа)", () =>
         await i18n.changeLanguage("en");
       });
       const blocker = await within(panel).findByTestId("contract-send-blocker");
-      expect(blocker).toHaveTextContent("Visas needed: accountant, lawyer");
+      expect(blocker).toHaveTextContent("Visas needed: finance, legal");
       expect(blocker).not.toHaveTextContent("бухгалтер");
     } finally {
       await i18n.changeLanguage("ru");
@@ -628,7 +628,7 @@ describe("Проект: договор — «Ожидает подписания
 });
 
 describe("Проект: акт (строка документа)", () => {
-  it("скан подписанного акта → «Подписан (скан)», проект «Выполнено»", async () => {
+  it("скан подписанного акта → «Подписан», проект «Выполнено»", async () => {
     const { panel } = await openCard("accountant@demo.example", 97);
 
     expect(await within(panel).findByText(/Акт у клиента на приёмке/)).toBeVisible();
@@ -659,7 +659,7 @@ describe("Проект: акт (строка документа)", () => {
       .getByText("Клиент принял акт в кабинете. Скана нет.")
       .closest("li") as HTMLElement;
     expect(within(detail).getByText("Принят")).toBeVisible(); // поле даты
-    expect(detail).not.toHaveTextContent("Подписан (скан)");
+    expect(detail).not.toHaveTextContent("Подписан");
     expect(detail).not.toHaveTextContent("скан сохранён");
     const docs = screen.getByRole("region", { name: "Документы проекта" });
     expect(docs).toHaveTextContent("АКТ-2026/044");
@@ -668,7 +668,7 @@ describe("Проект: акт (строка документа)", () => {
     expect(actRow).not.toHaveTextContent("скан");
   });
 
-  it("возврат заказчиком с причиной → «Возвращён с причиной» → выпустить заново", async () => {
+  it("возврат заказчиком с причиной → «Возвращён с замечаниями» → выпустить заново", async () => {
     const { panel } = await openCard("accountant@demo.example", 97);
     await click(panel, "Заказчик вернул акт…");
     const form = within(panel).getByRole("form", { name: "Заказчик вернул акт" });

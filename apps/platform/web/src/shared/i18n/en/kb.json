@@ -90,7 +90,7 @@
   "panel": {
     "actions": "Actions",
     "active": "Used in bot search",
-    "ingestError": "Indexing failed: {{error}}",
+    "ingestError": "Indexing failed: {{reason}}",
     "fields": {
       "language": "Language",
       "product": "Product",
@@ -126,7 +126,7 @@
       "hint": "This is how the bot's search sees the document: the bot answers from these pieces of text.",
       "empty": "No fragments yet: the document has not been indexed.",
       "number": "Fragment {{number}}",
-      "tokens": "{{count}} tokens"
+      "tokens": "size: {{count}}"
     }
   },
   "create": {

@@ -72,9 +72,9 @@ class MeUpdate(BaseModel):
     @model_validator(mode="after")
     def _not_empty(self) -> "MeUpdate":
         if not self.model_fields_set:
-            raise ValueError("укажите language или active_role")
+            raise ValueError("укажите язык или роль")
         if "language" in self.model_fields_set and self.language is None:
-            raise ValueError("language не может быть null")
+            raise ValueError("язык не может быть пустым")
         return self
 
 

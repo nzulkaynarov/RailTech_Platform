@@ -92,14 +92,12 @@ class EmployeeUpdate(BaseModel):
     @model_validator(mode="after")
     def _not_empty(self) -> "EmployeeUpdate":
         if not self.model_fields_set:
-            raise ValueError(
-                "укажите role_ids, position, is_active, transfer_to_user_id или deputy"
-            )
+            raise ValueError("укажите хотя бы одно поле")
         if "deputy" in self.model_fields_set and len(self.model_fields_set) > 1:
             raise ValueError("замещение ставится отдельным запросом, без других полей")
         for name in ("role_ids", "position", "is_active", "transfer_to_user_id"):
             if name in self.model_fields_set and getattr(self, name) is None:
-                raise ValueError(f"{name} не может быть null")
+                raise ValueError("поле не может быть пустым")
         return self
 
 
@@ -232,10 +230,10 @@ class RoleUpdate(BaseModel):
     @model_validator(mode="after")
     def _not_empty(self) -> "RoleUpdate":
         if not self.model_fields_set - {"version"}:
-            raise ValueError("укажите name, description, access или restricted_fields")
+            raise ValueError("укажите хотя бы одно поле")
         for name in self.model_fields_set:
             if getattr(self, name) is None:
-                raise ValueError(f"{name} не может быть null")
+                raise ValueError("поле не может быть пустым")
         if self.name is not None and not self.name.strip():
             raise ValueError("название не может быть пустым")
         return self

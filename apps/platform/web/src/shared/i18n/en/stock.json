@@ -133,7 +133,7 @@
     "caption": "Partner orders",
     "scroll": "Partner orders table",
     "columns": {
-      "number": "PO number",
+      "number": "Order number",
       "supplier": "Partner",
       "requests": "Requests and projects",
       "expected": "Expected date",
@@ -144,9 +144,9 @@
     },
     "status": {
       "draft": "Draft",
-      "sent": "Sent",
+      "sent": "Sent to supplier",
       "confirmed": "Confirmed",
-      "received": "Received",
+      "received": "Received at warehouse",
       "cancelled": "Cancelled"
     },
     "receipt": {
@@ -177,7 +177,7 @@
     "note": "Internal note",
     "noteHint": "The partner does not see it.",
     "partnerNote": "Comment to the partner",
-    "partnerNoteHint": "Sent with the order e-mail and shown in the partner cabinet. Fixed once sent.",
+    "partnerNoteHint": "Sent with the order e-mail and shown in the partner account. Fixed once sent.",
     "product": "Item",
     "productLabel": "Item, line {{n}}",
     "productRequired": "Choose an item",
@@ -310,7 +310,7 @@
     },
     "offer": {
       "label": "Partner price: {{text}}",
-      "incoterms": "basis {{code}}",
+      "incoterms": "basis {{terms}}",
       "validUntil": "valid until {{date}}",
       "expired": "expired {{date}}"
     },

@@ -89,7 +89,7 @@ test.describe("Склад и закупки: снабженец", () => {
     await request.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page.getByText("Запрос ушёл на sales@steel.example")).toBeVisible();
     const journal = page.getByRole("list", { name: "Запросы цены у партнёров" });
-    await expect(journal.getByText("Ждём ответ")).toBeVisible();
+    await expect(journal.getByText("Ждёт ответа")).toBeVisible();
     await expect(journal.getByText(/Демо Снабженцев → sales@steel\.example/)).toBeVisible();
     await settledScreenshot(page, "calc-stock");
     await journal.scrollIntoViewIfNeeded();

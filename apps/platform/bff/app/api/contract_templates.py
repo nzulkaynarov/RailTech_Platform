@@ -162,12 +162,12 @@ def _word_too_large() -> PlatformError:
 
 
 async def _word_body(request: Request) -> tuple[bytes, str]:
-    """Тело загрузки целиком до предела; multipart не разбирается (тип, архив и текст — ERP)."""
+    """Тело загрузки целиком до предела; форма с файлом не разбирается (тип, архив и текст — ERP)."""
     content_type = request.headers.get("content-type", "")
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Файл нужно передать формой multipart.",
+            "Приложите файл к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )

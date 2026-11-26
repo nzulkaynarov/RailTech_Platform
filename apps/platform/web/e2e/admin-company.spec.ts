@@ -223,7 +223,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     ).toBeVisible();
 
     await page.getByLabel("Маска номера").fill("{type}-");
-    await expect(page.getByText("В маске обязателен токен {seq}")).toBeVisible();
+    await expect(page.getByText("В маске обязательна часть {seq}")).toBeVisible();
     await expect(page.getByRole("button", { name: "Сохранить нумерацию" })).toBeDisabled();
     await page.getByLabel("Маска номера").fill("{prefix}{type}-{YYYY}-{seq}");
 

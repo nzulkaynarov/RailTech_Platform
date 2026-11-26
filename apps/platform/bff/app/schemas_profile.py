@@ -66,7 +66,7 @@ class ProfileUpdate(BaseModel):
         if not self.model_fields_set:
             raise ValueError("укажите хотя бы одно поле")
         if any(getattr(self, name) is None for name in self.model_fields_set):
-            raise ValueError("поле не может быть null")
+            raise ValueError("поле не может быть пустым")
         return self
 
     def to_crm(self) -> dict[str, Any]:

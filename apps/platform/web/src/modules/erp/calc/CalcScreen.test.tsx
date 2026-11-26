@@ -88,7 +88,7 @@ describe("Расчёт · без резолюции (РЕЗ-1)", () => {
     expect(within(panel).queryByText(/Письмо /)).toBeNull();
     expect(within(panel).getByText("Срок расчёта")).toBeVisible();
     expect(within(panel).getByText("Файл заявки загружается…")).toBeVisible();
-    expect(within(panel).queryByText("Резолюция директора")).toBeNull();
+    expect(within(panel).queryByText("Резолюция")).toBeNull();
     expect(within(panel).queryByText(/назначен\(а\) резолюцией/)).toBeNull();
     fireEvent.click(within(panel).getByRole("link", { name: "Открыть расчёт" }));
     expect(await screen.findByText(/срок расчёта 30\.10\.2026/)).toBeVisible();

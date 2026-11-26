@@ -30,7 +30,7 @@ export function templateFileName(
     .trim();
   const base = clean || "Шаблон";
   const titled = language === "ru" ? base : `${base} (${language.toUpperCase()})`;
-  return `${titled}, ред. ${String(edition)} — проект.${extension}`;
+  return titled + ", ред. " + String(edition) + " — проект." + extension;
 }
 
 const POLL_MS = 1000;

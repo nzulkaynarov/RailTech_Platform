@@ -150,7 +150,7 @@
     },
     "delivery": {
       "assembling": "Being assembled",
-      "in_transit": "On the way to our warehouse",
+      "in_transit": "On the way to you",
       "ready_to_ship": "Ready to ship",
       "shipped": "Shipped",
       "delivered": "Delivered",

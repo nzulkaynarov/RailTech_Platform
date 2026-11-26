@@ -12,6 +12,6 @@ export const AuthContext = createContext<AuthState | null>(null);
 /** Профиль и признак обязательной смены пароля; доступен под `AuthGate`. */
 export function useAuth(): AuthState {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("useAuth вне AuthGate");
+  if (!value) throw new Error("useAuth outside AuthGate");
   return value;
 }

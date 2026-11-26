@@ -29,11 +29,11 @@ import { TabsBar } from "../../../shared/ui/TabsBar";
 import { DocumentSheet } from "./DocumentSheet";
 import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
-import { StatusTag } from "../../../shared/ui/StatusTag";
 
 import "./documents.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { PersonRefCell } from "../../PersonRefCell";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PAGE_SIZE = 25;
 
@@ -240,8 +240,8 @@ function RowStatus({ row }: { row: EdsDocumentRow }) {
         kind={row.kind}
         status={row.status}
         awaitingSignature={row.awaiting_signature}
+        undelivered={row.undelivered}
       />
-      {row.undelivered ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
       {row.awaiting_signature && row.signer ? (
         <div className="pf-hint">{t("list.onSigningAt", { name: row.signer.full_name })}</div>
       ) : null}
@@ -644,38 +644,40 @@ export function DocumentsPage() {
     </FilterBar>
   );
   return (
-    <div className="pf-docs">
-      <PageHeader
-        title={title}
-        {...(canSee(me, { resource: "company.settings" })
-          ? {
-              // ЕВ-3а: «Шаблоны» ушли из меню «Документов» — вход отсюда и из «Настроек · Компания»
-              extra: <Link to="/admin/templates">{t("modules:admin.templatesLink")}</Link>,
-            }
-          : {})}
-      />
-      {mobile ? (
-        <>
-          {filterBar}
-          <Card styles={{ body: { padding: 0 } }}>{body}</Card>
-        </>
-      ) : (
-        // Одна строка вкладок видов, под ней одна строка фильтров и рамка списка
-        <TabsBar
-          id="pf-docs-tabs"
-          label={t("documents:list.tabs.label")}
-          activeKey={tab}
-          onChange={(key) => {
-            setFilter({ kind: key === "all" ? null : key });
-          }}
-          items={kindTabs.map((key) => ({ key, label: t(`documents:list.tabs.${key}`) }))}
-          stack
-        >
-          {filterBar}
-          <Card styles={{ body: { padding: 0 } }}>{body}</Card>
-        </TabsBar>
-      )}
-      {docId ? <DocumentSheet id={docId} /> : null}
-    </div>
+    <PageFrame layout="registry">
+      <div className="pf-docs">
+        <PageHeader
+          title={title}
+          {...(canSee(me, { resource: "company.settings" })
+            ? {
+                // ЕВ-3а: «Шаблоны» ушли из меню «Документов» — вход отсюда и из «Настроек · Компания»
+                extra: <Link to="/admin/templates">{t("modules:admin.templatesLink")}</Link>,
+              }
+            : {})}
+        />
+        {mobile ? (
+          <>
+            {filterBar}
+            <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+          </>
+        ) : (
+          // Одна строка вкладок видов, под ней одна строка фильтров и рамка списка
+          <TabsBar
+            id="pf-docs-tabs"
+            label={t("documents:list.tabs.label")}
+            activeKey={tab}
+            onChange={(key) => {
+              setFilter({ kind: key === "all" ? null : key });
+            }}
+            items={kindTabs.map((key) => ({ key, label: t(`documents:list.tabs.${key}`) }))}
+            stack
+          >
+            {filterBar}
+            <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+          </TabsBar>
+        )}
+        {docId ? <DocumentSheet id={docId} /> : null}
+      </div>
+    </PageFrame>
   );
 }

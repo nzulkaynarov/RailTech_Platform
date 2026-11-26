@@ -4,7 +4,7 @@
 \b(Telegram|Телеграм\w*|телеграм\w*)\b	L	*	staff	корпоративный мессенджер / «бот» / «чат»	клиентский канал — разрешён в кабинете и письмах
 \b(WhatsApp|Ватсап\w*)\b	M	*	*	мессенджер
 \b(Gmail|Google|Гугл\w*|Yandex|Яндекс\w*|Телемост\w*|Telemost|Zoom|Outlook|Microsoft|Bitrix\w*|Битрикс\w*|Jira|Slack)\b	H	*	*	рабочая почта / рабочий календарь / видеовстреча	memory no-vendor-names-in-ui
-\b(Didox|Дидокс\w*|soliq\.uz|Faktura\.uz|(?<!-)Faktura|E-?IMZO|Е-?ИМЗО|MyID|OneID|Payme|(?-i:Click)|Uzum)\b	H	*	*	ЭДО / электронная подпись / «проверка в налоговой» / оплата
+\b(Didox|Дидокс\w*|soliq\.uz|Faktura\.uz|(?<!-)Faktura|E-?IMZO|Е-?ИМЗО|MyID|OneID|Payme|(?-i:Click\b(?!\s+(?:a|an|the|on|to|here)\b|\s+[“"«]))|Uzum)\b	H	*	*	ЭДО / электронная подпись / «проверка в налоговой» / оплата
 (?-i:\b1[СC]\b)|1С:Предприятие	M	ru	*	учётная программа
 \bRailTech\b	M	*	*	{{company}} — название компании из Настроек	своё имя тоже не хардкодим (memory)
 (?-i:\bSoliq\b)	H	ru,en	*	оплата / «проверка в налоговой»	название сервиса; в uz «soliq» — обычное слово «налог»

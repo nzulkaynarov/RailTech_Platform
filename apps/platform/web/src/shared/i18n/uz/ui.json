@@ -83,11 +83,30 @@
     "tooLarge": "«{{name}}» fayli {{max}} dan katta — kiçikroq fayl tanlang",
     "wrongType": "«{{name}}» fayli mos emas: {{accept}} mumkin"
   },
-  "pdfViewer": {
+  "documentViewer": {
+    "toolbar": "Köriş asboblari",
+    "scaleMode": "Masştab",
+    "fit": "Eni böyiça",
+    "actual": "100 %",
+    "zoomOut": "Kiçiklaştiriş",
+    "zoomIn": "Kattalaştiriş",
+    "page": "Sahifa",
+    "pageOf": "{{total}} dan",
+    "search": "Matn böyiça qidiriş",
+    "searchPlaceholder": "Hüjjatdan qidiriş",
+    "matches": "{{total}} dan {{current}}",
+    "noMatches": "Topilmadi",
+    "prevMatch": "Oldingisi",
+    "nextMatch": "Keyingisi",
+    "download": "Yuklab oliş",
+    "full": "Bütün ekran",
+    "collapse": "Yiğiş",
+    "thumbs": "Sahifalar",
+    "thumbPage": "{{page}}-sahifa",
+    "pageLabel": "«{{name}}», {{page}}-sahifa, jami {{total}}",
+    "pagesCount": "PDF · {{count}} sahifa",
     "region": "«{{name}}» fayli sahifalari",
-    "page": "«{{name}}», {{page}}-sahifa, jami {{total}}",
-    "error": "Faylni köriş uçun oçib bölmadi. Uni yuklab oling.",
-    "truncated": "{{total}} sahifadan {{shown}} tasi körsatilgan. Qolgani yuklab olingan faylda."
+    "error": "Faylni köriş uçun oçib bölmadi. Uni yuklab oling."
   },
   "bodyEditor": {
     "addRow": "+ qator",

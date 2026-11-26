@@ -81,7 +81,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Кому")).toHaveValue("Директор");
+    await expect(page.getByLabel("Кому")).toHaveValue("На согласование");
 
     await fillMemo(
       page,
@@ -109,7 +109,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page
         .getByRole("region", { name: "Согласование" })
-        .getByText("Вы → Директор → Бухгалтер (есть сумма)"),
+        .getByText("Вы → согласование → оплата (есть сумма)"),
     ).toBeVisible();
     await openStep(page, CHECK);
     await settledScreenshot(page, "form-filled");
@@ -257,7 +257,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page
         .getByRole("list", { name: "Прикреплённые файлы" })
-        .getByText("Допустимы PDF, изображения и документы Office."),
+        .getByText("Допустимы PDF, изображения и файлы Word, Excel и PowerPoint."),
     ).toBeVisible();
     await page.getByRole("button", { name: "Убрать файл virus.exe" }).click();
     await expect(page.getByRole("list", { name: "Прикреплённые файлы" })).toHaveCount(0);

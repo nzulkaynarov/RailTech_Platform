@@ -19,6 +19,7 @@ import { type AuditFilterValues, NO_FILTERS, hasFilters } from "./filters";
 import { AuditList } from "./AuditList";
 import { JournalFilter } from "../journal/JournalFilter";
 import { companyDayStart } from "./describe";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "./audit.css";
 
@@ -133,7 +134,7 @@ export function AuditPage() {
   };
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader title={title} />
       <JournalFilter current="people" />
       <div ref={blockRef}>
@@ -195,6 +196,6 @@ export function AuditPage() {
           />
         )}
       </PanelPortal>
-    </>
+    </PageFrame>
   );
 }
