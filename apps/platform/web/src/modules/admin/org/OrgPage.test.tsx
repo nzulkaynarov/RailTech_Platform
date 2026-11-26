@@ -204,9 +204,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     // тот же сотрудник входит позже: профиль мока считается по выданным ролям и матрице
     endSession();
     signIn("manager@demo.example");
-    const me = buildMe(
-      readSession() ?? { userId: "", language: "ru", mustChangePassword: false },
-    );
+    const me = buildMe(readSession() ?? { userId: "", language: "ru", mustChangePassword: false });
     expect(me?.roles).toEqual([ref("DIRECTOR")]);
     expect(me?.resources["erp.calc"]).toBe("full");
     expect(me?.modules).toContain("admin");

@@ -93,7 +93,7 @@ function viewRoles(explicit: string | null): { all: MockRole[]; view: MockRole[]
   const session = readSession();
   const roles = session ? sessionRoles(session) : undefined;
   if (!session || !roles) return undefined;
-  const chosen = roles.all.find((r) => r.id === (explicit));
+  const chosen = roles.all.find((r) => r.id === explicit);
   return { all: roles.all, view: chosen ? [chosen] : roles.all };
 }
 
