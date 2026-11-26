@@ -42,6 +42,7 @@ import {
   zoneRows,
 } from "./model";
 
+import { PageFrame } from "../../../shared/ui/PageFrame";
 import "../settings/settings.css";
 
 /** Какая карточка «Сервисов» проверяет шаг первого запуска: без проверки шаг остаётся «заполнено». */
@@ -260,7 +261,7 @@ function StateBody() {
   const done = readiness.filter((r) => r.state === "works" || r.state === "filled").length;
 
   return (
-    <div className="pf-set-home">
+    <PageFrame layout="registry" className="pf-set-home">
       <PageHeader title={t("modules:admin.sections.overview")} />
       <section aria-labelledby="pf-set-state-attention">
         <Card styles={{ body: { padding: 0 } }}>
@@ -362,6 +363,6 @@ function StateBody() {
           </Card>
         </section>
       ) : null}
-    </div>
+    </PageFrame>
   );
 }

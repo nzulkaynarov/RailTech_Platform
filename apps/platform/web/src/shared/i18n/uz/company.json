@@ -224,6 +224,8 @@
     },
     "start": "Boşlanğiç qiymat",
     "startHint": "Birinçi raqam = qiymat + 1",
+    "formatTitle": "Raqam formati",
+    "counterTitle": "Hisoblagich",
     "labelsTitle": "Raqam turlarining belgilari",
     "labelsHint": "Raqam barça tillarda bir xil: faqat lotin harflari A-Z va raqamlar.",
     "labelInvalid": "Faqat lotin harflari A-Z va raqamlar",

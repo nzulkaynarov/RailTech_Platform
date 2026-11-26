@@ -224,6 +224,8 @@
     },
     "start": "Start value",
     "startHint": "First number = value + 1",
+    "formatTitle": "Number format",
+    "counterTitle": "Counter",
     "labelsTitle": "Number labels",
     "labelsHint": "A number is the same in every language: Latin letters A-Z and digits only.",
     "labelInvalid": "Latin letters A-Z and digits only",
