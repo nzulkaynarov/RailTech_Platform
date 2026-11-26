@@ -131,6 +131,10 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "word_base_changed",
         "Текст шаблона изменился после проверки. Загрузите файл ещё раз.",
     ),
+    "WORD_FILE_CHANGED": (
+        "word_file_changed",
+        "Загружен не тот файл, что проверялся. Загрузите файл ещё раз.",
+    ),
     "CONTACT_EMAIL_AMBIGUOUS": (
         "contact_email_ambiguous",
         "Этот адрес уже указан у контакта другой компании кабинета. Укажите другой адрес.",

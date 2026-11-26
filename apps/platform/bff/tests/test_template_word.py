@@ -44,7 +44,9 @@ def erp_check(**over: Any) -> dict[str, Any]:
         },
         "unknown_placeholders": ["warehouse.name"],
         "missing_blocks": [],
-        "images_dropped": 2,
+        "dropped": [{"kind": "images", "count": 2}, {"kind": "colors", "count": 1}],
+        "lost_markup": [{"kind": "links", "count": 1}],
+        "file_sha": "fedcba9876543210",
         "base": BASE,
         "locked": False,
         "can_apply": True,
@@ -125,7 +127,7 @@ async def test_check_forwards_the_file_untouched_and_translates_the_answer(
     assert body["can_apply"] is True
     assert body["items"][0]["segments"][1] == {"op": "del", "text": "Поставка."}
     assert body["summary"]["changed"] == ["1"]
-    assert body["images_dropped"] == 2
+    assert body["dropped"][0] == {"kind": "images", "count": 2}
     assert (
         "body_html" not in body
     )  # новый текст наружу не отдаётся: он сохраняется только через «Принять»
@@ -144,13 +146,15 @@ async def test_apply_sends_the_base_and_returns_the_template(
     )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     response = await upload(
-        web, f"/api/v1/document-templates/12/word/apply?language=en&base={BASE}"
+        web,
+        f"/api/v1/document-templates/12/word/apply?language=en&base={BASE}&file_sha=fedcba9876543210&confirm_loss=true",
     )
     assert response.status_code == 200, response.text
     check(response, "/document-templates/{id}/word/apply", "post")
     assert response.json()["edition"] == 2
     params = route.calls.last.request.url.params
     assert (params["mode"], params["language"], params["base"]) == ("apply", "en", BASE)
+    assert (params["file_sha"], params["confirm_loss"]) == ("fedcba9876543210", "true")
 
 
 async def test_apply_needs_a_proper_base(web: Web, be: Backends) -> None:
@@ -208,8 +212,14 @@ async def test_text_changed_and_locked_are_conflicts(web: Web, be: Backends) -> 
         return_value=httpx.Response(400, json={"detail": "TEMPLATE_LOCKED"})
     )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
-    changed = await upload(web, f"/api/v1/document-templates/12/word/apply?language=ru&base={BASE}")
-    locked = await upload(web, f"/api/v1/document-templates/13/word/apply?language=ru&base={BASE}")
+    changed = await upload(
+        web,
+        f"/api/v1/document-templates/12/word/apply?language=ru&base={BASE}&file_sha=fedcba9876543210",
+    )
+    locked = await upload(
+        web,
+        f"/api/v1/document-templates/13/word/apply?language=ru&base={BASE}&file_sha=fedcba9876543210",
+    )
     assert changed.status_code == 409
     assert changed.json()["details"]["reason"] == "word_base_changed"
     assert locked.status_code == 409

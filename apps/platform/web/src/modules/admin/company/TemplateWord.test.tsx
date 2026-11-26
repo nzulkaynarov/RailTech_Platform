@@ -37,7 +37,9 @@ const CHECK: TemplateWordCheck = {
   can_apply: true,
   locked: false,
   base: "0123456789abcdef",
-  images_dropped: 0,
+  file_sha: "fedcba9876543210",
+  dropped: [],
+  lost_markup: [],
   unknown_placeholders: [],
   missing_blocks: [],
   summary: { changed: ["1"], added: ["3"], removed: [], total: 2, more: 0 },
@@ -148,7 +150,7 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
     URL.revokeObjectURL = vi.fn();
     fireEvent.click(screen.getByRole("button", { name: "Скачать Word" }));
     await waitFor(() => {
-      expect(names).toEqual(["Шаблон (ru), ред. 1 — проект.docx"]);
+      expect(names).toEqual(["Договор поставки (наш), ред. 1 — проект.docx"]);
     });
   });
 
@@ -169,7 +171,7 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
     fireEvent.click(within(sheet).getByRole("button", { name: "Принять изменения" }));
     await screen.findByText("Текст шаблона обновлён");
     expect(calls[1]?.url).toBe(
-      "/api/v1/document-templates/2/word/apply?language=ru&base=0123456789abcdef",
+      "/api/v1/document-templates/2/word/apply?language=ru&base=0123456789abcdef&file_sha=fedcba9876543210",
     );
     expect(calls[1]?.file).toBe("Правки юриста.docx");
     await waitFor(() => {
@@ -212,16 +214,85 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
       unknown_placeholders: ["warehouse_name", "deal_sum"],
       missing_blocks: [{ code: "doc.totals", label: "Блок: итоги и НДС" }],
       can_apply: false,
-      images_dropped: 2,
+      dropped: [
+        { kind: "images", count: 2 },
+        { kind: "colors", count: 1 },
+      ],
     });
     pick("a.docx");
     const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
-    expect(within(sheet).getByText("Неизвестные подстановки: 2")).toBeInTheDocument();
+    expect(within(sheet).getByText("Неизвестные поля: 2")).toBeInTheDocument();
     expect(within(sheet).getByText("{{warehouse_name}}")).toBeInTheDocument();
     expect(within(sheet).getByText("{{deal_sum}}")).toBeInTheDocument();
     expect(within(sheet).getByText("Блок: итоги и НДС")).toBeInTheDocument();
-    expect(within(sheet).getByText("Рисунки из файла не сохраняются: 2.")).toBeInTheDocument();
+    expect(within(sheet).getByText("Рисунки: 2")).toBeInTheDocument();
+    expect(within(sheet).getByText("Цвет текста: 1")).toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: "Принять изменения" })).toBeDisabled();
+  });
+
+  it("в текущем тексте есть ссылки и рисунки: принять можно только после подтверждения, оно уходит в запрос", async () => {
+    await openEditor();
+    const calls = stubWord({
+      lost_markup: [
+        { kind: "links", count: 2 },
+        { kind: "merged_cells", count: 1 },
+      ],
+    });
+    pick("a.docx");
+    const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(within(sheet).getByText("Ссылки: 2")).toBeInTheDocument();
+    expect(within(sheet).getByText("Объединённые ячейки: 1")).toBeInTheDocument();
+    const accept = within(sheet).getByRole("button", { name: "Принять изменения" });
+    expect(accept).toBeDisabled();
+    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Понимаю, это пропадёт" }));
+    expect(accept).toBeEnabled();
+    fireEvent.click(accept);
+    await screen.findByText("Текст шаблона обновлён");
+    expect(calls[1]?.url).toBe(
+      "/api/v1/document-templates/2/word/apply?language=ru&base=0123456789abcdef&file_sha=fedcba9876543210&confirm_loss=true",
+    );
+  });
+
+  it("слова те же, но в файле цвета и комментарии: «изменений нет» не говорится, принять нечего", async () => {
+    await openEditor();
+    stubWord({
+      unchanged: false,
+      can_apply: false,
+      summary: { changed: [], added: [], removed: [], total: 0, more: 0 },
+      items: [],
+      dropped: [
+        { kind: "comments", count: 1 },
+        { kind: "highlights", count: 3 },
+      ],
+    });
+    pick("a.docx");
+    const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(within(sheet).queryByText(/Изменений нет/)).toBeNull();
+    expect(
+      within(sheet).getByText(/Слова те же, но в файле есть то, что не сохраняется/),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByText("Комментарии: 1")).toBeInTheDocument();
+    expect(within(sheet).getByText("Выделение цветом: 3")).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "Принять изменения" })).toBeDisabled();
+  });
+
+  it("обрывки полей называются как есть, коды — в фигурных скобках", async () => {
+    await openEditor();
+    stubWord({ unknown_placeholders: ["{{buyer name}", "deal_sum"], can_apply: true });
+    pick("a.docx");
+    const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(within(sheet).getByText("{{buyer name}")).toBeInTheDocument();
+    expect(within(sheet).getByText("{{deal_sum}}")).toBeInTheDocument();
+  });
+
+  it("файл скачан до чужой правки: сказано словами, панель не открывается", async () => {
+    await openEditor();
+    stubWord({}, "word_stale");
+    pick("old.docx");
+    expect(
+      await screen.findByText(/Шаблон изменился после скачивания: скачайте его заново/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Что изменилось/ })).toBeNull();
   });
 
   it("плохой файл: понятная причина, панель не открывается", async () => {

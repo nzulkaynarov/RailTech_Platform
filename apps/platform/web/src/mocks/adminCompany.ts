@@ -752,10 +752,13 @@ export const adminCompanyHandlers = [
   http.get("*/document-templates/:id/word", ({ request }) => {
     if (!readSession()) return new HttpResponse(null, { status: 401 });
     const language = new URL(request.url).searchParams.get("language") ?? "ru";
+    const row = readCompanyMock().docTemplates.find((t) => t.id === templateIdOf(request));
+    // Имя по одному правилу: «<Название>, ред. <N> — проект.docx», язык, кроме русского, — в названии
+    const name = `${row?.name ?? "Шаблон"}${language === "ru" ? "" : ` (${language.toUpperCase()})`}, ред. ${String(row?.edition ?? 1)} — проект.docx`;
     return new HttpResponse("PK-docx", {
       headers: {
         "content-type": WORD_MIME,
-        "content-disposition": `attachment; filename="template.docx"; filename*=UTF-8''${encodeURIComponent(`Шаблон (${language}), ред. 1 — проект.docx`)}`,
+        "content-disposition": `attachment; filename="template.docx"; filename*=UTF-8''${encodeURIComponent(name)}`,
       },
     });
   }),
@@ -772,7 +775,9 @@ export const adminCompanyHandlers = [
       can_apply: !same && !(row?.is_locked ?? false),
       locked: row?.is_locked ?? false,
       base: "0123456789abcdef",
-      images_dropped: text.includes("IMAGES") ? 2 : 0,
+      dropped: text.includes("IMAGES") ? [{ kind: "images", count: 2 }] : [],
+      lost_markup: [],
+      file_sha: "fedcba9876543210",
       unknown_placeholders: text.includes("UNKNOWN") ? ["warehouse.name"] : [],
       missing_blocks: [],
       summary: {

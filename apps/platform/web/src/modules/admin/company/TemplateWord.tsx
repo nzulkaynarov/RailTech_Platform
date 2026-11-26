@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Segmented } from "antd";
+import { Alert, App, Button, Checkbox, Segmented } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -88,12 +88,15 @@ function CheckSheet({
   language: DocumentTemplateLanguage;
   applying: boolean;
   error: unknown;
-  onAccept: () => void;
+  onAccept: (confirmLoss: boolean) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation("company");
+  const [understood, setUnderstood] = useState(false);
   const count = (kind: WordChange["kind"]) => check.items.filter((i) => i.kind === kind).length;
   const none = check.unchanged;
+  const sameText = !none && !check.formatting_only && check.items.length === 0;
+  const loses = check.lost_markup.length > 0;
   return (
     <FormSheet
       layer="drawer"
@@ -101,8 +104,10 @@ function CheckSheet({
       title={t("templates.word.sheetTitle", { language: language.toUpperCase() })}
       submitLabel={t("templates.word.accept")}
       saving={applying}
-      submitDisabled={!check.can_apply}
-      onSubmit={onAccept}
+      submitDisabled={!check.can_apply || (loses && !understood)}
+      onSubmit={() => {
+        onAccept(loses);
+      }}
       onCancel={onCancel}
       error={
         error ? (
@@ -115,6 +120,8 @@ function CheckSheet({
           <p className="pf-co-hint" role="status">
             {t("templates.word.nothingChanged")}
           </p>
+        ) : sameText ? (
+          <p role="status">{t("templates.word.sameTextDropped")}</p>
         ) : (
           <p role="status">
             {check.formatting_only
@@ -155,7 +162,9 @@ function CheckSheet({
                 <ul className="pf-co-word-list">
                   {check.unknown_placeholders.map((code) => (
                     <li key={code}>
-                      <code className="pf-co-mono">{`{{${code}}}`}</code>
+                      <code className="pf-co-mono">
+                        {code.includes("{") ? code : `{{${code}}}`}
+                      </code>
                     </li>
                   ))}
                 </ul>
@@ -163,10 +172,53 @@ function CheckSheet({
             }
           />
         ) : null}
-        {check.images_dropped > 0 ? (
-          <p className="pf-co-hint">
-            {t("templates.word.images", { count: check.images_dropped })}
-          </p>
+        {check.dropped.length > 0 ? (
+          <Alert
+            type="info"
+            showIcon
+            message={t("templates.word.dropped")}
+            description={
+              <ul className="pf-co-word-list">
+                {check.dropped.map((item) => (
+                  <li key={item.kind}>
+                    {t(`templates.word.droppedKind.${item.kind}`, {
+                      count: item.count,
+                      defaultValue: item.kind,
+                    })}
+                  </li>
+                ))}
+              </ul>
+            }
+          />
+        ) : null}
+        {loses ? (
+          <Alert
+            type="warning"
+            showIcon
+            message={t("templates.word.loses")}
+            description={
+              <>
+                <ul className="pf-co-word-list">
+                  {check.lost_markup.map((item) => (
+                    <li key={item.kind}>
+                      {t(`templates.word.lostKind.${item.kind}`, {
+                        count: item.count,
+                        defaultValue: item.kind,
+                      })}
+                    </li>
+                  ))}
+                </ul>
+                <Checkbox
+                  checked={understood}
+                  onChange={(event) => {
+                    setUnderstood(event.target.checked);
+                  }}
+                >
+                  {t("templates.word.understood")}
+                </Checkbox>
+              </>
+            }
+          />
         ) : null}
         <ol className="pf-co-word-changes" aria-label={t("templates.word.changesLabel")}>
           {check.items.map((item, i) => (
@@ -273,10 +325,19 @@ export function useTemplateWord(
       },
     );
   };
-  const accept = () => {
+  const accept = (confirmLoss: boolean) => {
     if (!target || !file || !check) return;
     applying.mutate(
-      { id: target.id, data: { file }, params: { language, base: check.base } },
+      {
+        id: target.id,
+        data: { file },
+        params: {
+          language,
+          base: check.base,
+          file_sha: check.file_sha,
+          ...(confirmLoss ? { confirm_loss: true } : {}),
+        },
+      },
       {
         onSuccess: (next) => {
           void queryClient.invalidateQueries({ queryKey: getListDocumentTemplatesQueryKey() });

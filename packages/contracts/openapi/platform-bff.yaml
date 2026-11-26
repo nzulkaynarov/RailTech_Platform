@@ -2790,7 +2790,7 @@ paths:
         подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось
         относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные
         блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`,
-        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big`, `word_too_complex`, `word_file_required`.
+        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже.
         Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`,
         `company.settings` или `eds.visa.legal` — полный.
       parameters:
@@ -2841,6 +2841,8 @@ paths:
         - $ref: '#/components/parameters/CompanyItemId'
         - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
         - {name: base, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток текста из `checkTemplateWord`'}
+        - {name: file_sha, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток файла из `checkTemplateWord`: другой файл — 409'}
+        - {name: confirm_loss, in: query, required: false, schema: {type: boolean}, description: 'Подтверждение: пропадёт то, что в `lost_markup` проверки; без него при непустом списке — 422 `word_loss_not_confirmed`'}
       requestBody:
         required: true
         content:
@@ -25358,22 +25360,39 @@ components:
       properties:
         code: {type: string}
         label: {type: string}
+    WordCount:
+      type: object
+      additionalProperties: false
+      required: [kind, count]
+      properties:
+        kind: {type: string}
+        count: {type: integer}
     TemplateWordCheck:
       type: object
       additionalProperties: false
       description: Что изменится, если принять загруженный Word. Ничего не сохранено.
-      required: [unchanged, formatting_only, can_apply, locked, base, images_dropped, unknown_placeholders, missing_blocks, summary, items]
+      required: [unchanged, formatting_only, can_apply, locked, base, file_sha, dropped, lost_markup, unknown_placeholders, missing_blocks, summary, items]
       properties:
-        unchanged: {type: boolean, description: 'Изменений нет (скачал и загрузил без правок)'}
+        unchanged: {type: boolean, description: 'Изменений нет: текст и оформление те же и ничего не отброшено'}
         formatting_only: {type: boolean, description: 'Текст тот же, изменилось только оформление'}
         can_apply: {type: boolean, description: 'Принять можно: есть изменения, шаблон не закреплён, обязательные блоки на месте'}
         locked: {type: boolean, description: 'Закреплённый шаблон договора: правки только новой редакцией'}
         base: {type: string, description: 'Отпечаток текущего текста; отдаётся обратно в «Принять»'}
-        images_dropped: {type: integer, description: 'Сколько рисунков в файле отброшено'}
+        file_sha: {type: string, description: 'Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409'}
+        dropped:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordCount'
+          description: 'Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights`'
+        lost_markup:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordCount'
+          description: 'Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя'
         unknown_placeholders:
           type: array
           items: {type: string}
-          description: 'Коды подстановок нового текста, которых система не знает (шаблон с ними нельзя отправить на утверждение)'
+          description: 'Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение'
         missing_blocks:
           type: array
           items:

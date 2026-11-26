@@ -68,11 +68,13 @@ for (const width of WIDTHS) {
 
       const download = page.waitForEvent("download");
       await editor.getByRole("button", { name: "Скачать Word" }).click();
-      expect((await download).suggestedFilename()).toBe("Шаблон (ru), ред. 1 — проект.docx");
+      expect((await download).suggestedFilename()).toBe(
+        "Договор поставки (наш), ред. 1 — проект.docx",
+      );
 
       await upload(page, "UNKNOWN IMAGES");
       const sheet = page.getByRole("dialog", { name: /Что изменилось · RU/ });
-      await expect(sheet.getByText("Неизвестные подстановки: 1")).toBeVisible();
+      await expect(sheet.getByText("Неизвестные поля: 1")).toBeVisible();
       await expect(sheet.getByText("Пункт 1 · изменён")).toBeVisible();
       await expect(sheet.getByText("{{warehouse.name}}")).toBeVisible();
       await expect(sheet.getByRole("button", { name: "Принять изменения" })).toBeEnabled();

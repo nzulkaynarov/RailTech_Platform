@@ -11,4 +11,13 @@ export type ApplyTemplateWordParams = {
    * @pattern ^[0-9a-f]{16}$
    */
   base: string;
+  /**
+   * Отпечаток файла из `checkTemplateWord`: другой файл — 409
+   * @pattern ^[0-9a-f]{16}$
+   */
+  file_sha: string;
+  /**
+   * Подтверждение: пропадёт то, что в `lost_markup` проверки; без него при непустом списке — 422 `word_loss_not_confirmed`
+   */
+  confirm_loss?: boolean;
 };

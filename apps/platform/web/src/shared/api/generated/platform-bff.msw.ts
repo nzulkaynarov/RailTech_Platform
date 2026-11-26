@@ -2693,7 +2693,19 @@ export const getCheckTemplateWordResponseMock = (
   can_apply: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   base: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  images_dropped: faker.number.int(),
+  file_sha: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  dropped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      count: faker.number.int(),
+    }),
+  ),
+  lost_markup: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      count: faker.number.int(),
+    }),
+  ),
   unknown_placeholders: Array.from(
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,

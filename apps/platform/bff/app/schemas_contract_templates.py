@@ -123,6 +123,11 @@ class WordMissingBlock(BaseModel):
     label: str
 
 
+class WordCount(BaseModel):
+    kind: str
+    count: int
+
+
 class TemplateWordCheck(BaseModel):
     """Что изменится, если принять загруженный Word. Ничего не сохранено; `base` — в «Принять»."""
 
@@ -133,11 +138,21 @@ class TemplateWordCheck(BaseModel):
         description="Закреплённый шаблон договора: правки — только в новой редакции"
     )
     base: str
-    images_dropped: int
+    file_sha: str
+    dropped: list[WordCount]
+    lost_markup: list[WordCount]
     unknown_placeholders: list[str]
     missing_blocks: list[WordMissingBlock]
     summary: WordChangeSummary
     items: list[WordChange]
+
+
+def _counts(raw: Any) -> list[WordCount]:
+    return [
+        WordCount(kind=text(i.get("kind")), count=i["count"])
+        for i in raw or []
+        if isinstance(i, dict) and isinstance(i.get("count"), int)
+    ]
 
 
 def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
@@ -168,9 +183,9 @@ def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
         can_apply=raw.get("can_apply") is True,
         locked=raw.get("locked") is True,
         base=text(raw.get("base")),
-        images_dropped=raw.get("images_dropped")
-        if isinstance(raw.get("images_dropped"), int)
-        else 0,
+        file_sha=text(raw.get("file_sha")),
+        dropped=_counts(raw.get("dropped")),
+        lost_markup=_counts(raw.get("lost_markup")),
         unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
         missing_blocks=[
             WordMissingBlock(code=text(b.get("code")), label=text(b.get("label")))

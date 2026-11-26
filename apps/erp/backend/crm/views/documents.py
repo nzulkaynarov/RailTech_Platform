@@ -622,12 +622,21 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         try:
             if mode == "apply":
                 updated = word_service.apply(
-                    template, request.user, language, content, upload.name, request.query_params.get("base") or ""
+                    template,
+                    request.user,
+                    language,
+                    content,
+                    upload.name,
+                    request.query_params.get("base") or "",
+                    sha=request.query_params.get("file_sha") or "",
+                    confirm_loss=request.query_params.get("confirm_loss") == "true",
                 )
                 return Response(self.get_serializer(updated).data)
             return Response(word_service.check(template, language, content, upload.name))
         except word_service.WordError as exc:
-            return Response({"detail": exc.code}, status=409 if exc.code == "WORD_BASE_CHANGED" else 400)
+            return Response(
+                {"detail": exc.code}, status=409 if exc.code in ("WORD_BASE_CHANGED", "WORD_FILE_CHANGED") else 400
+            )
         except DjangoValidationError as exc:
             return _template_error(exc)
 

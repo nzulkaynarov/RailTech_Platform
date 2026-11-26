@@ -303,9 +303,9 @@
       },
       "requests": {
         "title": "Arizalar",
-        "hint": "Ariza hisob-kitobgaça nima boʼladi.",
+        "hint": "Ariza hisob-kitobgaça nima böladi.",
         "note": "Qoida yangi arizalarga amal qiladi.",
-        "save": "Qoidani saqlash"
+        "save": "Qoidani saqlaş"
       }
     },
     "contract_auto_send": "Tasdiqlangan şablon böyiça şartnoma TT qabul qilingaç özi Kabinetga ketadi",
@@ -317,7 +317,7 @@
     "contract_four_eyesHint": "Hamkor şartnomasini tayyorlagan kişi u böyiça özi qaror qilmaydi. Yagona ega tasdiqlaş bilan qaror qiladi, yozuv jurnalga tuşadi.",
     "contract_deviations_allowedHint": "Çetlanişli şartnoma viza yönalişidan ötadi va vizalargaça mijozga ketmaydi.",
     "request_resolution": "Hisob-kitobdan oldin rezolyusiya",
-    "request_resolutionHint": "Rezolyusiya kerak boʼlmasa, istalgan kanaldan kelgan ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
+    "request_resolutionHint": "Rezolyusiya kerak bölmasa, istalgan kanaldan kelgan ariza darhol masʼul xodimga hisob-kitobga ketadi. Rezolyusiyani «Rezolyusiya» huquqi egalari beradi (Rollar va huquqlar).",
     "resolution": {
       "always": "Har bir arizada",
       "never": "Kerak emas"
@@ -403,11 +403,11 @@
       "open": "Oçiş",
       "openNamed": "Oçiş: {{name}}",
       "body": "Şablon matni (HTML)",
-      "bodyHint": "{{example}} körinişidagi örinbosarlar hujjat maʼlumotlari bilan almaştiriladi.",
+      "bodyHint": "{{example}} kabi maydonlar hujjat maʼlumotlari bilan almaştiriladi.",
       "activeLabel": "Şablon amal qiladi",
-      "placeholders": "Mavjud örinbosarlar",
-      "unknownWarning": "Nomaʼlum örinbosar {{token}}",
-      "placeholdersUnknown": "Nomaʼlum örinbosarlar: {{count}}",
+      "placeholders": "Mavjud maydonlar",
+      "unknownWarning": "Nomaʼlum maydon {{token}}",
+      "placeholdersUnknown": "Nomaʼlum maydonlar: {{count}}",
       "unknownTitle": "Röyxatda yöq — hujjatga özgarişsiz tuşadi",
       "unknownMark": "röyxatda yöq",
       "previewTitle": "Test maʼlumotlardagi namuna",
@@ -443,9 +443,9 @@
         "receipt": "Tölov kvitansiyasi",
         "delivery_note": "Yuk xati"
       },
-      "bodyTitle": "Shablon matni",
-      "showMarkup": "Belgilashni ko‘rsatish",
-      "hideMarkup": "Belgilashni yashirish"
+      "bodyTitle": "Şablon matni",
+      "showMarkup": "Belgilaşni körsatiş",
+      "hideMarkup": "Belgilaşni yaşiriş"
     },
     "emails": {
       "key": "Xat kaliti",
@@ -479,50 +479,72 @@
       }
     },
     "word": {
-      "download": "Word’da yuklab olish",
-      "downloadPdf": "PDF yuklab olish",
-      "upload": "Word’dan yuklash",
+      "download": "Word’da yuklab oliş",
+      "downloadPdf": "PDF yuklab oliş",
+      "upload": "Word’dan yuklaş",
       "file": "Word fayli",
       "language": "Matn tili",
-      "noText": "matn yo‘q",
-      "howTo": "Word’da yuklab oling, mas’ullarga bering, tahrirdan keyin qayta yuklang: saqlashdan oldin nima o‘zgargani ko‘rinadi.",
-      "lockedHint": "Matn tasdiqlangan va o‘zgartirilmaydi. Yuklab olish mumkin; o‘zgartirish uchun yangi tahrir yarating.",
-      "noTextHint": "Bu tilda hozircha matn yo‘q — hujjat rus tilida chop etiladi. Faylda tarjima uchun asos sifatida rus matni bor.",
-      "saveFirst": "Avval shablonni saqlang — shundan keyin uni Word’da yuklab olish mumkin.",
-      "sheetTitle": "Nima o‘zgardi · {{language}}",
-      "accept": "O‘zgarishlarni qabul qilish",
-      "nothingChanged": "O‘zgarish yo‘q: fayl shablon matniga mos.",
-      "formattingOnly": "So‘zlar bir xil, faqat ko‘rinish o‘zgargan.",
-      "summary": "O‘zgargan: {{changed}} · qo‘shilgan: {{added}} · o‘chirilgan: {{removed}}",
-      "locked": "Shablon tasdiqlangan, uning matni o‘zgarmaydi. Yangi tahrir yarating va faylni unga yuklang.",
-      "missingBlocks": "Bu bloklarsiz hujjat shakllanmaydi",
-      "unknown": "Noma’lum maydonlar: {{count}}",
-      "unknownHint": "Ular bor shablonni tasdiqlashga yuborib bo‘lmaydi. Fayldagi kodni to‘g‘rilang yoki maydonni olib tashlang.",
-      "images": "Fayldagi rasmlar saqlanmaydi: {{count}}.",
-      "changesLabel": "Bandlar bo‘yicha o‘zgarishlar",
+      "noText": "matn yöq",
+      "howTo": "Word’da yuklab oling, masʼullarga bering, tahrirdan keyin qayta yuklang: saqlaşdan oldin nima özgargani körinadi.",
+      "lockedHint": "Matn tasdiqlangan va özgartirilmaydi. Yuklab oliş mumkin; özgartiriş uçun yangi tahrir yarating.",
+      "noTextHint": "Bu tilda hozirça matn yöq — hujjat rus tilida çop etiladi. Faylda tarjima uçun asos sifatida rus matni bor.",
+      "saveFirst": "Avval şablonni saqlang — şundan keyin uni Word’da yuklab oliş mumkin.",
+      "sheetTitle": "Nima özgardi · {{language}}",
+      "accept": "Özgarişlarni qabul qiliş",
+      "nothingChanged": "Özgariş yöq: fayl şablon matniga mos.",
+      "formattingOnly": "Sözlar bir xil, faqat köriniş özgargan.",
+      "summary": "Özgargan: {{changed}} · qöşilgan: {{added}} · öçirilgan: {{removed}}",
+      "locked": "Şablon tasdiqlangan, uning matni özgarmaydi. Yangi tahrir yarating va faylni unga yuklang.",
+      "missingBlocks": "Bu bloklarsiz hujjat şakllanmaydi",
+      "unknown": "Nomaʼlum maydonlar: {{count}}",
+      "unknownHint": "Ular bor şablonni tasdiqlaşga yuborib bölmaydi. Fayldagi kodni töğrilang yoki maydonni olib taşlang.",
+      "changesLabel": "Bandlar böyiça özgarişlar",
       "point": "{{point}}-band",
       "noPoint": "Raqamsiz",
       "kind": {
-        "changed": "o‘zgargan",
-        "added": "qo‘shilgan",
-        "removed": "o‘chirilgan"
+        "changed": "özgargan",
+        "added": "qöşilgan",
+        "removed": "öçirilgan"
       },
       "was": "Edi",
-      "becomes": "Bo‘ladi",
-      "more": "Yana o‘zgarishlar: {{count}}.",
-      "applied": "Shablon matni yangilandi",
-      "pdfFailed": "PDF tayyorlanmadi. Qayta urinib ko‘ring.",
+      "becomes": "Böladi",
+      "more": "Yana özgarişlar: {{count}}.",
+      "applied": "Şablon matni yangilandi",
+      "pdfFailed": "PDF tayyorlanmadi. Qayta urinib köring.",
       "errors": {
         "word_only_docx": "Word fayli (.docx) kerak.",
-        "word_empty": "Faylda matn yo‘q.",
-        "word_hostile": "Fayl Word hujjatiga o‘xshamaydi yoki juda murakkab. Uni Word’da qayta saqlang.",
-        "word_unreadable": "Fayl o‘qilmadi. Uni Word’dan .docx sifatida saqlang.",
+        "word_empty": "Faylda matn yöq.",
+        "word_hostile": "Fayl Word hujjatiga öxşamaydi yoki juda murakkab. Uni Word’da qayta saqlang.",
+        "word_unreadable": "Fayl öqilmadi. Uni Word’dan .docx sifatida saqlang.",
         "word_too_big": "Fayl 5 MB dan katta yoki juda uzun.",
-        "word_too_complex": "Solishtirish uchun tahrirlar juda ko‘p. Faylni qismlarga bo‘lib yuklang.",
-        "word_base_changed": "Shablon matni tekshiruvdan keyin o‘zgargan. Faylni qayta yuklang.",
+        "word_too_complex": "Soliştiriş uçun tahrirlar juda köp. Faylni qismlarga bölib yuklang.",
+        "word_base_changed": "Şablon matni tekşiruvdan keyin özgargan. Faylni qayta yuklang.",
         "word_file_required": "Word faylini tanlang.",
-        "template_locked": "Tasdiqlangan matn o‘zgartirilmaydi. Yangi tahrir yarating."
-      }
+        "template_locked": "Tasdiqlangan matn özgartirilmaydi. Yangi tahrir yarating.",
+        "word_stale": "Şablon yuklab olingandan keyin özgargan: uni qayta yuklab oling va tahrirlarni köçiring.",
+        "word_loss_not_confirmed": "Havolalar, rasmlar va birlaştirilgan kataklar yöqolişini tasdiqlang.",
+        "word_file_changed": "Tekşirilgan fayl örniga boşqa fayl yuborildi. Faylni qayta yuklang."
+      },
+      "sameTextDropped": "Sözlar bir xil, lekin faylda saqlanmaydigan narsalar bor.",
+      "dropped": "Faylda saqlanmaydigan narsalar bor",
+      "droppedKind": {
+        "images": "Rasmlar: {{count}}",
+        "comments": "Izohlar: {{count}}",
+        "notes": "Izohnomalar: {{count}}",
+        "colors": "Matn rangi: {{count}}",
+        "fonts": "Şriftlar: {{count}}",
+        "highlights": "Rangli ajratiş: {{count}}"
+      },
+      "loses": "Joriy matnda Word saqlay olmaydigan narsalar bor: qabul qilingaç ular yöqoladi",
+      "lostKind": {
+        "links": "Havolalar: {{count}}",
+        "rules": "Gorizontal çiziqlar: {{count}}",
+        "pictures": "Rasmlar: {{count}}",
+        "merged_cells": "Birlaştirilgan kataklar: {{count}}",
+        "nested_lists": "Içki röyxatlar: {{count}}",
+        "nested_tables": "Içki jadvallar: {{count}}"
+      },
+      "understood": "Tuşundim, bular yöqoladi"
     }
   },
   "categories": {
@@ -832,7 +854,7 @@
       "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
       "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi.",
-      "template_unknown_placeholders": "Shablonda noma’lum maydonlar bor: {{list}}. Ularni to‘g‘rilab, qayta urinib ko‘ring."
+      "template_unknown_placeholders": "Şablonda nomaʼlum maydonlar bor: {{list}}. Ularni töğrilab, qayta urinib köring."
     },
     "fileLanguage": "Fayl tili"
   },

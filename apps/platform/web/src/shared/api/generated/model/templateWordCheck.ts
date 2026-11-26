@@ -4,13 +4,14 @@
  */
 import type { WordChange } from "./wordChange";
 import type { WordChangeSummary } from "./wordChangeSummary";
+import type { WordCount } from "./wordCount";
 import type { WordMissingBlock } from "./wordMissingBlock";
 
 /**
  * Что изменится, если принять загруженный Word. Ничего не сохранено.
  */
 export interface TemplateWordCheck {
-  /** Изменений нет (скачал и загрузил без правок) */
+  /** Изменений нет: текст и оформление те же и ничего не отброшено */
   unchanged: boolean;
   /** Текст тот же, изменилось только оформление */
   formatting_only: boolean;
@@ -20,9 +21,13 @@ export interface TemplateWordCheck {
   locked: boolean;
   /** Отпечаток текущего текста; отдаётся обратно в «Принять» */
   base: string;
-  /** Сколько рисунков в файле отброшено */
-  images_dropped: number;
-  /** Коды подстановок нового текста, которых система не знает (шаблон с ними нельзя отправить на утверждение) */
+  /** Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409 */
+  file_sha: string;
+  /** Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights` */
+  dropped: WordCount[];
+  /** Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя */
+  lost_markup: WordCount[];
+  /** Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение */
   unknown_placeholders: string[];
   missing_blocks: WordMissingBlock[];
   summary: WordChangeSummary;

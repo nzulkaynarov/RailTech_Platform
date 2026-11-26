@@ -403,11 +403,11 @@
       "open": "Open",
       "openNamed": "Open: {{name}}",
       "body": "Template text (HTML)",
-      "bodyHint": "{{example}} placeholders are replaced with document data.",
+      "bodyHint": "Fields like {{example}} are replaced with document data.",
       "activeLabel": "Template is active",
-      "placeholders": "Available placeholders",
-      "unknownWarning": "Unknown placeholder {{token}}",
-      "placeholdersUnknown": "Unknown placeholders: {{count}}",
+      "placeholders": "Available fields",
+      "unknownWarning": "Unknown field {{token}}",
+      "placeholdersUnknown": "Unknown fields: {{count}}",
       "unknownTitle": "Not in the list — they appear in the document as is",
       "unknownMark": "not in the list",
       "previewTitle": "Sample on test data",
@@ -498,7 +498,6 @@
       "missingBlocks": "The document cannot be built without these blocks",
       "unknown": "Unknown fields: {{count}}",
       "unknownHint": "A template with them cannot be sent for approval. Fix the code in the file or remove the field.",
-      "images": "Pictures from the file are not saved: {{count}}.",
       "changesLabel": "Changes by clause",
       "point": "Clause {{point}}",
       "noPoint": "No number",
@@ -521,8 +520,31 @@
         "word_too_complex": "Too many edits to compare. Upload the file in parts.",
         "word_base_changed": "The template text changed after the check. Upload the file again.",
         "word_file_required": "Choose a Word file.",
-        "template_locked": "Approved text cannot be edited. Create a new edition."
-      }
+        "template_locked": "Approved text cannot be edited. Create a new edition.",
+        "word_stale": "The template changed after the download: download it again and carry your edits over.",
+        "word_loss_not_confirmed": "Confirm that links, pictures and merged cells will be lost.",
+        "word_file_changed": "A different file was sent than the one checked. Upload the file again."
+      },
+      "sameTextDropped": "The words are the same, but the file has things that are not saved.",
+      "dropped": "The file has things that are not saved",
+      "droppedKind": {
+        "images": "Pictures: {{count}}",
+        "comments": "Comments: {{count}}",
+        "notes": "Footnotes: {{count}}",
+        "colors": "Text colour: {{count}}",
+        "fonts": "Fonts: {{count}}",
+        "highlights": "Highlighting: {{count}}"
+      },
+      "loses": "The current text has things Word cannot keep: they will be gone after accepting",
+      "lostKind": {
+        "links": "Links: {{count}}",
+        "rules": "Horizontal rules: {{count}}",
+        "pictures": "Pictures: {{count}}",
+        "merged_cells": "Merged cells: {{count}}",
+        "nested_lists": "Nested lists: {{count}}",
+        "nested_tables": "Nested tables: {{count}}"
+      },
+      "understood": "I understand, these will be lost"
     }
   },
   "categories": {

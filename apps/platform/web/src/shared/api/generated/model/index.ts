@@ -1399,6 +1399,7 @@ export * from "./whatsNewMark";
 export * from "./wordChange";
 export * from "./wordChangeKind";
 export * from "./wordChangeSummary";
+export * from "./wordCount";
 export * from "./wordMissingBlock";
 export * from "./wordSegment";
 export * from "./wordSegmentOp";

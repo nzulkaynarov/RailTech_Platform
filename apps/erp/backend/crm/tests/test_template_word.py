@@ -23,6 +23,7 @@ BODY = (
     "<h1>Договор поставки</h1>"
     "<p>1. Предмет договора: <strong>поставка</strong> товаров для {{counterparty.name}}.</p>"
     "<p>2. Срок и порядок оплаты <em>согласуются</em> в спецификации.</p>"
+    "<p>3. Ответственность сторон определяется законом.</p>"
     "<ul><li>первый пункт</li><li>второй пункт</li></ul>"
     "<ol><li>шаг один</li><li>шаг два</li></ol>"
     "<table><tbody><tr><td>Товар</td><td>Количество</td></tr><tr><td>Болт</td><td>10</td></tr></tbody></table>"
@@ -54,13 +55,26 @@ def make(
     )
 
 
-def upload(user, template, data: bytes, *, name="t.docx", mode="check", language="ru", base=""):
+def upload(user, template, data: bytes, *, name="t.docx", mode="check", language="ru", base="", sha="", confirm=False):
     url = URL.format(id=template.id) + f"?mode={mode}&language={language}" + (f"&base={base}" if base else "")
+    sha = sha or (word.file_sha(data) if mode == "apply" else "")
+    url += (f"&file_sha={sha}" if sha else "") + ("&confirm_loss=true" if confirm else "")
     return api(user).post(url, {"file": SimpleUploadedFile(name, data, content_type=DOCX)}, format="multipart")
 
 
 def download(user, template, language="ru"):
     return api(user).get(URL.format(id=template.id) + f"?language={language}")
+
+
+def untagged(docx: bytes) -> bytes:
+    """Файл без метки «откуда» (сделан не нашей выгрузкой): проверка свежести его не касается."""
+    from docx import Document
+
+    doc = Document(io.BytesIO(docx))
+    doc.core_properties.keywords = ""
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
 
 
 def edited(docx: bytes, old: str, new: str) -> bytes:
@@ -155,13 +169,14 @@ def test_apply_saves_and_writes_the_journal(pw):  # noqa: F811
     log = ActivityLog.objects.get(event_code="document_template.word_uploaded")
     assert log.user_id == pw.director.id and log.event_params["file"] == "Правки юриста.docx"
     assert log.event_params["changed"] == 1
-    # после принятия тот же файл — «изменений нет»
-    assert upload(pw.director, template, data).json()["unchanged"] is True
+    # файл скачан до принятия, текст с тех пор изменился: старый файл не принимается, свежий — «изменений нет»
+    assert upload(pw.director, template, data).json() == {"detail": "WORD_STALE"}
+    assert upload(pw.director, template, download(pw.director, template).content).json()["unchanged"] is True
 
 
 def test_apply_refuses_when_the_text_changed_after_the_check(pw):  # noqa: F811
     template = make(pw)
-    data = edited(download(pw.director, template).content, "поставка", "продажа")
+    data = untagged(edited(download(pw.director, template).content, "поставка", "продажа"))
     base = upload(pw.director, template, data).json()["base"]
     DocumentTemplate.objects.filter(pk=template.pk).update(body_html=BODY + "<p>3. Ещё.</p>")
     response = upload(pw.director, template, data, mode="apply", base=base)
@@ -357,3 +372,324 @@ def test_file_name_rule():
 
     assert word.download_name(T, "ru") == "Договор поставка 2026, ред. 3 — проект.docx"
     assert word.download_name(T, "uz", "pdf") == "Договор поставка 2026 (UZ), ред. 3 — проект.pdf"
+
+
+# ── ШАБЛ-1, возврат ревью: поля, правки с записью исправлений, потери, пределы ─────────────────────────────────────
+
+
+def with_paragraph(src: bytes, needle: str, change) -> bytes:
+    """DOCX с правкой абзаца, в тексте которого есть `needle` (change получает python-docx абзац)."""
+    from docx import Document
+
+    doc = Document(io.BytesIO(src))
+    target = next(p for p in doc.paragraphs if needle in p.text)
+    change(target, doc)
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
+def checked(pw, template, data, **kw):  # noqa: F811
+    response = upload(pw.director, template, data, **kw)
+    assert response.status_code == 200, response.content
+    return response.json()
+
+
+def xml(text: str):
+    import re
+
+    from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
+
+    if "xmlns:w=" not in text:
+        text = re.sub(r"^<([\w:]+)", lambda m: f"<{m.group(1)} {nsdecls('w')}", text, count=1)
+    return parse_xml(text)
+
+
+def test_field_with_formatting_inside_the_code_stays_whole(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def retype(p, doc):
+        for run in p.runs:
+            if "counterparty.name" in run.text:
+                run.text = "{{counter"
+                second = xml("<w:r><w:rPr><w:i/></w:rPr><w:t>party.</w:t></w:r>")
+                run._r.addnext(second)
+                second.addnext(xml("<w:r><w:t>name}}</w:t></w:r>"))
+                return
+
+    body = checked(pw, template, with_paragraph(src, "1. Предмет", retype))
+    assert (
+        "{{counterparty.name}}" in body["body_html"]
+        and "<em>" not in body["body_html"].split("{{counterparty.name}}")[0][-8:]
+    )
+    assert body["unknown_placeholders"] == []
+
+
+@pytest.mark.parametrize(
+    "bad,named",
+    [
+        ("{{counterparty.name}", "{{counterparty.name}"),
+        ("{{counterparty name}}", "{{counterparty name}}"),
+        ("{{контрагент.имя}}", "{{контрагент.имя}}"),
+        ("{{counterparty.nme}}", "counterparty.nme"),
+    ],
+)
+def test_broken_fields_are_named_and_block_approval(pw, bad, named):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def ruin(p, doc):
+        for run in p.runs:
+            if "counterparty.name" in run.text:
+                run.text = run.text.replace("[Контрагент — название {{counterparty.name}}]", bad)
+
+    body = checked(pw, template, with_paragraph(src, "1. Предмет", ruin))
+    assert named in body["unknown_placeholders"]
+    # черновик с таким текстом сохраняется, на утверждение не уходит и называет обрывок
+    DocumentTemplate.objects.filter(pk=template.pk).update(body_html=body["body_html"])
+    template.refresh_from_db()
+    _t, error = svc.submit_for_approval(template, pw.director)
+    assert error == "TEMPLATE_UNKNOWN_PLACEHOLDERS"
+    assert named in word.unknown_placeholders(template.body_html)
+
+
+def test_erased_opening_bracket_leaves_a_named_leftover(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def ruin(p, doc):
+        for run in p.runs:
+            if "counterparty.name" in run.text:
+                run.text = run.text.replace("[Контрагент — название", "Контрагент — название")
+
+    body = checked(pw, template, with_paragraph(src, "1. Предмет", ruin))
+    assert body["unknown_placeholders"] == ["Контрагент — название {{counterparty.name}}]"]
+
+
+def test_tracked_changes_and_content_controls_are_read_not_lost(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def track(p, doc):
+        p._p.append(
+            xml(
+                '<w:ins w:id="1" w:author="Ю" w:date="2026-11-26T00:00:00Z"><w:r><w:t> Вставка юриста.</w:t></w:r></w:ins>'
+            )
+        )
+        p._p.append(
+            xml(
+                '<w:del w:id="2" w:author="Ю" w:date="2026-11-26T00:00:00Z"><w:r><w:delText> Удалённое.</w:delText></w:r></w:del>'
+            )
+        )
+        p._p.addnext(
+            xml(
+                "<w:sdt><w:sdtPr/><w:sdtContent><w:p><w:r><w:t>5. Пункт в элементе управления.</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+            )
+        )
+        p._p.append(xml('<w:customXml w:element="x"><w:r><w:t> Дополнение.</w:t></w:r></w:customXml>'))
+
+    body = checked(pw, template, with_paragraph(src, "3. Ответственность", track))
+    html = body["body_html"]
+    assert "Вставка юриста." in html and "Удалённое" not in html
+    assert "5. Пункт в элементе управления." in html and "Дополнение." in html
+    assert body["unchanged"] is False and body["can_apply"] is True
+
+
+def test_moved_clause_is_not_lost(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def move(p, doc):
+        text = p.text
+        for run in list(p.runs):
+            run._r.getparent().remove(run._r)
+        p._p.append(
+            xml(
+                f'<w:moveFrom w:id="5" w:author="Ю" w:date="2026-11-26T00:00:00Z"><w:r><w:t>{text}</w:t></w:r></w:moveFrom>'
+            )
+        )
+        p._p.addprevious(
+            xml(
+                f'<w:p><w:moveTo w:id="6" w:author="Ю" w:date="2026-11-26T00:00:00Z"><w:r><w:t>{text}</w:t></w:r></w:moveTo></w:p>'
+            )
+        )
+
+    body = checked(pw, template, with_paragraph(src, "3. Ответственность", move))
+    assert body["body_html"].count("3. Ответственность сторон определяется законом.") == 1
+
+
+def test_nested_table_and_text_box_are_read(pw):  # noqa: F811
+    from docx import Document
+
+    template = make(pw)
+    src = download(pw.director, template).content
+    doc = Document(io.BytesIO(src))
+    inner = doc.tables[0].cell(1, 0).add_table(rows=1, cols=1)
+    inner.cell(0, 0).text = "Вложенная строка"
+    target = next(p for p in doc.paragraphs if "3. Ответственность" in p.text)
+    target._p.append(
+        xml(
+            '<w:r xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" '
+            'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+            'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><w:drawing><wp:inline>'
+            '<wp:extent cx="1" cy="1"/><wp:docPr id="9" name="tb"/><a:graphic>'
+            '<a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:txbx>'
+            "<w:txbxContent><w:p><w:r><w:t>Текст в надписи</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp>"
+            "</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>"
+        )
+    )
+    out = io.BytesIO()
+    doc.save(out)
+    body = checked(pw, template, out.getvalue())
+    assert "Вложенная строка" in body["body_html"] and "Текст в надписи" in body["body_html"]
+    assert {"kind": "images", "count": 1} not in body["dropped"]  # надпись — не рисунок
+
+
+def test_what_is_dropped_is_named_and_unchanged_needs_nothing_dropped(pw):  # noqa: F811
+    from docx.shared import RGBColor
+
+    template = make(pw)
+    src = download(pw.director, template).content
+
+    def decorate(p, doc):
+        run = p.runs[0]
+        run.font.color.rgb = RGBColor(255, 0, 0)
+        run.font.name = "Times New Roman"
+        from docx.enum.text import WD_COLOR_INDEX
+
+        run.font.highlight_color = WD_COLOR_INDEX.YELLOW
+        p._p.append(
+            xml('<w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="1"/></w:r>')
+        )
+        p._p.append(xml('<w:r><w:commentReference w:id="0"/></w:r>'))
+
+    body = checked(pw, template, with_paragraph(src, "3. Ответственность", decorate))
+    kinds = {d["kind"] for d in body["dropped"]}
+    assert {"colors", "fonts", "highlights", "notes", "comments"} <= kinds
+    assert body["unchanged"] is False and body["can_apply"] is False  # текст тот же — применять нечего
+    assert body["changes"]["summary"]["total"] == 0
+
+
+def test_markup_word_cannot_keep_needs_a_confirmation(pw):  # noqa: F811
+    rich = BODY.replace(
+        "<p>2.",
+        '<p>0. См. <a href="https://lex.uz/docs/1">закон</a>.</p><hr /><p><img src="data:image/png;base64,iVBORw0KGgo=" alt="x" /></p>'
+        '<table><tbody><tr><td colspan="2">Итого</td></tr></tbody></table><ul><li>а<ul><li>б</li></ul></li></ul><p>2.',
+    )
+    template = make(pw, body=rich)
+    data = edited(download(pw.director, template).content, "поставка", "продажа")
+    body = checked(pw, template, data)
+    kinds = {m["kind"] for m in body["lost_markup"]}
+    assert {"links", "rules", "pictures", "merged_cells", "nested_lists"} <= kinds
+    refused = upload(pw.director, template, data, mode="apply", base=body["base"])
+    assert refused.status_code == 400 and refused.json() == {"detail": "WORD_LOSS_NOT_CONFIRMED"}
+    template.refresh_from_db()
+    assert "lex.uz" in template.body_html
+    done = upload(pw.director, template, data, mode="apply", base=body["base"], confirm=True)
+    assert done.status_code == 200
+    template.refresh_from_db()
+    assert "lex.uz" not in template.body_html and "продажа" in template.body_html
+
+
+def test_a_file_downloaded_before_someones_edit_is_refused(pw):  # noqa: F811
+    template = make(pw)
+    old = download(pw.director, template).content
+    DocumentTemplate.objects.filter(pk=template.pk).update(body_html=BODY.replace("поставка", "ПОСТАВКА КОЛЛЕГИ"))
+    for mode in ("check", "apply"):
+        response = upload(pw.director, template, old, mode=mode, base="0" * 16)
+        assert response.status_code == 400 and response.json() == {"detail": "WORD_STALE"}
+
+
+def test_apply_refuses_a_file_other_than_the_checked_one(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+    first = edited(src, "поставка", "продажа")
+    other = edited(src, "поставка", "ПОДМЕНА")
+    body = checked(pw, template, first)
+    response = upload(pw.director, template, other, mode="apply", base=body["base"], sha=body["file_sha"])
+    assert response.status_code == 409 and response.json() == {"detail": "WORD_FILE_CHANGED"}
+    assert (
+        upload(pw.director, template, first, mode="apply", base=body["base"], sha=body["file_sha"]).status_code == 200
+    )
+
+
+def _big(src: bytes, kind: str, count: int = 10_000) -> bytes:
+    """Тело документа из `count` пунктов списка или строк таблицы — собрано XML-ом (python-docx строит такое минутами)."""
+    from lxml import etree
+
+    with zipfile.ZipFile(io.BytesIO(src)) as archive:
+        files = {n: archive.read(n) for n in archive.namelist()}
+    root = etree.fromstring(files["word/document.xml"])
+    ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    body = root.find(f"{{{ns}}}body")
+    for child in list(body):
+        if not child.tag.endswith("sectPr"):
+            body.remove(child)
+    if kind == "list":
+        rows = "".join(
+            f'<w:p><w:pPr><w:pStyle w:val="ListNumber"/></w:pPr><w:r><w:t>п{i}</w:t></w:r></w:p>' for i in range(count)
+        )
+    else:
+        rows = (
+            "<w:tbl>"
+            + "".join(f"<w:tr><w:tc><w:p><w:r><w:t>r{i}</w:t></w:r></w:p></w:tc></w:tr>" for i in range(count))
+            + "</w:tbl>"
+        )
+    fragment = etree.fromstring(f'<w:body xmlns:w="{ns}">{rows}</w:body>')
+    for k, child in enumerate(list(fragment)):
+        body.insert(k, child)
+    files["word/document.xml"] = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as out:
+        for name, data in files.items():
+            out.writestr(name, data)
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize("kind", ["list", "rows"])
+def test_ten_thousand_items_are_refused_fast(pw, kind):  # noqa: F811
+    import time
+
+    template = make(pw)
+    data = _big(download(pw.director, template).content, kind)
+    for mode in ("check", "apply"):
+        started = time.monotonic()
+        response = upload(pw.director, template, data, mode=mode, base="0" * 16)
+        assert response.status_code == 400 and response.json() == {"detail": "WORD_TOO_BIG"}
+        assert time.monotonic() - started < 5
+    template.refresh_from_db()
+    assert template.body_html == BODY
+
+
+def test_parse_has_a_wall_clock_limit(pw, monkeypatch):  # noqa: F811
+    template = make(pw)
+    data = download(pw.director, template).content
+    monkeypatch.setattr(word, "MAX_PARSE_SECONDS", -1.0)
+    assert upload(pw.director, template, data).json() == {"detail": "WORD_TOO_COMPLEX"}
+
+
+def test_too_costly_comparison_is_a_plain_refusal_and_apply_still_works(pw, monkeypatch):  # noqa: F811
+    from crm.services import contract_compare
+
+    template = make(pw)
+    data = edited(download(pw.director, template).content, "поставка", "продажа")
+    base = checked(pw, template, data)["base"]
+
+    def boom(*_args, **_kwargs):
+        raise contract_compare.TooBig("slow")
+
+    monkeypatch.setattr(contract_compare, "compare", boom)
+    assert upload(pw.director, template, data).json() == {"detail": "WORD_TOO_COMPLEX"}
+    # принятие после проверки не падает 500: текст сохранён, число пунктов в журнал не пишется
+    assert upload(pw.director, template, data, mode="apply", base=base).status_code == 200
+
+
+def test_apply_without_the_file_fingerprint_is_refused(pw):  # noqa: F811
+    template = make(pw)
+    data = edited(download(pw.director, template).content, "поставка", "продажа")
+    base = checked(pw, template, data)["base"]
+    url = URL.format(id=template.id) + f"?mode=apply&language=ru&base={base}"
+    response = api(pw.director).post(url, {"file": SimpleUploadedFile("t.docx", data)}, format="multipart")
+    assert response.status_code == 409 and response.json() == {"detail": "WORD_FILE_CHANGED"}

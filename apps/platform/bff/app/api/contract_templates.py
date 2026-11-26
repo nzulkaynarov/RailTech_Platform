@@ -220,12 +220,20 @@ async def apply_word(
     request: Request,
     authed: Writer,
     base: Annotated[str, Query(pattern=r"^[0-9a-f]{16}$")],
+    file_sha: Annotated[str, Query(pattern=r"^[0-9a-f]{16}$")],
+    confirm_loss: bool = False,
 ) -> DocumentTemplate:
     content, content_type = await _word_body(request)
     response = await _erp(authed).request(
         "POST",
         f"{BASE}/{id}/word/",
-        params={"language": language, "mode": "apply", "base": base},
+        params={
+            "language": language,
+            "mode": "apply",
+            "base": base,
+            "file_sha": file_sha,
+            **({"confirm_loss": "true"} if confirm_loss else {}),
+        },
         content=content,
         content_type=content_type,
     )

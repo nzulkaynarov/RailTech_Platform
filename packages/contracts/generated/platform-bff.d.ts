@@ -1399,7 +1399,7 @@ export interface paths {
     put?: never;
     /**
      * Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)
-     * @description ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big`, `word_too_complex`, `word_file_required`. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     * @description ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
      */
     post: operations["checkTemplateWord"];
     delete?: never;
@@ -14572,9 +14572,13 @@ export interface components {
       code: string;
       label: string;
     };
+    WordCount: {
+      kind: string;
+      count: number;
+    };
     /** @description Что изменится, если принять загруженный Word. Ничего не сохранено. */
     TemplateWordCheck: {
-      /** @description Изменений нет (скачал и загрузил без правок) */
+      /** @description Изменений нет: текст и оформление те же и ничего не отброшено */
       unchanged: boolean;
       /** @description Текст тот же, изменилось только оформление */
       formatting_only: boolean;
@@ -14584,9 +14588,13 @@ export interface components {
       locked: boolean;
       /** @description Отпечаток текущего текста; отдаётся обратно в «Принять» */
       base: string;
-      /** @description Сколько рисунков в файле отброшено */
-      images_dropped: number;
-      /** @description Коды подстановок нового текста, которых система не знает (шаблон с ними нельзя отправить на утверждение) */
+      /** @description Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409 */
+      file_sha: string;
+      /** @description Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights` */
+      dropped: components["schemas"]["WordCount"][];
+      /** @description Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя */
+      lost_markup: components["schemas"]["WordCount"][];
+      /** @description Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение */
       unknown_placeholders: string[];
       missing_blocks: components["schemas"]["WordMissingBlock"][];
       summary: components["schemas"]["WordChangeSummary"];
@@ -22997,6 +23005,10 @@ export interface operations {
         language: "ru" | "uz" | "en";
         /** @description Отпечаток текста из `checkTemplateWord` */
         base: string;
+        /** @description Отпечаток файла из `checkTemplateWord`: другой файл — 409 */
+        file_sha: string;
+        /** @description Подтверждение: пропадёт то, что в `lost_markup` проверки; без него при непустом списке — 422 `word_loss_not_confirmed` */
+        confirm_loss?: boolean;
       };
       header: {
         /** @description Значение cookie `rt_pf_csrf` */
