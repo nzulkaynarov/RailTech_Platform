@@ -85,6 +85,8 @@ async def test_list_puts_recently_active_first(
         "handoff_status": "done",
         "do_not_work": False,
         "logo_url": "/api/v1/people/counterparties/501/logo?v=a1b2c3d4e5",
+        "company_id": "501",
+        "roles": [{"role": "client", "state": "active", "kind": None}],
     }
     assert items[2]["in_erp"] is False
     assert items[2]["logo_url"] is None
