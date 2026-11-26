@@ -675,9 +675,9 @@ def list_tasks_page(
     from integration.models import CrmClientMapping
 
     clients = dict(
-        CrmClientMapping.objects.filter(company_id__in={t.deal.company_id for t in page if t.deal.company_id}).values_list(
-            "company_id", "crm_client_id"
-        )
+        CrmClientMapping.objects.filter(
+            company_id__in={t.deal.company_id for t in page if t.deal.company_id}
+        ).values_list("company_id", "crm_client_id")
     )
     rows = []
     for task in page:

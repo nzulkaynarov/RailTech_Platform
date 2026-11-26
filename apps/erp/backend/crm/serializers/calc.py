@@ -67,9 +67,7 @@ class CalcTaskRowSerializer(serializers.Serializer):
 
 class CalcTaskListSerializer(serializers.Serializer):
     results = CalcTaskRowSerializer(many=True)
-    count = serializers.IntegerField(
-        required=False, help_text="ЗАЯВ-1: всего подходящих заявок; только при `state`"
-    )
+    count = serializers.IntegerField(required=False, help_text="ЗАЯВ-1: всего подходящих заявок; только при `state`")
 
 
 class CalcDealRefSerializer(serializers.Serializer):

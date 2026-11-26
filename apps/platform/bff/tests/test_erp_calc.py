@@ -237,7 +237,7 @@ async def test_requests_registry_passes_state_search_and_paging(
 
 
 async def test_requests_registry_needs_the_calc_section(web: Web, erp: respx.MockRouter) -> None:
-    """Видимость не шире прежней: без раздела «Расчёт» закрытые заявки других не отдаются, в ERP запроса нет."""
+    """Видимость не шире прежней: без раздела «Расчёт» закрытые заявки не отдаются."""
     await web.login(["REGISTRAR"])
 
     response = await web.client.get("/api/v1/erp/calc/requests", params={"state": "closed"})
