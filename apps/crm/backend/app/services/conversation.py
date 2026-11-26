@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents.dialog.graph import DialogAgent
 from app.agents.dialog.state import DialogResult
 from app.bus import events as bus_events
+from app.domain.company_conversation import is_company_conversation
 from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language
@@ -27,7 +28,7 @@ from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.audit import Actor
-from app.services import escalation, message_log, stages
+from app.services import escalation, known_contact, message_log, stages
 from app.services.contact_telegram import sync_telegram_names
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_records import RecordsMixin
@@ -265,6 +266,9 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                 inc.human_requested,
                 bool(inc.attachments),
                 await verified_client(session, inc.tg_user_id),
+                company_owner=is_company_conversation(
+                    lead.owner_mode, lead.assigned_user_id, lead.client_id, lead.qualification
+                ),
             )
         return [], turn, None
 
@@ -300,6 +304,8 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
         )
         await bus_events.lead_created(session, lead, Actor(None, "bot"))
         logger.info("lead_created", lead_id=lead.id)
+        # КОНТР-1а: уже контакт компании — это переписка компании, а не новый лид.
+        await known_contact.apply(session, lead)
         return lead, conversation, True
 
     async def _run_agent(self, turn: Turn, cfg: AppSettings) -> DialogResult | None:

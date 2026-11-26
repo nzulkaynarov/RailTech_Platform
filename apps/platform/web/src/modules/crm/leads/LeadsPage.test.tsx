@@ -47,6 +47,12 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     });
   });
 
+  it("в строке рядом с именем — компания, а не «клиент» (КОНТР-1а)", async () => {
+    await open("manager@demo.example");
+    await screen.findByRole("table", { name: "Лиды" });
+    expect(within(table()).getByText("(ООО Рельс-Сервис Демо)")).toBeVisible();
+  });
+
   it("вкладки по статусу, «Мои / Просроченные» и канал сужают список", async () => {
     await open("manager@demo.example");
     await screen.findByRole("table", { name: "Лиды" });

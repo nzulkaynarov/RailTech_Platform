@@ -81,6 +81,7 @@
     "need": "Sörov",
     "consent": "Maʼlumotlarga rozilik",
     "consentBot": "botda {{date}} berilgan",
+    "consentForm": "saytdagi formada {{date}} berilgan",
     "consentStaff": "xodim tomonidan {{date}} belgilangan ({{method}})",
     "consentMissing": "yöq — ariza yaratayotganda belgilang",
     "consentMissingBot": "yöq — mijoz rozilikni botda beradi",
@@ -100,7 +101,7 @@
       "manager": "Menejer",
       "system": "Tizim"
     },
-    "client": "Mijoz",
+    "client": "Kompaniya",
     "confirmation": "Mijozga ariza tasdiği",
     "firstResponse": "Saytdagi sörovga birinçi javob",
     "firstResponseDue": "{{date}} gaça",

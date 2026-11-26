@@ -14,6 +14,7 @@ from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.company_conversation import is_company_conversation
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
 from app.domain.lead_sources import WEB_NOTE_MARK
 from app.domain.platform_links import LinkBase
@@ -91,7 +92,13 @@ class StaffNotifier:
             if not lead_dm_due(lead.manager_notified_at, now, window):
                 return False
             manager = await _staff(session, user_id=lead.assigned_user_id)
-            target = lead_dm_target(lead.owner_mode, manager[0] if manager else None)
+            target = lead_dm_target(
+                lead.owner_mode,
+                manager[0] if manager else None,
+                company_conversation=is_company_conversation(
+                    lead.owner_mode, lead.assigned_user_id, lead.client_id, lead.qualification
+                ),
+            )
             if target is None:
                 return False
             text = await _last_lead_text(session, lead_id)
