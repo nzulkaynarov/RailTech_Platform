@@ -45,7 +45,7 @@ const COLS = {
   due: 120,
   visas: 180,
   responsible: 136,
-  action: 232,
+  action: 156,
 };
 
 function companyToday(): string {

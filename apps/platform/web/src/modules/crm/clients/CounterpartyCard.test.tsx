@@ -79,7 +79,9 @@ describe("Карточка контрагента", () => {
     expect(await within(panel).findByText("АКБ «Демо Банк»")).toBeVisible();
     // снабженцу номер счёта не показывается целиком
     expect(within(panel).getByText(/…0001/)).toBeVisible();
-    expect(within(panel).getByText("Номера счетов видит бухгалтерия.")).toBeVisible();
+    expect(
+      within(panel).getByText("Номера счетов видны только тем, кому открыты финансы."),
+    ).toBeVisible();
   });
 
   it("одна компания — клиент, поставщик и изготовитель: три вкладки и бренды в «Обзоре»", async () => {

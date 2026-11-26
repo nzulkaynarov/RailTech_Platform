@@ -184,3 +184,19 @@ $C logs --no-log-prefix crm-worker | grep rt_bus_delivery_retry | jq '{event, su
 `rt_bus.log_metrics` пишет строку `rt_bus_metrics` раз в 5 минут (`outbox_pending`, `dlq_size`, `inbox_failed`, по подписчикам).
 Доставленное и обработанное старше 30 суток удаляет `rt_bus.purge` (раз в сутки); `dead` и `failed` остаются до разбора.
 Задачи `rt_bus.*` создают по строке в `procrastinate_jobs` на тик; `rt_bus_jobs_cleanup` удаляет успешные старше часа.
+
+## Лиды известных контактов компаний: повторное применение правила (КОНТР-1а)
+
+Сообщение человека, который уже контакт компании, — не новый лид: лид получает компанию и ответственного за неё
+(`clients.owner_user_id`), уходит из «Новых» и виден ему в «Моих задачах». Для лидов, созданных до правила, — команда в
+контейнере CRM (по умолчанию только счёт, ничего не пишет; наружу человеку ничего не уходит, в вывод попадают лишь номера
+лидов и счётчики):
+
+```
+$C exec crm-api python -m app reapply-known-contacts            # счёт (dry-run)
+$C exec crm-api python -m app reapply-known-contacts --apply    # записать
+$C exec crm-api python -m app reapply-known-contacts --apply --lead-id <N>   # один лид
+```
+
+Повтор безопасен. Кто и когда переназначил — в журнале действий (`lead.known_contact`, до/после), метка беседы — ключ
+`known_contact` в `qualification` лида. Лид, которого уже ведёт человек, команда не трогает.

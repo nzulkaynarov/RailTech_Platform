@@ -81,7 +81,7 @@ _FIELD_OF = {
 }
 _FIELD_RENAMES = {"paid_at": "date", "confirmation_id": "proof_id"}
 _NOT_FOUND = {
-    "CONFIRMATION_NOT_FOUND": "Платёжка не найдена.",
+    "CONFIRMATION_NOT_FOUND": "Платёжное поручение не найдено.",
     "NOT_FOUND": "Счёт не найден.",
 }
 

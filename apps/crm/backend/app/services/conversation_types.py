@@ -47,6 +47,9 @@ class Turn:
     human: bool
     attachment: bool = False
     client_id: int | None = None
+    # КОНТР-1а: беседа известного контакта компании — менеджеру уходит уведомление, как о лиде в
+    # работе, хотя бот отвечает.
+    company_owner: bool = False
 
     @property
     def mode(self) -> Literal["prospect", "customer"]:

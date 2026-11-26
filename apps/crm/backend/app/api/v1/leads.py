@@ -16,6 +16,7 @@ from app.api.deps import ContainerDep, require
 from app.api.dialog_access import dialog
 from app.domain.backoffice import may_close_locally
 from app.domain.client_requests import platform_status
+from app.domain.company_conversation import is_company_conversation
 from app.domain.errors import NotFoundError
 from app.domain.reply_channel import ReplyVia
 from app.models.clients import Client
@@ -181,7 +182,10 @@ async def _existing_lead(session: AsyncSession, lead_id: int) -> Lead:
 
 
 def _unread(lead: Lead) -> bool:
-    if lead.owner_mode != "human" or lead.last_lead_msg_at is None:
+    mine = lead.owner_mode == "human" or is_company_conversation(
+        lead.owner_mode, lead.assigned_user_id, lead.client_id, lead.qualification
+    )
+    if not mine or lead.last_lead_msg_at is None:
         return False
     return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 

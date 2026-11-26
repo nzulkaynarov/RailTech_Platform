@@ -133,7 +133,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
 
     // «Расчёт готов» — КП уходит директору, строки закрываются для правки.
     await ready.click();
-    await expect(page.getByText(/Черновик КП КП-2026\/115 у директора на одобрении/)).toBeVisible();
+    await expect(page.getByText(/Черновик КП КП-2026\/115 на одобрении/)).toBeVisible();
     await expect(page.getByRole("button", { name: READY })).toHaveCount(0);
     await expect(
       line(page, MOUNTING).getByLabel(`Ставка бригады для «${MOUNTING}»`),

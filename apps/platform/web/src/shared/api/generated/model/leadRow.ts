@@ -33,4 +33,9 @@ export interface LeadRow {
    * @nullable
    */
   client_id: number | null;
+  /**
+   * Компания лида (контрагент): известный контакт или привязанный клиент; в строке — рядом с именем
+   * @nullable
+   */
+  company?: string | null;
 }

@@ -57,7 +57,7 @@ from app.schemas.lead_intake import ManualLeadIn, WebFormToken, WebLeadAccepted,
 from app.schemas.settings import AppSettings, WebFormSettings
 from app.security import audit
 from app.security.principal import Principal
-from app.services import stages, web_lead_sla
+from app.services import known_contact, stages, web_lead_sla
 from app.services.client_notices import ClientNoticeService
 from app.services.mail_domain import DomainVerdict, MailDomainChecker
 from app.services.settings import SettingsService
@@ -363,6 +363,8 @@ async def _new_web_lead(
     await bus_events.lead_created(session, lead, audit.Actor.system())
     await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode="paused")
     logger.info("web_lead_created", lead_id=lead.id, language=lead.language)
+    # КОНТР-1а: форма от известного контакта компании — переписка компании, не свободный лид.
+    await known_contact.apply(session, lead)
     return lead
 
 

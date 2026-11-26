@@ -14,6 +14,7 @@
 - `republish-identity [--user-id N] [--dry-run]` — снимки сотрудников на шину для новых подписчиков;
 - `staff-phones-check` — отчёт: телефоны сотрудников, не приводимые к E.164 (только чтение);
 - `republish-clients [--client-id N] [--dry-run]` — снимки клиентов (`client.updated`) на шину;
+- `reapply-known-contacts [--apply] [--lead-id N]` — лиды известных контактов, без флага счёт;
 - `republish-contacts [--apply]` — контакты переданных клиентов (`contact.updated`), без флага счёт;
 - `republish-ai-policy` — политика защиты данных для ИИ на шину заново (воркер делает сам);
 - `renumber-latin MAPPING [--apply]` — копии номеров CRM в латиницу по маппингу (СЦ-5);
@@ -165,6 +166,12 @@ def _parser() -> argparse.ArgumentParser:
     republish_clients.add_argument(
         "--dry-run", action="store_true", help="только посчитать, не публиковать"
     )
+    reapply_known = commands.add_parser(
+        "reapply-known-contacts",
+        help="лиды известных контактов компаний — к ответственному за компанию (по умолчанию счёт)",
+    )
+    reapply_known.add_argument("--apply", action="store_true", help="записать (без флага — счёт)")
+    reapply_known.add_argument("--lead-id", type=int, help="только этот лид")
     republish_contacts = commands.add_parser(
         "republish-contacts",
         help="переопубликовать контакты переданных в ERP клиентов (по умолчанию только счёт)",
@@ -248,6 +255,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import republish_clients
 
         return await republish_clients.run(args)
+    if args.command == "reapply-known-contacts":
+        from app.cli import reapply_known_contacts
+
+        return await reapply_known_contacts.run(args)
     if args.command == "republish-contacts":
         from app.cli import republish_contacts
 

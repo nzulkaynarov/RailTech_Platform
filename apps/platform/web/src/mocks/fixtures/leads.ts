@@ -566,6 +566,7 @@ function initial(): LeadsMock {
   const client = leads.find((l) => l.row.lead === "L-2033");
   if (client) {
     client.card.client = { id: 3, name: "ООО Рельс-Сервис Демо", inn: "300000003" };
+    client.row.company = "ООО Рельс-Сервис Демо";
     client.card.invitation = invitation(base);
   }
   return {

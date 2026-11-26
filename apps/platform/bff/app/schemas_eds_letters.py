@@ -415,7 +415,7 @@ class ResolutionIn(BaseModel):
 def _check_ids(value: list[str]) -> list[str]:
     for item in value:
         if not re.fullmatch(_USER_ID, item):
-            raise ValueError("ожидается crm_user_id")
+            raise ValueError("ожидается идентификатор сотрудника")
     return value
 
 
