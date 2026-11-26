@@ -94,7 +94,7 @@ def to_offered(raw: Mapping[str, Any]) -> OfferedContractTemplates:
     )
 
 
-# --- ШАБЛ-1: текст шаблона в Word и обратно -------------------------------------------------------------------
+# --- ШАБЛ-1: текст шаблона в Word и обратно ---------------------------------------------
 
 
 class WordSegment(BaseModel):
@@ -124,12 +124,14 @@ class WordMissingBlock(BaseModel):
 
 
 class TemplateWordCheck(BaseModel):
-    """Что изменится, если принять загруженный Word. Ничего не сохранено; `base` отдаётся обратно в «Принять»."""
+    """Что изменится, если принять загруженный Word. Ничего не сохранено; `base` — в «Принять»."""
 
     unchanged: bool
     formatting_only: bool = Field(description="Текст тот же, изменилось только оформление")
     can_apply: bool
-    locked: bool = Field(description="Закреплённый шаблон договора: правки — только в новой редакции")
+    locked: bool = Field(
+        description="Закреплённый шаблон договора: правки — только в новой редакции"
+    )
     base: str
     images_dropped: int
     unknown_placeholders: list[str]
@@ -139,8 +141,8 @@ class TemplateWordCheck(BaseModel):
 
 
 def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
-    changes = raw.get("changes") if isinstance(raw.get("changes"), dict) else {}
-    summary = changes.get("summary") if isinstance(changes.get("summary"), dict) else {}
+    changes: dict[str, Any] = raw["changes"] if isinstance(raw.get("changes"), dict) else {}
+    summary: dict[str, Any] = changes["summary"] if isinstance(changes.get("summary"), dict) else {}
 
     def points(key: str) -> list[str]:
         return [str(p) for p in summary.get(key) or []]
@@ -166,7 +168,9 @@ def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
         can_apply=raw.get("can_apply") is True,
         locked=raw.get("locked") is True,
         base=text(raw.get("base")),
-        images_dropped=raw.get("images_dropped") if isinstance(raw.get("images_dropped"), int) else 0,
+        images_dropped=raw.get("images_dropped")
+        if isinstance(raw.get("images_dropped"), int)
+        else 0,
         unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
         missing_blocks=[
             WordMissingBlock(code=text(b.get("code")), label=text(b.get("label")))

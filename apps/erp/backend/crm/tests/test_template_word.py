@@ -32,7 +32,9 @@ URL = "/api/v1/crm/document-templates/{id}/word/"
 DOCX = word.DOCX_MIME
 
 
-def make(pw, *, status=TemplateApproval.DRAFT, body=BODY, kind="CONTRACT", name="Договор с клиентом", **extra):  # noqa: F811
+def make(
+    pw, *, status=TemplateApproval.DRAFT, body=BODY, kind="CONTRACT", name="Договор с клиентом", **extra
+):  # noqa: F811
     return DocumentTemplate.objects.create(
         company=pw.own,
         name=name,
@@ -262,7 +264,11 @@ def test_template_with_known_placeholders_goes_to_approval(pw):  # noqa: F811
 
 def test_active_legal_template_cannot_lose_its_blocks_by_upload(pw, grant):  # noqa: F811
     grant(pw.director, "settings.edit")
-    template = make(pw, kind="INVOICE", body="<p>x</p><p>{{doc.items_table}}</p><p>{{doc.totals}}</p><p>{{doc.payment_requisites}}</p>")
+    template = make(
+        pw,
+        kind="INVOICE",
+        body="<p>x</p><p>{{doc.items_table}}</p><p>{{doc.totals}}</p><p>{{doc.payment_requisites}}</p>",
+    )
     DocumentTemplate.objects.filter(pk=template.pk).update(is_active=True)
     template.refresh_from_db()
     data = download(pw.director, template).content

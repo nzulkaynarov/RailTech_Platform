@@ -337,7 +337,7 @@ class DocumentSampleIn(Body):
     template_id: str | None = Field(
         default=None,
         pattern=r"^[0-9]+$",
-        description="Сохранённый шаблон вместо `body_html`: текст берётся на выбранном языке (пусто — русский)",
+        description="Сохранённый шаблон вместо `body_html`: текст на языке `language` (пусто — русский)",
     )
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None
@@ -827,10 +827,16 @@ class DocumentTemplate(BaseModel):
     kind: TemplateKind
     kind_name: str
     body_html: str
-    body_html_uz: str = Field(description="Текст на узбекском; пусто — в документе печатается русский")
-    body_html_en: str = Field(description="Текст на английском; пусто — в документе печатается русский")
+    body_html_uz: str = Field(
+        description="Текст на узбекском; пусто — в документе печатается русский"
+    )
+    body_html_en: str = Field(
+        description="Текст на английском; пусто — в документе печатается русский"
+    )
     edition: int
-    is_locked: bool = Field(description="Закреплённый шаблон договора: правки только новой редакцией")
+    is_locked: bool = Field(
+        description="Закреплённый шаблон договора: правки только новой редакцией"
+    )
     is_sample: bool
     is_owned: bool
     is_active: bool

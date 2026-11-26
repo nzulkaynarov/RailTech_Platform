@@ -1,8 +1,9 @@
 """ШАБЛ-1: шаблон в Word и обратно — `/document-templates/{id}/word*`.
 
-BFF не разбирает файл: тело `multipart` уходит в ERP как есть (предел 5 МБ), ответ ERP переводится в контракт; тип, архив-бомбу,
-закреплённый шаблон и отпечаток текста решает ERP. Здесь проверяется то, что делает BFF: пересылка файла и языка, имя файла
-из ERP, предел размера, коды отказов, права (читатель скачивает, загружает только полный доступ).
+BFF не разбирает файл: тело `multipart` уходит в ERP как есть (предел 5 МБ), ответ ERP
+переводится в контракт; тип, архив-бомбу, закреплённый шаблон и отпечаток текста решает ERP.
+Здесь проверяется то, что делает BFF: пересылка файла и языка, имя файла из ERP, предел
+размера, коды отказов, права (читатель скачивает, загружает только полный доступ).
 """
 
 import json
@@ -78,22 +79,23 @@ def upload(web: Web, url: str, data: bytes = b"PK-docx", *, name: str = "t.docx"
     )
 
 
-async def test_download_passes_language_and_the_file_name(
-    web: Web, be: Backends
-) -> None:
+async def test_download_passes_language_and_the_file_name(web: Web, be: Backends) -> None:
     route = be.router.get(f"{ERP}/12/word/").mock(
         return_value=httpx.Response(
             200,
             content=b"PK-docx",
             headers={
                 "content-type": DOCX,
-                "content-disposition": "attachment; filename=\"template-12.docx\"; filename*=UTF-8''%D0%94",
+                "content-disposition": (
+                    "attachment; filename=\"template-12.docx\"; filename*=UTF-8''%D0%94"
+                ),
             },
         )
     )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     response = await web.client.get("/api/v1/document-templates/12/word?language=uz")
-    assert response.status_code == 200 and response.content == b"PK-docx"
+    assert response.status_code == 200
+    assert response.content == b"PK-docx"
     assert response.headers["content-type"] == DOCX
     assert "filename*=UTF-8''%D0%94" in response.headers["content-disposition"]
     assert response.headers["x-content-type-options"] == "nosniff"
@@ -113,17 +115,25 @@ async def test_check_forwards_the_file_untouched_and_translates_the_answer(
         return_value=httpx.Response(200, json=erp_check())
     )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
-    response = await upload(web, "/api/v1/document-templates/12/word/check?language=ru", b"PK\x03\x04data")
+    response = await upload(
+        web, "/api/v1/document-templates/12/word/check?language=ru", b"PK\x03\x04data"
+    )
     assert response.status_code == 200, response.text
     check(response, "/document-templates/{id}/word/check", "post")
     body = response.json()
-    assert body["unknown_placeholders"] == ["warehouse.name"] and body["can_apply"] is True
+    assert body["unknown_placeholders"] == ["warehouse.name"]
+    assert body["can_apply"] is True
     assert body["items"][0]["segments"][1] == {"op": "del", "text": "Поставка."}
-    assert body["summary"]["changed"] == ["1"] and body["images_dropped"] == 2
-    assert "body_html" not in body  # новый текст наружу не отдаётся: он сохраняется только через «Принять»
+    assert body["summary"]["changed"] == ["1"]
+    assert body["images_dropped"] == 2
+    assert (
+        "body_html" not in body
+    )  # новый текст наружу не отдаётся: он сохраняется только через «Принять»
     sent = route.calls.last.request
-    assert sent.url.params["mode"] == "check" and sent.url.params["language"] == "ru"
-    assert b"PK\x03\x04data" in sent.content and sent.headers["content-type"].startswith("multipart/form-data")
+    assert sent.url.params["mode"] == "check"
+    assert sent.url.params["language"] == "ru"
+    assert b"PK\x03\x04data" in sent.content
+    assert sent.headers["content-type"].startswith("multipart/form-data")
 
 
 async def test_apply_sends_the_base_and_returns_the_template(
@@ -150,7 +160,9 @@ async def test_apply_needs_a_proper_base(web: Web, be: Backends) -> None:
 
 
 async def test_too_large_body_is_cut_before_the_erp(web: Web, be: Backends) -> None:
-    route = be.router.post(f"{ERP}/12/word/").mock(return_value=httpx.Response(200, json=erp_check()))
+    route = be.router.post(f"{ERP}/12/word/").mock(
+        return_value=httpx.Response(200, json=erp_check())
+    )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     response = await upload(
         web, "/api/v1/document-templates/12/word/check?language=ru", b"0" * (6 * 1024 * 1024)
@@ -162,12 +174,23 @@ async def test_too_large_body_is_cut_before_the_erp(web: Web, be: Backends) -> N
 
 async def test_not_multipart_is_refused(web: Web, be: Backends) -> None:
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
-    response = await web.send("POST", "/api/v1/document-templates/12/word/check?language=ru", json={})
-    assert response.status_code == 422 and response.json()["details"]["reason"] == "multipart_required"
+    response = await web.send(
+        "POST", "/api/v1/document-templates/12/word/check?language=ru", json={}
+    )
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "multipart_required"
 
 
 @pytest.mark.parametrize(
-    "code", ["WORD_HOSTILE", "WORD_ONLY_DOCX", "WORD_EMPTY", "WORD_UNREADABLE", "WORD_TOO_BIG", "WORD_TOO_COMPLEX"]
+    "code",
+    [
+        "WORD_HOSTILE",
+        "WORD_ONLY_DOCX",
+        "WORD_EMPTY",
+        "WORD_UNREADABLE",
+        "WORD_TOO_BIG",
+        "WORD_TOO_COMPLEX",
+    ],
 )
 async def test_erp_refusals_come_as_reasons(web: Web, be: Backends, code: str) -> None:
     be.router.post(f"{ERP}/12/word/").mock(return_value=httpx.Response(400, json={"detail": code}))
@@ -187,8 +210,10 @@ async def test_text_changed_and_locked_are_conflicts(web: Web, be: Backends) -> 
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     changed = await upload(web, f"/api/v1/document-templates/12/word/apply?language=ru&base={BASE}")
     locked = await upload(web, f"/api/v1/document-templates/13/word/apply?language=ru&base={BASE}")
-    assert changed.status_code == 409 and changed.json()["details"]["reason"] == "word_base_changed"
-    assert locked.status_code == 409 and locked.json()["details"]["reason"] == "template_locked"
+    assert changed.status_code == 409
+    assert changed.json()["details"]["reason"] == "word_base_changed"
+    assert locked.status_code == 409
+    assert locked.json()["details"]["reason"] == "template_locked"
 
 
 async def test_reader_downloads_but_does_not_upload(web: Web, be: Backends) -> None:
@@ -197,7 +222,9 @@ async def test_reader_downloads_but_does_not_upload(web: Web, be: Backends) -> N
     )
     reader = custom(50, "Читатель настроек", {"company.settings": "read"})
     assert (await web.login([reader])).status_code == 200
-    assert (await web.client.get("/api/v1/document-templates/12/word?language=ru")).status_code == 200
+    assert (
+        await web.client.get("/api/v1/document-templates/12/word?language=ru")
+    ).status_code == 200
     denied = await upload(web, "/api/v1/document-templates/12/word/check?language=ru")
     assert denied.status_code == 403
 

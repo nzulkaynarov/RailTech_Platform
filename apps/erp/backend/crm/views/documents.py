@@ -582,7 +582,9 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             409: OpenApiResponse(description="WORD_BASE_CHANGED"),
         },
     )
-    @action(detail=True, methods=["get", "post"], url_path="word", parser_classes=[MultiPartParser, FormParser, JSONParser])
+    @action(
+        detail=True, methods=["get", "post"], url_path="word", parser_classes=[MultiPartParser, FormParser, JSONParser]
+    )
     def word(self, request, pk=None):
         from django.core.exceptions import ValidationError as DjangoValidationError
 

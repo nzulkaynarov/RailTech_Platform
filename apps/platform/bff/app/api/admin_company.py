@@ -313,7 +313,8 @@ async def request_document_sample(body: DocumentSampleIn, authed: Reader) -> Doc
     """Образец в очередь ERP: бланк и текст — несохранённые, как на экране; PDF строит воркер."""
     payload: dict[str, Any] = {}
     if body.template_id is not None:
-        # Шаблон из списка: тело и вид берёт BFF у ERP, а не присылает экран (ШАБЛ-1: «Скачать PDF» из списка договоров).
+        # Шаблон из списка: тело и вид берёт BFF у ERP, а не присылает экран
+        # (ШАБЛ-1: «Скачать PDF» из списка договоров).
         stored = await _erp(authed).data("GET", f"crm/document-templates/{body.template_id}/")
         key = {"uz": "body_html_uz", "en": "body_html_en"}.get(body.language or "", "body_html")
         payload["template_kind"] = text(stored.get("kind_code") or stored.get("kind"))

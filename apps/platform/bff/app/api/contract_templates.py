@@ -14,14 +14,14 @@ from app.deps import Authed, require_any
 from app.errors import PlatformError
 from app.schemas_company import DocumentTemplate, to_document_template
 from app.schemas_contract_templates import (
-    TemplateWordCheck,
-    to_word_check,
     ContractTemplate,
     ContractTemplateIn,
     ContractTemplateList,
     OfferedContractTemplates,
+    TemplateWordCheck,
     to_contract_template,
     to_offered,
+    to_word_check,
 )
 
 router = APIRouter(tags=["templates"])
@@ -47,7 +47,8 @@ Approver = Annotated[Authed, Depends(require_any(("eds.visa.legal", "full"), ("a
 ItemId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 BASE = "crm/document-templates"
 Language = Annotated[Literal["ru", "uz", "en"], Query()]
-#: Файл Word шаблона — до 5 МБ; тело читается потоком и обрывается за пределом (ERP проверяет сам файл).
+#: Файл Word шаблона — до 5 МБ; тело читается потоком и обрывается за пределом
+#: (сам файл проверяет ERP).
 MAX_WORD_BYTES = 5 * 1024 * 1024
 MAX_WORD_BODY = MAX_WORD_BYTES + 256 * 1024
 
@@ -127,7 +128,7 @@ async def return_to_draft(id: ItemId, authed: Approver) -> ContractTemplate:
     return to_contract_template(await _erp(authed).data("POST", f"{BASE}/{id}/return-to-draft/"))
 
 
-# --- ШАБЛ-1: Word -------------------------------------------------------------------------------------------
+# --- ШАБЛ-1: Word ---------------------------------------------------------------------
 
 
 def _word_too_large() -> PlatformError:
@@ -140,7 +141,7 @@ def _word_too_large() -> PlatformError:
 
 
 async def _word_body(request: Request) -> tuple[bytes, str]:
-    """Тело загрузки целиком до предела; multipart не разбирается, тип, архив и содержимое проверяет ERP."""
+    """Тело загрузки целиком до предела; multipart не разбирается (тип, архив и текст — ERP)."""
     content_type = request.headers.get("content-type", "")
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(

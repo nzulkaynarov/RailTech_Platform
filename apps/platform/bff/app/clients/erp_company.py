@@ -259,7 +259,11 @@ def _validation_fields(body: Any) -> list[str]:
     """Поля DRF-ошибки `{"поле": ["текст"]}`; `detail` и `non_field_errors` полями не считаются."""
     if not isinstance(body, dict):
         return []
-    return sorted(k for k in body if k not in ("detail", "non_field_errors", "missing_blocks", "unknown_placeholders"))
+    return sorted(
+        k
+        for k in body
+        if k not in ("detail", "non_field_errors", "missing_blocks", "unknown_placeholders")
+    )
 
 
 _REASON = re.compile(r"^[a-z][a-z_]{1,40}$")

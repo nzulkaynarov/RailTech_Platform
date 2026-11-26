@@ -118,9 +118,10 @@ def _squash(runs: list[Run]) -> list[Run]:
     # соседи после подрезки снова склеиваем, пробелы на стыке — один
     merged: list[Run] = []
     for run in joined:
-        if (
-            merged
-            and (merged[-1].bold, merged[-1].italic, merged[-1].underline) == (run.bold, run.italic, run.underline)
+        if merged and (merged[-1].bold, merged[-1].italic, merged[-1].underline) == (
+            run.bold,
+            run.italic,
+            run.underline,
         ):
             text = merged[-1].text + run.text
             merged[-1] = Run(re.sub(r" {2,}", " ", text), run.bold, run.italic, run.underline)
@@ -284,7 +285,9 @@ def _blocks(children: list) -> list[Block]:
                     if not isinstance(part, _Node):
                         continue
                     if part.tag == "tr":
-                        cells = [_cell_paragraphs(c) for c in part.children if isinstance(c, _Node) and c.tag in ("td", "th")]
+                        cells = [
+                            _cell_paragraphs(c) for c in part.children if isinstance(c, _Node) and c.tag in ("td", "th")
+                        ]
                         if cells:
                             rows.append(cells)
                     elif part.tag in ("thead", "tbody", "tfoot"):
@@ -347,7 +350,13 @@ def blocks_to_html(blocks: list[Block]) -> str:
             rows = []
             for row in block.rows:
                 cells = [
-                    "<td>" + (_runs_html(cell[0].runs) if len(cell) == 1 else "".join(f"<p>{_runs_html(p.runs)}</p>" for p in cell)) + "</td>"
+                    "<td>"
+                    + (
+                        _runs_html(cell[0].runs)
+                        if len(cell) == 1
+                        else "".join(f"<p>{_runs_html(p.runs)}</p>" for p in cell)
+                    )
+                    + "</td>"
                     for cell in row
                 ]
                 rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -481,7 +490,9 @@ def _restart_numbering(doc, paragraphs: list) -> None:
         paragraph._p.get_or_add_pPr().get_or_add_numPr().get_or_add_ilvl().val = 0
 
 
-def blocks_to_docx(blocks: list[Block], *, name: str, edition: int, language: str, brand: Optional[dict] = None) -> bytes:
+def blocks_to_docx(
+    blocks: list[Block], *, name: str, edition: int, language: str, brand: Optional[dict] = None
+) -> bytes:
     """Word: бланк компании в верхнем колонтитуле (при загрузке не читается), текст шаблона, подстановки подписанными полями."""
     from docx import Document
     from docx.enum.text import WD_COLOR_INDEX
@@ -508,11 +519,7 @@ def blocks_to_docx(blocks: list[Block], *, name: str, edition: int, language: st
     title = head.add_run(str(brand.get("seller_name") or ""))
     title.bold = True
     title.font.size = Pt(12)
-    details = " · ".join(
-        str(brand.get(key))
-        for key in ("inn", "address", "phone", "email")
-        if brand.get(key)
-    )
+    details = " · ".join(str(brand.get(key)) for key in ("inn", "address", "phone", "email") if brand.get(key))
     if details:
         line = section.header.add_paragraph()
         piece = line.add_run(details)
@@ -571,7 +578,10 @@ def template_body(template, language: str) -> str:
 
 def download_name(template, language: str, extension: str = "docx") -> str:
     """«<Название>, ред. <N> — проект.docx»: одно правило имени и для Word, и для PDF; язык, кроме русского, — в названии."""
-    base = re.sub(r"\s+", " ", re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", " ", template.name or "")).strip()[:120].strip() or "Шаблон"
+    base = (
+        re.sub(r"\s+", " ", re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", " ", template.name or "")).strip()[:120].strip()
+        or "Шаблон"
+    )
     if language != "ru":
         base = f"{base} ({language.upper()})"
     return f"{base}, ред. {template.edition} — проект.{extension}"
@@ -645,7 +655,11 @@ def _list_kind(paragraph, doc) -> Optional[tuple[bool, str]]:
             for node in numbering.findall(qn("w:abstractNum")):
                 if abstract is not None and int(node.get(qn("w:abstractNumId"))) == abstract:
                     lvl = node.find(qn("w:lvl"))
-                    fmt = lvl.find(qn("w:numFmt")).get(qn("w:val")) if lvl is not None and lvl.find(qn("w:numFmt")) is not None else ""
+                    fmt = (
+                        lvl.find(qn("w:numFmt")).get(qn("w:val"))
+                        if lvl is not None and lvl.find(qn("w:numFmt")) is not None
+                        else ""
+                    )
                     return (fmt != "bullet", f"n{num_id}")
         except (KeyError, AttributeError, ValueError, NotImplementedError):
             pass
