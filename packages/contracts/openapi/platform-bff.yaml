@@ -2749,6 +2749,127 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /document-templates/{id}/word:
+    get:
+      tags: [templates]
+      operationId: downloadTemplateWord
+      summary: 'Шаблон: скачать Word'
+      description: >-
+        ШАБЛ-1. Текст шаблона на языке `language` как его читают люди: заголовки, абзацы, списки, таблицы, бланк компании в
+        колонтитуле; подстановки — подписанными полями вида `[Название контрагента {{counterparty.name}}]` (код в фигурных
+        скобках — главное), блоки документа — отдельной серой строкой. Язык без текста отдаёт русский (основа для перевода).
+        Имя файла — `<Название>, ред. <N> — проект.docx` (язык, кроме русского, — в названии), в `Content-Disposition`
+        (`filename*`). Доступно всегда, в том числе утверждённому шаблону. Раздел `eds.projects`, `company.settings` или
+        `eds.visa.legal` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+      responses:
+        '200':
+          description: DOCX
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /document-templates/{id}/word/check:
+    post:
+      tags: [templates]
+      operationId: checkTemplateWord
+      summary: 'Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)'
+      description: >-
+        ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не
+        разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический
+        размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив,
+        подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось
+        относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные
+        блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`,
+        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big`, `word_too_complex`, `word_file_required`.
+        Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`,
+        `company.settings` или `eds.visa.legal` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplateWordUpload'
+      responses:
+        '200':
+          description: Что изменится, если принять файл
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateWordCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /document-templates/{id}/word/apply:
+    post:
+      tags: [templates]
+      operationId: applyTemplateWord
+      summary: 'Шаблон: принять изменения из Word'
+      description: >-
+        ШАБЛ-1. Тот же файл, что в `checkTemplateWord`, и `base` из его ответа. ERP разбирает файл заново, сохраняет текст
+        этого языка и пишет в журнал, кто и что загрузил (файл, число изменённых, добавленных, удалённых пунктов). Текст
+        успели поменять после проверки — 409 `CONFLICT` (`details.reason = word_base_changed`); закреплённый шаблон договора —
+        409 (`template_locked`: сначала новая редакция); у активного шаблона счёта или акта без обязательных блоков — 422
+        `template_missing_required_blocks`. Чужой шаблон и образец платформы не принимают загрузку (403). Ответ — шаблон.
+        Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+        - {name: base, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток текста из `checkTemplateWord`'}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplateWordUpload'
+      responses:
+        '200':
+          description: Текст сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ContractTemplateConflict'
+        '413':
+          description: '413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /document-templates/contracts/{id}/new-edition:
     post:
       tags: [templates]
@@ -2782,7 +2903,7 @@ paths:
       operationId: submitContractTemplate
       summary: 'На утверждение'
       description: >-
-        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестная подстановка в любом из трёх языков — 422 `template_unknown_placeholders` и `details.unknown_placeholders` (коды по именам).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CompanyItemId'
@@ -24400,6 +24521,9 @@ components:
           $ref: '#/components/schemas/DocumentTemplateKind'
         body_html:
           type: string
+        template_id:
+          $ref: '#/components/schemas/CompanyItemRef'
+          description: Сохранённый шаблон вместо `body_html` (текст на языке `language`, пусто — русский); вид берётся у шаблона
         draft:
           $ref: '#/components/schemas/BrandProfileUpdate'
           description: Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя
@@ -25188,6 +25312,78 @@ components:
       description: >-
         Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются
         (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
+    TemplateWordUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Файл Word (`.docx`) до 5 МБ — скачанный шаблон с правками
+    WordSegment:
+      type: object
+      additionalProperties: false
+      required: [op, text]
+      properties:
+        op: {type: string, enum: [equal, del, ins]}
+        text: {type: string}
+    WordChange:
+      type: object
+      additionalProperties: false
+      required: [point, kind, ours, theirs, segments]
+      properties:
+        point: {type: string, description: 'Номер пункта в начале абзаца; пусто, если номера нет'}
+        kind: {type: string, enum: [changed, added, removed]}
+        ours: {type: string, description: 'Было (текущий текст шаблона)'}
+        theirs: {type: string, description: 'Станет (загруженный файл)'}
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordSegment'
+          description: Слова с подсветкой для изменённого пункта; для добавленного и удалённого пусто
+    WordChangeSummary:
+      type: object
+      additionalProperties: false
+      required: [changed, added, removed, total, more]
+      properties:
+        changed: {type: array, items: {type: string}, description: 'Номера изменённых пунктов'}
+        added: {type: array, items: {type: string}}
+        removed: {type: array, items: {type: string}}
+        total: {type: integer, description: 'Всего изменений, включая пункты без номера'}
+        more: {type: integer, description: 'Сколько номеров не поместилось в списки'}
+    WordMissingBlock:
+      type: object
+      additionalProperties: false
+      required: [code, label]
+      properties:
+        code: {type: string}
+        label: {type: string}
+    TemplateWordCheck:
+      type: object
+      additionalProperties: false
+      description: Что изменится, если принять загруженный Word. Ничего не сохранено.
+      required: [unchanged, formatting_only, can_apply, locked, base, images_dropped, unknown_placeholders, missing_blocks, summary, items]
+      properties:
+        unchanged: {type: boolean, description: 'Изменений нет (скачал и загрузил без правок)'}
+        formatting_only: {type: boolean, description: 'Текст тот же, изменилось только оформление'}
+        can_apply: {type: boolean, description: 'Принять можно: есть изменения, шаблон не закреплён, обязательные блоки на месте'}
+        locked: {type: boolean, description: 'Закреплённый шаблон договора: правки только новой редакцией'}
+        base: {type: string, description: 'Отпечаток текущего текста; отдаётся обратно в «Принять»'}
+        images_dropped: {type: integer, description: 'Сколько рисунков в файле отброшено'}
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Коды подстановок нового текста, которых система не знает (шаблон с ними нельзя отправить на утверждение)'
+        missing_blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordMissingBlock'
+        summary:
+          $ref: '#/components/schemas/WordChangeSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordChange'
     DocumentTemplate:
       type: object
       additionalProperties: false
@@ -25197,6 +25393,10 @@ components:
         - kind
         - kind_name
         - body_html
+        - body_html_uz
+        - body_html_en
+        - edition
+        - is_locked
         - is_sample
         - is_owned
         - is_active
@@ -25214,6 +25414,18 @@ components:
           description: Вид документа словами
         body_html:
           type: string
+        body_html_uz:
+          type: string
+          description: Текст на узбекском; пусто — в документе печатается русский
+        body_html_en:
+          type: string
+          description: Текст на английском; пусто — в документе печатается русский
+        edition:
+          type: integer
+          description: Номер редакции (у шаблонов договоров растёт, у прочих — 1); в имени скачанного файла
+        is_locked:
+          type: boolean
+          description: Закреплённый шаблон договора (утверждён или на утверждении) — правки только новой редакцией
         is_sample:
           type: boolean
           description: 'Образец платформы: правится только копия (`/copy`)'

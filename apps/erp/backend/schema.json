@@ -24052,6 +24052,144 @@
                 }
             }
         },
+        "/api/v1/crm/document-templates/{id}/word/": {
+            "get": {
+                "operationId": "crm_document_templates_word_retrieve",
+                "description": "GET `?language=ru|uz|en`: DOCX шаблона «как читают люди» (подстановки — подписанными полями), имя «<Название>, ред. <N> — проект.docx»; доступно всегда, и для утверждённого шаблона. POST (multipart `file`, `?language=`, `?mode=check|apply`): `check` ничего не пишет и отвечает, что изменилось; `apply` (с `base` из проверки) сохраняет текст этого языка и пишет в журнал. Закреплённый шаблон договора не меняется (400 TEMPLATE_LOCKED), только новая редакция.",
+                "summary": "Template text as Word (GET) / check or accept an uploaded Word file (POST)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DOCX"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "409": {
+                        "description": "WORD_BASE_CHANGED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "crm_document_templates_word_create",
+                "description": "GET `?language=ru|uz|en`: DOCX шаблона «как читают люди» (подстановки — подписанными полями), имя «<Название>, ред. <N> — проект.docx»; доступно всегда, и для утверждённого шаблона. POST (multipart `file`, `?language=`, `?mode=check|apply`): `check` ничего не пишет и отвечает, что изменилось; `apply` (с `base` из проверки) сохраняет текст этого языка и пишет в журнал. Закреплённый шаблон договора не меняется (400 TEMPLATE_LOCKED), только новая редакция.",
+                "summary": "Template text as Word (GET) / check or accept an uploaded Word file (POST)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DOCX"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "409": {
+                        "description": "WORD_BASE_CHANGED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/document-templates/contracts/": {
             "get": {
                 "operationId": "crm_document_templates_contracts_list",
@@ -51802,6 +51940,16 @@
                         "title": "HTML-тело",
                         "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
                     },
+                    "body_html_uz": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "HTML-тело (uz)"
+                    },
+                    "body_html_en": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "HTML-тело (en)"
+                    },
                     "placeholders_used": {
                         "readOnly": true,
                         "title": "Плейсхолдеры",
@@ -51950,6 +52098,8 @@
                     "approval_status",
                     "approved_at",
                     "approved_by_name",
+                    "body_html_en",
+                    "body_html_uz",
                     "confidentiality_years",
                     "counterparty_kind",
                     "created_at",
@@ -52085,6 +52235,30 @@
                         "description": "Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас)."
                     }
                 }
+            },
+            "DocumentTemplateRequest": {
+                "type": "object",
+                "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "maxLength": 255
+                    },
+                    "body_html": {
+                        "type": "string",
+                        "title": "HTML-тело",
+                        "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
             },
             "DocumentTemplateSubjectEnum": {
                 "enum": [

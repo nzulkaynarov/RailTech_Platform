@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { BrandProfileUpdate } from "./brandProfileUpdate";
+import type { CompanyItemRef } from "./companyItemRef";
 import type { DocumentKind } from "./documentKind";
 import type { DocumentSampleInLanguage } from "./documentSampleInLanguage";
 import type { DocumentTemplateKind } from "./documentTemplateKind";
@@ -14,6 +15,8 @@ export interface DocumentSampleIn {
   kind?: DocumentKind;
   template_kind?: DocumentTemplateKind;
   body_html?: string;
+  /** Сохранённый шаблон вместо `body_html` (текст на языке `language`, пусто — русский); вид берётся у шаблона */
+  template_id?: CompanyItemRef;
   /** Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
   draft?: BrandProfileUpdate;
   /** Язык печати; по умолчанию — язык платформы */

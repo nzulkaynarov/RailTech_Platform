@@ -92,3 +92,93 @@ def to_offered(raw: Mapping[str, Any]) -> OfferedContractTemplates:
         default_id=opt_ident(raw.get("default_id")),
         items=[to_contract_template(r) for r in raw.get("items") or [] if isinstance(r, dict)],
     )
+
+
+# --- ШАБЛ-1: текст шаблона в Word и обратно -------------------------------------------------------------------
+
+
+class WordSegment(BaseModel):
+    op: Literal["equal", "del", "ins"]
+    text: str
+
+
+class WordChange(BaseModel):
+    point: str = Field(description="Номер пункта в начале абзаца; пусто, если номера нет")
+    kind: Literal["changed", "added", "removed"]
+    ours: str
+    theirs: str
+    segments: list[WordSegment]
+
+
+class WordChangeSummary(BaseModel):
+    changed: list[str]
+    added: list[str]
+    removed: list[str]
+    total: int
+    more: int
+
+
+class WordMissingBlock(BaseModel):
+    code: str
+    label: str
+
+
+class TemplateWordCheck(BaseModel):
+    """Что изменится, если принять загруженный Word. Ничего не сохранено; `base` отдаётся обратно в «Принять»."""
+
+    unchanged: bool
+    formatting_only: bool = Field(description="Текст тот же, изменилось только оформление")
+    can_apply: bool
+    locked: bool = Field(description="Закреплённый шаблон договора: правки — только в новой редакции")
+    base: str
+    images_dropped: int
+    unknown_placeholders: list[str]
+    missing_blocks: list[WordMissingBlock]
+    summary: WordChangeSummary
+    items: list[WordChange]
+
+
+def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
+    changes = raw.get("changes") if isinstance(raw.get("changes"), dict) else {}
+    summary = changes.get("summary") if isinstance(changes.get("summary"), dict) else {}
+
+    def points(key: str) -> list[str]:
+        return [str(p) for p in summary.get(key) or []]
+
+    items = [
+        WordChange(
+            point=text(i.get("point")),
+            kind=i.get("kind") if i.get("kind") in ("changed", "added", "removed") else "changed",
+            ours=text(i.get("ours")),
+            theirs=text(i.get("theirs")),
+            segments=[
+                WordSegment(op=g["op"], text=text(g.get("text")))
+                for g in i.get("segments") or []
+                if isinstance(g, dict) and g.get("op") in ("equal", "del", "ins")
+            ],
+        )
+        for i in changes.get("items") or []
+        if isinstance(i, dict)
+    ]
+    return TemplateWordCheck(
+        unchanged=raw.get("unchanged") is True,
+        formatting_only=raw.get("formatting_only") is True,
+        can_apply=raw.get("can_apply") is True,
+        locked=raw.get("locked") is True,
+        base=text(raw.get("base")),
+        images_dropped=raw.get("images_dropped") if isinstance(raw.get("images_dropped"), int) else 0,
+        unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
+        missing_blocks=[
+            WordMissingBlock(code=text(b.get("code")), label=text(b.get("label")))
+            for b in raw.get("missing_blocks") or []
+            if isinstance(b, dict)
+        ],
+        summary=WordChangeSummary(
+            changed=points("changed"),
+            added=points("added"),
+            removed=points("removed"),
+            total=summary.get("total") if isinstance(summary.get("total"), int) else len(items),
+            more=summary.get("more") if isinstance(summary.get("more"), int) else 0,
+        ),
+        items=items,
+    )

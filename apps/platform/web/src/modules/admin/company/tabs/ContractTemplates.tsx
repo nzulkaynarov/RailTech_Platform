@@ -20,11 +20,22 @@ import { useFormat } from "../../../../shared/lib/useFormat";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { FormModal, ListTable, QueryGate, TabHeader } from "../common";
+import { LanguageTabs, useTemplateWord } from "../TemplateWord";
+import type { DocumentTemplateLanguage } from "../templateWord";
 
 /** Текст отказа словами: подкод ERP (`details.reason`), иначе общий. */
-function refusal(t: (key: string, options?: { defaultValue: string }) => string, error: unknown) {
+function refusal(
+  t: (key: string, options?: { defaultValue?: string; list?: string }) => string,
+  error: unknown,
+) {
   if (error instanceof ApiError) {
     const reason = error.details["reason"];
+    const unknown = error.details["unknown_placeholders"];
+    if (reason === "template_unknown_placeholders" && Array.isArray(unknown)) {
+      return t("contractTemplates.errors.template_unknown_placeholders", {
+        list: unknown.map((code) => `{{${String(code)}}}`).join(", "),
+      });
+    }
     if (typeof reason === "string") {
       const text = t(`contractTemplates.errors.${reason}`, { defaultValue: "" });
       if (text) return text;
@@ -46,6 +57,10 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
   const format = useFormat();
   const query = useListContractTemplates();
   const [creating, setCreating] = useState(false);
+  // ШАБЛ-1: язык файла Word и образца PDF для всех строк (RU / UZ / EN)
+  const [language, setLanguage] = useState<DocumentTemplateLanguage>("ru");
+  const word = useTemplateWord(language);
+  const mayPdf = canEdit(me, "company.settings");
   const [form] = Form.useForm<ContractTemplateIn>();
   // Утверждает держатель зоны «Право»; администратор — всегда. Решающее слово за ERP.
   const mayApprove = canEdit(me, "eds.visa.legal") || canEdit(me, "admin");
@@ -102,6 +117,12 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
     return t("contractTemplates.draftLine", { edition: row.edition });
   };
 
+  const languageBar = (
+    <div className="pf-co-word-bar">
+      <span className="pf-co-hint">{t("contractTemplates.fileLanguage")}</span>
+      <LanguageTabs value={language} onChange={setLanguage} />
+    </div>
+  );
   const add = mayPrepare ? (
     <Button
       type="primary"
@@ -124,6 +145,7 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
         {({ items }) => (
           <>
             {items.length > 0 ? <div>{add}</div> : null}
+            {items.length > 0 ? languageBar : null}
             <ListTable<ContractTemplate>
               tableId="admin.company.contractTemplates"
               label={t("contractTemplates.title")}
@@ -195,6 +217,31 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                   width: ROW_ACTIONS_WIDTH,
                   cell: (row) => {
                     const actions = [
+                      {
+                        key: "word",
+                        label: t("templates.word.download"),
+                        onClick: () => {
+                          void word.download(row);
+                        },
+                      },
+                      mayPdf
+                        ? {
+                            key: "pdf",
+                            label: t("templates.word.downloadPdf"),
+                            onClick: () => {
+                              void word.downloadPdf(row);
+                            },
+                          }
+                        : null,
+                      mayPrepare && !row.locked
+                        ? {
+                            key: "upload",
+                            label: t("templates.word.upload"),
+                            onClick: () => {
+                              word.upload(row);
+                            },
+                          }
+                        : null,
                       row.status === "approved" && row.is_active && mayPrepare
                         ? {
                             key: "edition",
@@ -243,6 +290,7 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
         )}
       </QueryGate>
       <Typography.Paragraph type="secondary">{t("contractTemplates.note")}</Typography.Paragraph>
+      {word.node}
       <FormModal
         open={creating}
         title={t("contractTemplates.createTitle")}

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Button, Checkbox, Form, Input, Select } from "antd";
+import { App, Button, Checkbox, ConfigProvider, Form, Input, Select } from "antd";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,8 @@ import {
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { ConfirmModal, EditorPage, FormModal, ListTable, QueryGate } from "../common";
 import { SamplePdf } from "../SamplePdf";
+import { LanguageTabs, TemplateWordButtons, useTemplateWord } from "../TemplateWord";
+import { type DocumentTemplateLanguage, templateFileName } from "../templateWord";
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
@@ -258,10 +260,23 @@ function DocumentEditor({
   const mutation = row ? update : create;
   const placeholders = useGetDocumentPlaceholders();
   const body = Form.useWatch("body_html", form) as string | undefined;
+  // ШАБЛ-1: текст правят в Word; разметка спрятана, пока не попросят. Язык — вкладки RU / UZ / EN для файла и образца.
+  const [language, setLanguage] = useState<DocumentTemplateLanguage>("ru");
+  const [showMarkup, setShowMarkup] = useState(false);
+  const [bodies, setBodies] = useState({
+    uz: row?.body_html_uz ?? "",
+    en: row?.body_html_en ?? "",
+  });
+  const word = useTemplateWord(language, (next) => {
+    setBodies({ uz: next.body_html_uz, en: next.body_html_en });
+    form.setFieldValue("body_html", next.body_html);
+  });
   const kind = (Form.useWatch("kind", form) as DocumentTemplateKind | undefined) ?? initial.kind;
 
   // Образец — настоящий PDF генератора на бланке, ничего не сохраняется (ДОК-14).
-  const text = body ?? initial.body_html;
+  const own = body ?? initial.body_html;
+  const text = language === "ru" ? own : bodies[language] || own;
+  const filled = ["ru", ...(bodies.uz.trim() ? ["uz"] : []), ...(bodies.en.trim() ? ["en"] : [])];
   // Подстановки, которых нет в каталоге: ERP называет их, когда образец готов (C2A-G-5).
   const [unknown, setUnknown] = useState<string[]>([]);
 
@@ -361,17 +376,58 @@ function DocumentEditor({
               />
             </Form.Item>
           )}
-          <Form.Item
-            name="body_html"
-            label={t("templates.documents.body")}
-            extra={
-              prefilled !== null && prefilled === body
-                ? t("templates.documents.prefilled")
-                : t("templates.documents.bodyHint", { example: "{{counterparty.name}}" })
-            }
-          >
-            <Input.TextArea rows={12} className="pf-co-mono" spellCheck={false} />
-          </Form.Item>
+          {/* Скачать можно и образец платформы, и без права на правки: форма отключена, эти кнопки — нет */}
+          <ConfigProvider componentDisabled={false}>
+            <div className="pf-co-word">
+              <span className="pf-co-word-title">{t("templates.documents.bodyTitle")}</span>
+              {row ? (
+                <>
+                  <LanguageTabs value={language} onChange={setLanguage} filled={filled} />
+                  <TemplateWordButtons
+                    template={row}
+                    word={word}
+                    canUpload={!readOnly && !row.is_locked}
+                    canPdf={false}
+                  />
+                  <p className="pf-co-hint">
+                    {row.is_locked
+                      ? t("templates.word.lockedHint")
+                      : language !== "ru" && !filled.includes(language)
+                        ? t("templates.word.noTextHint")
+                        : t("templates.word.howTo")}
+                  </p>
+                </>
+              ) : (
+                <p className="pf-co-hint">{t("templates.word.saveFirst")}</p>
+              )}
+              <Button
+                type="link"
+                className="pf-co-link"
+                aria-expanded={showMarkup}
+                onClick={() => {
+                  setShowMarkup((value) => !value);
+                }}
+              >
+                {showMarkup
+                  ? t("templates.documents.hideMarkup")
+                  : t("templates.documents.showMarkup")}
+              </Button>
+            </div>
+          </ConfigProvider>
+          {/* Поле остаётся в форме и скрытым: значение уходит при сохранении, даже если разметку не открывали */}
+          <div hidden={!showMarkup}>
+            <Form.Item
+              name="body_html"
+              label={t("templates.documents.body")}
+              extra={
+                prefilled !== null && prefilled === body
+                  ? t("templates.documents.prefilled")
+                  : t("templates.documents.bodyHint", { example: "{{counterparty.name}}" })
+              }
+            >
+              <Input.TextArea rows={12} className="pf-co-mono" spellCheck={false} />
+            </Form.Item>
+          </div>
           <Form.Item name="is_active" valuePropName="checked" style={{ marginBottom: 12 }}>
             <Checkbox>{t("templates.documents.activeLabel")}</Checkbox>
           </Form.Item>
@@ -419,6 +475,11 @@ function DocumentEditor({
             request={{ template_kind: kind, body_html: text }}
             title={t("templates.documents.previewFrame")}
             onWarnings={setUnknown}
+            language={language}
+            onLanguageChange={setLanguage}
+            {...(row
+              ? { downloadName: templateFileName(row.name, row.edition, language, "pdf") }
+              : {})}
           />
           {unknown.map((code) => (
             <p key={code} className="pf-co-hint" role="status">
@@ -427,6 +488,7 @@ function DocumentEditor({
           ))}
         </div>
       </div>
+      {word.node}
     </EditorPage>
   );
 }

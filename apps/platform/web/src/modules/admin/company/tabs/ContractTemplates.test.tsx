@@ -7,6 +7,7 @@ import { resetCompanyMock } from "../../../../mocks/fixtures/company";
 import { endSession } from "../../../../mocks/mockSession";
 import i18n from "../../../../shared/i18n";
 import { renderApp, signInAs } from "../../../../test/renderApp";
+import { rowActionItems } from "../../../../test/rowActions";
 import { setViewportWidth } from "../../../../test/viewport";
 
 beforeEach(() => {
@@ -60,8 +61,12 @@ describe("Документы · Шаблоны · Договоры (ДОК-10)",
   it("директор без зоны «Право» не видит «Утвердить»", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/templates?tab=contracts");
-    const row = await rowOf("Договор с клиентом · услуги");
-    expect(within(row).queryByRole("button", { name: /Действия/ })).toBeNull();
+    await rowOf("Договор с клиентом · услуги");
+    // ШАБЛ-1: скачать шаблон может любой, кто его видит; «Утвердить» и «Вернуть» — только «Право»
+    const items = await rowActionItems("Договор с клиентом · услуги");
+    expect(items).toContain("Скачать Word");
+    expect(items).not.toContain("Утвердить");
+    expect(items).not.toContain("Вернуть в черновик");
   });
 
   it("«Новая редакция» делает черновик; «На утверждение» отправляет его юристу", async () => {

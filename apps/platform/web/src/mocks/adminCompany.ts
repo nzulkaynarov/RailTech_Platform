@@ -27,6 +27,7 @@ import type {
   PlatformSettingsUpdate,
   QuoteDefaultsUpdate,
   ReferenceKind,
+  TemplateWordCheck,
 } from "../shared/api/generated/model";
 import { isSystemAdmin } from "../entities/role/roles";
 import { omit } from "../modules/admin/company/diff";
@@ -102,6 +103,29 @@ function guard(need: "read" | "full"): Response | Caller {
     platformAdmin: me.roles.some(isSystemAdmin),
     name: me.name,
   };
+}
+
+const WORD_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/** Id шаблона из адреса `/document-templates/<id>/word/...` (в обработчиках без `params`). */
+const templateIdOf = (request: Request): string =>
+  /\/document-templates\/([^/]+)\/word/.exec(new URL(request.url).pathname)?.[1] ?? "";
+
+async function uploadedText(request: Request): Promise<string> {
+  const file = (await request.formData().catch(() => null))?.get("file");
+  return file instanceof Blob ? await file.text() : "";
+}
+
+function wordRefusal(reason: string) {
+  return HttpResponse.json(
+    {
+      code: "VALIDATION_FAILED",
+      message: "Проверьте заполнение полей.",
+      source: "erp",
+      details: { reason, fields: [] },
+    },
+    { status: 422 },
+  );
 }
 
 const isResponse = (value: Response | Caller): value is Response => value instanceof Response;
@@ -396,7 +420,13 @@ export const adminCompanyHandlers = [
     const caller = guard("read");
     if (isResponse(caller)) return caller;
     const body = (await request.json()) as DocumentSampleIn;
-    if (body.kind === undefined && body.template_kind === undefined) return validation(["kind"]);
+    if (
+      body.kind === undefined &&
+      body.template_kind === undefined &&
+      body.template_id === undefined
+    ) {
+      return validation(["kind"]);
+    }
     sampleRequests.push(body);
     const id = sampleRequests.length.toString(16).padStart(32, "0");
     const known = PLACEHOLDER_GROUPS.flatMap((g) => g.items.map((i) => i.code));
@@ -699,6 +729,10 @@ export const adminCompanyHandlers = [
           kind,
           kind_name: TEMPLATE_KIND_NAME[kind],
           body_html: body.body_html ?? "",
+          body_html_uz: "",
+          body_html_en: "",
+          edition: 1,
+          is_locked: false,
           is_sample: false,
           is_owned: true,
           is_active: body.is_active ?? true,
@@ -713,6 +747,84 @@ export const adminCompanyHandlers = [
       201,
     ),
   ),
+  // --- ШАБЛ-1: шаблон в Word. Содержимое файла управляет ответом: HOSTILE — отказ, SAME — «изменений нет», UNKNOWN —
+  // неизвестная подстановка; всё остальное — одна правка пункта 1.
+  http.get("*/document-templates/:id/word", ({ request }) => {
+    if (!readSession()) return new HttpResponse(null, { status: 401 });
+    const language = new URL(request.url).searchParams.get("language") ?? "ru";
+    return new HttpResponse("PK-docx", {
+      headers: {
+        "content-type": WORD_MIME,
+        "content-disposition": `attachment; filename="template.docx"; filename*=UTF-8''${encodeURIComponent(`Шаблон (${language}), ред. 1 — проект.docx`)}`,
+      },
+    });
+  }),
+  http.post("*/document-templates/:id/word/check", async ({ request }) => {
+    const caller = guard("full");
+    if (isResponse(caller)) return caller;
+    const text = await uploadedText(request);
+    if (text.includes("HOSTILE")) return wordRefusal("word_hostile");
+    const row = readCompanyMock().docTemplates.find((t) => t.id === templateIdOf(request));
+    const same = text.includes("SAME");
+    const check: TemplateWordCheck = {
+      unchanged: same,
+      formatting_only: false,
+      can_apply: !same && !(row?.is_locked ?? false),
+      locked: row?.is_locked ?? false,
+      base: "0123456789abcdef",
+      images_dropped: text.includes("IMAGES") ? 2 : 0,
+      unknown_placeholders: text.includes("UNKNOWN") ? ["warehouse.name"] : [],
+      missing_blocks: [],
+      summary: {
+        changed: same ? [] : ["1"],
+        added: same ? [] : ["3"],
+        removed: [],
+        total: same ? 0 : 2,
+        more: 0,
+      },
+      items: same
+        ? []
+        : [
+            {
+              point: "1",
+              kind: "changed",
+              ours: "1. Поставка товаров.",
+              theirs: "1. Поставка и монтаж товаров.",
+              segments: [
+                { op: "equal", text: "1. Поставка " },
+                { op: "ins", text: "и монтаж " },
+                { op: "equal", text: "товаров." },
+              ],
+            },
+            {
+              point: "3",
+              kind: "added",
+              ours: "",
+              theirs: "3. Гарантия двенадцать месяцев.",
+              segments: [],
+            },
+          ],
+    };
+    return HttpResponse.json(check);
+  }),
+  http.post("*/document-templates/:id/word/apply", ({ request }) => {
+    const caller = guard("full");
+    if (isResponse(caller)) return caller;
+    const url = new URL(request.url);
+    const language = url.searchParams.get("language") ?? "ru";
+    const id = templateIdOf(request);
+    return HttpResponse.json(
+      updateCompanyMock((state) => {
+        const row = state.docTemplates.find((t) => t.id === id);
+        if (!row) return notFound();
+        const add = "<p>3. Гарантия двенадцать месяцев.</p>";
+        if (language === "uz") row.body_html_uz = add;
+        else if (language === "en") row.body_html_en = add;
+        else row.body_html = row.body_html + add;
+        return row;
+      }) as never,
+    );
+  }),
   http.patch("*/admin/company/document-templates/:id", ({ request, params }) =>
     write<DocumentTemplateUpdate>(request, (body, s) => {
       const row = s.docTemplates.find((t) => t.id === params["id"]);

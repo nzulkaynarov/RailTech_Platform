@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Segmented } from "antd";
+import { Button, Segmented } from "antd";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +16,18 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { companyErrorText } from "./errors";
+
+/** Образец, который на экране, — файлом: PDF из байтов, уже загруженных просмотрщиком. */
+function saveBytes(data: ArrayBuffer, name: string): void {
+  const href = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(href);
+}
 
 const PdfViewer = lazy(() => import("../../../shared/ui/PdfViewer"));
 
@@ -37,15 +49,28 @@ export function SamplePdf({
   request,
   title,
   onWarnings,
+  language: controlled,
+  onLanguageChange,
+  downloadName,
 }: {
   /** Что показать: вид бланка либо вид и текст шаблона; язык подставляет сам образец */
   request: Omit<DocumentSampleIn, "language">;
   title: string;
   /** Подстановки текста, которых нет в каталоге, — когда образец готов */
   onWarnings?: (codes: string[]) => void;
+  /** Язык задаёт вызывающий (вкладки RU / UZ / EN редактора шаблона); без него образец выбирает язык сам */
+  language?: DocumentSampleInLanguage;
+  onLanguageChange?: (language: DocumentSampleInLanguage) => void;
+  /** Имя файла «Скачать PDF» — образец, который сейчас на экране; без имени кнопки нет */
+  downloadName?: string;
 }) {
   const { t, i18n } = useTranslation("company");
-  const [language, setLanguage] = useState<DocumentSampleInLanguage>(uiLanguage(i18n.language));
+  const [own, setOwn] = useState<DocumentSampleInLanguage>(uiLanguage(i18n.language));
+  const language = controlled ?? own;
+  const setLanguage = (next: DocumentSampleInLanguage) => {
+    setOwn(next);
+    onLanguageChange?.(next);
+  };
   const [id, setId] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const key = JSON.stringify({ ...request, language });
@@ -106,13 +131,27 @@ export function SamplePdf({
   const pending = Boolean(id) && !ready && state.data?.status !== "failed";
   return (
     <div className="pf-co-sample">
-      <Segmented<DocumentSampleInLanguage>
-        aria-label={t("sample.language")}
-        size="small"
-        value={language}
-        onChange={setLanguage}
-        options={LANGUAGES.map((value) => ({ value, label: value.toUpperCase() }))}
-      />
+      <div className="pf-co-sample-bar">
+        {controlled === undefined ? (
+          <Segmented<DocumentSampleInLanguage>
+            aria-label={t("sample.language")}
+            size="small"
+            value={language}
+            onChange={setLanguage}
+            options={LANGUAGES.map((value) => ({ value, label: value.toUpperCase() }))}
+          />
+        ) : null}
+        {downloadName && shown ? (
+          <Button
+            size="small"
+            onClick={() => {
+              saveBytes(shown, downloadName);
+            }}
+          >
+            {t("templates.word.downloadPdf")}
+          </Button>
+        ) : null}
+      </div>
       <div aria-busy={pending ? "true" : "false"}>
         {error ? <ErrorNote message={error} /> : null}
         {shown ? (

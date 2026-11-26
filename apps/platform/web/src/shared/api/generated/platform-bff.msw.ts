@@ -442,6 +442,7 @@ import type {
   TelegramGroupList,
   TelegramLink,
   TemplateCatalog,
+  TemplateWordCheck,
   Ticket,
   TicketList,
   TicketPage,
@@ -2678,6 +2679,80 @@ export const getListOfferedContractTemplatesResponseMock = (
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
+  ...overrideResponse,
+});
+
+export const getDownloadTemplateWordResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getCheckTemplateWordResponseMock = (
+  overrideResponse: Partial<Extract<TemplateWordCheck, object>> = {},
+): TemplateWordCheck => ({
+  unchanged: faker.datatype.boolean(),
+  formatting_only: faker.datatype.boolean(),
+  can_apply: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  base: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  images_dropped: faker.number.int(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  missing_blocks: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  summary: {
+    changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    total: faker.number.int(),
+    more: faker.number.int(),
+  },
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+    ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    segments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getApplyTemplateWordResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
+): DocumentTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
+  is_sample: faker.datatype.boolean(),
+  is_owned: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  placeholders_used: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
 
@@ -19261,6 +19336,10 @@ export const getListDocumentTemplatesResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
     kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    is_locked: faker.datatype.boolean(),
     is_sample: faker.datatype.boolean(),
     is_owned: faker.datatype.boolean(),
     is_active: faker.datatype.boolean(),
@@ -19281,6 +19360,10 @@ export const getCreateDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19370,6 +19453,10 @@ export const getUpdateDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19389,6 +19476,10 @@ export const getCopyDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -45118,6 +45209,77 @@ export const getListOfferedContractTemplatesMockHandler = (
   );
 };
 
+export const getDownloadTemplateWordMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/document-templates/:id/word",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadTemplateWordResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getCheckTemplateWordMockHandler = (
+  overrideResponse?:
+    | TemplateWordCheck
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<TemplateWordCheck> | TemplateWordCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/:id/word/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckTemplateWordResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApplyTemplateWordMockHandler = (
+  overrideResponse?:
+    | DocumentTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentTemplate> | DocumentTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/:id/word/apply",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApplyTemplateWordResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getNewContractTemplateEditionMockHandler = (
   overrideResponse?:
     | ContractTemplate
@@ -56409,6 +56571,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListContractTemplatesMockHandler(),
   getCreateContractTemplateMockHandler(),
   getListOfferedContractTemplatesMockHandler(),
+  getDownloadTemplateWordMockHandler(),
+  getCheckTemplateWordMockHandler(),
+  getApplyTemplateWordMockHandler(),
   getNewContractTemplateEditionMockHandler(),
   getSubmitContractTemplateMockHandler(),
   getApproveContractTemplateMockHandler(),

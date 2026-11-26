@@ -442,7 +442,10 @@
         "act": "Dalolatnoma",
         "receipt": "Tölov kvitansiyasi",
         "delivery_note": "Yuk xati"
-      }
+      },
+      "bodyTitle": "Shablon matni",
+      "showMarkup": "Belgilashni ko‘rsatish",
+      "hideMarkup": "Belgilashni yashirish"
     },
     "emails": {
       "key": "Xat kaliti",
@@ -473,6 +476,52 @@
       "empty": {
         "title": "Hozirça xat şablonlari yöq",
         "text": "Hozirça xatlar platformaning fayl şablonlari böyiça ketadi. Matnni almaştiriş uçun öz şabloningizni yarating."
+      }
+    },
+    "word": {
+      "download": "Word’da yuklab olish",
+      "downloadPdf": "PDF yuklab olish",
+      "upload": "Word’dan yuklash",
+      "file": "Word fayli",
+      "language": "Matn tili",
+      "noText": "matn yo‘q",
+      "howTo": "Word’da yuklab oling, mas’ullarga bering, tahrirdan keyin qayta yuklang: saqlashdan oldin nima o‘zgargani ko‘rinadi.",
+      "lockedHint": "Matn tasdiqlangan va o‘zgartirilmaydi. Yuklab olish mumkin; o‘zgartirish uchun yangi tahrir yarating.",
+      "noTextHint": "Bu tilda hozircha matn yo‘q — hujjat rus tilida chop etiladi. Faylda tarjima uchun asos sifatida rus matni bor.",
+      "saveFirst": "Avval shablonni saqlang — shundan keyin uni Word’da yuklab olish mumkin.",
+      "sheetTitle": "Nima o‘zgardi · {{language}}",
+      "accept": "O‘zgarishlarni qabul qilish",
+      "nothingChanged": "O‘zgarish yo‘q: fayl shablon matniga mos.",
+      "formattingOnly": "So‘zlar bir xil, faqat ko‘rinish o‘zgargan.",
+      "summary": "O‘zgargan: {{changed}} · qo‘shilgan: {{added}} · o‘chirilgan: {{removed}}",
+      "locked": "Shablon tasdiqlangan, uning matni o‘zgarmaydi. Yangi tahrir yarating va faylni unga yuklang.",
+      "missingBlocks": "Bu bloklarsiz hujjat shakllanmaydi",
+      "unknown": "Noma’lum maydonlar: {{count}}",
+      "unknownHint": "Ular bor shablonni tasdiqlashga yuborib bo‘lmaydi. Fayldagi kodni to‘g‘rilang yoki maydonni olib tashlang.",
+      "images": "Fayldagi rasmlar saqlanmaydi: {{count}}.",
+      "changesLabel": "Bandlar bo‘yicha o‘zgarishlar",
+      "point": "{{point}}-band",
+      "noPoint": "Raqamsiz",
+      "kind": {
+        "changed": "o‘zgargan",
+        "added": "qo‘shilgan",
+        "removed": "o‘chirilgan"
+      },
+      "was": "Edi",
+      "becomes": "Bo‘ladi",
+      "more": "Yana o‘zgarishlar: {{count}}.",
+      "applied": "Shablon matni yangilandi",
+      "pdfFailed": "PDF tayyorlanmadi. Qayta urinib ko‘ring.",
+      "errors": {
+        "word_only_docx": "Word fayli (.docx) kerak.",
+        "word_empty": "Faylda matn yo‘q.",
+        "word_hostile": "Fayl Word hujjatiga o‘xshamaydi yoki juda murakkab. Uni Word’da qayta saqlang.",
+        "word_unreadable": "Fayl o‘qilmadi. Uni Word’dan .docx sifatida saqlang.",
+        "word_too_big": "Fayl 5 MB dan katta yoki juda uzun.",
+        "word_too_complex": "Solishtirish uchun tahrirlar juda ko‘p. Faylni qismlarga bo‘lib yuklang.",
+        "word_base_changed": "Shablon matni tekshiruvdan keyin o‘zgargan. Faylni qayta yuklang.",
+        "word_file_required": "Word faylini tanlang.",
+        "template_locked": "Tasdiqlangan matn o‘zgartirilmaydi. Yangi tahrir yarating."
       }
     }
   },
@@ -782,8 +831,10 @@
       "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
       "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
-      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
-    }
+      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi.",
+      "template_unknown_placeholders": "Shablonda noma’lum maydonlar bor: {{list}}. Ularni to‘g‘rilab, qayta urinib ko‘ring."
+    },
+    "fileLanguage": "Fayl tili"
   },
   "sample": {
     "language": "Hujjat tili",

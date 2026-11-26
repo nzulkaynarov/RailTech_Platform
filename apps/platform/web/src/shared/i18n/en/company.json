@@ -442,7 +442,10 @@
         "act": "Act",
         "receipt": "Payment receipt",
         "delivery_note": "Delivery note"
-      }
+      },
+      "bodyTitle": "Template text",
+      "showMarkup": "Show markup",
+      "hideMarkup": "Hide markup"
     },
     "emails": {
       "key": "Email key",
@@ -473,6 +476,52 @@
       "empty": {
         "title": "No email templates yet",
         "text": "For now emails use the platform file templates. Create your own template to replace the text."
+      }
+    },
+    "word": {
+      "download": "Download Word",
+      "downloadPdf": "Download PDF",
+      "upload": "Upload from Word",
+      "file": "Word file",
+      "language": "Text language",
+      "noText": "no text",
+      "howTo": "Download it as Word, pass it to the people responsible, upload it back after their edits: you will see what changed before anything is saved.",
+      "lockedHint": "The text is approved and cannot be edited. You can download it; create a new edition to make changes.",
+      "noTextHint": "There is no text in this language yet — the document prints in Russian. The file holds the Russian text as a base for translation.",
+      "saveFirst": "Save the template first — then you can download it as Word.",
+      "sheetTitle": "What changed · {{language}}",
+      "accept": "Accept changes",
+      "nothingChanged": "No changes: the file matches the template text.",
+      "formattingOnly": "The words are the same, only the formatting changed.",
+      "summary": "Changed: {{changed}} · added: {{added}} · removed: {{removed}}",
+      "locked": "The template is approved and its text cannot change. Create a new edition and upload the file into it.",
+      "missingBlocks": "The document cannot be built without these blocks",
+      "unknown": "Unknown fields: {{count}}",
+      "unknownHint": "A template with them cannot be sent for approval. Fix the code in the file or remove the field.",
+      "images": "Pictures from the file are not saved: {{count}}.",
+      "changesLabel": "Changes by clause",
+      "point": "Clause {{point}}",
+      "noPoint": "No number",
+      "kind": {
+        "changed": "changed",
+        "added": "added",
+        "removed": "removed"
+      },
+      "was": "Was",
+      "becomes": "Becomes",
+      "more": "And more changes: {{count}}.",
+      "applied": "Template text updated",
+      "pdfFailed": "The PDF was not built. Try again.",
+      "errors": {
+        "word_only_docx": "A Word file (.docx) is needed.",
+        "word_empty": "The file has no text.",
+        "word_hostile": "The file does not look like a Word document or is too complex. Save it in Word again.",
+        "word_unreadable": "The file cannot be read. Save it from Word as .docx.",
+        "word_too_big": "The file is over 5 MB or too long.",
+        "word_too_complex": "Too many edits to compare. Upload the file in parts.",
+        "word_base_changed": "The template text changed after the check. Upload the file again.",
+        "word_file_required": "Choose a Word file.",
+        "template_locked": "Approved text cannot be edited. Create a new edition."
       }
     }
   },
@@ -782,8 +831,10 @@
       "template_transition_not_allowed": "The template is in another status. Refresh the page.",
       "template_edition_in_progress": "A new edition is already in progress.",
       "template_counterparty_required": "Choose who the template is for.",
-      "template_approval_forbidden": "Approved by the holder of the Legal zone."
-    }
+      "template_approval_forbidden": "Approved by the holder of the Legal zone.",
+      "template_unknown_placeholders": "The template has unknown fields: {{list}}. Fix them and try again."
+    },
+    "fileLanguage": "File language"
   },
   "sample": {
     "language": "Document language",

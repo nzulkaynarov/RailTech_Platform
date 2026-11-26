@@ -39,6 +39,8 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "kind_code",
             "kind_name",
             "body_html",
+            "body_html_uz",
+            "body_html_en",
             "placeholders_used",
             "is_sample",
             "is_active",
@@ -62,6 +64,8 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
+            "body_html_uz",
+            "body_html_en",
             "placeholders_used",
             "is_sample",
             "approval_status",
