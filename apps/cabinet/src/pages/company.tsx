@@ -1215,10 +1215,6 @@ export function PartnerApplicationCard() {
                   </CanAct>
                 )}
 
-                {app.status === 'candidate_agreed' && (
-                  <p className="text-sm text-muted-foreground">{t('pages.company.partner.willBeIssued')}</p>
-                )}
-
                 {app.status === 'approved' && (
                   <Button asChild>
                     <Link to="/my-products">{t('pages.company.partner.toMyProducts')}</Link>

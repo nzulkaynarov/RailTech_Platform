@@ -413,7 +413,7 @@
       "nda": "Confidentiality after the contract ends: {{years}} years.",
       "ndaIndefinite": "Trade secrets: no time limit.",
       "agreement": "Agreement number",
-      "declineConfirm": "The contract ends on {{until}} and will not renew. This cannot be undone on the card.",
+      "declineConfirm": "The contract ends on {{until}} and will not renew. If you change your mind, use «Restore renewal» on this card.",
       "cancel": "Cancel",
       "action": {
         "decline_renewal": "Decline renewal",

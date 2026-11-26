@@ -8,6 +8,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { clickRowAction } from "./rowActionTest";
 
 setupCatalogTests();
 
@@ -133,7 +134,7 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
   it("отметка «подписан» без согласия — с причиной, а скан или заметка — на выбор", async () => {
     await openApplications("supply@demo.example");
     const row = rowOf("ООО «Восток Снаб»");
-    fireEvent.click(within(row).getByRole("button", { name: "Отметить: подписан без согласия" }));
+    await clickRowAction(row, "Отметить: подписан без согласия");
     const modal = await findModal(/Договор подписан/);
     expect(within(modal).getByLabelText(/Причина одобрения без согласия/)).toBeVisible();
     expect(within(modal).getByLabelText("Заметка вместо скана")).toBeVisible();

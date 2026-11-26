@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Radio, Segmented, Select } from "antd";
+import { Alert, Button, Dropdown, Input, Radio, Segmented, Select } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -176,84 +176,105 @@ export function PartnerApplicationsPanel() {
           (row.status === "contract_sent" && row.candidate_returned_at !== null);
         const canSend = row.status === "submitted" && row.contract_blocker === null;
         const canResend = row.status === "contract_sent" && row.invite_delivery === "failed";
+        const actions: { key: string; label: string; danger?: boolean; run: () => void }[] = [];
+        if (row.can_decide_contract && row.contract_approval === "requested") {
+          actions.push({
+            key: "decide",
+            label: t("partnerApplications.actions.decide"),
+            run: () => {
+              setDecisionRow(row);
+            },
+          });
+        }
+        if (canManage && canPrepare && row.contract_source === "") {
+          actions.push({
+            key: "prepare",
+            label: t("partnerApplications.actions.prepare"),
+            run: () => {
+              setPrepareRow(row);
+            },
+          });
+        }
+        if (canManage && (canSend || canResend)) {
+          actions.push({
+            key: "send",
+            label: t(
+              canSend
+                ? "partnerApplications.actions.sendContract"
+                : "partnerApplications.actions.resendContract",
+            ),
+            run: () => {
+              setSendContractRow(row);
+            },
+          });
+        }
+        if (canManage && canPrepare && row.contract_source !== "") {
+          actions.push({
+            key: "prepare",
+            label: t("partnerApplications.actions.prepareAgain"),
+            run: () => {
+              setPrepareRow(row);
+            },
+          });
+        }
+        if (canManage && row.status === "contract_sent" && row.email.trim() === "") {
+          actions.push({
+            key: "invite",
+            label: t("partnerApplications.actions.invite"),
+            run: () => {
+              setInviteRow(row);
+            },
+          });
+        }
+        if (canManage && row.status !== "submitted") {
+          actions.push({
+            key: "approve",
+            label: t(
+              row.status === "candidate_agreed"
+                ? "partnerApplications.actions.approve"
+                : "partnerApplications.actions.approveWithoutAgreement",
+            ),
+            run: () => {
+              setApproveRow(row);
+            },
+          });
+        }
+        if (canManage) {
+          actions.push({
+            key: "reject",
+            label: t("partnerApplications.actions.reject"),
+            danger: true,
+            run: () => {
+              setRejectRow(row);
+            },
+          });
+        }
+        const [first, ...rest] = actions;
+        if (!first) return null;
         return (
           <div className="pf-cat-actions">
-            {row.can_decide_contract && row.contract_approval === "requested" ? (
-              <Button
-                type="primary"
-                size="small"
-                onClick={() => {
-                  setDecisionRow(row);
+            <Button
+              type={first.danger ? "default" : "primary"}
+              danger={first.danger}
+              size="small"
+              onClick={first.run}
+            >
+              {first.label}
+            </Button>
+            {rest.length > 0 ? (
+              <Dropdown
+                trigger={["click"]}
+                menu={{
+                  items: rest.map((x) => ({ key: x.key, label: x.label, danger: x.danger })),
+                  onClick: ({ key }) => {
+                    rest.find((x) => x.key === key)?.run();
+                  },
                 }}
               >
-                {t("partnerApplications.actions.decide")}
-              </Button>
-            ) : null}
-            {canManage && canPrepare ? (
-              <Button
-                size="small"
-                type={row.contract_source === "" ? "primary" : "default"}
-                onClick={() => {
-                  setPrepareRow(row);
-                }}
-              >
-                {t(
-                  row.contract_source === ""
-                    ? "partnerApplications.actions.prepare"
-                    : "partnerApplications.actions.prepareAgain",
-                )}
-              </Button>
-            ) : null}
-            {canManage && (canSend || canResend) ? (
-              <Button
-                size="small"
-                type={canSend ? "primary" : "default"}
-                onClick={() => {
-                  setSendContractRow(row);
-                }}
-              >
-                {t(
-                  canSend
-                    ? "partnerApplications.actions.sendContract"
-                    : "partnerApplications.actions.resendContract",
-                )}
-              </Button>
-            ) : null}
-            {canManage && row.status === "contract_sent" && row.email.trim() === "" ? (
-              <Button
-                size="small"
-                onClick={() => {
-                  setInviteRow(row);
-                }}
-              >
-                {t("partnerApplications.actions.invite")}
-              </Button>
-            ) : null}
-            {canManage && row.status !== "submitted" ? (
-              <Button
-                type={row.status === "candidate_agreed" ? "primary" : "default"}
-                size="small"
-                onClick={() => {
-                  setApproveRow(row);
-                }}
-              >
-                {t(
-                  row.status === "candidate_agreed"
-                    ? "partnerApplications.actions.approve"
-                    : "partnerApplications.actions.approveWithoutAgreement",
-                )}
-              </Button>
-            ) : null}
-            {canManage ? (
-              <Button
-                danger
-                size="small"
-                onClick={() => {
-                  setRejectRow(row);
-                }}
-              >
-                {t("partnerApplications.actions.reject")}
-              </Button>
+                <Button size="small" aria-label={t("partnerApplications.actions.more")}>
+                  {t("partnerApplications.actions.more")}
+                </Button>
+              </Dropdown>
             ) : null}
           </div>
         );
@@ -459,7 +480,9 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
           ? t("partnerApplications.contractLine.returned", { note: row.contract_approval_note })
           : null;
   const waiting = row.contract_waiting_for.join(", ");
-  const voted = row.contract_votes.filter((vote) => vote.decision === "approve").map((vote) => vote.name);
+  const voted = row.contract_votes
+    .filter((vote) => vote.decision === "approve")
+    .map((vote) => vote.name);
   return (
     <div>
       {row.contract_number ? <div>№ {row.contract_number}</div> : null}
@@ -532,7 +555,9 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
       ) : null}
       {row.status === "approved" && row.contract_valid_until ? (
         <span className="pf-cat-sub">
-          {t("partnerApplications.contractLine.validUntil", { date: date(row.contract_valid_until) })}
+          {t("partnerApplications.contractLine.validUntil", {
+            date: date(row.contract_valid_until),
+          })}
           {row.signed_note
             ? ` · ${t("partnerApplications.contractLine.signedNote", { note: row.signed_note })}`
             : ""}
@@ -707,6 +732,12 @@ function ApproveModal({
       {withoutAgreement && !overrideReason.trim() ? (
         <p className="pf-hint" role="status">
           {t("partnerApplications.approveModal.needReason")}
+        </p>
+      ) : !contractNumber.trim() ||
+        (needsChoice && !companyChoice) ||
+        (needsProof && !proofGiven) ? (
+        <p className="pf-hint" role="status">
+          {t("partnerApplications.approveModal.needFields")}
         </p>
       ) : null}
       <p>

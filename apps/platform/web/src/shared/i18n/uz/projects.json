@@ -413,7 +413,7 @@
       "nda": "Şartnoma tugagaç sir saqlaş: {{years}} yil.",
       "ndaIndefinite": "Tijorat siri — muddatsiz.",
       "agreement": "Kelişuv raqami",
-      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Kartada bekor qilib bölmaydi.",
+      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Fikringiz o‘zgarsa, shu kartada «Uzaytirişni qaytariş» tugmasi bor.",
       "cancel": "Kerak emas",
       "action": {
         "decline_renewal": "Uzaytirişdan boş tortiş",

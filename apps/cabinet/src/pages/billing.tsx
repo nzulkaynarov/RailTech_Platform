@@ -163,19 +163,26 @@ export function ContractsPage() {
                       </Button>
                     </CanAct>
                   ) : null}
+                  {row.term?.can_decline ? (
+                    <CanAct>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title={t('pages.contracts.term.declineHint')}
+                        onClick={() => setDeclining(row)}
+                        aria-label={t('pages.contracts.term.declineNamed', { number: row.number })}
+                      >
+                        <CalendarX2 aria-hidden="true" />
+                        {t('pages.contracts.term.decline')}
+                      </Button>
+                    </CanAct>
+                  ) : null}
                   <RowMenu name={row.number}>
                     <RowDocumentItem documentId={row.document_id} number={row.number} />
                     {row.can_download_docx ? (
                       <RowMenuAction icon={Download} onSelect={() => void downloadContractDocx(row.id, `${row.number}.docx`)}>
                         {t('pages.contracts.remarks.docx')}
                       </RowMenuAction>
-                    ) : null}
-                    {row.term?.can_decline ? (
-                      <CanAct>
-                        <RowMenuAction icon={CalendarX2} onSelect={() => setDeclining(row)}>
-                          {t('pages.contracts.term.decline')}
-                        </RowMenuAction>
-                      </CanAct>
                     ) : null}
                     {row.term?.can_restore ? (
                       <CanAct>

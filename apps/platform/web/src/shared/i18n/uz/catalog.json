@@ -1136,6 +1136,7 @@
       "resendContract": "Şartnomani qayta yuboriş",
       "approve": "Belgilaş: imzolangan",
       "invite": "Kabinetga taklif qilış",
+      "more": "Yana",
       "approveWithoutAgreement": "Belgilaş: imzolangan, kelişuvsiz",
       "reject": "Rad etiş",
       "prepare": "Şartnomani tayyorlaş",
@@ -1160,6 +1161,7 @@
     "approveModal": {
       "title": "Şartnoma imzolandi: {{name}}",
       "hint": "Imzolangan şartnoma skanini biriktiring yoki izoh qoldiring — skan majburiy emas. Şartnoma muddati hozir hisoblanadi, kompaniya hamkor kabinetini, aloqaçi esa taklifnomani oladi.",
+      "needFields": "Şartnoma raqami, imzo (skan yoki izoh) va kompaniya tanlovini kiriting — tugma faollaşadi.",
       "needReason": "Tugma sabab körsatganingizdan söng faol böladi.",
       "scanLabel": "Imzolangan skan",
       "scanHint": "PDF yoki rasm, 20 MB gaça",

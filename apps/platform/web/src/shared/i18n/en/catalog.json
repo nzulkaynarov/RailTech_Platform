@@ -1136,6 +1136,7 @@
       "resendContract": "Send contract again",
       "approve": "Mark as signed",
       "invite": "Invite to the Cabinet",
+      "more": "More",
       "approveWithoutAgreement": "Mark as signed without agreement",
       "reject": "Reject",
       "prepare": "Prepare contract",
@@ -1160,6 +1161,7 @@
     "approveModal": {
       "title": "Contract signed: {{name}}",
       "hint": "Attach the scan of the signed contract or leave a note — the scan is optional. The contract term is calculated now, the company gets the partner cabinet and the contact an invitation.",
+      "needFields": "Enter the contract number, the counterparty signature (scan or note) and the company choice to enable the button.",
       "needReason": "The button becomes available once you give a reason.",
       "scanLabel": "Signed scan",
       "scanHint": "PDF or image, up to 20 MB",

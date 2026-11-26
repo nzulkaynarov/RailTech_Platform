@@ -10,6 +10,7 @@ import {
   signIn,
 } from "../../../test/catalogKit";
 import { server } from "../../../test/server";
+import { clickRowAction } from "./rowActionTest";
 
 setupCatalogTests();
 
@@ -50,6 +51,9 @@ describe("Очередь заявок кандидатов в партнёры (
               matching_company_name: null,
               company_match_pending: null,
               invite_delivery: null,
+              contract_approvers: [],
+              contract_waiting_for: [],
+              contract_votes: [],
             },
           ],
         }),
@@ -93,7 +97,9 @@ describe("Очередь заявок кандидатов в партнёры (
   it("снабжение отправляет подготовленный договор кандидату", async () => {
     await openApplications("supply@demo.example");
 
-    fireEvent.click(screen.getByRole("button", { name: "Отправить договор" }));
+    const sendRow = screen.getByText("ООО «Сталь-Транс»").closest("tr");
+    if (!sendRow) throw new Error("Row not found");
+    await clickRowAction(sendRow, "Отправить договор");
     const modal = await findModal(/Отправка договора/);
 
     // FX-1: совпадение по ИНН — вопрос сотруднику, без ответа договор не уходит
@@ -128,9 +134,7 @@ describe("Очередь заявок кандидатов в партнёры (
     fireEvent.change(within(modal).getByLabelText(/Номер договора/), {
       target: { value: "DOG-PART-FINAL" },
     });
-    fireEvent.click(
-      within(modal).getByRole("button", { name: "Отметить: подписан" }),
-    );
+    fireEvent.click(within(modal).getByRole("button", { name: "Отметить: подписан" }));
     await modalClosed(/Договор подписан/);
 
     expect(await screen.findByText("№ DOG-PART-FINAL")).toBeVisible();
@@ -142,10 +146,8 @@ describe("Очередь заявок кандидатов в партнёры (
 
     const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
     if (!vostokRow) throw new Error("Row not found");
-    expect(
-      within(vostokRow).queryByRole("button", { name: "Отметить: подписан" }),
-    ).toBeNull();
-    fireEvent.click(within(vostokRow).getByRole("button", { name: "Отметить: подписан без согласия" }));
+    expect(within(vostokRow).queryByRole("button", { name: "Отметить: подписан" })).toBeNull();
+    await clickRowAction(vostokRow, "Отметить: подписан без согласия");
 
     const modal = await findModal(/Договор подписан/);
     const okBtn = within(modal).getByRole("button", {
@@ -171,7 +173,9 @@ describe("Очередь заявок кандидатов в партнёры (
 
     const newRow = screen.getByText("ООО «Сталь-Транс»").closest("tr");
     if (!newRow) throw new Error("Row not found");
-    expect(within(newRow).queryByRole("button", { name: "Отметить: подписан без согласия" })).toBeNull();
+    expect(
+      within(newRow).queryByRole("button", { name: "Отметить: подписан без согласия" }),
+    ).toBeNull();
     expect(within(newRow).queryByRole("button", { name: "Отметить: подписан" })).toBeNull();
   });
 
@@ -189,9 +193,9 @@ describe("Очередь заявок кандидатов в партнёры (
   it("снабжение может отклонить заявку с указанием причины", async () => {
     await openApplications("supply@demo.example");
 
-    const [rejectButton] = screen.getAllByRole("button", { name: "Отклонить" });
-    if (!rejectButton) throw new Error("No reject button found");
-    fireEvent.click(rejectButton);
+    const rejectRow = screen.getByText("ООО «Сталь-Транс»").closest("tr");
+    if (!rejectRow) throw new Error("Row not found");
+    await clickRowAction(rejectRow, "Отклонить");
 
     const modal = await findModal(/Отклонение заявки/);
     const okBtn = within(modal).getByRole("button", { name: "Отклонить заявку" });

@@ -453,19 +453,16 @@ describe('Срок договора (ДС-1)', () => {
     expect(within(signed).getByText('до 31 дек. 2026 г. · продлится сам')).toBeInTheDocument();
     // без срока (договор не подписан) — прочерк, и меню без отказа
     const sent = card('Договоры', 'D-2026-0048');
-    await openRowMenu(user, sent, 'D-2026-0048');
-    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
-    await user.keyboard('{Escape}');
+    expect(within(sent).queryByRole('button', { name: /Отказаться от продления/ })).not.toBeInTheDocument();
 
-    await openRowMenu(user, signed, 'D-2026-0035');
-    await user.click(await screen.findByRole('menuitem', { name: 'Отказаться от продления' }));
+    await user.click(within(signed).getByRole('button', { name: 'Отказаться от продления договора D-2026-0035' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Договор действует до 31 дек. 2026 г./)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Отказаться от продления' }));
     expect(await screen.findByText('Вы отказались от продления договора D-2026-0035.')).toBeInTheDocument();
     expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · закончится в срок')).toBeInTheDocument();
+    expect(within(card('Договоры', 'D-2026-0035')).queryByRole('button', { name: /Отказаться от продления/ })).not.toBeInTheDocument();
     await openRowMenu(user, card('Договоры', 'D-2026-0035'), 'D-2026-0035');
-    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
     // свой отказ можно вернуть до последнего дня отказа
     await user.click(await screen.findByRole('menuitem', { name: 'Вернуть продление' }));
     expect(await screen.findByText('Продление договора D-2026-0035 возвращено.')).toBeInTheDocument();

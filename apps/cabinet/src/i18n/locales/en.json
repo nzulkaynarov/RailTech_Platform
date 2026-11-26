@@ -652,6 +652,8 @@
           "expired": "term over"
         },
         "decline": "Decline renewal",
+        "declineNamed": "Decline renewal of contract {{number}}",
+        "declineHint": "The contract ends on its date; started deliveries and payments are not affected.",
         "declineTitle": "Decline renewal of contract {{number}}",
         "declineText": "The contract is valid until {{until}} and ends after that. Started deliveries, payments and claims are not affected. You can decline until {{notice}}.",
         "declined": "You declined the renewal of contract {{number}}.",
