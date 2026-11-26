@@ -21,6 +21,7 @@ import { EmployeeList } from "./EmployeeList";
 
 import "./org.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PATH = "/admin/org";
 /** Уже этой ширины блока таблица из пяти колонок не помещается без горизонтальной прокрутки */
@@ -175,7 +176,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   }
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader
         title={title}
         readOnly={!editable}
@@ -237,6 +238,6 @@ export function OrgPage({ objectId }: { objectId?: string }) {
         />
       </div>
       {panel ? <PanelPortal tab="card">{panel}</PanelPortal> : null}
-    </>
+    </PageFrame>
   );
 }

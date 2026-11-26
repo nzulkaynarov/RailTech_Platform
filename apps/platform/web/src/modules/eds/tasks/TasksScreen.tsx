@@ -24,6 +24,7 @@ import { ClosedBanner } from "./LetterOutcomes";
 import { ReplyCard } from "./ReplyBlock";
 import { useActor } from "./actor";
 import { AcquaintAction, MyInstruction } from "./TaskActions";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../inbox/inbox.css";
 import "../mail/mail.css";
@@ -89,72 +90,76 @@ function Content({ letter }: { letter: LetterCard }) {
     (letter.instructions ?? []).some((i) => i.extensions.some((e) => e.status === "pending"));
   const canOpenCard = canSee(me, { anyOf: ["eds.inbox", "eds.inbox.register"] });
   return (
-    <div className="pf-letters">
-      <PageHeader
-        title={t("tasks.title", { number: letter.number })}
-        subtitle={letter.subject}
-        extra={
-          <div className="pf-fp-row">
-            {letter.urgent ? <StatusTag tone="red">{t("card.urgent")}</StatusTag> : null}
-            <StatusTag kind="incoming" status={letter.status} />
-            {letter.on_control ? <StatusTag tone="blue">{t("card.onControl")}</StatusTag> : null}
+    <PageFrame layout="registry">
+      <div className="pf-letters">
+        <PageHeader
+          title={t("tasks.title", { number: letter.number })}
+          subtitle={letter.subject}
+          extra={
+            <div className="pf-fp-row">
+              {letter.urgent ? <StatusTag tone="red">{t("card.urgent")}</StatusTag> : null}
+              <StatusTag kind="incoming" status={letter.status} />
+              {letter.on_control ? <StatusTag tone="blue">{t("card.onControl")}</StatusTag> : null}
+            </div>
+          }
+        />
+        <div className="pf-letters-grid">
+          <div className="pf-letters-main">
+            {actor.forName ? (
+              <Alert type="info" showIcon message={t("tasks.onBehalf", { name: actor.forName })} />
+            ) : null}
+            <ClosedBanner letter={letter} />
+            <LetterBody letter={letter} />
+            {mine ? <MyInstruction letter={letter} instruction={mine} /> : null}
+            {acquaint ? <AcquaintAction letter={letter} /> : null}
+            {!mine && !acquaint && !waitsAuthor ? (
+              <EmptyState
+                level={2}
+                compact
+                title={t("tasks.noTask.title")}
+                text={t("tasks.noTask.text")}
+              />
+            ) : null}
+            <ReplyCard letter={letter} />
+            <InstructionsCard letter={letter} />
+            <OfficeDecision letter={letter} />
           </div>
-        }
-      />
-      <div className="pf-letters-grid">
-        <div className="pf-letters-main">
-          {actor.forName ? (
-            <Alert type="info" showIcon message={t("tasks.onBehalf", { name: actor.forName })} />
-          ) : null}
-          <ClosedBanner letter={letter} />
-          <LetterBody letter={letter} />
-          {mine ? <MyInstruction letter={letter} instruction={mine} /> : null}
-          {acquaint ? <AcquaintAction letter={letter} /> : null}
-          {!mine && !acquaint && !waitsAuthor ? (
-            <EmptyState
-              level={2}
-              compact
-              title={t("tasks.noTask.title")}
-              text={t("tasks.noTask.text")}
-            />
-          ) : null}
-          <ReplyCard letter={letter} />
-          <InstructionsCard letter={letter} />
-          <OfficeDecision letter={letter} />
+          <aside className="pf-letters-side" aria-label={t("tasks.details")}>
+            <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.details")}</h2>}>
+              <DefinitionList
+                items={[
+                  {
+                    label: t(
+                      letter.track === "office"
+                        ? "card.fields.correspondent"
+                        : "card.fields.client",
+                    ),
+                    value: letter.sender.name,
+                  },
+                  { label: t("card.fields.received"), value: date(letter.received_at) },
+                  {
+                    label: t("card.fields.documentDue"),
+                    value: letter.document_due ? date(letter.document_due) : null,
+                  },
+                  { label: t("card.fields.addressee"), value: letter.addressee.name },
+                ]}
+              />
+              {letter.body_text ? (
+                <>
+                  <h3 className="pf-res-subhead">{t("card.summary")}</h3>
+                  <p className="pf-letters-summary">{letter.summary}</p>
+                </>
+              ) : null}
+              {canOpenCard ? (
+                <LinkButton size="small" to={letterPath(letter.number)}>
+                  {t("tasks.openCard")}
+                </LinkButton>
+              ) : null}
+            </Card>
+          </aside>
         </div>
-        <aside className="pf-letters-side" aria-label={t("tasks.details")}>
-          <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.details")}</h2>}>
-            <DefinitionList
-              items={[
-                {
-                  label: t(
-                    letter.track === "office" ? "card.fields.correspondent" : "card.fields.client",
-                  ),
-                  value: letter.sender.name,
-                },
-                { label: t("card.fields.received"), value: date(letter.received_at) },
-                {
-                  label: t("card.fields.documentDue"),
-                  value: letter.document_due ? date(letter.document_due) : null,
-                },
-                { label: t("card.fields.addressee"), value: letter.addressee.name },
-              ]}
-            />
-            {letter.body_text ? (
-              <>
-                <h3 className="pf-res-subhead">{t("card.summary")}</h3>
-                <p className="pf-letters-summary">{letter.summary}</p>
-              </>
-            ) : null}
-            {canOpenCard ? (
-              <LinkButton size="small" to={letterPath(letter.number)}>
-                {t("tasks.openCard")}
-              </LinkButton>
-            ) : null}
-          </Card>
-        </aside>
       </div>
-    </div>
+    </PageFrame>
   );
 }
 
