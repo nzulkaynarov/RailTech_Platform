@@ -108,6 +108,7 @@ def lead_row(lead: crm.LeadOut, names: Names, now: datetime) -> LeadRow:
         handoff_open=_handoff_open(lead.escalation),
         overdue=_overdue(lead.escalation, now),
         client_id=lead.client_id,
+        company=lead.company_name if lead.client_id is not None else None,
     )
 
 

@@ -204,6 +204,25 @@ async def test_lead_rows_say_whose_client_and_quick_actions_have_verbs(
     assert (answer["action_label"], answer["reason"]) == ("Ответить", "ваш клиент ждёт ответа")
 
 
+async def test_known_contact_message_is_a_company_row_with_one_reply_action(
+    web: Web, fb: FeedBackends
+) -> None:
+    """КОНТР-1а: контакт компании написал боту — строка «Имя (Компания) написал(а) в Telegram»."""
+    company_lead = {
+        **lead(3, "Демо Контакт", unread=True, last_msg=fb.m.ago(minutes=5)),
+        "owner_mode": "bot",
+        "client_id": 7,
+        "company_name": "Демо Партнёр",
+    }
+    fb.state["inbox"] = {"escalations": [], "mine": [company_lead], "unassigned": []}
+    await web.login(["MANAGER"])
+
+    row = (await rows(web))["lead:3:answer_lead"]
+
+    assert row["title"] == "Демо Контакт (Демо Партнёр) написал(а) в Telegram"
+    assert (row["action_label"], row["reason"]) == ("Ответить", "ваш контрагент ждёт ответа")
+
+
 async def test_queue_says_when_a_source_returned_not_everything(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

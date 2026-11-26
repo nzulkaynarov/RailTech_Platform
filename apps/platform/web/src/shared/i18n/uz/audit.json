@@ -167,6 +167,8 @@
     },
     "lead": {
       "take": "Lidni oldi",
+      "known_contact": "Kompaniya kontaktining yozişmasi — mas'ulga",
+      "contact_sync": "Lidning pöçta yoki telefoni — kompaniya kontaktiga",
       "reply": "Lidga javob berdi",
       "note": "Eslatma qöşdi",
       "snooze": "Lidni keyinga qoldirdi",

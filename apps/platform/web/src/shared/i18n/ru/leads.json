@@ -81,6 +81,7 @@
     "need": "Запрос",
     "consent": "Согласие на данные",
     "consentBot": "дано в боте {{date}}",
+    "consentForm": "дано в форме на сайте {{date}}",
     "consentStaff": "отмечено сотрудником {{date}} ({{method}})",
     "consentMissing": "нет — отметьте при создании заявки",
     "consentMissingBot": "нет — клиент даёт согласие в боте",
@@ -100,7 +101,7 @@
       "manager": "Менеджер",
       "system": "Система"
     },
-    "client": "Клиент",
+    "client": "Компания",
     "confirmation": "Подтверждение заявки клиенту",
     "firstResponse": "Первый ответ на запрос с сайта",
     "firstResponseDue": "до {{date}}",

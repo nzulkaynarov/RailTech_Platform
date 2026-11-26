@@ -185,6 +185,7 @@ function NameCell({
       >
         {row.name}
       </Link>
+      {row.company ? <span className="pf-hint">({row.company})</span> : null}
       {row.unread ? <StatusTag tone="blue">{t("unread")}</StatusTag> : null}
       {row.overdue ? <StatusTag tone="red">{t("overdue")}</StatusTag> : null}
     </span>

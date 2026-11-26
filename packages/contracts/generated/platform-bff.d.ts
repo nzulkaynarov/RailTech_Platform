@@ -18208,6 +18208,8 @@ export interface components {
       overdue: boolean;
       /** @description Клиент, если лид уже стал клиентом */
       client_id: number | null;
+      /** @description Компания лида (контрагент): известный контакт или привязанный клиент; в строке — рядом с именем */
+      company?: string | null;
     };
     PeopleLead: {
       lead: string;
