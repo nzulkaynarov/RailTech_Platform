@@ -97,6 +97,15 @@ class OffsiteFacts:
     quota_bytes: int | None = None
     keep_days: int | None = None
     speed_bps: int | None = None
+    #: Копия файлов (ХРАН-1, раздел `files` отметки): настроена ли, итог, сколько файлов лежит
+    #: на Диске, когда все разделы были скопированы полностью, сколько не скопировано сейчас.
+    files_configured: bool = False
+    files_result: str = ""
+    files_count: int | None = None
+    files_bytes: int | None = None
+    files_last_success_at: datetime | None = None
+    files_failed: int = 0
+    files_total: int = 0
 
 
 def _when(raw: object) -> datetime | None:
@@ -125,7 +134,20 @@ def parse(raw: bytes) -> OffsiteFacts:
     if not isinstance(data, dict) or data.get("result") not in ("ok", "fail", "not_configured"):
         return OffsiteFacts(error="bad_status_json")
     provider = data.get("provider", "gdrive")  # до OPS-YADISK копия была только на Google Drive
+    files = data.get("files")
+    files = files if isinstance(files, dict) and files.get("configured") is True else None
+    buckets = files.get("buckets") if files else None
+    buckets = buckets if isinstance(buckets, dict) else {}
     return OffsiteFacts(
+        files_configured=files is not None,
+        files_result=_text(files.get("result")) if files else "",
+        files_count=_int(files.get("files")) if files else None,
+        files_bytes=_int(files.get("bytes")) if files else None,
+        files_last_success_at=_when(files.get("last_success_at")) if files else None,
+        files_failed=sum(
+            1 for b in buckets.values() if isinstance(b, dict) and b.get("result") == "fail"
+        ),
+        files_total=len(buckets),
         provider=provider if provider in PROVIDERS else "",
         result=str(data["result"]),
         reason=_text(data.get("reason")),
@@ -202,7 +224,23 @@ def _metrics(f: OffsiteFacts, now: datetime) -> dict[str, Metric]:
         "speed_bps": f.speed_bps,
         "provider": f.provider or None,
         "reason": f.reason or None,
+        "files_count": f.files_count,
+        "files_bytes": f.files_bytes,
+        "files_last_success_at": (
+            f.files_last_success_at.isoformat() if f.files_last_success_at else None
+        ),
+        "files_failed": f.files_failed if f.files_configured else None,
     }
+
+
+def files_text(f: OffsiteFacts) -> str | None:
+    """«Файлы: скопировано 1 240, последний раз 26.11 23:40» — без названий хранилищ и бакетов."""
+    if not f.files_configured:
+        return None
+    count = f"{f.files_count:,}".replace(",", " ") if f.files_count is not None else "0"
+    if f.files_last_success_at is None:
+        return f"Файлы: скопировано {count}, первая выгрузка ещё идёт"
+    return f"Файлы: скопировано {count}, последний раз {f.files_last_success_at:%d.%m %H:%M}"
 
 
 def _failure(
@@ -305,6 +343,9 @@ def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
         parts.append(f"базовых копий {f.base_backups}{since}")
     if f.speed_bps:
         parts.append(f"средняя скорость {speed_text(f.speed_bps)}")
+    files_line = files_text(f)
+    if files_line:
+        parts.append(files_line)
     tail = f": {', '.join(parts)}" if parts else ""
     pct = metrics["quota_pct"]
     if isinstance(pct, int) and pct >= QUOTA_WARN * 100:
@@ -320,6 +361,22 @@ def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
             ),
             metrics=metrics,
             cause=CAUSE_QUOTA,
+        )
+    if f.files_configured and (f.files_failed > 0 or f.files_result == "fail"):
+        return CheckResult(
+            KEY,
+            "warn",
+            f"Копия файлов не завершена: не скопировано {f.files_failed} из {f.files_total} "
+            f"разделов хранилища{tail}",
+            hint=hosting_hint(
+                "Сервис копирования не смог скопировать часть файлов за пределы сервера; "
+                "копия базы при этом обновляется",
+                "Посмотреть журнал offsite-backup на сервере приложений (docker compose logs "
+                "offsite-backup) и раздел files в status.json; повтор — "
+                "infra/deploy/offsite-check.sh",
+            ),
+            metrics=metrics,
+            cause="server_down",
         )
     return CheckResult(
         KEY,

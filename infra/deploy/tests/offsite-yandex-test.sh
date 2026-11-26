@@ -51,7 +51,7 @@ run() {
   local dav_pass="$1"; shift
   docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
     -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
-    -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json -e OFFSITE_YANDEX_URL=http://127.0.0.1:8080 -e DAV_USER="$LOGIN" -e DAV_PASS="$dav_pass" \
+    -e OFFSITE_FILE_BUCKETS= -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json -e OFFSITE_YANDEX_URL=http://127.0.0.1:8080 -e DAV_USER="$LOGIN" -e DAV_PASS="$dav_pass" \
     ${extra[@]+"${extra[@]}"} --entrypoint sh "$image" -c '
       rclone serve webdav /t/dav --addr 127.0.0.1:8080 --user "$DAV_USER" --pass "$DAV_PASS" > /tmp/serve.log 2>&1 &
       i=0; until grep -q "Serving" /tmp/serve.log 2>/dev/null || [ $i -ge 50 ]; do i=$((i + 1)); sleep 0.1; done

@@ -62,7 +62,8 @@ for f in prod dev; do
   [[ " $buckets " == *" offsite "* && " $buckets " == *" offsite-config "* ]] || fail "$f: s3-init не создаёт бакеты offsite и offsite-config"
 done
 grep -qE '^    offsite\) echo "offsite" ;;$' "$init" || fail "init.sh: offsite пишет только в бакет offsite"
-grep -qE '^    offsite\) echo "wal offsite-config" ;;$' "$init" || fail "init.sh: offsite читает бакеты wal и offsite-config (только чтение)"
+grep -qE '^    offsite\) echo "wal offsite-config eds-private erp-private erp-public client-documents tg-attachments kb-sources" ;;$' "$init" \
+  || fail "init.sh: offsite читает бакеты wal, offsite-config и файловые бакеты (только чтение; не erp-temp, langfuse, backups)"
 grep -qE '^    crm\) echo "offsite-config" ;;$' "$init" || fail "init.sh: CRM пишет в offsite-config (только запись)"
 grep -qE '^    crm\) echo "offsite/status.json" ;;$' "$init" || fail "init.sh: CRM читает в бакете offsite только status.json"
 grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: ro-бакет CRM — только backups (offsite целиком CRM не читает)"
@@ -99,7 +100,7 @@ FOLDER_ID=TESTFOLDERID1234567890
 run() { # run <аргументы offsite-sync.sh> — переменные OFFSITE_* из массива extra
   docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
     -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
-    -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json \
+    -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json -e OFFSITE_FILE_BUCKETS= \
     "${extra[@]}" --entrypoint sh "$image" /offsite/offsite-sync.sh "$@"
 }
 status() { cat "$w/status/status.json"; }

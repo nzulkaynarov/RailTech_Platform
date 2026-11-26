@@ -136,6 +136,8 @@ services:
       OFFSITE_SA_HOST_PATH: ${RT_SECRETS_DIR:-/opt/rt/secrets}/gdrive-sa.json
       OFFSITE_GDRIVE_FOLDER_ID: ${OFFSITE_GDRIVE_FOLDER_ID:-}
       OFFSITE_GDRIVE_SHARED_DRIVE_ID: ${OFFSITE_GDRIVE_SHARED_DRIVE_ID:-}
+      # Файловые бакеты, которые та же ежедневная попытка копирует в папку files/<бакет>/ на Диске (ХРАН-1); пусто — не копировать.
+      OFFSITE_FILE_BUCKETS: ${OFFSITE_FILE_BUCKETS-eds-private erp-private erp-public client-documents tg-attachments kb-sources}
       OFFSITE_KEEP_DAYS: ${OFFSITE_KEEP_DAYS:-14}
       OFFSITE_MAX_GB: ${OFFSITE_MAX_GB:-100}
       OFFSITE_BWLIMIT: ${OFFSITE_BWLIMIT:-2M}

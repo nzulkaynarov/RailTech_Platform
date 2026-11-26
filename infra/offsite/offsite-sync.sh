@@ -21,7 +21,12 @@
 #     на диск и не печатается. Аварийный путь Google — файл /secrets/gdrive-sa.json и OFFSITE_GDRIVE_FOLDER_ID: они сильнее ключа и
 #     папки из интерфейса, когда провайдер — gdrive; OFFSITE_PROVIDER в .env.prod сильнее выбора в интерфейсе. Ничего не настроено —
 #     не ошибка: итог not_configured, проверка раз в 10 минут.
-# Запуск: offsite-sync.sh [--daemon | --now | --probe | --health]. Журнал — JSON-строки в stdout; ключи, пароли, логин и ID папки в
+#   - Файлы (ХРАН-1): после архива WAL та же попытка копирует файловые бакеты RustFS ($OFFSITE_FILE_BUCKETS: eds-private, erp-private,
+#     erp-public, client-documents, tg-attachments, kb-sources) в папку `files/<бакет>/` рядом с каталогом архива. Только `rclone copy`
+#     (пропавшее у нас на Диске остаётся), сверка по контрольной сумме, малая память (2 передачи, 4 проверки). Ключ offsite читает эти
+#     бакеты и не пишет в них. Сбой одного бакета не останавливает остальные; итог по каждому — в status.json (`files`), без имён файлов.
+#     `--estimate` — объём к первой выгрузке (`rclone size` по бакетам), без копирования.
+# Запуск: offsite-sync.sh [--daemon | --now | --probe | --estimate | --health]. Журнал — JSON-строки в stdout; ключи, пароли, логин и ID папки в
 # журнал и в status.json не попадают.
 set -eu
 # Время в листингах rclone и отметках — UTC (сравнение строк «ГГГГ-ММ-ДД чч:мм:сс» с границей срока).
@@ -53,6 +58,15 @@ AT_UTC="${OFFSITE_AT_UTC:-23:00}"
 RETRY_MIN="${OFFSITE_RETRY_MIN:-30}"
 RUN_TIMEOUT_S="${OFFSITE_RUN_TIMEOUT_S:-21600}"
 NOT_CONFIGURED_EVERY_S=600
+# Файлы (ХРАН-1). Пустая переменная (`OFFSITE_FILE_BUCKETS=`) отключает копирование файлов. Источник — тот же RustFS (ключ offsite,
+# только чтение); назначение — папка files/ рядом с каталогом архива.
+FILE_BUCKETS="${OFFSITE_FILE_BUCKETS-eds-private erp-private erp-public client-documents tg-attachments kb-sources}"
+FILES_SRC="${OFFSITE_FILES_SRC:-rustfs:}"
+FILES_DST_OVERRIDE="${OFFSITE_FILES_DST:-}"
+FILES_DST="${FILES_DST_OVERRIDE:-gdrive:files}"
+FILES_BWLIMIT="${OFFSITE_FILES_BWLIMIT:-$BWLIMIT}"
+FILES_TIMEOUT_S="${OFFSITE_FILES_TIMEOUT_S:-$RUN_TIMEOUT_S}"
+FILES_STALE_S=93600 # 26 часов: сутки и запас на саму копию (как в строке CRM)
 
 # rclone настраивается переменными окружения, файла конфигурации с секретами нет. RustFS — ключ сервиса `offsite` (S3_OFFSITE_*):
 # чтение бакета wal и запись только в бакет offsite (infra/s3/init.sh). Drive — сервисный аккаунт, корень — папка общего диска.
@@ -201,11 +215,160 @@ message_of() { # <причина>
   esac
 }
 
+# --- файлы (ХРАН-1) -------------------------------------------------------------------------------------------------------------
+# Состояние бакета — строка в $STATE/files/<бакет>: итог;файлов;байт;скопировано за попытку;успех (epoch);причина сбоя;время сбоя;
+# файлов в источнике;байт в источнике. «Файлов/байт» — сколько лежит на Диске по последнему успешному обмеру. Имён файлов нет нигде.
+files_message() { # <причина> — фиксированные тексты: имён файлов и секретов в них не бывает
+  case "$1" in
+    source) echo "Не удалось прочитать файлы в хранилище сервера" ;;
+    access|not_shared_drive) echo "Диск отказал в доступе к папке для файлов" ;;
+    quota) echo "На Диске не хватает места для файлов" ;;
+    timeout) echo "Копирование файлов не уложилось в отведённое время и продолжится следующей попыткой" ;;
+    network) echo "Нет связи с Диском при копировании файлов" ;;
+    *) echo "Копирование файлов завершилось ошибкой" ;;
+  esac
+}
+
+# «файлов;байт» по `rclone size --json` пути (источник или Диск); 1 — не удалось (журнал rclone — в $2).
+size_of() { # <путь> <журнал>
+  out="$(rcl size --json "$1" 2> "$2")" || return 1
+  sf="$(printf '%s' "$out" | sed -n 's/.*"count":[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+  sb="$(printf '%s' "$out" | sed -n 's/.*"bytes":[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+  [ -n "$sf" ] && [ -n "$sb" ] || return 1
+  printf '%s;%s' "$sf" "$sb"
+}
+
+valid_bucket() { case "$1" in ""|*[!a-z0-9.-]*) return 1 ;; esac; }
+
+# Раздел `files` для status.json: итог, объём на Диске, время последней полной копии и по каждому бакету — свой итог.
+files_json() {
+  if [ -z "$FILE_BUCKETS" ]; then printf '{"configured":false}'; return; fi
+  nok=0; nbad=0; npend=0; tot_f=0; tot_b=0; items=""
+  for b in $FILE_BUCKETS; do
+    valid_bucket "$b" || continue
+    st="$(cat "$STATE/files/$b" 2>/dev/null || true)"
+    if [ -z "$st" ]; then st="pending;;;;;;;;"; fi
+    IFS=';' read -r r f by cp okt er ert sf sb <<EOF
+$st
+EOF
+    case "$r" in ok) nok=$((nok + 1)) ;; fail) nbad=$((nbad + 1)) ;; *) npend=$((npend + 1)) ;; esac
+    tot_f=$((tot_f + ${f:-0})); tot_b=$((tot_b + ${by:-0}))
+    err_text=""; if [ -n "$er" ]; then err_text="$(files_message "$er")"; fi
+    ok_iso=""; if [ -n "$okt" ] && [ "$okt" != 0 ]; then ok_iso="$(iso "$okt")"; fi
+    er_iso=""; if [ -n "$ert" ] && [ "$ert" != 0 ]; then er_iso="$(iso "$ert")"; fi
+    items="$items${items:+,}\"$b\":{\"result\":\"$r\",\"files\":$(njson "$f"),\"bytes\":$(njson "$by"),\"copied_files\":$(njson "$cp"),\"source_files\":$(njson "$sf"),\"source_bytes\":$(njson "$sb"),\"last_success_at\":$(qjson "$ok_iso"),\"last_error\":$(qjson "$err_text"),\"last_error_reason\":$(qjson "$er"),\"last_error_at\":$(qjson "$er_iso")}"
+  done
+  if [ "$nbad" -eq 0 ] && [ "$npend" -eq 0 ]; then res=ok
+  elif [ "$nok" -eq 0 ] && [ "$nbad" -gt 0 ]; then res=fail
+  elif [ "$nok" -eq 0 ]; then res=pending
+  else res=partial; fi
+  all_ok="$(marker files_last_success)"
+  all_iso=""; if [ "$all_ok" -gt 0 ]; then all_iso="$(iso "$all_ok")"; fi
+  printf '{"configured":true,"result":"%s","last_success_at":%s,"files":%s,"bytes":%s,"buckets":{%s}}' \
+    "$res" "$(qjson "$all_iso")" "$tot_f" "$tot_b" "$items"
+}
+
+put_bucket() { # <бакет> <итог> <файлов> <байт> <скопировано> <успех> <причина> <время сбоя> <файлов в источнике> <байт в источнике>
+  mkdir -p "$STATE/files"
+  printf '%s;%s;%s;%s;%s;%s;%s;%s;%s\n' "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" > "$STATE/files/$1"
+}
+
+# Бакет не скопирован: прежний объём и время успеха остаются, добавляются причина и время сбоя.
+bucket_failed() { # <бакет> <причина> [журнал rclone]
+  prev="$(cat "$STATE/files/$1" 2>/dev/null || true)"
+  IFS=';' read -r _ f by _ okt _ _ sf sb <<EOF
+$prev
+EOF
+  put_bucket "$1" fail "$f" "$by" 0 "$okt" "$2" "$(now)" "$sf" "$sb"
+  log "offsite_files_bucket_failed" ",\"bucket\":\"$1\",\"reason\":\"$2\""
+  if [ -n "${3:-}" ]; then last_error "$3" | mask | cut -c1-300 >&2 || true; fi
+}
+
+# Объём источника по каждому бакету до копирования: то, что уйдёт при первой выгрузке (строки offsite_files_estimate в журнале).
+files_estimate() { # <каталог для журналов>; итог — в est_f и est_b, объём бакета — в файле src-<бакет>
+  est_f=0; est_b=0
+  for b in $FILE_BUCKETS; do
+    valid_bucket "$b" || continue
+    if sz="$(size_of "${FILES_SRC}$b" "$1/size-$b.log")"; then
+      printf '%s\n' "$sz" > "$1/src-$b"
+      est_f=$((est_f + ${sz%%;*})); est_b=$((est_b + ${sz#*;}))
+      log "offsite_files_estimate" ",\"bucket\":\"$b\",\"files\":${sz%%;*},\"bytes\":${sz#*;}"
+    else
+      rm -f "$1/src-$b"
+      log "offsite_files_estimate_failed" ",\"bucket\":\"$b\""
+    fi
+  done
+  log "offsite_files_estimate_total" ",\"files\":$est_f,\"bytes\":$est_b,\"bwlimit\":\"$FILES_BWLIMIT\""
+}
+
+# Один бакет → files/<бакет>/ на Диске. Только copy: удалённое у нас на Диске остаётся. Сверка — по контрольной сумме (если у Диска
+# её нет — по размеру: файлы-оригиналы не меняются). Память: 2 передачи, 4 проверки, малый буфер.
+copy_bucket() { # <бакет> <секунд до срока> <каталог журналов>
+  b="$1"; left="$2"; wk="$3"; dst="$FILES_DST/$b"
+  if [ ! -s "$wk/src-$b" ]; then bucket_failed "$b" source "$wk/size-$b.log"; return 1; fi
+  src_sz="$(cat "$wk/src-$b")"
+  if ! rcl mkdir "$dst" 2> "$wk/copy-$b.log"; then bucket_failed "$b" "$(classify "$wk/copy-$b.log")" "$wk/copy-$b.log"; return 1; fi
+  crc=0
+  timeout "$((left + 600))" rclone copy "${FILES_SRC}$b" "$dst" --checksum \
+    --retries "$RETRIES" --retries-sleep "$RETRIES_SLEEP" --low-level-retries 10 --timeout 5m --contimeout 30s --tpslimit 5 \
+    --use-server-modtime --bwlimit "$FILES_BWLIMIT" --transfers 2 --checkers 4 --max-backlog 1000 --buffer-size 4M \
+    --drive-chunk-size 8M --drive-stop-on-upload-limit --max-duration "${left}s" --log-level INFO --stats 0 2>> "$wk/copy-$b.log" || crc=$?
+  if [ "$crc" -ne 0 ]; then bucket_failed "$b" "$(classify "$wk/copy-$b.log")" "$wk/copy-$b.log"; return 1; fi
+  copied="$(grep -c ': Copied (' "$wk/copy-$b.log" 2>/dev/null || true)"; copied="${copied:-0}"
+  if ! dst_sz="$(size_of "$dst" "$wk/dsize-$b.log")"; then bucket_failed "$b" "$(classify "$wk/dsize-$b.log")" "$wk/dsize-$b.log"; return 1; fi
+  put_bucket "$b" ok "${dst_sz%%;*}" "${dst_sz#*;}" "$copied" "$(now)" "" 0 "${src_sz%%;*}" "${src_sz#*;}"
+  log "offsite_files_bucket_done" ",\"bucket\":\"$b\",\"copied_files\":$copied,\"files\":${dst_sz%%;*},\"bytes\":${dst_sz#*;}"
+}
+
+# Файловый этап попытки: после архива WAL, независимо от его итога. Сбой бакета не останавливает остальные.
+run_files() {
+  [ -n "$FILE_BUCKETS" ] || return 0
+  mkdir -p "$STATE/files"
+  fstart="$(now)"; deadline=$((fstart + FILES_TIMEOUT_S)); fwork="$(mktemp -d)"
+  log "offsite_files_started" ",\"buckets\":\"$FILE_BUCKETS\""
+  files_estimate "$fwork"
+  all_ok=1
+  for b in $FILE_BUCKETS; do
+    valid_bucket "$b" || { log "offsite_files_bad_bucket_name"; all_ok=0; continue; }
+    left=$((deadline - $(now)))
+    if [ "$left" -le 0 ]; then bucket_failed "$b" timeout; all_ok=0; continue; fi
+    copy_bucket "$b" "$left" "$fwork" || all_ok=0
+    publish_status
+  done
+  mark files_all_ok "$all_ok"
+  if [ "$all_ok" -eq 1 ]; then mark files_last_success "$(now)"; fi
+  log "offsite_files_finished" ",\"seconds\":$(( $(now) - fstart )),\"all_ok\":$all_ok"
+  publish_status
+  rm -rf "$fwork"
+}
+
+# Диагностика объёма без копирования: сколько файлов и байт в каждом бакете (оценка первой выгрузки).
+estimate() {
+  [ -n "$FILE_BUCKETS" ] || { echo "копирование файлов отключено (OFFSITE_FILE_BUCKETS пуст)"; return 0; }
+  ew="$(mktemp -d)"; erc=0
+  files_estimate "$ew" > /dev/null
+  for b in $FILE_BUCKETS; do
+    if [ -s "$ew/src-$b" ]; then
+      sz="$(cat "$ew/src-$b")"; printf '%s: %s файлов, %s байт\n' "$b" "${sz%%;*}" "${sz#*;}"
+    else printf '%s: не удалось прочитать\n' "$b"; erc=1; fi
+  done
+  printf 'всего: %s файлов, %s байт\n' "$est_f" "$est_b"
+  rm -rf "$ew"
+  return "$erc"
+}
+
 # --- итог попытки -------------------------------------------------------------------------------------------------------
 write_status() { # <итог ok|fail|not_configured> <причина> [техническая строка]
-  result="$1" reason="$2" detail="$(clean "${3:-}")"
-  attempt="$(now)"
-  mark last_attempt "$attempt"; mark last_result "$result"
+  mark last_attempt "$(now)"; mark last_result "$1"; mark last_reason "$2"
+  mark last_detail "$(clean "${3:-}")"; mark last_duration "${DURATION:-}"
+  publish_status
+}
+
+# status.json из отметок тома: итог WAL как раньше (поля не меняются) и раздел `files` (ХРАН-1, дополнение).
+publish_status() {
+  result="$(cat "$STATE/last_result" 2>/dev/null || echo not_configured)"; reason="$(cat "$STATE/last_reason" 2>/dev/null || true)"
+  detail="$(cat "$STATE/last_detail" 2>/dev/null || true)"; DURATION="$(cat "$STATE/last_duration" 2>/dev/null || true)"
+  attempt="$(marker last_attempt)"
   last_ok="$(marker last_success)"
   [ "$last_ok" -gt 0 ] && last_iso="$(iso "$last_ok")" || last_iso=""
   stats="$(cat "$STATE/stats" 2>/dev/null || echo ';;;;')"
@@ -214,10 +377,10 @@ write_status() { # <итог ok|fail|not_configured> <причина> [техн�
   message=""
   [ "$result" = ok ] || message="$(message_of "$reason")"
   speed="$(cat "$STATE/speed" 2>/dev/null || true)"
-  body="$(printf '{"schema":1,"provider":"%s","result":"%s","reason":"%s","message":"%s","detail":"%s","attempt_at":"%s","last_success_at":%s,"duration_s":%s,"bytes":%s,"objects":%s,"base_backups":%s,"oldest_base_at":%s,"newest_base_at":%s,"quota_bytes":%s,"keep_days":%s,"speed_bps":%s,"prefix":"%s"}' \
+  body="$(printf '{"schema":1,"provider":"%s","result":"%s","reason":"%s","message":"%s","detail":"%s","attempt_at":"%s","last_success_at":%s,"duration_s":%s,"bytes":%s,"objects":%s,"base_backups":%s,"oldest_base_at":%s,"newest_base_at":%s,"quota_bytes":%s,"keep_days":%s,"speed_bps":%s,"prefix":"%s","files":%s}' \
     "$PROVIDER" "$result" "$reason" "$(clean "$message")" "$detail" "$(iso "$attempt")" "$(qjson "$last_iso")" "$(njson "${DURATION:-}")" \
     "$(njson "$bytes")" "$(njson "$objects")" "$(njson "$bases")" "$(qjson "$oldest")" "$(qjson "$newest")" \
-    "$((MAX_GB * 1073741824))" "$KEEP_DAYS" "$(njson "$speed")" "$(clean "$PREFIX")")"
+    "$((MAX_GB * 1073741824))" "$KEEP_DAYS" "$(njson "$speed")" "$(clean "$PREFIX")" "$(files_json)")"
   printf '%s\n' "$body" > "$STATE/status.json"
   if printf '%s\n' "$body" | rcl rcat "$STATUS_DST" 2> "$STATE/status-write.log"; then
     log "offsite_status_written" ",\"result\":\"$result\",\"reason\":\"$reason\""
@@ -279,9 +442,11 @@ load_config() {
     RCLONE_CONFIG_YADISK_PASS="$(cat "$CFG_DIR/yandex-pass.obscured" 2>/dev/null || true)"
     export RCLONE_CONFIG_YADISK_USER="$YA_LOGIN" RCLONE_CONFIG_YADISK_PASS
     DST="${DST_OVERRIDE:-yadisk:$YA_FOLDER/$PREFIX}"
+    FILES_DST="${FILES_DST_OVERRIDE:-yadisk:$YA_FOLDER/files}"
   else
     YA_LOGIN=""; YA_FOLDER=""
     DST="${DST_OVERRIDE:-gdrive:$PREFIX}"
+    FILES_DST="${FILES_DST_OVERRIDE:-gdrive:files}"
   fi
 }
 
@@ -322,6 +487,13 @@ run_once() {
     write_status not_configured "$problem"
     return 0
   fi
+  rc=0; run_wal || rc=$?
+  run_files || true
+  return "$rc"
+}
+
+# Архив WAL: выборка, копия, срок хранения. Итог — write_status (раздел `files` в нём — по состоянию файлового этапа).
+run_wal() {
   started="$(now)"; DURATION=""
   work="$(mktemp -d)"
   log "offsite_sync_started" ",\"provider\":\"$PROVIDER\""
@@ -416,6 +588,13 @@ recover_marker() {
   epoch="$(date -u -d "$(printf '%s' "$prev" | sed 's/T/ /; s/Z$//')" +%s 2>/dev/null || true)"
   [ -z "$epoch" ] || mark last_success "$epoch"
 }
+recover_files_marker() {
+  [ "$(marker files_last_success)" -eq 0 ] || return 0
+  prev="$(rcl cat "$STATUS_DST" 2>/dev/null | sed -n 's/.*"files":{[^}]*"last_success_at":"\([^"]*\)".*/\1/p' | head -n 1)"
+  [ -n "$prev" ] || return 0
+  epoch="$(date -u -d "$(printf '%s' "$prev" | sed 's/T/ /; s/Z$//')" +%s 2>/dev/null || true)"
+  [ -z "$epoch" ] || mark files_last_success "$epoch"
+}
 
 due() {
   [ ! -e "$STATE/force" ] || return 0
@@ -423,6 +602,8 @@ due() {
   result="$(cat "$STATE/last_result" 2>/dev/null || echo none)"
   if [ "$result" = not_configured ]; then [ $((t - last_try)) -ge "$NOT_CONFIGURED_EVERY_S" ]; return; fi
   if [ "$result" != ok ]; then [ $((t - last_try)) -ge $((RETRY_MIN * 60)) ]; return; fi
+  # Файлы не докопированы (сбой бакета, срок): повтор тем же интервалом, что и при сбое архива.
+  if [ -n "$FILE_BUCKETS" ] && [ "$(cat "$STATE/files_all_ok" 2>/dev/null || echo 1)" = 0 ]; then [ $((t - last_try)) -ge $((RETRY_MIN * 60)) ]; return; fi
   [ $((t - last_ok)) -lt 86400 ] || return 0
   sched="$(date -u -d "$(date -u +%Y-%m-%d) $AT_UTC" +%s)"
   [ "$t" -ge "$sched" ] && [ "$last_ok" -lt "$sched" ]
@@ -446,6 +627,7 @@ daemon() {
   # дождётся rclone — этот случай закрывает clear_stale_lock при следующем старте.
   trap 'rmdir "$STATE/lock" 2>/dev/null || true; log offsite_daemon_stopped; exit 0' TERM INT
   recover_marker
+  recover_files_marker
   while true; do
     mark heartbeat "$(now)"
     load_config
@@ -469,10 +651,19 @@ probe() {
   return "$rc"
 }
 
-# healthcheck контейнера: цикл жив (отметка свежее 10 минут) или идёт копирование. Итог копирования — строка CRM, не здоровье.
+# healthcheck контейнера: цикл жив (отметка свежее 10 минут) или идёт копирование. Кроме того — красный, если копия УЖЕ работала и
+# встала: архив WAL при последнем сбое не копировался 26 часов либо файлы не копировались полностью 26 часов. Ни разу не удавшаяся
+# копия (первая выгрузка идёт днями, не настроено) здоровью не мешает; подробности и причина — строка CRM и status.json.
 health() {
   if [ -d "$STATE/lock" ]; then exit 0; fi
   [ $(( $(now) - $(marker heartbeat) )) -lt 600 ] || { echo "offsite-backup: цикл не отмечался больше 10 минут"; exit 1; }
+  t="$(now)"; ok_wal="$(marker last_success)"; ok_files="$(marker files_last_success)"
+  if [ "$ok_wal" -gt 0 ] && [ "$(cat "$STATE/last_result" 2>/dev/null || echo ok)" = fail ] && [ $((t - ok_wal)) -gt "$FILES_STALE_S" ]; then
+    echo "offsite-backup: архив базы не копировался больше 26 часов (последний раз $(iso "$ok_wal")); причина — строка «Внешняя копия бэкапов» или status.json"; exit 1
+  fi
+  if [ -n "$FILE_BUCKETS" ] && [ "$ok_files" -gt 0 ] && [ $((t - ok_files)) -gt "$FILES_STALE_S" ]; then
+    echo "offsite-backup: файлы не копировались полностью больше 26 часов (последний раз $(iso "$ok_files")); бакеты и причины — в status.json, раздел files"; exit 1
+  fi
 }
 
 # OFFSITE_LIB=1 — только функции (тест infra/deploy/tests/offsite-sync-test.sh подключает файл через «.»).
@@ -488,6 +679,7 @@ case "${1:---daemon}" in
     exit "$rc" ;;
   --health) health ;;
   --probe) rc=0; probe || rc=$?; exit "$rc" ;;
-  -h|--help) sed -n '2,29p' "$0" ;;
-  *) echo "usage: offsite-sync.sh [--daemon|--now|--probe|--health]" >&2; exit 2 ;;
+  --estimate) rc=0; estimate || rc=$?; exit "$rc" ;;
+  -h|--help) sed -n '2,34p' "$0" ;;
+  *) echo "usage: offsite-sync.sh [--daemon|--now|--probe|--estimate|--health]" >&2; exit 2 ;;
 esac
