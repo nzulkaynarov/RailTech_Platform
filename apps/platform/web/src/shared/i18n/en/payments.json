@@ -170,7 +170,7 @@
     "form": "Customer payment order",
     "file": {
       "label": "Payment order file",
-      "hint": "PDF, image or Word or Excel file, up to 25 MB"
+      "hint": "PDF, image or Word, Excel or PowerPoint file, up to 25 MB"
     },
     "source": {
       "label": "Where it came from"
@@ -187,7 +187,7 @@
       "not_open": "the invoice no longer awaits payment, the card is refreshed",
       "forbidden": "the action is not allowed for your role",
       "too_large": "the file is larger than 25 MB",
-      "unsupported": "PDF, images and Word and Excel files are allowed",
+      "unsupported": "PDF, images and Word, Excel and PowerPoint files are allowed",
       "unavailable": "the service is not responding, the file stayed in the form",
       "unknown": "something went wrong, the file stayed in the form"
     }
@@ -378,7 +378,7 @@
       },
       "receipt": {
         "label": "Payment order",
-        "hint": "PDF, image or Word or Excel file, up to 25 MB. Optional",
+        "hint": "PDF, image or Word, Excel or PowerPoint file, up to 25 MB. Optional",
         "uploaded": "Uploaded: {{name}}"
       },
       "note": {

@@ -63,7 +63,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     // «Ждут оплаты»: выставленный и частично оплаченный; остаток виден
     await expect(page.getByRole("row")).toHaveCount(1 + 2);
     await expect(row(page, "СЧ-2026/142").getByText("Выставлен")).toBeVisible();
-    await expect(row(page, "СЧ-2026/147").getByText("Частично оплачен")).toBeVisible();
+    await expect(row(page, "СЧ-2026/147").getByText("Оплачен частично")).toBeVisible();
     await expect(row(page, "СЧ-2026/147").getByText(/остаток 30\s000\s000/)).toBeVisible();
     await settledScreenshot(page, "list-awaiting");
     await expectNoViolations(page, "список: Ждут оплаты");
@@ -173,7 +173,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await confirmDialog(page);
 
     await expect(page.getByText(/Частичная оплата подтверждена/)).toBeVisible();
-    await expect(row(page, "СЧ-2026/142").getByText("Частично оплачен")).toBeVisible();
+    await expect(row(page, "СЧ-2026/142").getByText("Оплачен частично")).toBeVisible();
     await expect(row(page, "СЧ-2026/142").getByText(/остаток 72\s000\s000/)).toBeVisible();
 
     // остаток закрывает счёт

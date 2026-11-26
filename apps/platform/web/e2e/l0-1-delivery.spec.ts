@@ -60,7 +60,7 @@ test.describe("L0-1: отметки доставки клиенту в карт�
       await expect(transit.getByLabel("Подтверждение доставки")).toHaveCount(0);
       await transit.getByRole("button", { name: "Сохранить" }).click();
       await expect(transit).toHaveCount(0);
-      await expect(card.getByText("Едет на наш склад").first()).toBeVisible();
+      await expect(card.getByText("В пути к клиенту").first()).toBeVisible();
       await expect(card.getByRole("button", { name: "Отправлено, в пути" })).toHaveCount(0);
 
       await card.getByRole("button", { name: "Доставлено" }).click();

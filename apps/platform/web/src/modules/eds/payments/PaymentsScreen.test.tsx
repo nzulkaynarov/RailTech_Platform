@@ -47,7 +47,7 @@ describe("Счета и оплаты: список", () => {
     expect(within(first).getByText("ООО «Демо-Рейл»")).toBeVisible();
     expect(within(first).getByText("Выставлен")).toBeVisible();
     const partial = within(table).getByRole("row", { name: /СЧ-2026\/147/ });
-    expect(within(partial).getByText("Частично оплачен")).toBeVisible();
+    expect(within(partial).getByText("Оплачен частично")).toBeVisible();
     expect(within(partial).getByText(/остаток 30\s000\s000/)).toBeVisible();
   });
 
@@ -173,7 +173,7 @@ describe("Подтвердить оплату", () => {
     expect(within(panel).queryByRole("form", { name: "Подтверждение оплаты" })).toBeNull();
   });
 
-  it("частичная оплата: кнопка меняет слова, остаток виден; счёт остаётся «Частично оплачен»", async () => {
+  it("частичная оплата: кнопка меняет слова, остаток виден; счёт остаётся «Оплачен частично»", async () => {
     const { form } = await openInvoice("СЧ-2026/142");
     const amount = within(form).getByLabelText(/Сумма по выписке/);
 
@@ -188,7 +188,7 @@ describe("Подтвердить оплату", () => {
     await confirmDialog();
     expect(await screen.findByText(/Частичная оплата подтверждена/)).toBeVisible();
     const row = await screen.findByRole("row", { name: /СЧ-2026\/142/ });
-    expect(within(row).getByText("Частично оплачен")).toBeVisible();
+    expect(within(row).getByText("Оплачен частично")).toBeVisible();
     expect(within(row).getByText(/остаток 72\s000\s000/)).toBeVisible();
   });
 

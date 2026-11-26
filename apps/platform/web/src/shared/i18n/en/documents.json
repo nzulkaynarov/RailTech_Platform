@@ -17,13 +17,13 @@
     "quote": {
       "open": "Awaiting approval",
       "approved": "Approved",
-      "returned": "Returned for rework",
+      "returned": "Needs rework",
       "rejected": "Not approved"
     },
     "filter": {
       "draft": "Draft",
       "on_approval": "Awaiting approval",
-      "returned": "Returned for rework",
+      "returned": "Needs rework",
       "approved": "Approved",
       "rejected": "Rejected",
       "to_accountant": "Sent for payment",
@@ -287,14 +287,14 @@
     },
     "files": {
       "label": "Attachments",
-      "hint": "PDF, images and Word and Excel files, each up to 25 MB.",
+      "hint": "PDF, images and Word, Excel and PowerPoint files, each up to 25 MB.",
       "list": "Attached files",
       "uploading": "uploading…",
       "uploaded": "uploaded",
       "attached": "already in the document",
       "remove": "Remove file {{name}}",
       "tooLarge": "The file is larger than 25 MB.",
-      "unsupported": "PDF, images and Word and Excel files are accepted.",
+      "unsupported": "PDF, images and Word, Excel and PowerPoint files are accepted.",
       "failed": "Not uploaded: {{reason}}",
       "invoiceLater": "The partner's invoice will come later"
     },
@@ -359,7 +359,7 @@
         "VALIDATION_FAILED": "check the fields",
         "BACKEND_UNAVAILABLE": "the documents service is not responding, try again later",
         "PAYLOAD_TOO_LARGE": "the file is larger than 25 MB",
-        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Word and Excel files are accepted",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Word, Excel and PowerPoint files are accepted",
         "REQUEST_TIMEOUT": "the server did not respond in time",
         "DEFAULT": "the server returned an error, try again",
         "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Details & letterhead”",

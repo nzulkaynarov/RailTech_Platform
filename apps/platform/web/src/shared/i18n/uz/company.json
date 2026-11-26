@@ -260,7 +260,7 @@
     "invalidField": "Qiymatni tekşiring",
     "note": "Yangi TT şu qiymatlarni oladi; rasmiylaştirilgan TT özgarmaydi.",
     "remindOverdue": "Mijozlarga muddati ötgan hisob-fakturalar haqida eslatiş",
-    "remindOverdueHint": "Kuniga bir marta, Toşkent vaqti bilan 10:00 da — tölov muddati uç kundan ortiq ötgan har bir hisob-faktura böyiça eslatma: qönğiroqçada va mijozga xat bilan. Sukut böyiça öçirilgan.",
+    "remindOverdueHint": "Kuniga bir marta, Toşkent vaqti bilan 10:00 da — tölov muddati uç kundan ortiq ötgan har bir hisob-faktura böyiça eslatma: mijozning bildirişnomalarida va xat bilan. Sukut böyiça öçirilgan.",
     "confirmDays": "Hamkor narxini tasdiqlaş, kun",
     "expiringDays": "Hamkor narxi tugaşidan oldin ogohlantiriş, kun",
     "actReminderHours": "Dalolatnoma eslatmalari orasidagi tanaffus, soat",
@@ -712,7 +712,7 @@
       "off": "Öçirilgan"
     },
     "kinds": {
-      "quote": "TK",
+      "quote": "TT",
       "contract": "Şartnoma",
       "invoice": "Hisob",
       "act": "Dalolatnoma",

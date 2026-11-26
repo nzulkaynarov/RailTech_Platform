@@ -257,7 +257,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page
         .getByRole("list", { name: "Прикреплённые файлы" })
-        .getByText("Допустимы PDF, изображения и файлы Word и Excel."),
+        .getByText("Допустимы PDF, изображения и файлы Word, Excel и PowerPoint."),
     ).toBeVisible();
     await page.getByRole("button", { name: "Убрать файл virus.exe" }).click();
     await expect(page.getByRole("list", { name: "Прикреплённые файлы" })).toHaveCount(0);

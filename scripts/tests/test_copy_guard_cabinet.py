@@ -54,15 +54,27 @@ class CabinetCopyGuard(unittest.TestCase):
 
     def test_allow_list_is_short_explained_and_exact(self) -> None:
         lines = [x for x in ALLOW.read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]
-        mine = [x for x in lines if (x.split("\t") + ["", "", "", ""])[3] in ("", "cabinet")]  # 4th column = app
-        self.assertLessEqual(len(mine), ALLOW_CEILING)
-        for line in mine:
-            key, cls, reason = (line.split("\t") + ["", ""])[:3]
+        # every row of the file is checked (not only this app's): known app, reason, no wildcard patterns
+        for line in lines:
+            key, cls, reason, app = (line.split("\t") + ["", "", ""])[:4]
+            self.assertIn(app, ("cabinet", "platform"), f"a row must name its app in column 4: {line!r}")
             self.assertTrue(key and cls and reason.strip(), f"key, class and reason are required: {line!r}")
             self.assertNotIn(".*", key, f"no wildcard patterns: {line!r}")
             self.assertNotIn(".+", key, f"no wildcard patterns: {line!r}")
             for wide in ("\\w+", "\\w*", "[^"):
                 self.assertNotIn(wide, key, f"no wide patterns: {line!r}")
+        mine = [x for x in lines if (x.split("\t") + ["", "", "", ""])[3] == "cabinet"]
+        self.assertLessEqual(len(mine), ALLOW_CEILING)
+
+    def test_unknown_app_in_allow_file_is_an_error(self) -> None:
+        guard = _load("copy_guard")
+        tmp = Path(__file__).with_name("_allow_unknown_app.tsv")
+        tmp.write_text("x\tcode\treason\tnobody\n", encoding="utf-8")
+        try:
+            with self.assertRaises(ValueError):
+                guard._load_allow(tmp)
+        finally:
+            tmp.unlink()
 
     def test_rules_catch_what_the_cabinet_was_cleaned_of(self) -> None:
         guard = _load("copy_guard")

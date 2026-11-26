@@ -368,7 +368,7 @@
     "urgent": "Urgent",
     "files": {
       "label": "Document file",
-      "hint": "A scan or file of the letter is required. PDF, images, Word and Excel files, up to 25 MB. Do not upload passports or personal documents."
+      "hint": "A scan or file of the letter is required. PDF, images, Word, Excel and PowerPoint files, up to 25 MB. Do not upload passports or personal documents."
     },
     "deal": {
       "label": "Link to a request or project",

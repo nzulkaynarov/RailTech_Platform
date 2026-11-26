@@ -23,7 +23,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { PersonRefCell } from "../../PersonRefCell";
 import { PAGE_SIZE, type Scope, projectPath, scopeOf } from "./api";
 import { useStateLabels } from "./labels";
-import { ActStatusTag, ProjectStatusTag } from "./status";
+import { ActStatusTag, ContractStatusTag, ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
@@ -71,7 +71,7 @@ function Documents({ row }: { row: ProjectRow }) {
         {contract ? (
           <li>
             <span className="pf-hint">{t("card.documents.contract")}</span>
-            <ProjectStatusTag kind="contract" status={contract.status} />
+            <ContractStatusTag contract={contract} />
           </li>
         ) : null}
         {invoice ? (
