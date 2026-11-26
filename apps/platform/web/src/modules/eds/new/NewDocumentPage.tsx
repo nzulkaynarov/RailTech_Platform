@@ -78,6 +78,7 @@ import "../documents/documents.css";
 import "./new.css";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../shared/lib/unit";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 /** Типы внутреннего документа; исходящее письмо — отдельный экран без выбора типа (план 2026-11-12 п. 0.2). */
 const INTERNAL_KINDS: readonly EdsDocumentKind[] = ["memo", "application", "report"];
@@ -1052,31 +1053,33 @@ function DocumentForm({
   );
 
   return (
-    <div className={letter ? "pf-newdoc pf-newdoc--letter" : "pf-newdoc"}>
-      <PageHeader title={title} subtitle={subtitle} />
-      {handOver && !letter ? (
-        <p className="pf-hint" role="status">
-          {t("documents:form.handover.from", { number: handOver.letter })}
-        </p>
-      ) : null}
-      {letter ? (
-        <div className="pf-newdoc-letter">
-          <div className="pf-newdoc-letter-form">{form}</div>
-          <Card className="pf-newdoc-letter-pdf">
-            <LetterPdfPanel
-              documentId={savedId}
-              initial={draft?.letter?.pdf ?? null}
-              prepare={prepare}
-              canBuild={!uploading}
-              subject={values.subject}
-              auto={{ key: JSON.stringify(values), prepare: prepareQuiet }}
-            />
-          </Card>
-        </div>
-      ) : (
-        form
-      )}
-    </div>
+    <PageFrame layout="object">
+      <div className={letter ? "pf-newdoc pf-newdoc--letter" : "pf-newdoc"}>
+        <PageHeader title={title} subtitle={subtitle} />
+        {handOver && !letter ? (
+          <p className="pf-hint" role="status">
+            {t("documents:form.handover.from", { number: handOver.letter })}
+          </p>
+        ) : null}
+        {letter ? (
+          <div className="pf-newdoc-letter">
+            <div className="pf-newdoc-letter-form">{form}</div>
+            <Card className="pf-newdoc-letter-pdf">
+              <LetterPdfPanel
+                documentId={savedId}
+                initial={draft?.letter?.pdf ?? null}
+                prepare={prepare}
+                canBuild={!uploading}
+                subject={values.subject}
+                auto={{ key: JSON.stringify(values), prepare: prepareQuiet }}
+              />
+            </Card>
+          </div>
+        ) : (
+          form
+        )}
+      </div>
+    </PageFrame>
   );
 }
 
