@@ -577,7 +577,7 @@ describe("письмо директору: из переписки и при с�
     const { router } = renderAt("/crm/messages?lead=L-2041");
     const button = await screen.findByRole(
       "link",
-      { name: "В заявку: Заявка-демо.pdf — письмом директору" },
+      { name: "В заявку: Заявка-демо.pdf — письмом на согласование" },
       { timeout: 10_000 },
     );
     fireEvent.click(button);

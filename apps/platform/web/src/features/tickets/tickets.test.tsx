@@ -197,7 +197,7 @@ describe("Обращения к администратору", () => {
     const heading = await screen.findByRole("heading", { level: 3, name: /TK-0001/ });
     const card = heading.parentElement as HTMLElement;
     expect(within(card).queryByRole("textbox", { name: "Ваш ответ" })).toBeNull();
-    expect(within(card).getByText(/Директор читает обращения/)).toBeInTheDocument();
+    expect(within(card).getByText(/Обращения читают/)).toBeInTheDocument();
   });
 
   it("сотрудник без доступа к Admin не открывает чужие обращения", async () => {
