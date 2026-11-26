@@ -8,49 +8,55 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { USER_SCOPE, panelsKey, usePanelsStore } from "../../../app/shell/panelsStore";
 import { useViewport } from "../../../app/shell/useViewport";
 import { FormField } from "../../../shared/ui/FormParts";
-import { SETTINGS, entryAt } from "../settingsRegistry";
+import { SETTINGS_HOME } from "../module";
+import { SETTINGS, SETTINGS_GROUPS, entryAt } from "../settingsRegistry";
 
 import "./settings.css";
 
 /**
- * Рамка страницы Настроек (ЕВ-2а, отчёт 2026-11-22 §7 п. 20; polish 2026-11-24 п. 16 — одно меню): страницы своей группы стоят
- * в подменю модуля под активной группой (`AppShell`), рамка меню не рисует. Пока меню не видно (телефон, свёрнутое меню
- * на 768–1439 px), над страницей остаётся выпадающий список. Страницы группы, которых сотруднику не видно, в меню нет; одна страница — меню нет.
- * «Состояние» (`/admin`) и скрытые страницы без группы стоят без меню.
+ * Рамка страницы Настроек (НАСТ-1, макеты 54 и 55; ЕВ-2а, polish 2026-11-24 п. 16 — одно меню): все страницы Настроек стоят в меню
+ * модуля (`AppShell`) сразу, по группам, рамка меню не рисует. Пока меню не видно (телефон, свёрнутое меню на 768–1439 px),
+ * над страницей остаётся один выпадающий список с теми же группами и пунктами и поиском. «Состояние» (`/admin`) и страницы
+ * группы — в нём же. Скрытые страницы без пункта (мастер, обращение) стоят без выбора. Страница под выбором не пересоздаётся.
  */
 export function SettingsFrame({ children }: { children: ReactNode }) {
   const { t } = useTranslation("modules");
   const { me } = useAuth();
   const { mobile, menuWide } = useViewport();
-  // Меню модуля свёрнуто (по умолчанию так на 768–1439 px) — страницы группы не видны, нужен выбор здесь.
+  // Меню модуля свёрнуто (по умолчанию так на 768–1439 px) — страницы не видны, нужен выбор здесь.
   const menuOpen =
     usePanelsStore((state) => state.entries[panelsKey(me.id, USER_SCOPE)]?.menuOpen) ?? menuWide;
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const current = entryAt(pathname);
-  const entries = current
-    ? SETTINGS.filter((entry) => entry.group === current.group && canSee(me, entry.access))
-    : [];
-  if (!current || entries.length < 2) return <>{children}</>;
-  const label = t("admin.frame.nav", { group: t(`admin.groups.${current.group}`) });
-  // Страницы группы — в меню модуля под активной группой (одно меню, не два); выбор над страницей — только когда
-  // меню не видно: телефон или свёрнутое меню на ноутбуке.
-  // Одно и то же дерево при любой ширине: меняется только выбор страницы, страница под ним не пересоздаётся (форма не теряет ввод).
+  const onState = pathname.replace(/\/+$/, "") === SETTINGS_HOME;
+  if (!current && !onState) return <>{children}</>;
   const showPicker = mobile || !menuOpen;
+  const visible = SETTINGS.filter((entry) => canSee(me, entry.access));
+  const stateLabel = t("admin.nav.state");
+  const options = [
+    { value: SETTINGS_HOME, label: stateLabel },
+    ...SETTINGS_GROUPS.map((group) => ({
+      label: t(`admin.groups.${group}`),
+      title: t(`admin.groups.${group}`),
+      options: visible
+        .filter((entry) => entry.group === group)
+        .map((entry) => ({ value: entry.path, label: t(`admin.sections.${entry.key}`) })),
+    })).filter((group) => group.options.length > 0),
+  ];
   return (
     <div className="pf-set-frame" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
       {showPicker ? (
-        <FormField id="pf-set-frame-nav" label={label}>
+        <FormField id="pf-set-frame-nav" label={t("admin.frame.nav")}>
           <Select
             id="pf-set-frame-nav"
-            value={current.key}
-            options={entries.map((entry) => ({
-              value: entry.key,
-              label: t(`admin.sections.${entry.key}`),
-            }))}
-            onChange={(key: string) => {
-              const next = entries.find((entry) => entry.key === key);
-              if (next) void navigate(next.path);
+            showSearch
+            virtual={false}
+            optionFilterProp="label"
+            value={current?.path ?? SETTINGS_HOME}
+            options={options}
+            onChange={(path: string) => {
+              void navigate(path);
             }}
           />
         </FormField>

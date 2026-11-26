@@ -21,8 +21,6 @@ export interface MenuItem {
   badge?: MenuBadge;
   /** Заголовок группы (Настройки, SET-IA): пункты с одной группой идут подряд под её заголовком */
   group?: string | undefined;
-  /** Страницы пункта (Настройки): показываются под активным пунктом, отдельного меню в рамке страницы нет */
-  children?: readonly { key: string; to: string; label: string; active: boolean }[];
 }
 
 export interface ModuleMenuLabels {
@@ -68,15 +66,12 @@ function MenuLink({
   labels: ModuleMenuLabels;
   onNavigate?: (() => void) | undefined;
 }) {
-  const pages = item.active && item.children && item.children.length > 1 ? item.children : null;
   return (
     <>
       <Link
         to={item.to}
-        className={
-          pages ? "pf-menu-item pf-menu-item--open pf-focusable" : "pf-menu-item pf-focusable"
-        }
-        aria-current={item.active ? (pages ? "true" : "page") : undefined}
+        className="pf-menu-item pf-focusable"
+        aria-current={item.active ? "page" : undefined}
         onClick={onNavigate}
       >
         <span>{item.label}</span>
@@ -99,22 +94,6 @@ function MenuLink({
           </>
         ) : null}
       </Link>
-      {pages ? (
-        <ul className="pf-menu-pages" aria-label={item.label}>
-          {pages.map((page) => (
-            <li key={page.key}>
-              <Link
-                to={page.to}
-                className="pf-menu-item pf-menu-item--page pf-focusable"
-                aria-current={page.active ? "page" : undefined}
-                onClick={onNavigate}
-              >
-                {page.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </>
   );
 }

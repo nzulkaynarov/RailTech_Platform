@@ -8,7 +8,7 @@ import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
-import { SETTINGS, entryAt } from "../../modules/admin/settingsRegistry";
+import { SETTINGS, SETTINGS_GROUPS, entryAt } from "../../modules/admin/settingsRegistry";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
@@ -286,25 +286,32 @@ export function AppShell() {
   });
 
   const settingsCurrent = entryAt(location.pathname);
-  const settingsPages = (group: string) =>
-    SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)).map((entry) => ({
-      key: entry.key,
-      to: entry.path,
-      label: t(`modules:admin.sections.${entry.key}`),
-      active: settingsCurrent?.key === entry.key,
-    }));
   const activeItems = itemsOf(activeModule.code);
-  const menuItems: MenuItem[] = activeItems.map(({ item, to }) => ({
+  const moduleItems: MenuItem[] = activeItems.map(({ item, to }) => ({
     key: `${activeModule.code}.${item.key}`,
     to,
     label: itemLabel(activeModule.code, item),
     active: isActiveItem(activeModule.code, item),
     badge: badgeOfItem([...new Set(refsOf(item))]),
-    // Настройки: страницы активной группы — тем же меню, а не вторым меню в рамке страницы
-    ...(activeModule.code === "admin" && isActiveItem("admin", item)
-      ? { children: settingsPages(item.key) }
-      : {}),
   }));
+  // Настройки (НАСТ-1, макет 54): одно меню — «Состояние», затем все страницы по группам, всегда раскрытые; открытая подсвечена,
+  // по нажатию состав, порядок и ширина не меняются (раньше раскрывалась только активная группа, и список «прыгал»).
+  const settingsMenu: MenuItem[] =
+    activeModule.code === SETTINGS_MODULE
+      ? [
+          ...moduleItems.filter((item) => item.key === `${SETTINGS_MODULE}.state`),
+          ...SETTINGS_GROUPS.flatMap((group) =>
+            SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)),
+          ).map((entry) => ({
+            key: `${SETTINGS_MODULE}.${entry.key}`,
+            to: entry.path,
+            label: t(`modules:admin.sections.${entry.key}`),
+            active: settingsCurrent?.key === entry.key,
+            group: t(`modules:admin.groups.${entry.group}`),
+          })),
+        ]
+      : [];
+  const menuItems: MenuItem[] = activeModule.code === SETTINGS_MODULE ? settingsMenu : moduleItems;
   const activeResolved = nav
     ? activeItems.find(({ item }) => item.key === nav.item.key)
     : undefined;
