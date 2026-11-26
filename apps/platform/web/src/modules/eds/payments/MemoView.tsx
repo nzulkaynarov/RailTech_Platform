@@ -18,6 +18,7 @@ import { RecordTab } from "../decision/RecordTab";
 import { MemoFiles, MemoPanel, MemoStatus } from "./MemoPanel";
 import { useStateLabels } from "./labels";
 import { moneyProps } from "./model";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 function Content({ memo }: { memo: PaymentMemoCard }) {
   const { t } = useTranslation("payments");
@@ -31,48 +32,54 @@ function Content({ memo }: { memo: PaymentMemoCard }) {
     comment: entry.comment ?? null,
   }));
   return (
-    <div className="pf-dec-page pf-overlay-aware">
-      <PageHeader
-        title={memo.number ?? memo.subject}
-        {...(memo.number ? { subtitle: memo.subject } : {})}
-        extra={
-          <div className="pf-dec-row">
-            <MemoStatus status={memo.status} />
-            <LinkButton to="/eds/payments?show=memos">{t("view.backMemos")}</LinkButton>
-          </div>
-        }
-      />
-      <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.text")}</h2>}>
-        <p className="pf-dec-text">{memo.text}</p>
-      </Card>
-      <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.files")}</h2>}>
-        <MemoFiles memo={memo} />
-      </Card>
-      <DecisionCenter legacyTab="payment" legacySheet="payment" label={t("memo.panel.sheetLabel")}>
-        <MemoPanel memoId={memo.id} />
-      </DecisionCenter>
-      <RecordTab tab="facts">
-        <DefinitionList
-          items={[
-            { label: t("memo.panel.from"), value: memo.author.full_name },
-            {
-              label: t("memo.panel.amount"),
-              value: memo.amount ? <MoneyText {...moneyProps(memo.amount)} /> : null,
-            },
-            { label: t("memo.panel.due"), value: memo.due_date ? date(memo.due_date) : null },
-            {
-              label: t("brief.project"),
-              value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
-            },
-          ]}
+    <PageFrame layout="object">
+      <div className="pf-dec-page pf-overlay-aware">
+        <PageHeader
+          title={memo.number ?? memo.subject}
+          {...(memo.number ? { subtitle: memo.subject } : {})}
+          extra={
+            <div className="pf-dec-row">
+              <MemoStatus status={memo.status} />
+              <LinkButton to="/eds/payments?show=memos">{t("view.backMemos")}</LinkButton>
+            </div>
+          }
         />
-      </RecordTab>
-      {history.length > 0 ? (
-        <RecordTab tab="history">
-          <RecordHistory label={t("memo.panel.journal")} entries={history} />
+        <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.text")}</h2>}>
+          <p className="pf-dec-text">{memo.text}</p>
+        </Card>
+        <Card size="small" title={<h2 className="pf-dec-title">{t("memo.panel.files")}</h2>}>
+          <MemoFiles memo={memo} />
+        </Card>
+        <DecisionCenter
+          legacyTab="payment"
+          legacySheet="payment"
+          label={t("memo.panel.sheetLabel")}
+        >
+          <MemoPanel memoId={memo.id} />
+        </DecisionCenter>
+        <RecordTab tab="facts">
+          <DefinitionList
+            items={[
+              { label: t("memo.panel.from"), value: memo.author.full_name },
+              {
+                label: t("memo.panel.amount"),
+                value: memo.amount ? <MoneyText {...moneyProps(memo.amount)} /> : null,
+              },
+              { label: t("memo.panel.due"), value: memo.due_date ? date(memo.due_date) : null },
+              {
+                label: t("brief.project"),
+                value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
+              },
+            ]}
+          />
         </RecordTab>
-      ) : null}
-    </div>
+        {history.length > 0 ? (
+          <RecordTab tab="history">
+            <RecordHistory label={t("memo.panel.journal")} entries={history} />
+          </RecordTab>
+        ) : null}
+      </div>
+    </PageFrame>
   );
 }
 

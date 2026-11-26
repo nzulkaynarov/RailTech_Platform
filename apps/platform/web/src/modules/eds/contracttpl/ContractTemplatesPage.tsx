@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { ContractTemplates } from "../../admin/company/tabs/ContractTemplates";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../../admin/company/company.css";
 
@@ -14,9 +15,11 @@ export function ContractTemplatesPage() {
   const { t } = useTranslation("company");
   useDocumentTitle(t("contractTemplates.title"));
   return (
-    <div className="pf-co-body">
-      <PageHeader title={t("contractTemplates.title")} />
-      <ContractTemplates titled={false} />
-    </div>
+    <PageFrame layout="object">
+      <div className="pf-co-body">
+        <PageHeader title={t("contractTemplates.title")} />
+        <ContractTemplates titled={false} />
+      </div>
+    </PageFrame>
   );
 }

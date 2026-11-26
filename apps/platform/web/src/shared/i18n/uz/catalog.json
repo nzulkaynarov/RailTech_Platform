@@ -58,8 +58,8 @@
     "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
     "ERP_FORBIDDEN": "Ruxsat berilmadi: katalogni yoki hamkorlarni yuritiş huquqi kerak.",
-    "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni köra oladiganlar (taʼminot, direktor) özgartiradi.",
-    "CREW_RATES_REQUIRED": "Brigada stavkalarini boş muhandis, taʼminot yoki direktor özgartiradi.",
+    "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni köra oladiganlar özgartiradi.",
+    "CREW_RATES_REQUIRED": "Brigada stavkalarini faqat ularni köra oladiganlar özgartiradi.",
     "VALIDATION_FAILED": "Maydonlarni tekşiring.",
     "CONFLICT": "Bunday yozuv allaqaçon bor. Röyxatni yangilang.",
     "NOT_FOUND": "Yozuv endi yöq. Röyxatni yangilang.",
@@ -237,7 +237,7 @@
       "addSteps": [
         "Pozitsiya nomenklaturada qoralama sifatida paydo böladi.",
         "Uni hisob-kitobda tanlaş va fayllarni boğlaş mumkin.",
-        "Hamkor narxlarini taʼminotçi qöşadi."
+        "Hamkor narxlarini ularni köra oladigan xodim qöşadi."
       ],
       "editSteps": [
         "Özgarişlar pozitsiya kartasida saqlanadi.",
@@ -287,7 +287,7 @@
     "form": {
       "title": "Taklif: {{name}}",
       "price": "Xarid narxi, {{currency}}",
-      "noPrice": "Hamkor narxini körmaysiz va özgartirmaysiz: u taʼminotçi va direktorga oçiq.",
+      "noPrice": "Hamkor narxini körmaysiz va özgartirmaysiz: narxlarga ruxsatingiz yöq.",
       "quota": "Kvota, dona",
       "quotaHint": "Hamkor şu narxda qança birlik jönatişga tayyor.",
       "min": "Minimal buyurtma, dona",
@@ -360,7 +360,7 @@
       "rate": "Stavka, {{currency}}",
       "rateHint": "Böş — stavka belgilanmagan.",
       "unit": "Stavka",
-      "noRate": "Brigada stavkasini körmaysiz va özgartirmaysiz: u boş muhandis, taʼminotçi va direktorga oçiq.",
+      "noRate": "Brigada stavkasini körmaysiz va özgartirmaysiz: stavkalarga ruxsatingiz yöq.",
       "note": "Izoh",
       "active": "Işlaydi",
       "addSteps": [
@@ -410,8 +410,8 @@
       "why": "Nima uçun kerak",
       "whyHint": "Qisqaça: unga qaysi pozitsiyalar tuşadi.",
       "steps": [
-        "Sörov direktorga «Kategoriya sörovlari»ga boradi.",
-        "Direktor kategoriyani yaratib boğlaydi yoki sabab bilan rad etadi.",
+        "Sörov «Kategoriya sörovlari» bölimiga boradi.",
+        "Kategoriya yaratilib boğlanadi yoki sabab bilan rad etiladi.",
         "Qaror haqida xabarnoma olasiz."
       ]
     }
@@ -420,7 +420,7 @@
     "parts": "Maʼlumotnoma",
     "rates": {
       "title": "Valyuta kurslari",
-      "hint": "Sömga kurslar: Markaziy bankdan avtomatik yoki sanaga qölda. TT uçun kompaniya sozlamalarida belgilangan muddatdan eski bölmagan oxirgi kurs olinadi.",
+      "hint": "Sömga kurslar: Markaziy bankdan yuklanadi yoki sanaga qölda kiritiladi. TT uçun kompaniya sozlamalarida belgilangan muddatdan eski bölmagan oxirgi kurs olinadi.",
       "filter": "Valyuta",
       "any": "Barça valyutalar",
       "table": "Sömga valyuta kurslari",
@@ -449,7 +449,7 @@
       "onlyActive": "Faqat amaldagilar",
       "add": "Kod qöşiş",
       "table": "TIF TN kodlari",
-      "editNamed": "{{code}} kodini özgartiriş",
+      "editNamed": "{{hs}} kodini özgartiriş",
       "active": "Amalda",
       "closed": "Yopilgan",
       "until": "{{date}} gaça",
@@ -466,7 +466,7 @@
       },
       "form": {
         "addTitle": "TIF TN kodini qöşiş",
-        "editTitle": "Kod {{code}}",
+        "editTitle": "Kod {{hs}}",
         "add": "Qöşiş",
         "code": "Kod",
         "codeHint": "2, 4, 6, 8 yoki 10 raqam. Qöşilgaç kodni özgartirib bölmaydi.",
@@ -725,9 +725,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Mijoz topşirilgandan keyin uşlab turilgan: hamkor kartoçkasida va Mijozda STIRni tekşiring va «Qayta taklif qiliş» tugmasini bosing. Boğlaniş yaratilmadi, hamkor sörovlari şu yerda saqlanadi.",
+        "held": "STIR tekşiruvi kerak: hamkor kartoçkasida va Mijozda STIRni tekşiring va «Qayta taklif qiliş» tugmasini bosing. Boğlaniş yaratilmadi, hamkor sörovlari şu yerda saqlanadi.",
         "unverified": "Boğlanişni mijoz topşirilişi STIR mos kelgani böyiça yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizça hamkor sörovlari şu yerda saqlanadi.",
-        "conflict": "Bunday rekvizitli mijoz bor, lekin u boşqa kompaniyaga boğlangan. Heç narsa özgartirilmadi. Hamkor kartoçkasida va Mijozda STIR yoki röyxatdan ötiş raqamini tekşiring, xatosini töğrilang va hamkorni qayta taklif qiling."
+        "conflict": "Bunday rekvizitli mijoz boşqa kompaniyaga boğlangan, heç narsa özgartirilmadi. Hamkor va mijoz kartoçkalarida STIRni tekşiring, xatosini töğrilang va hamkorni qayta taklif qiling."
       }
     },
     "rights": "Hamkorga nima oçiladi",
@@ -1032,7 +1032,7 @@
     "merge": "{{sku}} bilan birlaştiriş",
     "mergeLabel": "{{sku}} bilan birlaştiriş: «{{name}}»",
     "mergeAction": "Birlaştiriş",
-    "mergeSummary": "Ariza, TK va buyurtma qatorlari «{{name}}» ga ötadi, qoralama arxivga ketadi.",
+    "mergeSummary": "Ariza, TT va buyurtma qatorlari «{{name}}» ga ötadi, qoralama arxivga ketadi.",
     "merged": "Kartoçkalar birlaştirildi",
     "draft": "Qoralama",
     "emptyRequests": {
@@ -1112,9 +1112,9 @@
       "rejected": "Rad etilgan"
     },
     "status": {
-      "submitted": "Topşirilgan",
+      "submitted": "Körib çiqilmoqda",
       "contract_sent": "Şartnoma yuborilgan",
-      "candidate_agreed": "Nomzod kelişgan",
+      "candidate_agreed": "Imzolaşni kutmoqda",
       "approved": "Maʼqullangan",
       "rejected": "Rad etilgan"
     },
@@ -1156,7 +1156,7 @@
       "prepare": "Şartnomani tayyorlaş",
       "prepareAgain": "Qayta tayyorlaş",
       "decide": "Şartnoma böyiça qaror",
-      "fromArchive": "Qogʻozda allaqaçon imzolangan"
+      "fromArchive": "Qoğozda allaqaçon imzolangan"
     },
     "empty": {
       "title": "Hamkorlik arizalari yöq",
@@ -1282,14 +1282,14 @@
       },
       "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi",
       "hintRemarks": "Nomzod şartnomani izohlar va öz tahriri bilan qaytardi. Barça masʼullar kelişadi.",
-      "hintDirector": "Eʼtiroz bor: direktor qaror qiladi."
+      "hintDirector": "Eʼtiroz bor: tasdiqlovçi qaror qiladi."
     },
     "archiveModal": {
-      "title": "Qogʻozda allaqaçon imzolangan: {{name}}",
+      "title": "Qoğozda allaqaçon imzolangan: {{name}}",
       "ok": "Kiritiş",
-      "hint": "Hamkor hujjatlarni avval imzolagan. Ariza darhol tasdiqlanadi, kabinetga va poçtaga heç narsa yuborilmaydi.",
+      "hint": "Hamkor hujjatlarni avval imzolagan. Ariza tasdiqlanadi, kabinetga va poçtaga heç narsa yuborilmaydi.",
       "signedOn": "Imzolangan sana",
-      "signedOnHint": "Qogʻozdagi haqiqiy sana: muddat şundan hisoblanadi.",
+      "signedOnHint": "Qoğozdagi haqiqiy sana: muddat şundan hisoblanadi.",
       "numberPlaceholder": "Eski raqam; böş bölsa — yangisi beriladi",
       "ownDate": "Öz sanasi (boşqa bölsa)",
       "scan": "Skan",

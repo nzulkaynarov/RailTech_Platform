@@ -94,7 +94,10 @@ describe("карты статусов", () => {
   it("слова статусов в одном документе не повторяются", () => {
     const words = Object.entries(resources.ru.dictionary.status).flatMap(([kind, map]) => {
       const values = Object.values(map);
-      expect(new Set(values).size, kind).toBe(values.length);
+      // Договор: «согласован клиентом» и «выставлен» сотруднику показываются одним словом «Ожидает подписания»
+      // (решение владельца 2026-11-25, docs/architecture/status-dictionary.md §3) — одно допустимое совпадение.
+      const sharedByDecision = kind === "contract" ? 1 : 0;
+      expect(new Set(values).size, kind).toBe(values.length - sharedByDecision);
       return values;
     });
     expect(words.length).toBeGreaterThan(30);

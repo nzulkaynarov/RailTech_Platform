@@ -54,7 +54,7 @@ export function SigningPage() {
   );
   const kindName = (code: string): string => {
     const found = kinds.data?.items.find((item) => item.code === code);
-    return found ? localName(found.name, i18n.language) : t("kinds.unknown", { code });
+    return found ? localName(found.name, i18n.language) : t("kinds.unknown", { name: code });
   };
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: getListSigningAuthoritiesQueryKey() });

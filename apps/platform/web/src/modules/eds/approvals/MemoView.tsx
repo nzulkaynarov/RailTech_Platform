@@ -27,6 +27,7 @@ import { AgreePanel } from "./AgreePanel";
 import { memoRef } from "./api";
 import { useStateLabels } from "./labels";
 import { mayDecideMemos } from "./model";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 function Files({ memo }: { memo: MemoApprovalCard }) {
   const { t, i18n } = useTranslation("approvals");
@@ -58,70 +59,72 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
   const number = memo.number ?? t(`kinds.${memo.kind}`);
 
   return (
-    <div className="pf-dec-page pf-overlay-aware">
-      <PageHeader
-        title={t("card.title", { number })}
-        subtitle={memo.subject}
-        extra={
-          <div className="pf-dec-row">
-            <DocumentStatusTag kind="memo" status={memo.document_status} />
-            {mayDecide && memo.can_decide ? null : (
-              <StatusTag tone="default">
-                <span className="pf-dec-lock">
-                  <LockIcon size={12} />
-                  {t("card.readOnly")}
-                </span>
-              </StatusTag>
-            )}
-          </div>
-        }
-      />
-      <Card size="small" title={<h2 className="pf-dec-title">{t("card.text")}</h2>}>
-        <p className="pf-dec-text">{memo.text}</p>
-      </Card>
-      <Card size="small" title={<h2 className="pf-dec-title">{t("card.files")}</h2>}>
-        <Files memo={memo} />
-      </Card>
-      <DecisionCenter legacyTab="agree" legacySheet="agree" label={t("panel.sheetLabel")}>
-        <AgreePanel memoRef={refKey} />
-      </DecisionCenter>
-      <RecordTab tab="facts">
-        <DefinitionList
-          items={[
-            { label: t("card.fields.kind"), value: t(`kinds.${memo.kind}`) },
-            {
-              label: t("card.fields.to"),
-              value: memo.addressee ? memo.addressee.full_name : t("card.toDirector"),
-            },
-            {
-              label: t("card.fields.amount"),
-              value: memo.amount ? (
-                <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
-              ) : null,
-            },
-            { label: t("card.fields.due"), value: memo.due_date ? date(memo.due_date) : null },
-            {
-              label: t("card.fields.deal"),
-              value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
-            },
-          ]}
+    <PageFrame layout="object">
+      <div className="pf-dec-page pf-overlay-aware">
+        <PageHeader
+          title={t("card.title", { number })}
+          subtitle={memo.subject}
+          extra={
+            <div className="pf-dec-row">
+              <DocumentStatusTag kind="memo" status={memo.document_status} />
+              {mayDecide && memo.can_decide ? null : (
+                <StatusTag tone="default">
+                  <span className="pf-dec-lock">
+                    <LockIcon size={12} />
+                    {t("card.readOnly")}
+                  </span>
+                </StatusTag>
+              )}
+            </div>
+          }
         />
-      </RecordTab>
-      <RecordTab tab="route">
-        <RouteTimeline
-          label={t("card.route")}
-          steps={memo.steps}
-          decisions={memo.decisions}
-          author={{
-            name: memo.author.full_name,
-            at: memo.created_at,
-            title: (name) => t("card.routeAuthor", { name }),
-          }}
-          stepTitle={(step) => t(`card.routeStep.${step.status}`, { label: step.label })}
-          decisionTitle={(d) => t(`card.decision.${d.decision}`)}
-        />
-      </RecordTab>
-    </div>
+        <Card size="small" title={<h2 className="pf-dec-title">{t("card.text")}</h2>}>
+          <p className="pf-dec-text">{memo.text}</p>
+        </Card>
+        <Card size="small" title={<h2 className="pf-dec-title">{t("card.files")}</h2>}>
+          <Files memo={memo} />
+        </Card>
+        <DecisionCenter legacyTab="agree" legacySheet="agree" label={t("panel.sheetLabel")}>
+          <AgreePanel memoRef={refKey} />
+        </DecisionCenter>
+        <RecordTab tab="facts">
+          <DefinitionList
+            items={[
+              { label: t("card.fields.kind"), value: t(`kinds.${memo.kind}`) },
+              {
+                label: t("card.fields.to"),
+                value: memo.addressee ? memo.addressee.full_name : t("card.toDirector"),
+              },
+              {
+                label: t("card.fields.amount"),
+                value: memo.amount ? (
+                  <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
+                ) : null,
+              },
+              { label: t("card.fields.due"), value: memo.due_date ? date(memo.due_date) : null },
+              {
+                label: t("card.fields.deal"),
+                value: memo.deal ? (memo.deal.number ?? String(memo.deal.erp_deal_id)) : null,
+              },
+            ]}
+          />
+        </RecordTab>
+        <RecordTab tab="route">
+          <RouteTimeline
+            label={t("card.route")}
+            steps={memo.steps}
+            decisions={memo.decisions}
+            author={{
+              name: memo.author.full_name,
+              at: memo.created_at,
+              title: (name) => t("card.routeAuthor", { name }),
+            }}
+            stepTitle={(step) => t(`card.routeStep.${step.status}`, { label: step.label })}
+            decisionTitle={(d) => t(`card.decision.${d.decision}`)}
+          />
+        </RecordTab>
+      </div>
+    </PageFrame>
   );
 }
 

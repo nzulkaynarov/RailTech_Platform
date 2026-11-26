@@ -31,6 +31,7 @@ import {
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { ItemRefCell } from "../../ItemRefCell";
 import { PersonRefCell } from "../../PersonRefCell";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../calc/calc.css";
 import "./stock.css";
@@ -59,7 +60,7 @@ function OfferNote({
   const { t } = useTranslation("stock");
   const { date } = useFormat();
   const parts = [
-    offer.incoterms ? t("order.offer.incoterms", { code: offer.incoterms }) : null,
+    offer.incoterms ? t("order.offer.incoterms", { terms: offer.incoterms }) : null,
     offer.valid_until
       ? t(offer.expired ? "order.offer.expired" : "order.offer.validUntil", {
           date: date(offer.valid_until),
@@ -227,178 +228,180 @@ function Content({ order }: { order: SupplierOrderDetail }) {
               ? ("setDate" as const)
               : null;
   return (
-    <div className="pf-calc pf-stock pf-overlay-aware">
-      <PageHeader
-        title={t("order.title", { number: order.number })}
-        subtitle={[order.supplier.name, order.requests.map((r) => r.number).join(", ")]
-          .filter(Boolean)
-          .join(" · ")}
-        extra={
-          <div className="pf-calc-row">
-            <OrderStatusTag status={order.status} />
-            {primary ? (
-              <Button
-                type="primary"
-                onClick={() => {
-                  setDialog(
-                    primary === "setDate" ? "edit" : primary === "resend" ? "send" : primary,
-                  );
-                }}
-              >
-                {t(`order.action.${primary}`)}
-              </Button>
-            ) : null}
-            {primary === "resend" && a.confirm ? (
-              <Button
-                onClick={() => {
-                  setDialog("confirm");
-                }}
-              >
-                {t("order.action.confirm")}
-              </Button>
-            ) : null}
-            {a.edit && primary !== "setDate" ? (
-              <Button
-                onClick={() => {
-                  setDialog("edit");
-                }}
-              >
-                {t("order.action.edit")}
-              </Button>
-            ) : null}
-            {a.cancel ? (
-              <Button
-                danger
-                onClick={() => {
-                  setDialog("cancel");
-                }}
-              >
-                {t("order.action.cancel")}
-              </Button>
-            ) : null}
-            <LinkButton to="/erp/stock?view=orders">{t("order.back")}</LinkButton>
-          </div>
-        }
-      />
-      {order.overdue && order.days_overdue ? (
-        <Alert
-          type="warning"
-          showIcon
-          message={t("order.overdueBanner", {
-            date: order.expected_date ? date(order.expected_date) : "",
-            count: order.days_overdue,
-          })}
-        />
-      ) : null}
-      {order.send_missing ? (
-        // СЦ-10: без цены и даты заказ партнёру не уходит — карточка говорит, чего не хватает.
-        <Alert
-          type="info"
-          showIcon
-          message={[
-            order.send_missing.prices > 0
-              ? t("order.missing.prices", { count: order.send_missing.prices })
-              : null,
-            order.send_missing.date ? t("order.missing.date") : null,
-          ]
+    <PageFrame layout="object">
+      <div className="pf-calc pf-stock pf-overlay-aware">
+        <PageHeader
+          title={t("order.title", { number: order.number })}
+          subtitle={[order.supplier.name, order.requests.map((r) => r.number).join(", ")]
             .filter(Boolean)
             .join(" · ")}
-          description={[
-            order.price_request
-              ? order.price_request.answered_at
-                ? t("order.price.state.answered", {
-                    date: activity(order.price_request.answered_at),
-                  })
-                : order.price_request.status === "failed"
-                  ? t("order.price.state.failed")
-                  : t("order.price.state.sent", {
-                      date: activity(order.price_request.requested_at),
-                    })
-              : null,
-            order.actions.edit
-              ? t(primary === "setDate" ? "order.missing.hintDate" : "order.missing.hint")
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" ")}
+          extra={
+            <div className="pf-calc-row">
+              <OrderStatusTag status={order.status} />
+              {primary ? (
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setDialog(
+                      primary === "setDate" ? "edit" : primary === "resend" ? "send" : primary,
+                    );
+                  }}
+                >
+                  {t(`order.action.${primary}`)}
+                </Button>
+              ) : null}
+              {primary === "resend" && a.confirm ? (
+                <Button
+                  onClick={() => {
+                    setDialog("confirm");
+                  }}
+                >
+                  {t("order.action.confirm")}
+                </Button>
+              ) : null}
+              {a.edit && primary !== "setDate" ? (
+                <Button
+                  onClick={() => {
+                    setDialog("edit");
+                  }}
+                >
+                  {t("order.action.edit")}
+                </Button>
+              ) : null}
+              {a.cancel ? (
+                <Button
+                  danger
+                  onClick={() => {
+                    setDialog("cancel");
+                  }}
+                >
+                  {t("order.action.cancel")}
+                </Button>
+              ) : null}
+              <LinkButton to="/erp/stock?view=orders">{t("order.back")}</LinkButton>
+            </div>
+          }
         />
-      ) : null}
-      {order.status === "cancelled" ? (
-        <Alert
-          type="info"
-          showIcon
-          message={t("order.cancelledBanner", { reason: order.cancel_reason ?? "—" })}
-        />
-      ) : null}
-      <Card
-        size="small"
-        title={<h2 className="pf-calc-title">{t("order.linesTitle")}</h2>}
-        styles={{ body: { padding: 0 } }}
-      >
-        <Lines order={order} />
-      </Card>
-      {order.status !== "draft" ? <OrderPartnerLinks number={order.number} /> : null}
-      <Card
-        size="small"
-        title={<h2 className="pf-calc-title">{t("order.receiptsTitle")}</h2>}
-        styles={{ body: { padding: 0 } }}
-      >
-        <Receipts order={order} />
-      </Card>
-      <PanelPortal tab="facts">
-        <div className="pf-calc-task">
-          <DefinitionList
-            items={[
-              { label: t("order.email"), value: order.supplier.email },
-              {
-                label: t("order.expected"),
-                value: order.expected_date ? date(order.expected_date) : null,
-              },
-              {
-                label: t("order.sent"),
-                value: order.sent_at
-                  ? `${activity(order.sent_at)}${order.sent_to ? ` · ${order.sent_to}` : ""}`
-                  : null,
-              },
-              // 0.10 (FR-12): итог письма приходит от почтового сервиса — «отправлено» только после него.
-              { label: t("order.mail.label"), value: order.mail ? mailText(order.mail) : null },
-              {
-                label: t("order.confirmed"),
-                value: order.confirmed_at ? activity(order.confirmed_at) : null,
-              },
-              {
-                label: t("order.receivedAt"),
-                value: order.received_at ? activity(order.received_at) : null,
-              },
-              {
-                label: t("order.createdBy"),
-                value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
-              },
-              {
-                label: t("order.partnerNote"),
-                value: order.partner_note ? (
-                  <span className="pf-stock-multiline">{order.partner_note}</span>
-                ) : null,
-              },
-              { label: t("order.note"), value: order.note },
-            ]}
+        {order.overdue && order.days_overdue ? (
+          <Alert
+            type="warning"
+            showIcon
+            message={t("order.overdueBanner", {
+              date: order.expected_date ? date(order.expected_date) : "",
+              count: order.days_overdue,
+            })}
           />
-        </div>
-      </PanelPortal>
-      {order.log.length > 0 ? (
-        <PanelPortal tab="history">
+        ) : null}
+        {order.send_missing ? (
+          // СЦ-10: без цены и даты заказ партнёру не уходит — карточка говорит, чего не хватает.
+          <Alert
+            type="info"
+            showIcon
+            message={[
+              order.send_missing.prices > 0
+                ? t("order.missing.prices", { count: order.send_missing.prices })
+                : null,
+              order.send_missing.date ? t("order.missing.date") : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            description={[
+              order.price_request
+                ? order.price_request.answered_at
+                  ? t("order.price.state.answered", {
+                      date: activity(order.price_request.answered_at),
+                    })
+                  : order.price_request.status === "failed"
+                    ? t("order.price.state.failed")
+                    : t("order.price.state.sent", {
+                        date: activity(order.price_request.requested_at),
+                      })
+                : null,
+              order.actions.edit
+                ? t(primary === "setDate" ? "order.missing.hintDate" : "order.missing.hint")
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          />
+        ) : null}
+        {order.status === "cancelled" ? (
+          <Alert
+            type="info"
+            showIcon
+            message={t("order.cancelledBanner", { reason: order.cancel_reason ?? "—" })}
+          />
+        ) : null}
+        <Card
+          size="small"
+          title={<h2 className="pf-calc-title">{t("order.linesTitle")}</h2>}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Lines order={order} />
+        </Card>
+        {order.status !== "draft" ? <OrderPartnerLinks number={order.number} /> : null}
+        <Card
+          size="small"
+          title={<h2 className="pf-calc-title">{t("order.receiptsTitle")}</h2>}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Receipts order={order} />
+        </Card>
+        <PanelPortal tab="facts">
           <div className="pf-calc-task">
-            <OrderLog order={order} />
+            <DefinitionList
+              items={[
+                { label: t("order.email"), value: order.supplier.email },
+                {
+                  label: t("order.expected"),
+                  value: order.expected_date ? date(order.expected_date) : null,
+                },
+                {
+                  label: t("order.sent"),
+                  value: order.sent_at
+                    ? `${activity(order.sent_at)}${order.sent_to ? ` · ${order.sent_to}` : ""}`
+                    : null,
+                },
+                // 0.10 (FR-12): итог письма приходит от почтового сервиса — «отправлено» только после него.
+                { label: t("order.mail.label"), value: order.mail ? mailText(order.mail) : null },
+                {
+                  label: t("order.confirmed"),
+                  value: order.confirmed_at ? activity(order.confirmed_at) : null,
+                },
+                {
+                  label: t("order.receivedAt"),
+                  value: order.received_at ? activity(order.received_at) : null,
+                },
+                {
+                  label: t("order.createdBy"),
+                  value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
+                },
+                {
+                  label: t("order.partnerNote"),
+                  value: order.partner_note ? (
+                    <span className="pf-stock-multiline">{order.partner_note}</span>
+                  ) : null,
+                },
+                { label: t("order.note"), value: order.note },
+              ]}
+            />
           </div>
         </PanelPortal>
-      ) : null}
-      {dialog === "send" ? <SendModal order={order} onClose={close} /> : null}
-      {dialog === "price" ? <PriceRequestModal order={order} onClose={close} /> : null}
-      {dialog === "confirm" ? <ConfirmModal order={order} onClose={close} /> : null}
-      {dialog === "cancel" ? <CancelModal order={order} onClose={close} /> : null}
-      {dialog === "edit" ? <EditModal order={order} onClose={close} /> : null}
-      {dialog === "receive" ? <ReceiveModal number={order.number} onClose={close} /> : null}
-    </div>
+        {order.log.length > 0 ? (
+          <PanelPortal tab="history">
+            <div className="pf-calc-task">
+              <OrderLog order={order} />
+            </div>
+          </PanelPortal>
+        ) : null}
+        {dialog === "send" ? <SendModal order={order} onClose={close} /> : null}
+        {dialog === "price" ? <PriceRequestModal order={order} onClose={close} /> : null}
+        {dialog === "confirm" ? <ConfirmModal order={order} onClose={close} /> : null}
+        {dialog === "cancel" ? <CancelModal order={order} onClose={close} /> : null}
+        {dialog === "edit" ? <EditModal order={order} onClose={close} /> : null}
+        {dialog === "receive" ? <ReceiveModal number={order.number} onClose={close} /> : null}
+      </div>
+    </PageFrame>
   );
 }
 

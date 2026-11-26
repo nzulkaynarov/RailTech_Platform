@@ -743,8 +743,8 @@ _VISA_REASON = {
         "your visa: finance, before signing",
     ),
     "approvals.visa_legal": (
-        "ваша виза: юрист, до подписи",
-        "sizning vizangiz: yurist, imzogaça",
+        "ваша виза: право, до подписи",
+        "sizning vizangiz: huquq, imzogaça",
         "your visa: legal, before signing",
     ),
 }
@@ -1324,7 +1324,11 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
     if counts is not None and wants_work(view, "confirm_payment"):
         cards["payments_to_confirm"] = QueueCard(
             key="payments_to_confirm",
-            label=tr("Платёжки на подтверждение", "Tasdiqlaş uçun tölovlar", "Payments to confirm"),
+            label=tr(
+                "Платёжные поручения на подтверждение",
+                "Tasdiqlaş uçun tölovlar",
+                "Payments to confirm",
+            ),
             count=counts["proofs"],
             hint=tr("Операции · Финансы", "Amallar · Moliya", "Operations · Finance"),
             path="/eds/payments?show=proofs",

@@ -56,4 +56,29 @@ describe("page frame (КАРКАС-1)", () => {
     }
     expect(outside.sort()).toEqual([...OUTSIDE_FRAME].sort());
   });
+
+  it("every object screen renders in the object layout, except the shrinking list", () => {
+    const OBJECT_SCREENS = [
+      "eds/inbox/LetterView",
+      "eds/approvals/MemoView",
+      "eds/drafts/QuoteView",
+      "eds/projects/ProjectView",
+      "eds/payments/PaymentView",
+      "eds/payments/MemoView",
+      "erp/stock/OrderScreen",
+      "erp/stock/OrderCreatePage",
+      "eds/new/NewDocumentPage",
+      "eds/register/RegisterLetterPage",
+      "eds/contracttpl/ContractTemplatesPage",
+      "crm/kb/KbPage",
+    ];
+    const OBJECT_EXCEPTIONS: string[] = [];
+    const outside = OBJECT_SCREENS.filter(
+      (name) =>
+        !readFileSync(join(WEB_ROOT, "src/modules", `${name}.tsx`), "utf8").includes(
+          '<PageFrame layout="object">',
+        ),
+    );
+    expect(outside).toEqual(OBJECT_EXCEPTIONS);
+  });
 });

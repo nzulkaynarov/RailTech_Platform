@@ -77,7 +77,7 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(screen.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
     expect(screen.getByText("Сергей Кузнецов")).toBeVisible();
     expect(screen.getByText("kuznetsov@stal-trans.example")).toBeVisible();
-    expect(screen.getAllByText("Подана")[0]).toBeVisible();
+    expect(screen.getAllByText("На рассмотрении")[0]).toBeVisible();
 
     // Вторая заявка
     const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
@@ -175,7 +175,7 @@ describe("Очередь заявок кандидатов в партнёры (
   it("согласованную кандидатом заявку одобряют без причины", async () => {
     await openApplications("supply@demo.example");
 
-    expect(screen.getByText("Согласован кандидатом")).toBeVisible();
+    expect(screen.getByText("Ожидает подписания")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Отметить: подписан" }));
 
     const modal = await findModal(/Договор подписан/);

@@ -43,7 +43,7 @@ async function signOut(page: Page): Promise<void> {
 }
 
 async function pickTemplate(page: Page, name: string): Promise<void> {
-  const form = page.getByRole("form", { name: "Резолюция директора" });
+  const form = page.getByRole("form", { name: "Резолюция" });
   await form.getByLabel("Из шаблона").click();
   await page
     .locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)")
@@ -80,7 +80,7 @@ test.describe("EDS-REG · шаблоны резолюций", () => {
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await spaGoto(page, width === 390 ? TAX.replace("panel=open", "sheet=resolution") : TAX);
-      const form = page.getByRole("form", { name: "Резолюция директора" });
+      const form = page.getByRole("form", { name: "Резолюция" });
       await expect(form.getByLabel("Из шаблона")).toBeVisible();
       await pickTemplate(page, "Налоговая — ответ бухгалтерии");
       await expect(form.getByRole("radio", { name: /Подготовить ответ/ })).toBeChecked();
