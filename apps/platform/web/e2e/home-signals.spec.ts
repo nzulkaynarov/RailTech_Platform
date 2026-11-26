@@ -13,13 +13,13 @@ for (const width of WIDTHS) {
     await loginAndWait(page, "director@demo.example");
     const home = page
       .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: /^Главная, задач: \d+$/ });
+      .getByRole("link", { name: /^Главная: требуют действия — \d+$/ });
     await expect(home).toBeVisible();
     const count = (await home.locator("b").getAttribute("data-count")) ?? "";
     expect(Number(count)).toBeGreaterThan(0);
     // тот же номер, что бейдж «Задачи» в подменю и заголовок вкладки
     await expect(page).toHaveTitle(new RegExp(`^\\(${count}\\) `));
-    await expect(page.getByRole("link", { name: "Контакты" }).locator("b")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^Операции/ }).locator("b")).toHaveCount(0);
     await expectNoViolations(page, `значок задач ${String(width)}`);
     await settledScreenshot(page, "rail-count");
   });

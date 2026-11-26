@@ -53,10 +53,10 @@ describe("i18n", () => {
     }
   });
 
-  it("СЦ-7: у каждого вида объекта есть kindChip в ru, en и uz", () => {
+  it("СЦ-7: у каждого вида объекта есть kindName в ru, en и uz", () => {
     for (const lng of ["ru", "en", "uz"] as const) {
       for (const kind of Object.values(ObjectKind)) {
-        const v = valueAt(resources[lng].shell, `notifications.kindChip.${kind}`);
+        const v = valueAt(resources[lng].shell, `notifications.kindName.${kind}`);
         expect(v, `${lng}:${kind}`).toEqual(expect.any(String));
         expect(v, `${lng}:${kind}`).not.toBe("");
       }

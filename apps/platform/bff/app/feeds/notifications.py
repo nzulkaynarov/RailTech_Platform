@@ -208,6 +208,7 @@ def map_erp(
         object=obj,
         created_at=created,
         read=bool(row.get("is_read")),
+        needs_action=tab_of(str(row.get("event_code") or "")) == "decisions",
     )
 
 
@@ -290,6 +291,7 @@ def map_crm(row: dict[str, Any]) -> Notification | None:
         object=_crm_object(row),
         created_at=created,
         read=bool(row.get("read")),
+        needs_action=tab == "decisions",
     )
 
 

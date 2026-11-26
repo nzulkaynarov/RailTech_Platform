@@ -232,6 +232,8 @@ class Notification(BaseModel):
     object: ObjectRef | None = None
     created_at: datetime
     read: bool
+    # УВЕД-1: требует действия (решение, ответ) — всплывающее уведомление не закрывается само
+    needs_action: bool = False
 
 
 class NotificationPage(BaseModel):

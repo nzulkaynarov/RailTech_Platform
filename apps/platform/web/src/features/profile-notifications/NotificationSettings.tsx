@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Skeleton, Switch } from "antd";
-import { useId } from "react";
+import { Alert, Button, Skeleton, Switch } from "antd";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { canSee } from "../../app/access";
@@ -12,6 +12,13 @@ import {
   useUpdateNotificationSettings,
 } from "../../shared/api/generated/platform-bff";
 import { useFormat } from "../../shared/lib/useFormat";
+import {
+  browserPermission,
+  requestBrowserPermission,
+  type BrowserPermission,
+} from "../../shared/notify/browserNotify";
+import { useNotify } from "../../shared/notify/NotifyProvider";
+import { useNotifyPrefs } from "../../shared/notify/prefs";
 import { testErrorKey } from "./errors";
 
 function Row({
@@ -56,7 +63,9 @@ function Row({
  */
 export function NotificationSettings({ me }: { me: Me }) {
   const { t } = useTranslation("audit");
-  const { message } = App.useApp();
+  const notify = useNotify();
+  const [prefs, setPrefs] = useNotifyPrefs(me.id);
+  const [permission, setPermission] = useState<BrowserPermission>(browserPermission);
   const queryClient = useQueryClient();
   const format = useFormat();
   const base = useId();
@@ -65,18 +74,70 @@ export function NotificationSettings({ me }: { me: Me }) {
     mutation: {
       onSuccess: (next) => {
         queryClient.setQueryData(getGetNotificationSettingsQueryKey(), next);
-        void message.success(t("profile.saved"));
+        notify.success(t("profile.saved"));
       },
     },
   });
   const test = useSendTestNotification({
     mutation: {
       onSuccess: () => {
-        void message.success(t("profile.testSent"));
+        notify.success(t("profile.testSent"));
         void queryClient.invalidateQueries({ queryKey: getGetNotificationSettingsQueryKey() });
       },
     },
   });
+
+  const turnBrowser = async (value: boolean) => {
+    if (!value) {
+      setPrefs({ browser: false });
+      return;
+    }
+    // разрешение просим только по этому щелчку, не при загрузке страницы
+    const result = await requestBrowserPermission();
+    setPermission(result);
+    setPrefs({ browser: result === "granted" });
+  };
+  const local = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+      <Row
+        id={`${base}-popups`}
+        label={t("profile.popups")}
+        hint={t("profile.popupsHint")}
+        checked={prefs.popups}
+        disabled={false}
+        loading={false}
+        onChange={(value) => {
+          setPrefs({ popups: value });
+        }}
+      />
+      <Row
+        id={`${base}-popups-only`}
+        label={t("profile.popupsOnly")}
+        hint={t("profile.popupsOnlyHint")}
+        checked={prefs.onlyAction}
+        disabled={!prefs.popups}
+        loading={false}
+        onChange={(value) => {
+          setPrefs({ onlyAction: value });
+        }}
+      />
+      <Row
+        id={`${base}-browser`}
+        label={t("profile.browser")}
+        hint={t("profile.browserHint")}
+        checked={prefs.browser && permission === "granted"}
+        disabled={permission === "unsupported" || permission === "denied"}
+        loading={false}
+        onChange={(value) => {
+          void turnBrowser(value);
+        }}
+      />
+      {permission === "denied" ? <div className="pf-hint">{t("profile.browserDenied")}</div> : null}
+      {permission === "unsupported" ? (
+        <div className="pf-hint">{t("profile.browserUnsupported")}</div>
+      ) : null}
+    </div>
+  );
 
   let body;
   if (settings.isPending) {
@@ -185,6 +246,7 @@ export function NotificationSettings({ me }: { me: Me }) {
       <p className="pf-hint" style={{ margin: "0 0 12px" }}>
         {t("profile.intro")}
       </p>
+      {local}
       {body}
     </div>
   );

@@ -130,14 +130,20 @@ describe("каркас на 1440", () => {
     renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     const rail = screen.getByRole("navigation", { name: "Модули" });
-    const home = await within(rail).findByRole("link", { name: /^Главная, задач: \d+$/ });
+    const home = await within(rail).findByRole("link", {
+      name: /^Главная: требуют действия — \d+$/,
+    });
     const count = home.querySelector("b")?.getAttribute("data-count") ?? "";
     expect(Number(count)).toBeGreaterThan(0);
     await waitFor(() => {
       expect(document.title).toMatch(new RegExp(`^\\(${count}\\) `));
     });
-    // у соседних модулей числа нет
-    expect(within(rail).getByRole("link", { name: "Контакты" }).querySelector("b")).toBeNull();
+    // одно правило для всех модулей (УВЕД-1): значок есть там, где в разделах есть что-то, требующее действия
+    expect(
+      within(rail)
+        .getByRole("link", { name: /^Операции/ })
+        .querySelector("b"),
+    ).toBeNull();
   });
 
   it("ЕВ-3б: счётчик `crm.messages` BFF входит в бейдж «Лидов», хотя раздела «Ждут ответа» в коде нет", async () => {
@@ -179,7 +185,7 @@ describe("каркас на 1440", () => {
         .getAllByRole("link")
         .map((a) => a.querySelector("span")?.textContent ?? a.textContent),
     ).toEqual(["RT", "Главная", "Контакты", "Документы", "Операции", "Органайзер"]);
-    expect(within(rail).getByRole("link", { name: "Контакты" })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: /^Контакты/ })).toHaveAttribute(
       "aria-current",
       "page",
     );

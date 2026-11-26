@@ -12116,6 +12116,8 @@ export interface components {
       /** Format: date-time */
       created_at: string;
       read: boolean;
+      /** @description Требует действия сотрудника (решение, ответ); иначе — к сведению. От этого зависит всплывающее уведомление: требующее действия остаётся на экране, пока его не закроют (УВЕД-1). */
+      needs_action?: boolean;
     };
     NotificationPage: {
       items: components["schemas"]["Notification"][];

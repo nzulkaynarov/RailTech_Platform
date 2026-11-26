@@ -155,7 +155,15 @@
       "NOT_CONFIGURED": "Bot ulanmagan. Administrator uni Sozlamalar · Ulanişlar bölimida ulaydi.",
       "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
       "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring."
-    }
+    },
+    "popups": "Qalqib çiquvçi xabarnomalar",
+    "popupsHint": "Yangi xabarnoma kelganda ekran burçida oyna.",
+    "popupsOnly": "Faqat amal talab qilganlari",
+    "popupsOnlyHint": "Qolganlari qöngiroqda va menyu hisoblagiçlarida köriniladi.",
+    "browser": "Brauzer xabarnomalari",
+    "browserHint": "Varaq fonda bölganda. Yoqilganda brauzer ruxsat söraydi.",
+    "browserDenied": "Brauzer bu sayt uçun xabarnomalarni taqiqlagan. Sayt sozlamalarida ruxsat bering.",
+    "browserUnsupported": "Bu brauzer xabarnomalarni körsatmaydi."
   },
   "actions": {
     "auth": {

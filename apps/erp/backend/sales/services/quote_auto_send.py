@@ -27,6 +27,8 @@ from typing import Any, Optional
 
 from django.db import transaction
 
+from notifications.text_format import channel_words
+
 logger = logging.getLogger(__name__)
 
 CHANNEL_ORDER = ("telegram", "cabinet", "email")
@@ -286,7 +288,7 @@ def _title(report: dict[str, Any]) -> str:
 def _detail(report: dict[str, Any]) -> str:
     parts = []
     if report["sent_via"]:
-        parts.append("Каналы: " + ", ".join(report["sent_via"]))
+        parts.append("Отправлено: " + channel_words(report["sent_via"]))
     if report["skipped"]:
         parts.append(
             "Недоступно: "

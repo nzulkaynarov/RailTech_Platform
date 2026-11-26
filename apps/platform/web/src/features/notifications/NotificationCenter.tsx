@@ -28,25 +28,26 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
   const { t } = useTranslation("shell");
   const { query, enabled } = useNotifications();
   const read = useReadNotifications();
-  const [readScope, setReadScope] = useState<"unread" | "all">("unread");
+  const [readScope, setReadScope] = useState<"needs" | "all">("all");
   const [category, setCategory] = useState<NotificationTab>("all");
 
   const page = query.data;
   const items = page?.items ?? [];
   const unread = page?.unread_count ?? items.filter((n) => !n.read).length;
+  const needsAction = items.filter((n) => !n.read && n.needs_action === true).length;
   const unreadOf = (tab: NotificationTab) => items.filter((n) => n.tab === tab && !n.read).length;
 
   const shown =
     variant === "panel"
       ? items
       : items.filter((item) => {
-          if (readScope === "unread" && item.read) return false;
+          if (readScope === "needs" && (item.read || item.needs_action !== true)) return false;
           if (category !== "all" && item.tab !== category) return false;
           return true;
         });
 
-  const open = (item: Notification) => {
-    if (!item.read) read.markRead(item.id);
+  const open = (_item: Notification, sameObject: readonly Notification[]) => {
+    read.markObjectRead(sameObject);
     onClose?.();
   };
 
@@ -137,7 +138,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             flex: "0 0 auto",
           }}
         >
-          <Segmented<"unread" | "all">
+          <Segmented<"needs" | "all">
             size="small"
             value={readScope}
             onChange={(val) => {
@@ -145,17 +146,17 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             }}
             options={[
               {
-                value: "unread",
+                value: "needs",
                 // Ширина сегмента постоянна (UX-1b, S16): невидимый образец «(99)» держит место, цифры — табличные.
                 label: (
                   <span className="pf-notes-unread">
                     <span aria-hidden="true" className="pf-notes-unread-ghost">
-                      {t("notifications.scope.unreadCount", { count: 99 })}
+                      {t("notifications.scope.needsActionCount", { count: 99 })}
                     </span>
                     <span>
-                      {unread > 0
-                        ? t("notifications.scope.unreadCount", { count: unread })
-                        : t("notifications.scope.unread")}
+                      {needsAction > 0
+                        ? t("notifications.scope.needsActionCount", { count: needsAction })
+                        : t("notifications.scope.needsAction")}
                     </span>
                   </span>
                 ),

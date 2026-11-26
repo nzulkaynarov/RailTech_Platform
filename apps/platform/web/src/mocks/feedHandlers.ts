@@ -117,8 +117,27 @@ const DUE_RANK = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as con
 const readIds = new Set<string>();
 let readAllAt = 0;
 
+/** Уведомления, «пришедшие» в сессии через `window.__rtMockPushNotification` (e2e УВЕД-1): живут до перезагрузки страницы. */
+const pushedNotes: Notification[] = [];
+
+export function pushMockNotification(
+  note: Omit<Notification, "id" | "created_at" | "read"> & { id?: string },
+): Notification {
+  const next: Notification = {
+    ...note,
+    id: note.id ?? `erp:${String(9000 + pushedNotes.length)}`,
+    created_at: new Date().toISOString(),
+    read: false,
+  };
+  pushedNotes.push(next);
+  return next;
+}
+
+/** Момент загрузки страницы: время демо-уведомлений не «ползёт» вперёд с каждым опросом (иначе они выглядели бы новыми). */
+const MOCK_NOW = Date.now();
+
 function notificationsFor(roles: readonly MockRole[]): Notification[] {
-  const now = Date.now();
+  const now = MOCK_NOW;
   const seen = new Set<string>();
   return roles
     .flatMap((role) => notificationSeed(role.demo))
@@ -326,7 +345,13 @@ export const feedHandlers = [
           ...handOverNotificationsOf(userId),
         ]
       : [];
-    const all = [...mine, ...crm].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const pushed = pushedNotes.map((n) => ({
+      ...n,
+      read: n.read || readIds.has(n.id) || readAllAt > 0,
+    }));
+    const all = [...mine, ...crm, ...pushed]
+      .map((n) => ({ ...n, needs_action: n.needs_action ?? n.tab === "decisions" }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
     const items = all.filter((n) => tab === "all" || n.tab === tab);
     return HttpResponse.json({
       items,
@@ -451,4 +476,5 @@ function productHits(query: string) {
 export function resetFeedMocks(): void {
   readIds.clear();
   readAllAt = 0;
+  pushedNotes.length = 0;
 }

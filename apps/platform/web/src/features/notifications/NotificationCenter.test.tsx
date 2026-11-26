@@ -49,16 +49,18 @@ describe("Центр уведомлений", () => {
     ).toBeInTheDocument();
     const center = await openBell(/^Центр уведомлений, 3 новых/);
 
-    expect(within(center).getByText("Непрочитанные (3)")).toBeInTheDocument();
+    expect(within(center).getByText("Требуют действия (2)")).toBeInTheDocument();
     expect(within(center).getByText("Все")).toBeInTheDocument();
 
     const list = await within(center).findByRole("list", { name: "Уведомления" });
-    // По умолчанию выбран сегмент «Непрочитанные» -> 3 элемента
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
-
-    // Переключение на «Все» отображает все 7 уведомлений прямо в шторке
-    fireEvent.click(within(center).getByText("Все"));
+    // По умолчанию — «Все»: 7 уведомлений, непрочитанные выше прочитанных
     expect(within(list).getAllByRole("listitem")).toHaveLength(7);
+    expect(within(list).getAllByRole("listitem")[0]).toHaveTextContent("Новое");
+
+    // «Требуют действия» оставляет непрочитанные решения
+    fireEvent.click(within(center).getByText("Требуют действия (2)"));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    fireEvent.click(within(center).getByText("Все"));
 
     // непрочитанное помечено словом, не только цветом; у договора и счёта есть экраны (D2-4, D2-5): ссылки, а не «Где посмотреть»
     expect(within(list).queryAllByRole("button", { name: /Где посмотреть/ })).toHaveLength(0);

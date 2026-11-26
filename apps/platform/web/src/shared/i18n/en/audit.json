@@ -155,7 +155,15 @@
       "NOT_CONFIGURED": "The bot is not connected. An administrator connects it in Settings · Connections.",
       "BACKEND_UNAVAILABLE": "CRM is not responding. Retry later.",
       "DEFAULT": "The action failed. Please retry."
-    }
+    },
+    "popups": "Pop-up notifications",
+    "popupsHint": "A window in the corner of the screen when a new notification arrives.",
+    "popupsOnly": "Only those that need action",
+    "popupsOnlyHint": "The rest stay in the bell and in the menu counters.",
+    "browser": "Browser notifications",
+    "browserHint": "When the tab is in the background. The browser asks for permission when you turn this on.",
+    "browserDenied": "The browser blocked notifications for this site. Allow them in site settings.",
+    "browserUnsupported": "This browser does not show notifications."
   },
   "actions": {
     "auth": {
