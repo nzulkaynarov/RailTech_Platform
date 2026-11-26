@@ -26,7 +26,7 @@ describe("Проекты: список", () => {
     expect(first).toHaveTextContent("АО «Демо-Транс»");
     expect(first).toHaveTextContent("Согласуйте редакцию договора");
     expect(first).toHaveTextContent("Договор");
-    expect(first).toHaveTextContent("Черновик");
+    expect(first).toHaveTextContent("На согласовании у клиента");
     expect(first).toHaveTextContent("Демо Помощников");
     expect(row.getByRole("link", { name: "Открыть проект ПР-2026-105" })).toBeVisible();
   });

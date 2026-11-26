@@ -60,6 +60,7 @@
     },
     "contract": {
       "project": "Qoralama",
+      "at_client": "Mijoz kelişuvida",
       "client_agreed": "Imzolaşni kutmoqda",
       "issued_at_operator": "Imzolaşni kutmoqda",
       "signed": "Imzolangan",
@@ -163,7 +164,7 @@
       },
       "lineStatus": {
         "assembling": "Butlanmoqda",
-        "in_transit": "Omborimizga kelmoqda",
+        "in_transit": "Mijozga yölda",
         "ready_to_ship": "Jönatişga tayyor",
         "shipped": "Jönatilgan",
         "delivered": "Yetkazilgan",
@@ -259,7 +260,7 @@
       "project": "Loyiha hali mijozga yuborilmagan.",
       "atClient": "Loyiha mijozda matn kelişuvida.",
       "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani imzolaşga qöying (platformadan taşqarida).",
-      "issued_at_operator": "Şartnoma imzolaşni kutmoqda. Ikki tomon imzolagaç, skanni biriktiriş.",
+      "issued_at_operator": "Şartnoma imzolaşni kutmoqda. Ikki tomon imzolagaç, skanni biriktiring.",
       "signed": "Şartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
       "rejected": "Mijoz şartnomani rad etdi. Loyihani töğrilab, qaytadan kelişuvga yuboring.",
       "cancelled": "Şartnoma bekor qilingan."

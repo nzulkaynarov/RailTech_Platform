@@ -368,7 +368,7 @@
     "urgent": "Şoşilinç",
     "files": {
       "label": "Hujjat fayli",
-      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Word va Excel fayllari, 25 MB gaça. Pasport va şaxsiy hujjatlarni yuklamang."
+      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Word, Excel va PowerPoint fayllari, 25 MB gaça. Pasport va şaxsiy hujjatlarni yuklamang."
     },
     "deal": {
       "label": "Ariza yoki loyiha bilan boğlaş",
@@ -799,7 +799,7 @@
     "assist": {
       "title": "Yordamçi taklifi",
       "button": "Taklif qiliş",
-      "intro": "Yordamçi xat turi va harakatni taklif qiladi; xatni usiz ham körib çiqiş mumkin. Poçta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yaşiriladi, ilovalar yuborilmaydi.",
+      "intro": "Yordamçi xat turi va harakatni taklif qiladi; xatni usiz ham körib çiqiş mumkin. Poçta manzillari, telefonlar, STIR, JŞŞIR, pasport, karta va hisob raqamlari yaşiriladi, ilovalar yuborilmaydi.",
       "note": "Taklif özi heç narsa qilmaydi — harakatni siz tanlaysiz.",
       "unavailable": "Yordamçi hozir mavjud emas — xatni qölda körib çiqing yoki keyinroq urinib köring.",
       "retry": "Qayta uriniş",

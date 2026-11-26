@@ -328,7 +328,7 @@
       "other": "Xat yetkazilmadi"
     },
     "purpose": {
-      "quote_sent": "Mijozga TK",
+      "quote_sent": "Mijozga TT",
       "generated_document": "Mijozga hujjat",
       "portal_magic_link": "Kabinetga kiriş havolasi",
       "portal_invitation": "Kabinetga taklif",
@@ -339,8 +339,8 @@
       "payment_received": "Tölov qabul qilindi",
       "payment_reminder": "Tölov eslatmasi",
       "act_awaiting_acceptance": "Imzolaş uçun dalolatnoma",
-      "quote_acceptance_code": "TK tasdiqlaş kodi",
-      "quote_accepted_contact": "TK qabul qilindi",
+      "quote_acceptance_code": "TT tasdiqlaş kodi",
+      "quote_accepted_contact": "TT qabul qilindi",
       "account_created_by_operator": "Hisob yaratildi",
       "invite": "Xodimga taklif",
       "password_reset": "Vaqtinçalik parol",

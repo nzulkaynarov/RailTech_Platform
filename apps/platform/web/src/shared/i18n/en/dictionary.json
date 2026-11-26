@@ -36,7 +36,7 @@
       "agreed": "Awaiting signature",
       "issued": "Awaiting signature",
       "signed": "Signed",
-      "rejected": "Rejected"
+      "rejected": "Rejected by client"
     },
     "invoice": {
       "issued": "Issued",
@@ -55,7 +55,7 @@
       "pending": "Awaiting approval",
       "approved": "Approved",
       "rejected": "Rejected",
-      "returned": "Returned for rework",
+      "returned": "Needs rework",
       "passed_to_accountant": "Sent for payment",
       "paid": "Paid"
     },

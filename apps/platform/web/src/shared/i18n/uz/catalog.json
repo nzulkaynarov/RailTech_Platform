@@ -1018,7 +1018,7 @@
     "merge": "{{sku}} bilan birlaştiriş",
     "mergeLabel": "{{sku}} bilan birlaştiriş: «{{name}}»",
     "mergeAction": "Birlaştiriş",
-    "mergeSummary": "Ariza, TK va buyurtma qatorlari «{{name}}» ga ötadi, qoralama arxivga ketadi.",
+    "mergeSummary": "Ariza, TT va buyurtma qatorlari «{{name}}» ga ötadi, qoralama arxivga ketadi.",
     "merged": "Kartoçkalar birlaştirildi",
     "draft": "Qoralama",
     "emptyRequests": {

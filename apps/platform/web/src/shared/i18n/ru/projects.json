@@ -60,6 +60,7 @@
     },
     "contract": {
       "project": "Черновик",
+      "at_client": "На согласовании у клиента",
       "client_agreed": "Ожидает подписания",
       "issued_at_operator": "Ожидает подписания",
       "signed": "Подписан",
@@ -69,7 +70,7 @@
     "invoice": {
       "to_issue": "К выставлению",
       "issued": "Выставлен",
-      "partial": "Частично оплачен",
+      "partial": "Оплачен частично",
       "paid": "Оплачен",
       "overdue": "Просрочен",
       "cancelled": "Отменён"
@@ -163,7 +164,7 @@
       },
       "lineStatus": {
         "assembling": "Комплектуется",
-        "in_transit": "Едет на наш склад",
+        "in_transit": "В пути к клиенту",
         "ready_to_ship": "Готово к отгрузке",
         "shipped": "Отгружено",
         "delivered": "Доставлено",

@@ -629,7 +629,9 @@ describe("письмо директору: из переписки и при с�
       target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
     });
     expect(
-      await within(panel).findByText("Подходит PDF, изображение или файл Word или Excel"),
+      await within(panel).findByText(
+        "Подходит PDF, изображение или файл Word, Excel или PowerPoint",
+      ),
     ).toBeVisible();
     expect(submitButton(panel)).toBeDisabled();
     expect(within(remainingList(panel)).getByText(/Файл не загрузился — выберите/)).toBeVisible();

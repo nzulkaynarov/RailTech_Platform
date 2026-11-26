@@ -170,7 +170,7 @@
     "form": "Mijozning tölov topşiriqnomasi",
     "file": {
       "label": "Tölov topşiriqnomasi fayli",
-      "hint": "PDF, rasm yoki Word, Excel fayli, 25 MB gaça"
+      "hint": "PDF, rasm yoki Word, Excel yoki PowerPoint fayli, 25 MB gaça"
     },
     "source": {
       "label": "Qayerdan kelgan"
@@ -187,7 +187,7 @@
       "not_open": "hisob endi tölovni kutmaydi, kartoçka yangilandi",
       "forbidden": "amal rolingiz uçun mavjud emas",
       "too_large": "fayl 25 MB dan katta",
-      "unsupported": "PDF, rasm va Word, Excel fayllari mumkin",
+      "unsupported": "PDF, rasm va Word, Excel va PowerPoint fayllari mumkin",
       "unavailable": "xizmat javob bermayapti, fayl şaklda qoldi",
       "unknown": "nimadir notöğri ketdi, fayl şaklda qoldi"
     }
@@ -378,7 +378,7 @@
       },
       "receipt": {
         "label": "Tölov topşiriqnomasi",
-        "hint": "PDF, rasm yoki Word, Excel fayli, 25 MB gaça. Majburiy emas",
+        "hint": "PDF, rasm yoki Word, Excel yoki PowerPoint fayli, 25 MB gaça. Majburiy emas",
         "uploaded": "Yuklandi: {{name}}"
       },
       "note": {

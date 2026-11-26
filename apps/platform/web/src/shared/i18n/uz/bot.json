@@ -516,7 +516,7 @@
       },
       "erp_quote_acceptance_code": {
         "label": "TTni tasdiqlaş kodi",
-        "when": "Mijoz TKni qabul qiliş uçun kabinetda «Kod oliş» ni bosdi: bot kodni Telegramda yuboradi. {deal} — ariza, {code} — kod, {minutes} — amal qiliş daqiqalari; kod heç qayerda saqlanmaydi."
+        "when": "Mijoz TTni qabul qiliş uçun kabinetda «Kod oliş» ni bosdi: bot kodni Telegramda yuboradi. {deal} — ariza, {code} — kod, {minutes} — amal qiliş daqiqalari; kod heç qayerda saqlanmaydi."
       },
       "erp_invoice_issued": {
         "label": "Hisob çiqarildi",

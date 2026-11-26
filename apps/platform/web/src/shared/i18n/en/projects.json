@@ -60,6 +60,7 @@
     },
     "contract": {
       "project": "Draft",
+      "at_client": "With client for agreement",
       "client_agreed": "Awaiting signature",
       "issued_at_operator": "Awaiting signature",
       "signed": "Signed",
@@ -163,7 +164,7 @@
       },
       "lineStatus": {
         "assembling": "Being assembled",
-        "in_transit": "On the way to our warehouse",
+        "in_transit": "On the way to the client",
         "ready_to_ship": "Ready to ship",
         "shipped": "Shipped",
         "delivered": "Delivered",

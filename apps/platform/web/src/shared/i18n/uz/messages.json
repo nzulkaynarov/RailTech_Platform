@@ -153,7 +153,7 @@
     "channelEmail": "Poçta",
     "context": {
       "deal": "Ariza {{number}}",
-      "quote": "TK {{number}}",
+      "quote": "TT {{number}}",
       "invoice": "Hisob {{number}}",
       "act": "Dalolatnoma {{number}}"
     },

@@ -755,7 +755,7 @@ describe("EDS · Создать документ: форма", () => {
       target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
     });
     expect(
-      await within(list).findByText("Допустимы PDF, изображения и файлы Word и Excel."),
+      await within(list).findByText("Допустимы PDF, изображения и файлы Word, Excel и PowerPoint."),
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Убрать файл schet.pdf" }));

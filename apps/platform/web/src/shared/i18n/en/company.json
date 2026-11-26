@@ -260,7 +260,7 @@
     "invalidField": "Check the value",
     "note": "New quotes take these values; issued quotes do not change.",
     "remindOverdue": "Remind customers about overdue invoices",
-    "remindOverdueHint": "Once a day at 10:00 Tashkent time — a reminder for every invoice more than three days past due: in the bell and by email to the client. Off by default.",
+    "remindOverdueHint": "Once a day at 10:00 Tashkent time — a reminder for every invoice more than three days past due: in the client's notifications and by email. Off by default.",
     "confirmDays": "Partner price confirmation, days",
     "expiringDays": "Warn before a partner price expires, days",
     "actReminderHours": "Pause between act reminders, hours",

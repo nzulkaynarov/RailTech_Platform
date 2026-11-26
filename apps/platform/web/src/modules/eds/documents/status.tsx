@@ -10,10 +10,13 @@ export function DocumentStatusTag({
   kind,
   status,
   awaitingSignature = false,
+  undelivered = false,
 }: {
   kind: EdsRegistryKind;
   status: string;
   awaitingSignature?: boolean;
+  /** EDS ставит `sent` при подписи, до доставки: письмо, которое не ушло адресату, — «Не отправлено», а не «Отправлено». */
+  undelivered?: boolean;
 }) {
   const { t } = useTranslation(["documents", "dictionary", "projects"]);
   // Договор, счёт и акт проекта: слова SPEC-v3 §2.4 — те же, что в карточке проекта.
@@ -27,6 +30,9 @@ export function DocumentStatusTag({
   }
   if (kind === "contract" || kind === "invoice" || kind === "act") {
     return <ProjectStatusTag kind={kind} status={status} />;
+  }
+  if (kind === "letter_out" && status === "sent" && undelivered) {
+    return <StatusTag tone="red">{t("documents:panel.mailFailed")}</StatusTag>;
   }
   const entry = statusEntry(kind, status, awaitingSignature);
   return (
