@@ -145,6 +145,8 @@ services:
     volumes:
       - ../offsite/offsite-sync.sh:/offsite/offsite-sync.sh:ro
       - ${RT_SECRETS_DIR:-/opt/rt/secrets}:/secrets:ro
+      # Ключ шифрования файлов внешней копии (ХРАН-1): создаётся сервисом один раз, живёт в /opt/rt/secrets/offsite-files (chmod 700).
+      - ${RT_SECRETS_DIR:-/opt/rt/secrets}/offsite-files:/files-key
       - offsite_state:/state
     depends_on:
       s3-init:

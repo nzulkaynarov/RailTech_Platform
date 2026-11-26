@@ -100,7 +100,7 @@ FOLDER_ID=TESTFOLDERID1234567890
 run() { # run <аргументы offsite-sync.sh> — переменные OFFSITE_* из массива extra
   docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
     -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
-    -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json -e OFFSITE_FILE_BUCKETS= \
+    -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json -e OFFSITE_FILE_BUCKETS=eds-private -e OFFSITE_FILES_SRC=/t/files/ -e OFFSITE_FILES_DST=/t/drive/files -e OFFSITE_FILES_KEY_DIR=/t/key \
     "${extra[@]}" --entrypoint sh "$image" /offsite/offsite-sync.sh "$@"
 }
 status() { cat "$w/status/status.json"; }
@@ -112,7 +112,10 @@ in_box '
 set -e
 mk() { mkdir -p "$(dirname "$1")"; printf "%s" "$3" > "$1"; touch -d "$2" "$1"; }
 d() { date -u -d "@$(( $(date -u +%s) - $1 * 86400 ))" "+%Y-%m-%d %H:%M:%S"; }
-s=/t/src/pg17; rm -rf /t/src /t/drive /t/status /t/state /t/secrets; mkdir -p /t/status /t/secrets
+s=/t/src/pg17; rm -rf /t/src /t/drive /t/status /t/state /t/secrets /t/files /t/key; mkdir -p /t/status /t/secrets
+mkdir -p /t/files/eds-private/sub /t/key; echo "doc-secret-1" > /t/files/eds-private/договор-секрет.pdf; echo "doc-secret-2" > /t/files/eds-private/sub/скан.png
+printf "%s\n%s\n" 1111111111111111111111111111111111111111111111111111111111111111 2222222222222222222222222222222222222222222222222222222222222222 > /t/key/files-crypt.key
+sha256sum /t/key/files-crypt.key | cut -c1-64 > /t/key/saved
 for age_hex in "20 02" "15 04" "1 06"; do
   set -- $age_hex; hex=0000000100000000000000$2; nxt=0000000100000000000000$(printf %02X $((0x$2 + 1)))
   mk $s/basebackups_005/base_$hex/tar_partitions/part_1.tar.zst "$(d $1)" "data-$hex"
@@ -153,6 +156,9 @@ want="basebackups_005/base_000000010000000000000004/metadata.json basebackups_00
 [[ "$(field bytes)" -gt 0 && "$(field quota_bytes)" == 107374182400 && "$(field keep_days)" == 14 && "$(field prefix)" == pg17 ]] || { status; fail "сводка: байты, квота, окно, каталог"; }
 [[ "$(field last_success_at)" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$ && "$(field oldest_base_at)" =~ Z$ ]] || { status; fail "время успеха и самой ранней копии"; }
 cmp -s "$w/src/pg17/wal_005/000000010000000000000005.zst" "$w/drive/pg17/wal_005/000000010000000000000005.zst" || fail "содержимое сегмента на Drive отличается"
+# Файлы идут тем же заходом и зашифрованы: итог ok, на «Drive» нет читаемых имён и содержимого.
+[[ "$(field files.result)" == ok && "$(field files.files)" == 2 ]] || { status; fail "файлы: итог ok и 2 файла"; }
+! find "$w/drive/files" | grep -qE "договор|скан|eds-private" && ! grep -rq "doc-secret" "$w/drive/files" || fail "файлы на «Drive» не зашифрованы"
 
 # 2.3 Срок хранения на Drive: прошлые прогоны оставили старую копию и её WAL — удаляются; повтор ничего не копирует заново.
 in_box 'cp -a /t/src/pg17/basebackups_005/base_000000010000000000000002* /t/drive/pg17/basebackups_005/

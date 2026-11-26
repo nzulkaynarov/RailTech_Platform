@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Final
+from zoneinfo import ZoneInfo
 
 from app.domain.external_status import CheckResult, Metric
 from app.domain.system_status import hosting_hint
@@ -106,6 +107,8 @@ class OffsiteFacts:
     files_last_success_at: datetime | None = None
     files_failed: int = 0
     files_total: int = 0
+    #: Ключ шифрования файлов отмечен сохранённым вне сервера; None — отметки нет.
+    files_key_saved: bool | None = None
 
 
 def _when(raw: object) -> datetime | None:
@@ -148,6 +151,9 @@ def parse(raw: bytes) -> OffsiteFacts:
             1 for b in buckets.values() if isinstance(b, dict) and b.get("result") == "fail"
         ),
         files_total=len(buckets),
+        files_key_saved=(
+            files.get("key_saved") if files and isinstance(files.get("key_saved"), bool) else None
+        ),
         provider=provider if provider in PROVIDERS else "",
         result=str(data["result"]),
         reason=_text(data.get("reason")),
@@ -230,17 +236,24 @@ def _metrics(f: OffsiteFacts, now: datetime) -> dict[str, Metric]:
             f.files_last_success_at.isoformat() if f.files_last_success_at else None
         ),
         "files_failed": f.files_failed if f.files_configured else None,
+        "files_key_saved": f.files_key_saved if f.files_configured else None,
     }
 
 
-def files_text(f: OffsiteFacts) -> str | None:
-    """«Файлы: скопировано 1 240, последний раз 26.11 23:40» — без названий хранилищ и бакетов."""
+#: Файлы копируются зашифрованными с первой ночи; ключ — сохранить вне сервера (напоминание).
+KEY_REMINDER: Final = "Файлы копируются. Сохраните ключ восстановления: без него копию не открыть"
+
+
+def files_text(f: OffsiteFacts, tz: str = "UTC") -> str | None:
+    """«Файлы: скопировано 1 240, последний раз 26.11 23:40» (время компании) — без названий
+    хранилищ и бакетов."""
     if not f.files_configured:
         return None
     count = f"{f.files_count:,}".replace(",", " ") if f.files_count is not None else "0"
     if f.files_last_success_at is None:
         return f"Файлы: скопировано {count}, первая выгрузка ещё идёт"
-    return f"Файлы: скопировано {count}, последний раз {f.files_last_success_at:%d.%m %H:%M}"
+    local = f.files_last_success_at.astimezone(ZoneInfo(tz))
+    return f"Файлы: скопировано {count}, последний раз {local:%d.%m %H:%M}"
 
 
 def _failure(
@@ -295,7 +308,7 @@ def _failure(
     )
 
 
-def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
+def offsite_backup(f: OffsiteFacts, now: datetime, tz: str = "UTC") -> CheckResult:
     if f.error is not None:
         return CheckResult(
             KEY,
@@ -343,9 +356,11 @@ def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
         parts.append(f"базовых копий {f.base_backups}{since}")
     if f.speed_bps:
         parts.append(f"средняя скорость {speed_text(f.speed_bps)}")
-    files_line = files_text(f)
+    files_line = files_text(f, tz)
     if files_line:
         parts.append(files_line)
+    if f.files_configured and f.files_key_saved is False:
+        parts.append(KEY_REMINDER)
     tail = f": {', '.join(parts)}" if parts else ""
     pct = metrics["quota_pct"]
     if isinstance(pct, int) and pct >= QUOTA_WARN * 100:
@@ -372,8 +387,7 @@ def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
                 "Сервис копирования не смог скопировать часть файлов за пределы сервера; "
                 "копия базы при этом обновляется",
                 "Посмотреть журнал offsite-backup на сервере приложений (docker compose logs "
-                "offsite-backup) и раздел files в status.json; повтор — "
-                "infra/deploy/offsite-check.sh",
+                "offsite-backup) и раздел files в status.json; сервис повторит сам через 30 минут",
             ),
             metrics=metrics,
             cause="server_down",

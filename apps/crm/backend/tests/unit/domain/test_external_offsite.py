@@ -340,3 +340,36 @@ def test_failed_file_part_is_a_warning_for_hosting_while_the_database_copy_is_fi
     assert "не скопировано 1 из 2" in result.summary
     assert hosting_ask(result.hint) is not None
     assert "kb-sources" not in result.summary
+
+
+def test_files_time_is_shown_in_the_company_time_zone() -> None:
+    result = offsite_backup(parse(status(files=_files())), NOW, "Asia/Tashkent")
+    assert "последний раз 28.10 04:40" in result.summary
+
+
+def test_unsaved_key_is_a_reminder_not_a_failure_and_disappears_once_saved() -> None:
+    reminder = "Сохраните ключ восстановления: без него копию не открыть"
+    unsaved = offsite_backup(parse(status(files=_files(key_saved=False))), NOW)
+    assert unsaved.status == "ok"
+    assert reminder in unsaved.summary
+    assert unsaved.metrics["files_key_saved"] is False
+    saved = offsite_backup(parse(status(files=_files(key_saved=True))), NOW)
+    assert reminder not in saved.summary
+    assert reminder not in offsite_backup(parse(status(files=_files())), NOW).summary
+
+
+def test_first_upload_with_pending_parts_is_not_a_failure_or_a_task() -> None:
+    buckets = {"eds-private": {"result": "ok"}, "kb-sources": {"result": "pending"}}
+    files = _files(result="partial", last_success_at=None, buckets=buckets)
+    result = offsite_backup(parse(status(files=files)), NOW)
+    assert result.status == "ok"
+    assert "первая выгрузка ещё идёт" in result.summary
+    assert result.hint is None
+
+
+def test_failed_file_part_hint_does_not_advise_a_manual_run_during_an_attempt() -> None:
+    buckets = {"kb-sources": {"result": "fail"}}
+    files = _files(result="fail", buckets=buckets)
+    result = offsite_backup(parse(status(files=files)), NOW)
+    assert result.status == "warn"
+    assert "offsite-check.sh" not in (result.hint or "")
