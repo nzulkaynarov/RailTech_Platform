@@ -266,7 +266,7 @@
     },
     "to": {
       "label": "To",
-      "director": "Approval"
+      "director": "For approval"
     },
     "recipient": {
       "label": "Addressee (organization)",

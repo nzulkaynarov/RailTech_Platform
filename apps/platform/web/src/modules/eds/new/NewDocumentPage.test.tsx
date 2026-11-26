@@ -116,7 +116,7 @@ describe("EDS · Создать документ: форма", () => {
     // шаг 1 «О чём» открыт: тип, тема, кому, сумма, срок, связь с проектом
     expect(screen.getByLabelText("Тип документа")).toBeInTheDocument();
     expect(screen.getByLabelText("Тема")).toBeVisible();
-    expect(screen.getByLabelText("Кому")).toHaveValue("Согласование");
+    expect(screen.getByLabelText("Кому")).toHaveValue("На согласование");
     expect(screen.getByLabelText("Кому")).toHaveAttribute("readonly");
     expect(screen.getByLabelText("Сумма, сум")).toBeVisible();
     expect(screen.getByLabelText("Нужно до")).toBeVisible();

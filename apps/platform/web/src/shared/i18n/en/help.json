@@ -107,7 +107,7 @@
       "registrar": {
         "title": "Office clerk",
         "steps": [
-          "“Documents · Incoming”: register a received letter, with its number and addressee; the resolution is added by the addressee.",
+          "“Documents · Incoming”: register a received letter, with its number and addressee; the resolution is added by the addressee or by whoever the letter is handed to.",
           "“Mail”: letters in the shared mailbox before registration — sort them, register them or mark a duplicate.",
           "“Contacts · Leads”: note what a new lead wants and hand it to a manager with a note.",
           "Outgoing on paper: record that it was sent on the letter card."

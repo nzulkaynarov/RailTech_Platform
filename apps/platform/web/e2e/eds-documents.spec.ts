@@ -81,7 +81,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Кому")).toHaveValue("Согласование");
+    await expect(page.getByLabel("Кому")).toHaveValue("На согласование");
 
     await fillMemo(
       page,

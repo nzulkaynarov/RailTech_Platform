@@ -363,7 +363,8 @@
     "addressee": {
       "label": "Addressee",
       "hint": "",
-      "default": "Default addressee"
+      "default": "Default addressee",
+      "unset": "Not chosen"
     },
     "urgent": "Urgent",
     "files": {

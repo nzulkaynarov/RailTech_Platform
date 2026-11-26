@@ -363,7 +363,8 @@
     "addressee": {
       "label": "Adresat",
       "hint": "",
-      "default": "Sukut böyiça qabul qiluvçi"
+      "default": "Sukut böyiça qabul qiluvçi",
+      "unset": "Tanlanmagan"
     },
     "urgent": "Şoşilinç",
     "files": {
