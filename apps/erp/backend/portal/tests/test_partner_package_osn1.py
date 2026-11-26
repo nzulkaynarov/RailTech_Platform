@@ -199,3 +199,28 @@ class TestSignedTerms:
         assert nda.confidentiality_years == 3, "NDA хранит свой срок тайны из шаблона"
         card = supply.get(f"{DESK}/{app.pk}/").json()
         assert {d["base_role"]: d["confidentiality_years"] for d in card["package"]}["nda"] == 3
+
+
+def test_preparing_again_keeps_the_candidates_reply_per_document(world, supply):
+    """Кандидат вернул NDA своим файлом и замечанием; повторная подготовка пересобирает пакет,
+    но ответ кандидата по роли не теряется."""
+    app, candidate = sent(world, supply)
+    nda = app.package_documents.get(base_role="nda")
+    reply = candidate.post(
+        f"{PORTAL}/return",
+        {"notes": "Срок тайны 5 лет", "document": nda.pk, "file": upload("nda.docx", DOCX, DOCX_TYPE)},
+        format="multipart",
+    )
+    assert reply.status_code == 200, reply.content
+    app.refresh_from_db()
+    old = app.package_documents.get(base_role="nda")
+    assert old.candidate_file and old.candidate_remark == "Срок тайны 5 лет"
+    kept_name = old.candidate_file.name
+
+    again = post(supply, app, "prepare-contract", {"package": True, "language": "ru"})
+    assert again.status_code == 200, again.content
+
+    new = app.package_documents.get(base_role="nda")
+    assert new.pk != old.pk
+    assert new.candidate_file.name == kept_name and new.candidate_remark == "Срок тайны 5 лет"
+    assert new.candidate_file.read() == DOCX

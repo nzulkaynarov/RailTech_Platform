@@ -127,6 +127,7 @@ describe("Очередь заявок кандидатов в партнёры (
               contract_blocker: null,
               candidate_returned_at: "2026-11-26T09:00:00+05:00",
               contract_approvers: [],
+              package: [],
               contract_waiting_for: [],
               contract_votes: [],
             },

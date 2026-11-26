@@ -21,7 +21,7 @@
 
 from typing import Optional, Tuple
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from documents.models.documents import ContractSubject, CounterpartyKind, DocumentTemplate, TemplateApproval
 
@@ -285,33 +285,37 @@ def approve(template, user) -> Tuple[Optional[DocumentTemplate], Optional[str]]:
     if template.approval_status != TemplateApproval.ON_APPROVAL:
         return None, "TEMPLATE_TRANSITION_NOT_ALLOWED"
     now = timezone.now()
-    if template.base_role:
-        # ОСН-1: одна действующая редакция базового документа на роль. Прежние редакции этого же шаблона снимаются с показа;
-        # другой действующий шаблон той же роли — отказ: новая редакция — исключение, а не второй документ.
-        active = DocumentTemplate.objects.filter(
-            company=template.company,
-            base_role=template.base_role,
-            approval_status=TemplateApproval.APPROVED,
-            is_active=True,
-        ).exclude(pk=template.pk)
-        if active.exclude(pk__in=edition_chain_ids(template)).exists():
-            return None, "TEMPLATE_BASE_ROLE_TAKEN"
-        active.update(is_active=False)
-    # Одна действующая редакция на (вид контрагента, предмет, название): прежние остаются утверждёнными, но не предлагаются.
-    DocumentTemplate.objects.filter(
-        company=template.company,
-        kind=template.kind,
-        name=template.name,
-        counterparty_kind=template.counterparty_kind,
-        subject=template.subject,
-        approval_status=TemplateApproval.APPROVED,
-        is_active=True,
-    ).exclude(pk=template.pk).update(is_active=False)
-    template.approval_status = TemplateApproval.APPROVED
-    template.approved_by = user
-    template.approved_at = now
-    template.is_active = True
-    template.save(update_fields=["approval_status", "approved_by", "approved_at", "is_active", "updated_at"])
+    try:
+        with transaction.atomic():  # параллельное утверждение двух шаблонов одной роли: уникальный индекс, не 500
+            if template.base_role:
+                # ОСН-1: одна действующая редакция базового документа на роль. Прежние редакции этого же шаблона снимаются с показа;
+                # другой действующий шаблон той же роли — отказ: новая редакция — исключение, а не второй документ.
+                active = DocumentTemplate.objects.filter(
+                    company=template.company,
+                    base_role=template.base_role,
+                    approval_status=TemplateApproval.APPROVED,
+                    is_active=True,
+                ).exclude(pk=template.pk)
+                if active.exclude(pk__in=edition_chain_ids(template)).exists():
+                    return None, "TEMPLATE_BASE_ROLE_TAKEN"
+                active.update(is_active=False)
+            # Одна действующая редакция на (вид контрагента, предмет, название): прежние остаются утверждёнными, но не предлагаются.
+            DocumentTemplate.objects.filter(
+                company=template.company,
+                kind=template.kind,
+                name=template.name,
+                counterparty_kind=template.counterparty_kind,
+                subject=template.subject,
+                approval_status=TemplateApproval.APPROVED,
+                is_active=True,
+            ).exclude(pk=template.pk).update(is_active=False)
+            template.approval_status = TemplateApproval.APPROVED
+            template.approved_by = user
+            template.approved_at = now
+            template.is_active = True
+            template.save(update_fields=["approval_status", "approved_by", "approved_at", "is_active", "updated_at"])
+    except IntegrityError:
+        return None, "TEMPLATE_BASE_ROLE_TAKEN"
     _carry_defaults_to_edition(template)
     _journal(template, user, "contract_template.approved", "Шаблон договора утверждён")
     return template, None

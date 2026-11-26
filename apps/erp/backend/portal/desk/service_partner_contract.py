@@ -459,7 +459,13 @@ def prepare_contract(pk: int, data: dict, upload, user) -> PartnerApplication:
     app.signed_scan = None
     app.signed_scan_at = None
     app.save()
-    app.package_documents.all().delete()  # новая подготовка заменяет прежний пакет целиком
+    # Новая подготовка заменяет прежний пакет целиком, но ответ кандидата по роли (его файл и замечание) не теряется
+    kept = {
+        old.base_role: (old.candidate_file.name, old.candidate_remark)
+        for old in app.package_documents.all()
+        if old.candidate_file or old.candidate_remark
+    }
+    app.package_documents.all().delete()
     for position, (item, doc_number, pdf) in enumerate(built):
         tpl = item["template"]
         row = PartnerApplicationDocument(
@@ -472,6 +478,9 @@ def prepare_contract(pk: int, data: dict, upload, user) -> PartnerApplication:
             position=position,
         )
         row.file.save(f"{item['role']}_{doc_number.replace('/', '-')}.pdf", ContentFile(pdf), save=False)
+        carried = kept.get(item["role"])
+        if carried:
+            row.candidate_file.name, row.candidate_remark = carried
         row.save()
 
     record(
