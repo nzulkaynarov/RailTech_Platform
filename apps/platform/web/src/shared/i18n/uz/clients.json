@@ -173,7 +173,7 @@
       "mfo": "MFO",
       "noBank": "Bank körsatilmagan",
       "empty": "Hozirça hisoblar yöq.",
-      "masked": "Hisob raqamlarini buxgalteriya köradi."
+      "masked": "Hisob raqamlari faqat moliyaga ruxsati borlarga körinadi."
     },
     "brands": {
       "title": "Işlab çiqaruvçi sifatida",

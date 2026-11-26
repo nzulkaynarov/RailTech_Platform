@@ -375,8 +375,8 @@
       "collecting": "Визы собираются.",
       "askAdmin": "Попросите администратора назначить роль: {{roles}}.",
       "role": {
-        "visa_finance": "бухгалтер",
-        "visa_legal": "юрист"
+        "visa_finance": "финансы",
+        "visa_legal": "право"
       }
     },
     "term": {

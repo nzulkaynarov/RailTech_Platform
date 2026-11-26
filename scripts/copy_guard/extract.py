@@ -41,6 +41,9 @@ SETTINGS_HINT = re.compile(
 # Daily budget and key fields of the AI model providers in the bot settings: connection settings, brands are the point.
 MODEL_KEY = re.compile(r"^bot:(fields|hints)\.(anthropic|gemini)$")
 
+# The help names a role as the heading of its guide and in the «who» column of the path: the role itself, not a job title in a sentence.
+ROLE_NAME_KEY = re.compile(r"^help:(start\.kinds\.\w+\.title|path\.steps\[\d+\]\.who)$")
+
 
 def row(app, surface, audience, source, key, lang, text, ctx=""):
     return {
@@ -99,6 +102,8 @@ def extract_json(root: Path) -> Iterator[dict]:
             ns = f.stem
             for k, v in flat(json.loads(f.read_text(encoding="utf-8"))):
                 ctx = "settings" if ns in {"integrations", "bus", "audit"} or SETTINGS_HINT.search(k) or MODEL_KEY.search(f"{ns}:{k}") else ""
+                if ROLE_NAME_KEY.search(f"{ns}:{k}"):
+                    ctx = "roles"
                 yield row("platform", "ui", "staff", f"{rel}:{lines.get(k, 1)}", f"{ns}:{k}", lang, v, ctx)
         f = root / "apps/cabinet/src/i18n/locales" / f"{lang}.json"
         rel = f.relative_to(root).as_posix()

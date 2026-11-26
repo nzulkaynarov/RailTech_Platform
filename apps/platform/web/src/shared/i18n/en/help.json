@@ -65,17 +65,17 @@
       "supply": {
         "title": "Supply",
         "steps": [
-          "“Tasks”: costing tasks arrive after the director's resolution.",
+          "“Tasks”: costing tasks arrive after the resolution.",
           "Select items: stock, partners, delivery terms.",
-          "Give the “goods and stock” sign-off. When all sign-offs are in, the quote goes to the director."
+          "Give the “goods and stock” sign-off. When all sign-offs are in, the quote goes for approval."
         ]
       },
       "engineer": {
         "title": "Chief engineer",
         "steps": [
-          "“Tasks”: service tasks arrive after the director's resolution.",
+          "“Tasks”: service tasks arrive after the resolution.",
           "Cost the services: terms of reference, crew, deadlines.",
-          "Give the “services” sign-off. When all sign-offs are in, the quote goes to the director."
+          "Give the “services” sign-off. When all sign-offs are in, the quote goes for approval."
         ]
       },
       "accountant": {
@@ -107,7 +107,7 @@
       "registrar": {
         "title": "Office clerk",
         "steps": [
-          "“Documents · Incoming”: register a received letter, with its number and addressee; the director adds the resolution.",
+          "“Documents · Incoming”: register a received letter, with its number and addressee; the resolution is added by the addressee.",
           "“Mail”: letters in the shared mailbox before registration — sort them, register them or mark a duplicate.",
           "“Contacts · Leads”: note what a new lead wants and hand it to a manager with a note.",
           "Outgoing on paper: record that it was sent on the letter card."
@@ -118,7 +118,7 @@
         "steps": [
           "“Tasks”: contracts waiting for your visa — the signing route brings them.",
           "Open the contract, check its terms and give the visa or refuse with a reason: a refusal stops the signing.",
-          "Without your visa the contract route does not start — if you are away, an administrator assigns another lawyer."
+          "Without your visa the contract route does not start — if you are away, an administrator assigns someone else."
         ]
       },
       "signer": {
@@ -143,7 +143,7 @@
       {
         "title": "Resolution",
         "who": "director",
-        "text": "The director puts a resolution: decision, assignees, costing deadline. Or returns it to the manager, or rejects it."
+        "text": "The resolution sets the decision, assignees and costing deadline. The request can be returned to the manager or rejected."
       },
       {
         "title": "Costing",
@@ -153,7 +153,7 @@
       {
         "title": "Quote",
         "who": "director",
-        "text": "The director approves the quote; the client receives it through their channel and accepts or declines it."
+        "text": "The quote is approved; the client receives it through their channel and accepts or declines it."
       },
       {
         "title": "Contract",
@@ -163,7 +163,7 @@
       {
         "title": "Payment",
         "who": "accountant",
-        "text": "The invoice is issued, the client attaches the payment order, the accountant confirms payment against the statement. Delivery runs in parallel."
+        "text": "The invoice is issued, the client attaches the payment order, payment is confirmed against the statement. Delivery runs in parallel."
       },
       {
         "title": "Completed",
@@ -194,11 +194,11 @@
       },
       {
         "term": "Incoming letter (IN-104/26)",
-        "text": "An official client document addressed to the director; waits for a resolution."
+        "text": "An official client document addressed to the company; waits for a resolution."
       },
       {
         "term": "Resolution",
-        "text": "The director's decision on an incoming letter: text, assignees, deadline, margin limit."
+        "text": "The decision on an incoming letter: text, assignees, deadline, margin limit."
       },
       {
         "term": "Costing",
@@ -206,7 +206,7 @@
       },
       {
         "term": "Quote (QT-2026/118)",
-        "text": "A commercial offer with versions. Goes to the client only after the director approves."
+        "text": "A commercial offer with versions. Goes to the client only after approval."
       },
       {
         "term": "Outgoing (OUT-082/26)",
@@ -222,7 +222,7 @@
       },
       {
         "term": "Payment order",
-        "text": "The client's payment order (a file) that the accountant confirms."
+        "text": "The client's payment order (a file); payment is confirmed against it."
       },
       {
         "term": "Act (ACT-2026/058)",
@@ -230,7 +230,7 @@
       },
       {
         "term": "Memo (MEMO-2026/031)",
-        "text": "An internal employee document addressed to the director: subject, text, amount or deadline."
+        "text": "An internal employee document for approval: subject, text, amount or deadline."
       },
       {
         "term": "Request to admin (TK-0012)",
@@ -446,7 +446,7 @@
       "resolve": "Mark resolved",
       "reopen": "Return to work",
       "resolveConsequence": "The author learns that the request is resolved.",
-      "readOnly": "The director reads requests; the administrator replies and changes the status.",
+      "readOnly": "Requests can be read, but only the administrator replies and changes the status.",
       "replyRequired": "Write a reply",
       "errors": {
         "ticket_status_transition": "The status cannot be changed this way: refresh the page.",

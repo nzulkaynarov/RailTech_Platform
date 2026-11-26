@@ -15,7 +15,7 @@
     },
     "forbidden": {
       "title": "Rolingizga oçiq emas",
-      "text": "Bot sozlamalari administratorga va direktorga (faqat köriş) oçiq."
+      "text": "Bot sozlamalari administratorga va sozlamalarni öqiş huquqi borlarga (faqat köriş) oçiq."
     }
   },
   "nav": {

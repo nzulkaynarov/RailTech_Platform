@@ -148,7 +148,7 @@
       "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
     },
     "toRequest": "To request",
-    "toRequestLabel": "To request: {{name}} as the director letter",
+    "toRequestLabel": "To request: {{name}} as a letter for approval",
     "channelCabinet": "Account",
     "channelEmail": "E-mail",
     "context": {

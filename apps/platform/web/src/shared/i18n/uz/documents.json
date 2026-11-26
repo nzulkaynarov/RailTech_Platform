@@ -127,7 +127,7 @@
       "version": "Tahrir",
       "watchers": "Nusxa"
     },
-    "toDirector": "Direktor",
+    "toDirector": "Kelişuv",
     "text": "Matn",
     "bodyTable": "Xat matnidagi jadval",
     "files": "Ilovalar",
@@ -145,8 +145,8 @@
       "pending": "{{label}} — yönalişda keyingi",
       "skipped": "{{label}} — ötkazib yuborilgan"
     },
-    "routePreview": "Yönaliş yuborilgandan söng oçiladi: siz → direktor{{accountant}}.",
-    "routePreviewAccountant": " → buxgalter",
+    "routePreview": "Yönaliş yuborilgandan söng oçiladi: siz → kelişuv{{accountant}}.",
+    "routePreviewAccountant": " → tölov",
     "decisions": "Qarorlar",
     "decision": {
       "approve": "Kelişilgan",
@@ -176,7 +176,7 @@
       "attention": "Kimga",
       "email": "Manzil e-poçtasi",
       "signatory": "Imzolovçi",
-      "signatoryDefault": "blank böyiça (direktor)",
+      "signatoryDefault": "blank böyiça",
       "mailings": "Yuboriş jurnali",
       "noMailings": "Manzilga hali yuborilmagan.",
       "mailing": {
@@ -251,7 +251,7 @@
     }
   },
   "form": {
-    "subtitle": "Hujjat direktorga kelişiş uçun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettiriş mumkin.",
+    "subtitle": "Hujjat kelişuvga yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettiriş mumkin.",
     "subtitleContinue": "{{number}} qoralamasi: özgarişlar saqlanadi, istalgan payt yuboriş mumkin.",
     "subtitleReturned": "{{number}} qayta işlaşga qaytarilgan: tuzatib, qayta yuboring.",
     "formLabel": "Yangi hujjat",
@@ -266,7 +266,7 @@
     },
     "to": {
       "label": "Kimga",
-      "director": "Direktor"
+      "director": "Kelişuv"
     },
     "recipient": {
       "label": "Manzil (taşkilot)",
@@ -308,8 +308,8 @@
     },
     "route": {
       "label": "Kelişiş yönalişi",
-      "plain": "Siz → Direktor",
-      "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
+      "plain": "Siz → kelişuv",
+      "withAmount": "Siz → kelişuv → tölov (summa bor)",
       "letterHandover": "Siz → imzolovçi: imzolaydi, xat raqam oladi va adresatga ketadi",
       "approvers": "Kelişuvçilar",
       "approversHint": "Marşrut bosqiçlaridan oldin, tanlangan tartibda kelişadi.",

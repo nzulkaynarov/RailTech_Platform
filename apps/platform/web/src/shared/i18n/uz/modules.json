@@ -719,7 +719,7 @@
       },
       "errors": {
         "LAST_ADMIN": "Administrator rolini olib bölmaydi va oxirgi administratorni öçirib bölmaydi. Avval boşqa xodimni administrator qiling.",
-        "LAST_DIRECTOR": "Direktor rolini olib bölmaydi va oxirgi direktorni öçirib bölmaydi. Avval boşqa xodimni direktor qiling.",
+        "LAST_DIRECTOR": "Bu rolni olib bölmaydi va undagi oxirgi xodimni öçirib bölmaydi. Avval uni boşqa xodimga bering.",
         "ROLES_REQUIRED": "Kamida bitta rol kerak. Xodimga kirişni yopiş uçun uni öçiring.",
         "EMAIL_EXISTS": "Bunday poçtali xodim allaqaçon bor.",
         "ACTIVE_LEADS": "Xodimda işdagi lidlar bor. Ularni topşiradigan hamkasbni tanlang va takrorlang.",

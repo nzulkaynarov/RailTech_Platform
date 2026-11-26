@@ -81,7 +81,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Кому")).toHaveValue("Директор");
+    await expect(page.getByLabel("Кому")).toHaveValue("Согласование");
 
     await fillMemo(
       page,
@@ -109,7 +109,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(
       page
         .getByRole("region", { name: "Согласование" })
-        .getByText("Вы → Директор → Бухгалтер (есть сумма)"),
+        .getByText("Вы → согласование → оплата (есть сумма)"),
     ).toBeVisible();
     await openStep(page, CHECK);
     await settledScreenshot(page, "form-filled");

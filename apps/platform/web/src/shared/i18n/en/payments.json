@@ -160,7 +160,7 @@
       "CABINET": "Customer account",
       "BOT": "Telegram bot",
       "EMAIL": "Email",
-      "MANUAL": "Attached by accountant"
+      "MANUAL": "Attached by staff"
     },
     "from": "From: {{source}}",
     "note": "Customer comment: {{note}}"
@@ -404,12 +404,12 @@
         "failed": "Not returned: {{reason}}"
       },
       "reasons": {
-        "amount_exceeds_approved": "the amount is above what the director approved",
+        "amount_exceeds_approved": "the amount is above what was approved",
         "amount_currency_mismatch": "the payment currency differs from the memo currency",
         "amount_must_be_positive": "the amount must be above zero",
         "paid_on_in_future": "the payment date is in the future",
         "already_paid": "the memo is already paid with other data, the card is refreshed",
-        "invalid_state": "the memo is not with the accountant, the card is refreshed",
+        "invalid_state": "the memo no longer awaits payment, the card is refreshed",
         "route_closed": "the memo is already decided, the card is refreshed",
         "not_your_step": "it is not your step now",
         "file": "the payment order is unavailable, upload it again",

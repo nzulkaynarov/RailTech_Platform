@@ -13,7 +13,7 @@
   "hint": {
     "title": "Nobody may sign documents yet",
     "withDirector": "The company letterhead names {{name}} as the signatory. Add them under the charter for all document types?",
-    "noDirector": "Say who signs documents on behalf of the company: the head under the charter, others by order or power of attorney.",
+    "noDirector": "Say who signs documents on behalf of the company: under the charter without a power of attorney, others by order or power of attorney.",
     "addDirector": "Add {{name}}",
     "other": "Choose someone else"
   },
@@ -45,7 +45,7 @@
     "power_of_attorney": "Power of attorney",
     "numbered": "{{basis}} No. {{number}} of {{date}}",
     "hint": {
-      "charter": "The head acts without a power of attorney",
+      "charter": "Under the charter — without a power of attorney",
       "order": "Order number and date",
       "power_of_attorney": "Number, date and term are required; the term is at most 3 years"
     }

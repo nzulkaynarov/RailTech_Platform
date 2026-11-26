@@ -15,7 +15,7 @@
     },
     "forbidden": {
       "title": "Not available to your role",
-      "text": "The bot settings are available to the administrator and the director (view only)."
+      "text": "The bot settings are available to the administrator and to staff allowed to read settings (view only)."
     }
   },
   "nav": {

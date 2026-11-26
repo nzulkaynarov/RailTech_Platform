@@ -729,7 +729,7 @@
   },
   "contractTemplates": {
     "title": "Contract templates",
-    "hint": "The lawyer approves once — in a project only approved templates are chosen.",
+    "hint": "A template is approved once — in a project only approved templates are chosen.",
     "add": "New template",
     "createTitle": "New contract template",
     "createSubmit": "Create",

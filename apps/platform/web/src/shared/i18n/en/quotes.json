@@ -224,7 +224,7 @@
       "due": "Costing due"
     },
     "openReadOnly": {
-      "title": "The quote awaits the director's decision",
+      "title": "The quote awaits a decision",
       "text": "View only."
     },
     "decided": {
@@ -247,7 +247,7 @@
     "draft": "Comment restored from the draft.",
     "checklist": {
       "legend": "Approval checklist",
-      "visa_goods": "Supply visa",
+      "visa_goods": "“Goods and stock” sign-off",
       "visa_services": "Chief engineer visa",
       "margin": "Margin not below the resolution threshold",
       "due": "Client deadline met",
@@ -255,7 +255,7 @@
       "lateNote": "The quote was ready after the costing due date ({{due}}). You can approve: the journal will note \"approved late\"."
     },
     "blockedItem": {
-      "visa_goods": "no supply visa",
+      "visa_goods": "no “goods and stock” sign-off",
       "visa_services": "no chief engineer visa",
       "margin": "margin below the resolution threshold",
       "due": "costing due date"
@@ -311,7 +311,7 @@
       "return": "Not saved: {{reason}}"
     },
     "reasons": {
-      "route_closed": "the quote was already decided by another director or replaced by a new version, the card is refreshed",
+      "route_closed": "the quote was already decided or replaced by a new version, the card is refreshed",
       "checklist_not_green": "the checklist is not complete ({{items}}), the card is refreshed",
       "checklist_not_green_plain": "the checklist is not complete, the card is refreshed",
       "not_your_step": "it is not your step now",

@@ -375,8 +375,8 @@
       "collecting": "Visas are being collected.",
       "askAdmin": "Ask an administrator to assign the role: {{roles}}.",
       "role": {
-        "visa_finance": "accountant",
-        "visa_legal": "lawyer"
+        "visa_finance": "finance",
+        "visa_legal": "legal"
       }
     },
     "term": {

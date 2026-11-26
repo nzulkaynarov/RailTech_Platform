@@ -127,7 +127,7 @@
       "version": "Revision",
       "watchers": "Copy to"
     },
-    "toDirector": "Director",
+    "toDirector": "Approval",
     "text": "Text",
     "bodyTable": "Table in the letter text",
     "files": "Attachments",
@@ -145,8 +145,8 @@
       "pending": "{{label}} — next on the route",
       "skipped": "{{label}} — skipped"
     },
-    "routePreview": "The route opens after sending: you → director{{accountant}}.",
-    "routePreviewAccountant": " → accountant",
+    "routePreview": "The route opens after sending: you → approval{{accountant}}.",
+    "routePreviewAccountant": " → payment",
     "decisions": "Decisions",
     "decision": {
       "approve": "Approved",
@@ -176,7 +176,7 @@
       "attention": "To",
       "email": "Addressee email",
       "signatory": "Signatory",
-      "signatoryDefault": "from the letterhead (director)",
+      "signatoryDefault": "from the letterhead",
       "mailings": "Sending log",
       "noMailings": "Not sent to the addressee yet.",
       "mailing": {
@@ -251,7 +251,7 @@
     }
   },
   "form": {
-    "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “Documents”.",
+    "subtitle": "The document goes for approval. You can save a draft and continue later in “Documents”.",
     "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
     "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
     "formLabel": "New document",
@@ -266,7 +266,7 @@
     },
     "to": {
       "label": "To",
-      "director": "Director"
+      "director": "Approval"
     },
     "recipient": {
       "label": "Addressee (organization)",
@@ -308,8 +308,8 @@
     },
     "route": {
       "label": "Approval route",
-      "plain": "You → Director",
-      "withAmount": "You → Director → Accountant (amount given)",
+      "plain": "You → approval",
+      "withAmount": "You → approval → payment (amount given)",
       "letterHandover": "You → signer: they sign, the letter gets its number and goes to the addressee",
       "approvers": "Approvers",
       "approversHint": "Approve before the route steps, in the order chosen.",

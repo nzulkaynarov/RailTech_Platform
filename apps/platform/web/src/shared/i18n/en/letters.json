@@ -109,7 +109,7 @@
     "noClient": "Client not identified",
     "byClient": "Tax ID {{inn}}",
     "bySystem": "By the system, from a client request",
-    "decision": "Director's decision",
+    "decision": "Decision on the letter",
     "decisionFields": {
       "text": "Resolution text",
       "assignees": "Assignees",
@@ -183,7 +183,7 @@
   },
   "panel": {
     "awaitingReadOnly": {
-      "title": "The letter is waiting for the director's resolution",
+      "title": "The letter is waiting for a resolution",
       "text": "View only."
     },
     "decided": {
@@ -209,7 +209,7 @@
     "openTask": "Open the instruction work screen"
   },
   "form": {
-    "name": "Director's resolution",
+    "name": "Resolution",
     "text": {
       "label": "Resolution text",
       "hint": "Assignees receive this text in their task."
@@ -363,7 +363,7 @@
     "addressee": {
       "label": "Addressee",
       "hint": "",
-      "default": "Director (default)"
+      "default": "Default addressee"
     },
     "urgent": "Urgent",
     "files": {
@@ -477,9 +477,9 @@
     }
   },
   "office": {
-    "name": "Director's resolution",
+    "name": "Resolution",
     "draftName": "Draft resolution",
-    "draftIntro": "Prepare a draft: the director approves it in one click or edits it.",
+    "draftIntro": "Prepare a draft: it will be approved in one click or edited.",
     "kind": {
       "legend": "Resolution type",
       "execute": "For execution",
@@ -580,7 +580,7 @@
   },
   "instr": {
     "title": "Instructions",
-    "resolution": "Director's resolution",
+    "resolution": "Resolution",
     "fields": {
       "kind": "Type",
       "responsible": "Responsible",
@@ -672,11 +672,11 @@
       "newDue": "New deadline",
       "reason": "Reason",
       "submit": "Request extension",
-      "urgent": "The letter is urgent: the deadline cannot be extended, the director can only reject the request.",
-      "pending": "The request to move the deadline to {{date}} is awaiting the director's decision.",
+      "urgent": "The letter is urgent: the deadline cannot be extended, the request can only be rejected.",
+      "pending": "The request to move the deadline to {{date}} is awaiting a decision.",
       "errorDue": "The new deadline must be after the current one ({{date}}).",
       "errorReason": "Write the reason.",
-      "done": "Extension request sent to the director"
+      "done": "Extension request sent for a decision"
     },
     "acq": {
       "title": "Acknowledge",
@@ -768,7 +768,7 @@
       "register_incoming": "Register as incoming",
       "create_lead": "Create a lead",
       "supplier_price": "Upload the price list",
-      "to_accountant": "Hand over to the accountant",
+      "to_accountant": "Send for payment",
       "archive_mailing": "Archive as a newsletter",
       "reply_template": "Reply",
       "suspicious": "To Suspicious",

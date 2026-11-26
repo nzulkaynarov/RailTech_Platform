@@ -729,7 +729,7 @@
   },
   "contractTemplates": {
     "title": "Şartnoma şablonlari",
-    "hint": "Yurist bir marta tasdiqlaydi — loyihada faqat tasdiqlanganlari tanlanadi.",
+    "hint": "Şablon bir marta tasdiqlanadi — loyihada faqat tasdiqlanganlari tanlanadi.",
     "add": "Yangi şablon",
     "createTitle": "Yangi şartnoma şabloni",
     "createSubmit": "Yaratiş",

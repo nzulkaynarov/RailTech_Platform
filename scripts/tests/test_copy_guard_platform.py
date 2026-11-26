@@ -4,8 +4,7 @@ The tool and its word lists are in scripts/copy_guard/ (stdlib only). Fixed a te
 `python3 -I scripts/copy_guard/copy_guard.py check . --app platform --baseline scripts/copy_guard/baseline/platform.json --update`
 and commit the shorter baseline. A new finding is fixed in the text, not added to the baseline.
 
-Statuses follow docs/architecture/status-dictionary.md. Job titles instead of an action («у директора») are the one class
-that is still pending: texts plan PR 3 removes them and then PENDING_CEILING goes to 0 and PENDING_CLASSES disappears.
+Statuses follow docs/architecture/status-dictionary.md. An action is attributed to a capability, not to a job title.
 """
 
 import importlib.util
@@ -21,10 +20,8 @@ GUARD = ROOT / "scripts/copy_guard"
 BASELINE = GUARD / "baseline/platform.json"
 ALLOW = GUARD / "allow.tsv"
 # Ceilings only go down: each PR that fixes texts lowers the number (README, «Как работать»).
-BASELINE_CEILING = 830
+BASELINE_CEILING = 598
 ALLOW_CEILING = 1
-PENDING_CLASSES = ("jobtitle",)  # texts plan PR 3
-PENDING_CEILING = 435
 
 
 def _load(name: str):
@@ -54,17 +51,13 @@ class PlatformCopyGuard(unittest.TestCase):
             code = guard.guard(ROOT, "platform", BASELINE, update=False)
         self.assertEqual(code, 0, out.getvalue())
 
-    def test_baseline_has_no_high_or_medium_except_the_pending_class(self) -> None:
-        # H and M are fixed in the text; only L (to look at by eye) may stay, and job titles until PR 3
-        for sev, _app, _src, key, lang, cls, _match in (e[:7] for e in _entries()):
-            if sev != "L":
-                self.assertIn(cls, PENDING_CLASSES, f"fix the text, do not baseline it: {key} ({lang}, {cls})")
-                self.assertEqual(sev, "M", f"{key}: a pending class may only be M")
+    def test_baseline_has_no_high_or_medium(self) -> None:
+        # H and M are fixed in the text; only L (to look at by eye) may stay in the list
+        for entry in json.loads(BASELINE.read_text(encoding="utf-8")):
+            self.assertTrue(entry.startswith("L|"), f"fix the text, do not baseline it: {entry}")
 
     def test_baseline_only_shrinks(self) -> None:
-        entries = _entries()
-        self.assertLessEqual(len(entries), BASELINE_CEILING)
-        self.assertLessEqual(sum(1 for e in entries if e[5] in PENDING_CLASSES), PENDING_CEILING)
+        self.assertLessEqual(len(_entries()), BASELINE_CEILING)
 
     def test_bff_texts_have_no_pending_findings(self) -> None:
         # the BFF (errors, event feed, queue) is clean: nothing from apps/platform/bff may be baselined above L

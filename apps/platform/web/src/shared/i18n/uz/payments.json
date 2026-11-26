@@ -160,7 +160,7 @@
       "CABINET": "Mijoz kabineti",
       "BOT": "Telegram-bot",
       "EMAIL": "Poçta",
-      "MANUAL": "Buxgalter biriktirgan"
+      "MANUAL": "Xodim biriktirgan"
     },
     "from": "Manba: {{source}}",
     "note": "Mijoz izohi: {{note}}"
@@ -404,12 +404,12 @@
         "failed": "Qaytarilmadi: {{reason}}"
       },
       "reasons": {
-        "amount_exceeds_approved": "summa direktor kelişgan summadan katta",
+        "amount_exceeds_approved": "summa kelişilgandan katta",
         "amount_currency_mismatch": "tölov valyutasi xat valyutasiga mos emas",
         "amount_must_be_positive": "summa noldan katta bölişi kerak",
         "paid_on_in_future": "tölov sanasi kelajakda",
         "already_paid": "xat boşqa maʼlumotlar bilan allaqaçon tölangan, kartoçka yangilandi",
-        "invalid_state": "xat buxgalterda emas, kartoçka yangilandi",
+        "invalid_state": "xat endi tölovni kutmaydi, kartoçka yangilandi",
         "route_closed": "xat böyiça qaror allaqaçon qabul qilingan, kartoçka yangilandi",
         "not_your_step": "hozir sizning qadamingiz emas",
         "file": "tölov topşiriqnomasi mavjud emas, uni qayta yuklang",

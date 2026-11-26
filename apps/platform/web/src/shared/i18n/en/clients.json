@@ -173,7 +173,7 @@
       "mfo": "Bank code",
       "noBank": "Bank not specified",
       "empty": "No accounts yet.",
-      "masked": "Account numbers are visible to accounting."
+      "masked": "Account numbers are visible only to those with access to finance."
     },
     "brands": {
       "title": "As a manufacturer",

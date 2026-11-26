@@ -58,8 +58,8 @@
     "DEFAULT": "The action failed. Please retry.",
     "FORBIDDEN": "This action is not allowed for your role.",
     "ERP_FORBIDDEN": "Not allowed: you need the right to manage the catalogue or partners.",
-    "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them (supply, director).",
-    "CREW_RATES_REQUIRED": "Crew rates can only be changed by the chief engineer, supply or the director.",
+    "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them.",
+    "CREW_RATES_REQUIRED": "Crew rates can only be changed by those who can see them.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "This record already exists. Refresh the list.",
     "NOT_FOUND": "The record is gone. Refresh the list.",
@@ -234,7 +234,7 @@
       "addSteps": [
         "The item appears in the catalogue as a draft.",
         "It can be chosen in costing and have files linked.",
-        "Supply adds partner prices."
+        "Partner prices are added by those who can see them."
       ],
       "editSteps": [
         "Changes are saved in the item card.",
@@ -284,7 +284,7 @@
     "form": {
       "title": "Offer: {{name}}",
       "price": "Purchase price, {{currency}}",
-      "noPrice": "You neither see nor change the partner price: it is open to supply and the director.",
+      "noPrice": "You neither see nor change the partner price: you have no access to prices.",
       "quota": "Quota, pcs",
       "quotaHint": "How many units the partner will ship at this price.",
       "min": "Minimum order, pcs",
@@ -357,7 +357,7 @@
       "rate": "Rate, {{currency}}",
       "rateHint": "Empty — no rate set.",
       "unit": "Rate",
-      "noRate": "You neither see nor change the crew rate: it is open to the chief engineer, supply and the director.",
+      "noRate": "You neither see nor change the crew rate: you have no access to rates.",
       "note": "Note",
       "active": "Works",
       "addSteps": [
@@ -407,8 +407,8 @@
       "why": "Why it is needed",
       "whyHint": "Briefly: which items will go there.",
       "steps": [
-        "The request goes to the director in “Category requests”.",
-        "The director creates the category and links it, or refuses with a reason.",
+        "The request goes to “Category requests”.",
+        "The category will be created and linked, or refused with a reason.",
         "You get a notification about the decision."
       ]
     }

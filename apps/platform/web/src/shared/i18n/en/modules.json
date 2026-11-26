@@ -719,7 +719,7 @@
       },
       "errors": {
         "LAST_ADMIN": "You cannot remove the administrator role or disable the last administrator. Appoint another administrator first.",
-        "LAST_DIRECTOR": "You cannot remove the director role or disable the last director. Appoint another director first.",
+        "LAST_DIRECTOR": "You cannot remove this role or disable the last person who has it. Assign it to another employee first.",
         "ROLES_REQUIRED": "At least one role is required. To close the employee's access, disable them.",
         "EMAIL_EXISTS": "An employee with this email already exists.",
         "ACTIVE_LEADS": "The employee has leads in progress. Pick a colleague to hand them over to and try again.",

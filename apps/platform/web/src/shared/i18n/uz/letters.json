@@ -109,7 +109,7 @@
     "noClient": "Mijoz aniqlanmagan",
     "byClient": "STIR {{inn}}",
     "bySystem": "Tizim tomonidan, mijoz arizasi böyiça",
-    "decision": "Direktor qarori",
+    "decision": "Xat böyiça qaror",
     "decisionFields": {
       "text": "Rezolyutsiya matni",
       "assignees": "Ijroçilar",
@@ -183,7 +183,7 @@
   },
   "panel": {
     "awaitingReadOnly": {
-      "title": "Xat direktor rezolyutsiyasini kutmoqda",
+      "title": "Xat rezolyutsiyani kutmoqda",
       "text": "Faqat köriş."
     },
     "decided": {
@@ -209,7 +209,7 @@
     "openTask": "Topşiriqning iş ekranini oçiş"
   },
   "form": {
-    "name": "Direktor rezolyutsiyasi",
+    "name": "Rezolyutsiya",
     "text": {
       "label": "Rezolyutsiya matni",
       "hint": "Ijroçilar bu matnni topşiriqda oladi."
@@ -363,7 +363,7 @@
     "addressee": {
       "label": "Adresat",
       "hint": "",
-      "default": "Direktor (sukut böyiça)"
+      "default": "Sukut böyiça qabul qiluvçi"
     },
     "urgent": "Şoşilinç",
     "files": {
@@ -477,9 +477,9 @@
     }
   },
   "office": {
-    "name": "Direktor rezolyutsiyasi",
+    "name": "Rezolyutsiya",
     "draftName": "Rezolyutsiya loyihasi",
-    "draftIntro": "Loyihani tayyorlang: direktor uni bir bosişda tasdiqlaydi yoki tuzatadi.",
+    "draftIntro": "Loyihani tayyorlang: uni bir bosişda tasdiqlaydilar yoki tuzatadilar.",
     "kind": {
       "legend": "Rezolyutsiya turi",
       "execute": "Ijro uçun",
@@ -580,7 +580,7 @@
   },
   "instr": {
     "title": "Topşiriqlar",
-    "resolution": "Direktor rezolyutsiyasi",
+    "resolution": "Rezolyutsiya",
     "fields": {
       "kind": "Tur",
       "responsible": "Masʼul ijroçi",
@@ -672,11 +672,11 @@
       "newDue": "Yangi muddat",
       "reason": "Sabab",
       "submit": "Uzaytirişni söraş",
-      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi, direktor sörovni faqat rad etişi mumkin.",
-      "pending": "{{date}} ga uzaytiriş sörovi direktor qarorini kutmoqda.",
+      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi, sörovni faqat rad etiş mumkin.",
+      "pending": "{{date}} ga uzaytiriş sörovi qarorni kutmoqda.",
       "errorDue": "Yangi muddat joriydan ({{date}}) keyin bölsin.",
       "errorReason": "Sababni yozing.",
-      "done": "Uzaytiriş sörovi direktorga yuborildi"
+      "done": "Uzaytiriş sörovi qarorga yuborildi"
     },
     "acq": {
       "title": "Tanişib çiqiş",
@@ -768,7 +768,7 @@
       "register_incoming": "Kiruvçi sifatida röyxatga oliş",
       "create_lead": "Lid yaratiş",
       "supplier_price": "Narxnomani yuklaş",
-      "to_accountant": "Buxgalterga topşiriş",
+      "to_accountant": "Tölovga topşiriş",
       "archive_mailing": "Reklama sifatida arxivga",
       "reply_template": "Javob beriş",
       "suspicious": "«Şubhali»ga",

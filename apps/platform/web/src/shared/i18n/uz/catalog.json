@@ -58,8 +58,8 @@
     "DEFAULT": "Amalni bajarib bölmadi. Qayta urinib köring.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
     "ERP_FORBIDDEN": "Ruxsat berilmadi: katalogni yoki hamkorlarni yuritiş huquqi kerak.",
-    "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni köra oladiganlar (taʼminot, direktor) özgartiradi.",
-    "CREW_RATES_REQUIRED": "Brigada stavkalarini boş muhandis, taʼminot yoki direktor özgartiradi.",
+    "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni köra oladiganlar özgartiradi.",
+    "CREW_RATES_REQUIRED": "Brigada stavkalarini faqat ularni köra oladiganlar özgartiradi.",
     "VALIDATION_FAILED": "Maydonlarni tekşiring.",
     "CONFLICT": "Bunday yozuv allaqaçon bor. Röyxatni yangilang.",
     "NOT_FOUND": "Yozuv endi yöq. Röyxatni yangilang.",
@@ -234,7 +234,7 @@
       "addSteps": [
         "Pozitsiya nomenklaturada qoralama sifatida paydo böladi.",
         "Uni hisob-kitobda tanlaş va fayllarni boğlaş mumkin.",
-        "Hamkor narxlarini taʼminotçi qöşadi."
+        "Hamkor narxlarini ularni köra oladigan xodim qöşadi."
       ],
       "editSteps": [
         "Özgarişlar pozitsiya kartasida saqlanadi.",
@@ -284,7 +284,7 @@
     "form": {
       "title": "Taklif: {{name}}",
       "price": "Xarid narxi, {{currency}}",
-      "noPrice": "Hamkor narxini körmaysiz va özgartirmaysiz: u taʼminotçi va direktorga oçiq.",
+      "noPrice": "Hamkor narxini körmaysiz va özgartirmaysiz: narxlarga ruxsatingiz yöq.",
       "quota": "Kvota, dona",
       "quotaHint": "Hamkor şu narxda qança birlik jönatişga tayyor.",
       "min": "Minimal buyurtma, dona",
@@ -357,7 +357,7 @@
       "rate": "Stavka, {{currency}}",
       "rateHint": "Böş — stavka belgilanmagan.",
       "unit": "Stavka",
-      "noRate": "Brigada stavkasini körmaysiz va özgartirmaysiz: u boş muhandis, taʼminotçi va direktorga oçiq.",
+      "noRate": "Brigada stavkasini körmaysiz va özgartirmaysiz: stavkalarga ruxsatingiz yöq.",
       "note": "Izoh",
       "active": "Işlaydi",
       "addSteps": [
@@ -407,8 +407,8 @@
       "why": "Nima uçun kerak",
       "whyHint": "Qisqaça: unga qaysi pozitsiyalar tuşadi.",
       "steps": [
-        "Sörov direktorga «Kategoriya sörovlari»ga boradi.",
-        "Direktor kategoriyani yaratib boğlaydi yoki sabab bilan rad etadi.",
+        "Sörov «Kategoriya sörovlari» bölimiga boradi.",
+        "Kategoriya yaratilib boğlanadi yoki sabab bilan rad etiladi.",
         "Qaror haqida xabarnoma olasiz."
       ]
     }

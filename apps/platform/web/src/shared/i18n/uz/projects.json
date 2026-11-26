@@ -375,8 +375,8 @@
       "collecting": "Vizalar yiğilmoqda.",
       "askAdmin": "Administratordan rolni tayinlaşni sörang: {{roles}}.",
       "role": {
-        "visa_finance": "buxgalter",
-        "visa_legal": "yurist"
+        "visa_finance": "moliya",
+        "visa_legal": "huquq"
       }
     },
     "term": {
