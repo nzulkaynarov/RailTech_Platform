@@ -6,6 +6,7 @@ platform-admin viewers are refused on every mutation via the services.
 """
 
 from django.db.models import ProtectedError, Q
+from documents.models.documents import BaseRole
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -36,6 +37,7 @@ from crm.serializers import (
 )
 
 _TERM_KEYS = (
+    "base_role",
     "term_rule",
     "renewal_mode",
     "notice_days",
@@ -334,6 +336,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "name": drf_serializers.CharField(),
                 "counterparty_kind": drf_serializers.ChoiceField(choices=["client", "partner"]),
                 "subject": drf_serializers.ChoiceField(choices=["supply", "services"]),
+                "base_role": drf_serializers.ChoiceField(choices=BaseRole.choices, required=False),
             },
         ),
         responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
@@ -355,6 +358,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name", ""),
                 counterparty_kind=request.data.get("counterparty_kind", ""),
                 subject=request.data.get("subject", ""),
+                base_role=request.data.get("base_role", "") or "",
             )
         except DjangoValidationError as exc:
             return _template_error(exc)

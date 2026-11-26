@@ -217,6 +217,7 @@ def list_applications(status_filter: str | None = None, viewer=None) -> dict:
             "contract_approval_requested_by",
             "contract_approval_decided_by",
         )
+        .prefetch_related("package_documents")
         .order_by("-created_at")
     )
     if status_filter:
@@ -396,6 +397,7 @@ def send_contract(pk: int, data: dict, user) -> dict:
         app.contract_draft_sent_at = timezone.now()
         app.candidate_agreed_at = None  # договор отправлен заново — прежнее согласие к нему не относится
         app.candidate_returned_at = None
+        app.package_documents.update(candidate_remark="")  # замечания учтены в отправляемой редакции
         app.reviewed_by = user
         app.reviewed_at = timezone.now()
 
@@ -552,9 +554,10 @@ def approve_application(pk: int, data: dict, user) -> dict:
             app.signed_note = signed_note
             app.signed_marked_at = now
             # Срок договора считается в момент отметки по правилу компании (ДС-1, тот же сервис, что у клиентов)
-            from crm.services.contract_term import apply_to_partner_application
+            from crm.services.contract_term import apply_to_package, apply_to_partner_application
 
             apply_to_partner_application(app, signed_on=timezone.localdate())
+            apply_to_package(app, signed_on=timezone.localdate())
 
             # 5. Приглашение и интеграция с CRM
             if (

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.24.0
+  version: 0.25.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -3582,6 +3582,14 @@ paths:
         Отдаёт файл договора, который сотрудник отправил кандидату (ПД-1): PDF по утверждённому шаблону либо свой файл
         компании (PDF или DOCX; тип — в `Content-Type`, вид — `PartnerApplication.contract_file_kind`). Открыт любой
         сессии (FX-1). До отправки файла для кандидата нет — 404. Документ не собирается на лету: встроенного образца нет.
+        Пакет базовых документов (ОСН-1): `doc` — id из `PartnerApplication.documents`; без него — основной договор.
+      parameters:
+        - name: doc
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Документ пакета базовых документов (`PartnerApplication.documents[].id`)
       responses:
         '200':
           description: Файл договора
@@ -3668,6 +3676,9 @@ paths:
                   type: string
                   maxLength: 1000
                   description: Замечание кандидата к договору
+                document:
+                  type: integer
+                  description: Документ пакета, к которому относится замечание (`PartnerApplication.documents[].id`)
           multipart/form-data:
             schema:
               type: object
@@ -3676,6 +3687,9 @@ paths:
                   type: string
                   maxLength: 1000
                   description: Комментарий; обязателен, если файла нет
+                document:
+                  type: integer
+                  description: Документ пакета (ОСН-1); обязателен вместе с `file`, если в пакете несколько документов
                 file:
                   type: string
                   format: binary
@@ -4189,6 +4203,8 @@ components:
         - SCAN_NOT_EXPECTED
         - SCAN_INVALID
         - RETURN_NOTE_REQUIRED
+        - RETURN_DOCUMENT_REQUIRED
+        - RETURN_DOCUMENT_INVALID
         - CONTRACT_FILE_INVALID
         - NOT_IN_CONTRACT_SENT_STATUS
         - LAST_ADMIN_CANNOT_BE_REMOVED
@@ -4303,6 +4319,11 @@ components:
           type: [string, 'null']
           enum: [pdf, docx, null]
           description: Вид файла договора (ПД-1); null — файла нет
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPackageDocument'
+          description: Пакет базовых документов (ОСН-1), один шаг для кандидата, каждый документ открывается отдельно; пусто — договор одним файлом
         candidate_returned_at:
           type: [string, 'null']
           format: date-time
@@ -4322,6 +4343,26 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    PartnerPackageDocument:
+      type: object
+      required: [id, base_role, title, number, file_kind, remark]
+      properties:
+        id:
+          type: integer
+        base_role:
+          type: string
+          enum: [partnership, nda, offer]
+        title:
+          type: string
+        number:
+          type: string
+        file_kind:
+          type: string
+          enum: [pdf, docx]
+        remark:
+          type: string
+          description: Что кандидат вернул по этому документу
 
     PartnerApplicationPublicCreate:
       type: object

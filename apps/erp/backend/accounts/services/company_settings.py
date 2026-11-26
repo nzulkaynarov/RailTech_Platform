@@ -200,6 +200,12 @@ def update_company_settings(
             return None, "BAD_CHOICE"
         settings_row.contract_gating_kinds = sorted(set(kinds))
         changed.append("contract_gating_kinds")
+    if "partner_base_roles" in data:
+        roles = data.get("partner_base_roles")
+        if not isinstance(roles, list) or any(r not in ("partnership", "nda", "offer") for r in roles):
+            return None, "BAD_CHOICE"
+        settings_row.partner_base_roles = sorted(set(roles), key=("partnership", "nda", "offer").index)
+        changed.append("partner_base_roles")
     for field, low, high in (
         ("contract_notice_days", 0, 365),
         ("contract_next_year_from_day", 1, 31),

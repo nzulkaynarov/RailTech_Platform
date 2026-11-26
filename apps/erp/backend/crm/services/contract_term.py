@@ -132,6 +132,28 @@ def apply_to_partner_application(app, *, signed_on: Optional[dt.date] = None) ->
     app.contract_notice_days = rules["notice_days"]
 
 
+def apply_to_package(app, *, signed_on: Optional[dt.date] = None) -> None:
+    """ОСН-1: документы пакета кандидата получают срок в тот же момент отметки «подписан».
+
+    Договор о партнёрстве и оферта — по правилу компании (тот же `compute_term`); NDA срока договора не имеет, он хранит
+    свои поля шаблона: «тайна после окончания, лет» и «без срока». Повтор — без изменений."""
+    from core.tenant import own_company
+
+    signed_on = signed_on or timezone.localdate()
+    for row in app.package_documents.select_related("template"):
+        if row.valid_from is not None:
+            continue
+        row.valid_from = signed_on
+        if row.base_role == "nda":
+            row.confidentiality_years = row.template.confidentiality_years if row.template_id else None
+            row.trade_secret_indefinite = bool(row.template_id and row.template.trade_secret_indefinite)
+        else:
+            _, term = compute_term(own_company(), row.template, app.company, signed_on)
+            row.valid_from = term.valid_from
+            row.valid_until = term.valid_until
+        row.save()
+
+
 @transaction.atomic
 def apply_at_signing(contract, *, signed_on: Optional[dt.date] = None) -> None:
     """Договор подписан: вычислить срок из правила и записать на договор. Повтор — без изменений (срок уже стоит)."""

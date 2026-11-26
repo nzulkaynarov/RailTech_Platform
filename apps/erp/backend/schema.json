@@ -1168,7 +1168,7 @@
         "/api/portal/v1/company/partner-application/return": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_return_create",
-                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды.",
+                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды. В пакете документов (ОСН-1)\n`document` — id документа, к которому относится замечание или файл.",
                 "tags": [
                     "api"
                 ],
@@ -1182,7 +1182,7 @@
         "/api/portal/v1/company/partner-application/return/": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_return_create_2",
-                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды.",
+                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды. В пакете документов (ОСН-1)\n`document` — id документа, к которому относится замечание или файл.",
                 "tags": [
                     "api"
                 ],
@@ -14258,6 +14258,14 @@
                 "description": "`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат.",
                 "summary": "Download the contract or the signed scan",
                 "parameters": [
+                    {
+                        "in": "query",
+                        "name": "doc",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Документ пакета базовых документов (ОСН-1)."
+                    },
                     {
                         "in": "path",
                         "name": "id",
@@ -41225,6 +41233,15 @@
                 "type": "string",
                 "description": "* `in_stock` - in_stock\n* `on_order` - on_order\n* `expected` - expected"
             },
+            "BaseRoleEnum": {
+                "enum": [
+                    "partnership",
+                    "nda",
+                    "offer"
+                ],
+                "type": "string",
+                "description": "* `partnership` - Договор о партнёрстве\n* `nda` - Соглашение о неразглашении\n* `offer` - Оферта"
+            },
             "BlankEnum": {
                 "enum": [
                     ""
@@ -44915,6 +44932,10 @@
                         "title": "Какие договоры ограничивают новые сделки",
                         "description": "Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает."
                     },
+                    "partner_base_roles": {
+                        "title": "Базовые документы для партнёров",
+                        "description": "Роли базовых документов (`partnership`, `nda`, `offer`), которые получает кандидат в партнёры."
+                    },
                     "doc_number_prefix": {
                         "type": "string",
                         "title": "Префикс нумерации документов",
@@ -46038,6 +46059,9 @@
                     },
                     "subject": {
                         "$ref": "#/components/schemas/ContractTemplateCreateSubjectEnum"
+                    },
+                    "base_role": {
+                        "$ref": "#/components/schemas/BaseRoleEnum"
                     }
                 },
                 "required": [
@@ -49442,6 +49466,126 @@
                 "type": "string",
                 "description": "* `item` - item\n* `brand` - brand\n* `none` - none"
             },
+            "DeskPackageDocument": {
+                "type": "object",
+                "description": "ОСН-1: документ пакета базовых документов кандидата — по фактам заявки.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "base_role": {
+                        "$ref": "#/components/schemas/BaseRoleEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "template_edition": {
+                        "type": "integer"
+                    },
+                    "has_candidate_file": {
+                        "type": "boolean"
+                    },
+                    "candidate_remark": {
+                        "type": "string"
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "confidentiality_years": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "NDA: тайна после окончания, лет."
+                    },
+                    "trade_secret_indefinite": {
+                        "type": "boolean"
+                    },
+                    "from_archive": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "base_role",
+                    "candidate_remark",
+                    "confidentiality_years",
+                    "from_archive",
+                    "has_candidate_file",
+                    "id",
+                    "number",
+                    "template_edition",
+                    "title",
+                    "trade_secret_indefinite",
+                    "valid_from",
+                    "valid_until"
+                ]
+            },
+            "DeskPackageOptions": {
+                "type": "object",
+                "properties": {
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPackageRole"
+                        },
+                        "description": "Роли, которые компания выдаёт кандидатам (настройка компании)."
+                    },
+                    "ready": {
+                        "type": "boolean",
+                        "description": "У каждой роли есть утверждённый шаблон: пакет можно подготовить."
+                    }
+                },
+                "required": [
+                    "ready",
+                    "roles"
+                ]
+            },
+            "DeskPackageRole": {
+                "type": "object",
+                "properties": {
+                    "base_role": {
+                        "$ref": "#/components/schemas/BaseRoleEnum"
+                    },
+                    "role_name": {
+                        "type": "string"
+                    },
+                    "template_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Нет утверждённого шаблона роли — null."
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "edition": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LanguageEnum"
+                        }
+                    }
+                },
+                "required": [
+                    "base_role",
+                    "edition",
+                    "languages",
+                    "name",
+                    "role_name",
+                    "template_id"
+                ]
+            },
             "DeskPartnerApplicationApproveInRequest": {
                 "type": "object",
                 "properties": {
@@ -49708,6 +49852,13 @@
                     "contract_renewal_mode": {
                         "type": "string"
                     },
+                    "package": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPackageDocument"
+                        },
+                        "description": "Пакет базовых документов (ОСН-1); пусто — договор одним файлом."
+                    },
                     "id": {
                         "type": "integer"
                     },
@@ -49894,6 +50045,7 @@
                     "language",
                     "matching_company_id",
                     "matching_company_name",
+                    "package",
                     "phone",
                     "rejected_reason",
                     "reviewed_at",
@@ -50044,6 +50196,13 @@
                     },
                     "contract_renewal_mode": {
                         "type": "string"
+                    },
+                    "package": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPackageDocument"
+                        },
+                        "description": "Пакет базовых документов (ОСН-1); пусто — договор одним файлом."
                     },
                     "id": {
                         "type": "integer"
@@ -50213,6 +50372,7 @@
                     "language",
                     "matching_company_id",
                     "matching_company_name",
+                    "package",
                     "phone",
                     "rejected_reason",
                     "reviewed_at",
@@ -50336,6 +50496,9 @@
                     },
                     "can_decide": {
                         "type": "boolean"
+                    },
+                    "package": {
+                        "$ref": "#/components/schemas/DeskPackageOptions"
                     }
                 },
                 "required": [
@@ -50343,6 +50506,7 @@
                     "can_decide",
                     "default_template_id",
                     "deviations_allowed",
+                    "package",
                     "templates"
                 ]
             },
@@ -50353,6 +50517,11 @@
                     "template_id": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "package": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "ОСН-1: пакет из утверждённых базовых шаблонов (без отступлений)."
                     },
                     "language": {
                         "$ref": "#/components/schemas/LanguageEnum"
@@ -52199,6 +52368,17 @@
                             }
                         ]
                     },
+                    "base_role": {
+                        "readOnly": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/BaseRoleEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
                     "term_rule": {
                         "readOnly": true,
                         "oneOf": [
@@ -52273,6 +52453,7 @@
                     "approval_status",
                     "approved_at",
                     "approved_by_name",
+                    "base_role",
                     "confidentiality_years",
                     "counterparty_kind",
                     "created_at",
@@ -57576,6 +57757,10 @@
                     "contract_gating_kinds": {
                         "title": "Какие договоры ограничивают новые сделки",
                         "description": "Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает."
+                    },
+                    "partner_base_roles": {
+                        "title": "Базовые документы для партнёров",
+                        "description": "Роли базовых документов (`partnership`, `nda`, `offer`), которые получает кандидат в партнёры."
                     },
                     "doc_number_prefix": {
                         "type": "string",

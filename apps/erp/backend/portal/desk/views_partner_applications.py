@@ -261,7 +261,10 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         operation_id="catalog_partner_applications_document",
         summary="Download the contract or the signed scan",
         description="`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат.",
-        parameters=[OpenApiParameter("which", str, required=True, enum=["contract", "scan", "candidate"])],
+        parameters=[
+            OpenApiParameter("which", str, required=True, enum=["contract", "scan", "candidate"]),
+            OpenApiParameter("doc", int, required=False, description="Документ пакета базовых документов (ОСН-1)."),
+        ],
         responses={(200, "application/octet-stream"): bytes, 404: NOT_FOUND},
         tags=["Catalog"],
     )
@@ -275,6 +278,12 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
             contract_step.current_document(app) if which == "contract" else None
         )
         try:
+            doc = request.query_params.get("doc")
+            if doc:  # ОСН-1: документ пакета
+                row = contract_step.package_document(app, doc)
+                field = {"scan": row.signed_scan, "candidate": row.candidate_file}.get(which) or (
+                    row.file if which == "contract" else None
+                )
             data, content_type, name = contract_step.read_file(field)
         except AccessError as error:
             return _refused(error)
