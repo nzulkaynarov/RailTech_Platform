@@ -117,7 +117,10 @@ export function ModuleMenuContent({
   // части (`nearest`); переход нажатием внутри меню не прокручивает.
   useEffect(() => {
     const link = nav.current?.querySelector<HTMLElement>('a[aria-current="page"]');
-    if (!link || link.getAttribute("href") === clickedHref.current) return;
+    // Нажатие гасит только ближайший переход: возврат на ту же страницу «назад» или из другого модуля снова прокрутит.
+    const clicked = clickedHref.current;
+    clickedHref.current = null;
+    if (!link || link.getAttribute("href") === clicked) return;
     link.scrollIntoView({ block: "nearest" });
   }, [activeKey]);
   return (

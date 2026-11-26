@@ -124,6 +124,25 @@ test.describe("Меню настроек не прыгает", () => {
     await shot(page, "direct-exports");
   });
 
+  test("1440×790: страница, открытая из меню, после ухода и «назад» снова показывает свой пункт", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 790 });
+    await loginAndWait(page, "admin@demo.example");
+    await spaGoto(page, "/admin");
+    await page.locator(`${MENU} a.pf-menu-item[href="/admin/exports"]`).click();
+    await expect(page).toHaveURL(/\/admin\/exports$/);
+    // уход не через меню настроек и возврат кнопкой «назад»: меню появляется заново с прокруткой 0
+    await spaGoto(page, "/eds/documents");
+    await expect(page).toHaveURL(/\/eds\/documents$/);
+    await expect(page.locator(`${MENU} a.pf-menu-item[href="/admin/exports"]`)).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/admin\/exports$/);
+    const item = page.locator(`${MENU} a.pf-menu-item[aria-current="page"]`);
+    await expect(item).toHaveAttribute("href", "/admin/exports");
+    await expect(item).toBeInViewport({ ratio: 1 });
+  });
+
   test("1440×790: нажатие на наполовину скрытый пункт не прокручивает меню", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 790 });
     await loginAndWait(page, "admin@demo.example");
@@ -172,12 +191,18 @@ test.describe("Меню настроек не прыгает", () => {
       }
       await page.setViewportSize(size);
       await spaGoto(page, "/crm/clients");
-      await page
+      await expect(page).toHaveURL(/\/crm\/clients$/);
+      const railLink = page
         .getByRole("navigation", { name: "Модули" })
-        .getByRole("link", { name: "Настройки" })
-        .hover();
+        .getByRole("link", { name: "Настройки" });
+      await expect(railLink).toBeVisible();
       const flyout = page.locator(".ant-popover:not(.ant-popover-hidden)");
-      await expect(flyout.locator("a.pf-menu-item").first()).toBeVisible();
+      // наведение сразу после смены ширины окна может не открыть окно: колонка модулей ещё перестраивается
+      await expect(async () => {
+        await page.mouse.move(600, 400);
+        await railLink.hover();
+        await expect(flyout.locator("a.pf-menu-item").first()).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 15_000 });
       const flyLinks: string[] = [];
       for (const link of await flyout.locator("a.pf-menu-item").all()) {
         flyLinks.push(
