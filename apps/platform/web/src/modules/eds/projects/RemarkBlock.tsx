@@ -101,7 +101,7 @@ export function RemarkBlock({
       {parts.length > 0 ? (
         <p style={{ margin: 0 }} data-testid="remark-summary">
           {parts.join("; ")}
-          {summary.more > 0
+          {(summary.more ?? 0) > 0
             ? `; ${t("contract.remark.summary.more", { count: summary.more })}`
             : ""}
         </p>
