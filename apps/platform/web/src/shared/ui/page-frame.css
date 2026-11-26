@@ -1,0 +1,47 @@
+/* Каркас страницы (КАРКАС-1): ширина — вся доступная; колонки — по ширине самой страницы, а не окна. */
+.pf-frame {
+  min-width: 0;
+  width: 100%;
+  container: pf-frame / inline-size;
+}
+.pf-frame-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-frame--settings > .pf-frame-in {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@container pf-frame (min-width: 900px) {
+  .pf-frame--settings > .pf-frame-in {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container pf-frame (min-width: 1500px) {
+  .pf-frame--settings > .pf-frame-in {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* Всё, что не карточка (заголовок, баннер, строка поиска), и явно широкие блоки — на всю строку сетки. */
+.pf-frame--settings > .pf-frame-in > :not(.ant-card):not(.pf-set-card):not(.pf-frame-card),
+.pf-frame--settings > .pf-frame-in > .pf-frame-wide {
+  grid-column: 1 / -1;
+}
+.pf-frame--settings > .pf-frame-in > .ant-card,
+.pf-frame--settings > .pf-frame-in > .pf-set-card,
+.pf-frame--settings > .pf-frame-in > .pf-frame-card {
+  min-width: 0;
+  height: 100%;
+}
+/* Карточка с широкой таблицей или журналом внутри — на всю строку */
+.pf-frame--settings > .pf-frame-in > .pf-frame-wide > .ant-card {
+  height: auto;
+}
+.pf-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 0 16px;
+}

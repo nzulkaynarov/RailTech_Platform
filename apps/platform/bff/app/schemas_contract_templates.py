@@ -16,6 +16,7 @@ TemplateStatus = Literal["draft", "on_approval", "approved"]
 Counterparty = Literal["client", "partner"]
 Subject = Literal["supply", "services"]
 Lang = Literal["ru", "uz", "en"]
+BaseRole = Literal["partnership", "nda", "offer"]
 
 
 class ContractTemplate(BaseModel):
@@ -34,6 +35,9 @@ class ContractTemplate(BaseModel):
     unknown_placeholders: list[str] = Field(
         description="Неизвестные поля текстов: заметка, не блок"
     )
+    base_role: BaseRole | None = Field(
+        description="Базовый документ (ОСН-1): партнёрство, NDA, оферта; null — обычный шаблон"
+    )
     updated_at: str
 
 
@@ -47,6 +51,15 @@ class ContractTemplateIn(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     counterparty: Counterparty
     subject: Subject
+    base_role: BaseRole | None = None
+
+
+class ContractTemplateRoleIn(BaseModel):
+    """Пометка «Базовый документ» черновика; `null` снимает её. Закреплённый текст её не меняет."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    base_role: BaseRole | None
 
 
 class OfferedContractTemplates(BaseModel):
@@ -85,6 +98,9 @@ def to_contract_template(raw: Mapping[str, Any]) -> ContractTemplate:
         locked=raw.get("is_locked") is True,
         languages=langs or ["ru"],
         unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
+        base_role=raw.get("base_role")
+        if raw.get("base_role") in ("partnership", "nda", "offer")
+        else None,
         updated_at=text(raw.get("updated_at")),
     )
 

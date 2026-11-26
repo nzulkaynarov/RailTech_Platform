@@ -5,12 +5,13 @@ import { Link } from "react-router";
 
 import { articleForSection } from "../../../features/help/articles";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 import { PageHeader, ReadOnlyTag } from "../../../shared/ui/PageHeader";
 import { useSettingsEditable } from "./useSettingsEditable";
 
 import "./settings.css";
 
-/** Страницы-формы: поля не шире 768 px (отчёт 2026-11-22 §7 п. 20); остальные — таблицы и журналы — на всю ширину рамки. */
+/** Страницы-формы: карточки по смыслу в сетке 1–3 колонок (КАРКАС-1); остальные — таблицы и журналы — колонкой на всю ширину. */
 const FORM_PAGES: readonly string[] = [
   "timing",
   "forms",
@@ -18,6 +19,7 @@ const FORM_PAGES: readonly string[] = [
   "sales",
   "taxes",
   "numbering",
+  "company",
 ];
 
 /**
@@ -55,7 +57,10 @@ export function SettingsPage({
     </Link>
   ) : null;
   return (
-    <div className={`pf-set-page${FORM_PAGES.includes(sectionKey) ? " pf-set-narrow" : ""}`}>
+    <PageFrame
+      layout={FORM_PAGES.includes(sectionKey) ? "settings" : "registry"}
+      className="pf-set-page"
+    >
       <PageHeader
         title={title}
         subtitle={subtitle}
@@ -67,6 +72,6 @@ export function SettingsPage({
         }
       />
       {children}
-    </div>
+    </PageFrame>
   );
 }

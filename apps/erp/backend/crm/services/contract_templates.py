@@ -21,7 +21,7 @@
 
 from typing import Optional, Tuple
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from documents.models.documents import ContractSubject, CounterpartyKind, DocumentTemplate, TemplateApproval
 
@@ -113,6 +113,40 @@ def offered_templates(company, counterparty_kind: str):
     )
 
 
+# ── Базовые документы компании (ОСН-1) ─────────────────────────────────────────────────────────────────────────────────
+
+BASE_ROLES = ("partnership", "nda", "offer")
+
+
+def partner_base_roles(company) -> list[str]:
+    """Роли базовых документов, которые компания выдаёт кандидатам в партнёры, — настройка компании, не код."""
+    from parties.models.company_settings import CompanySettings, default_partner_base_roles
+
+    row = CompanySettings.objects.filter(company=company).first() if company is not None else None
+    roles = default_partner_base_roles() if row is None else list(row.partner_base_roles or [])
+    return [role for role in BASE_ROLES if role in roles]
+
+
+def base_template(company, role: str):
+    """Утверждённая действующая редакция базового документа роли: она одна на компанию (`doctpl_one_active_base_role`)."""
+    return (
+        contract_templates_of(company)
+        .filter(base_role=role, approval_status=TemplateApproval.APPROVED, is_active=True)
+        .order_by("-edition")
+        .first()
+    )
+
+
+def edition_chain_ids(template) -> list[int]:
+    """Предыдущие редакции шаблона по цепочке `previous_edition` (без него самого)."""
+    seen: list[int] = []
+    node = template.previous_edition
+    while node is not None and node.pk not in seen:
+        seen.append(node.pk)
+        node = node.previous_edition
+    return seen
+
+
 def is_locked(template) -> bool:
     """Закреплённый текст шаблона договора правится только в черновике."""
     return template.kind.code == CONTRACT_KIND and template.approval_status != TemplateApproval.DRAFT
@@ -132,7 +166,7 @@ def _journal(template, user, event_code: str, action: str, **params) -> None:
     )
 
 
-def create_from_standard(company, user, *, name: str, counterparty_kind: str, subject: str):
+def create_from_standard(company, user, *, name: str, counterparty_kind: str, subject: str, base_role: str = ""):
     """Новый шаблон договора (черновик, редакция 1) из стандартного текста: образец платформы либо зашитый текст."""
     from core.seeds.documents import CONTRACT_BODY
 
@@ -145,6 +179,8 @@ def create_from_standard(company, user, *, name: str, counterparty_kind: str, su
         return None, "TEMPLATE_COUNTERPARTY_INVALID"
     if subject not in ContractSubject.values:
         return None, "TEMPLATE_SUBJECT_INVALID"
+    if base_role and base_role not in BASE_ROLES:
+        return None, "TEMPLATE_BASE_ROLE_INVALID"
     sample = DocumentTemplate.objects.filter(company__isnull=True, is_sample=True, kind__code=CONTRACT_KIND).first()
     # Черновик: целостность блоков проверяется при отправке на утверждение, не при создании.
     template = create_template(
@@ -157,8 +193,9 @@ def create_from_standard(company, user, *, name: str, counterparty_kind: str, su
     )
     template.counterparty_kind = counterparty_kind
     template.subject = subject
+    template.base_role = base_role or ""
     template.approval_status = TemplateApproval.DRAFT
-    template.save(update_fields=["counterparty_kind", "subject", "approval_status"])
+    template.save(update_fields=["counterparty_kind", "subject", "base_role", "approval_status"])
     _journal(template, user, "contract_template.created", "Создан шаблон договора")
     return template, None
 
@@ -189,6 +226,7 @@ def new_edition(template, user) -> Tuple[Optional[DocumentTemplate], Optional[st
         previous_edition=template,
         counterparty_kind=template.counterparty_kind,
         subject=template.subject,
+        base_role=template.base_role,
         term_rule=template.term_rule,
         renewal_mode=template.renewal_mode,
         notice_days=template.notice_days,
@@ -247,21 +285,37 @@ def approve(template, user) -> Tuple[Optional[DocumentTemplate], Optional[str]]:
     if template.approval_status != TemplateApproval.ON_APPROVAL:
         return None, "TEMPLATE_TRANSITION_NOT_ALLOWED"
     now = timezone.now()
-    # Одна действующая редакция на (вид контрагента, предмет, название): прежние остаются утверждёнными, но не предлагаются.
-    DocumentTemplate.objects.filter(
-        company=template.company,
-        kind=template.kind,
-        name=template.name,
-        counterparty_kind=template.counterparty_kind,
-        subject=template.subject,
-        approval_status=TemplateApproval.APPROVED,
-        is_active=True,
-    ).exclude(pk=template.pk).update(is_active=False)
-    template.approval_status = TemplateApproval.APPROVED
-    template.approved_by = user
-    template.approved_at = now
-    template.is_active = True
-    template.save(update_fields=["approval_status", "approved_by", "approved_at", "is_active", "updated_at"])
+    try:
+        with transaction.atomic():  # параллельное утверждение двух шаблонов одной роли: уникальный индекс, не 500
+            if template.base_role:
+                # ОСН-1: одна действующая редакция базового документа на роль. Прежние редакции этого же шаблона снимаются с показа;
+                # другой действующий шаблон той же роли — отказ: новая редакция — исключение, а не второй документ.
+                active = DocumentTemplate.objects.filter(
+                    company=template.company,
+                    base_role=template.base_role,
+                    approval_status=TemplateApproval.APPROVED,
+                    is_active=True,
+                ).exclude(pk=template.pk)
+                if active.exclude(pk__in=edition_chain_ids(template)).exists():
+                    return None, "TEMPLATE_BASE_ROLE_TAKEN"
+                active.update(is_active=False)
+            # Одна действующая редакция на (вид контрагента, предмет, название): прежние остаются утверждёнными, но не предлагаются.
+            DocumentTemplate.objects.filter(
+                company=template.company,
+                kind=template.kind,
+                name=template.name,
+                counterparty_kind=template.counterparty_kind,
+                subject=template.subject,
+                approval_status=TemplateApproval.APPROVED,
+                is_active=True,
+            ).exclude(pk=template.pk).update(is_active=False)
+            template.approval_status = TemplateApproval.APPROVED
+            template.approved_by = user
+            template.approved_at = now
+            template.is_active = True
+            template.save(update_fields=["approval_status", "approved_by", "approved_at", "is_active", "updated_at"])
+    except IntegrityError:
+        return None, "TEMPLATE_BASE_ROLE_TAKEN"
     _carry_defaults_to_edition(template)
     _journal(template, user, "contract_template.approved", "Шаблон договора утверждён")
     return template, None

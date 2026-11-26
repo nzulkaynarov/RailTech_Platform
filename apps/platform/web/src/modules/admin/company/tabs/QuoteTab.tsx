@@ -49,6 +49,7 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
     "contract_four_eyes",
     "default_client_contract_template",
     "default_partner_contract_template",
+    "partner_base_roles",
     // ДС-1: срок договора — правило, продление, напоминания и что делать после окончания
     "contract_term_rule",
     "contract_auto_renew",
@@ -306,6 +307,22 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
               allowClear
               loading={contractTemplates.isPending}
               options={templateOptions("partner")}
+            />
+          </Form.Item>
+        ) : null}
+        {shows("partner_base_roles") ? (
+          <Form.Item
+            name="partner_base_roles"
+            label={t("quote.partner_base_roles")}
+            extra={t("quote.partner_base_rolesHint")}
+            className="pf-co-wide"
+          >
+            <Select
+              mode="multiple"
+              options={(["partnership", "nda", "offer"] as const).map((value) => ({
+                value,
+                label: t(`contractTemplates.baseRole.${value}`),
+              }))}
             />
           </Form.Item>
         ) : null}

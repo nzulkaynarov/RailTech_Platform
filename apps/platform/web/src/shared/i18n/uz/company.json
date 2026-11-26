@@ -224,6 +224,8 @@
     },
     "start": "Boşlanğiç qiymat",
     "startHint": "Birinçi raqam = qiymat + 1",
+    "formatTitle": "Raqam formati",
+    "counterTitle": "Hisoblagich",
     "labelsTitle": "Raqam turlarining belgilari",
     "labelsHint": "Raqam barça tillarda bir xil: faqat lotin harflari A-Z va raqamlar.",
     "labelInvalid": "Faqat lotin harflari A-Z va raqamlar",
@@ -358,7 +360,9 @@
       "partner": "Hamkorlik (ramka)",
       "supply": "Yetkazib beriş",
       "services": "Xizmatlar"
-    }
+    },
+    "partner_base_roles": "Hamkorlar uçun hujjatlar",
+    "partner_base_rolesHint": "Hamkor nomzod şu hujjatlar paketini oladi; matn tasdiqlangan şablonlardan olinadi."
   },
   "charges": {
     "title": "TT xarajat moddalari",
@@ -856,8 +860,23 @@
       "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
       "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
-      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
+      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi.",
+      "template_base_role_taken": "Bu asosiy hujjat boşqa şablonda allaqaçon tasdiqlangan. Uning yangi tahririni yarating.",
+      "template_base_role_invalid": "Asosiy hujjatni röyxatdan tanlang."
     },
+    "baseRole": {
+      "partnership": "Hamkorlik şartnomasi",
+      "nda": "Sir saqlaş kelişuvi",
+      "offer": "Oferta"
+    },
+    "baseRoleNone": "Oddiy şablon",
+    "baseRoleLabel": "Asosiy hujjat",
+    "baseRoleMark": "Asosiy hujjat: {{role}}",
+    "baseRoleHint": "Asosiy hujjat bir marta tasdiqlanadi, şartlar hamma uçun bir xil. Belgi qoralamada qöyiladi.",
+    "baseRoleTitle": "Asosiy hujjat: {{name}}",
+    "baseRoleSave": "Saqlaş",
+    "doneBase": "Belgi saqlandi.",
+    "actionBase": "Asosiy hujjat",
     "fileLanguage": "Fayl tili",
     "warn": {
       "unknown": "Şablonda nomaʼlum maydonlar bor: {{list}}. Ular tuzatilmagunça şablon böyiça şartnoma rasmiylaştirilmaydi."

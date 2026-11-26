@@ -101,4 +101,29 @@ describe("Документы · Шаблоны · Договоры (ДОК-10)",
       ).toBeInTheDocument();
     });
   });
+
+  it("базовый документ: пометка в списке; в черновике её ставят и снимают, у закреплённого — нет (ОСН-1)", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/templates?tab=contracts");
+    const marked = await rowOf("Договор с партнёром · поставка");
+    expect(marked).toHaveTextContent("Базовый документ: Договор о партнёрстве");
+    openMenu(marked, "Договор с партнёром · поставка");
+    expect(screen.queryByRole("menuitem", { name: "Базовый документ" })).toBeNull();
+
+    const draft = await rowOf("Договор с партнёром · услуги");
+    expect(draft).not.toHaveTextContent("Базовый документ:");
+    openMenu(draft, "Договор с партнёром · услуги");
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Базовый документ" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /Базовый документ: Договор с партнёром · услуги/,
+    });
+    fireEvent.mouseDown(within(dialog).getByRole("combobox"));
+    fireEvent.click(await screen.findByTitle("Соглашение о неразглашении"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+    await waitFor(async () => {
+      expect(await rowOf("Договор с партнёром · услуги")).toHaveTextContent(
+        "Базовый документ: Соглашение о неразглашении",
+      );
+    });
+  });
 });

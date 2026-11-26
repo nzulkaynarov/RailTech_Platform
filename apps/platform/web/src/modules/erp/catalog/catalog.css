@@ -375,6 +375,18 @@
   flex-direction: column;
   gap: 16px;
 }
+.pf-cat-fieldset {
+  margin: 0 0 12px;
+  padding: 8px 12px 4px;
+  border: 1px solid var(--rt-color-surface-border);
+  border-radius: 6px;
+}
+
+.pf-cat-fieldset legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
 .pf-cat-match-badge {
   display: inline-block;
   margin-top: 4px;

@@ -6413,6 +6413,11 @@ paths:
         — редакция, которую приложил кандидат.'
       summary: Download the contract or the signed scan
       parameters:
+      - in: query
+        name: doc
+        schema:
+          type: integer
+        description: Документ пакета базовых документов (ОСН-1).
       - in: path
         name: id
         schema:
@@ -6450,6 +6455,56 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/partner-applications/{id}/from-archive/:
+    post:
+      operationId: catalog_partner_applications_from_archive
+      description: 'ОСН-1: партнёр уже подписал бумажный пакет. Заявка сразу одобряется с реальными датами и сканами документов
+        пакета; в Кабинет и по почте ничего не уходит, пометка «внесено из архива». Multipart.'
+      summary: Record the signed paper package (from the archive)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerFromArchiveInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/partner-applications/{id}/invite/:
     post:
       operationId: catalog_partner_applications_invite
@@ -24011,6 +24066,16 @@ components:
       anyOf:
       - $ref: '#/components/schemas/ErrorDetail'
       - $ref: '#/components/schemas/ValidationErrors'
+    BaseRoleEnum:
+      enum:
+      - partnership
+      - nda
+      - offer
+      type: string
+      description: |-
+        * `partnership` - Договор о партнёрстве
+        * `nda` - Соглашение о неразглашении
+        * `offer` - Оферта
     BlankEnum:
       enum:
       - ''
@@ -26805,6 +26870,9 @@ components:
           title: Какие договоры ограничивают новые сделки
           description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
             не закрывает.'
+        partner_base_roles:
+          title: Базовые документы для партнёров
+          description: Роли базовых документов (`partnership`, `nda`, `offer`), которые получает кандидат в партнёры.
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов
@@ -27693,6 +27761,8 @@ components:
           $ref: '#/components/schemas/DeskPersonKindEnum'
         subject:
           $ref: '#/components/schemas/ContractTemplateCreateSubjectEnum'
+        base_role:
+          $ref: '#/components/schemas/BaseRoleEnum'
       required:
       - counterparty_kind
       - name
@@ -30271,6 +30341,99 @@ components:
         * `item` - item
         * `brand` - brand
         * `none` - none
+    DeskPackageDocument:
+      type: object
+      description: 'ОСН-1: документ пакета базовых документов кандидата — по фактам заявки.'
+      properties:
+        id:
+          type: integer
+        base_role:
+          $ref: '#/components/schemas/BaseRoleEnum'
+        title:
+          type: string
+        number:
+          type: string
+        template_edition:
+          type: integer
+        has_file:
+          type: boolean
+          description: 'Есть что открыть: файл документа или скан подписанного.'
+        has_candidate_file:
+          type: boolean
+        candidate_remark:
+          type: string
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        confidentiality_years:
+          type: integer
+          nullable: true
+          description: 'NDA: тайна после окончания, лет.'
+        trade_secret_indefinite:
+          type: boolean
+        from_archive:
+          type: boolean
+      required:
+      - base_role
+      - candidate_remark
+      - confidentiality_years
+      - from_archive
+      - has_candidate_file
+      - has_file
+      - id
+      - number
+      - template_edition
+      - title
+      - trade_secret_indefinite
+      - valid_from
+      - valid_until
+    DeskPackageOptions:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskPackageRole'
+          description: Роли, которые компания выдаёт кандидатам (настройка компании).
+        ready:
+          type: boolean
+          description: 'У каждой роли есть утверждённый шаблон: пакет можно подготовить.'
+      required:
+      - ready
+      - roles
+    DeskPackageRole:
+      type: object
+      properties:
+        base_role:
+          $ref: '#/components/schemas/BaseRoleEnum'
+        role_name:
+          type: string
+        template_id:
+          type: integer
+          nullable: true
+          description: Нет утверждённого шаблона роли — null.
+        name:
+          type: string
+          nullable: true
+        edition:
+          type: integer
+          nullable: true
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageEnum'
+      required:
+      - base_role
+      - edition
+      - languages
+      - name
+      - role_name
+      - template_id
     DeskPartnerApplicationApproveInRequest:
       type: object
       properties:
@@ -30473,6 +30636,11 @@ components:
           nullable: true
         contract_renewal_mode:
           type: string
+        package:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskPackageDocument'
+          description: Пакет базовых документов (ОСН-1); пусто — договор одним файлом.
         id:
           type: integer
         source:
@@ -30624,6 +30792,7 @@ components:
       - language
       - matching_company_id
       - matching_company_name
+      - package
       - phone
       - rejected_reason
       - reviewed_at
@@ -30736,6 +30905,11 @@ components:
           nullable: true
         contract_renewal_mode:
           type: string
+        package:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskPackageDocument'
+          description: Пакет базовых документов (ОСН-1); пусто — договор одним файлом.
         id:
           type: integer
         source:
@@ -30875,6 +31049,7 @@ components:
       - language
       - matching_company_id
       - matching_company_name
+      - package
       - phone
       - rejected_reason
       - reviewed_at
@@ -30968,11 +31143,14 @@ components:
           description: Держатели зоны «Право» по имени.
         can_decide:
           type: boolean
+        package:
+          $ref: '#/components/schemas/DeskPackageOptions'
       required:
       - approvers
       - can_decide
       - default_template_id
       - deviations_allowed
+      - package
       - templates
     DeskPartnerContractPrepareInRequest:
       type: object
@@ -30981,6 +31159,10 @@ components:
         template_id:
           type: integer
           nullable: true
+        package:
+          type: boolean
+          default: false
+          description: 'ОСН-1: пакет из утверждённых базовых шаблонов (без отступлений).'
         language:
           $ref: '#/components/schemas/LanguageEnum'
         deviation_text:
@@ -30997,6 +31179,55 @@ components:
           type: string
           format: binary
           description: 'Свой файл договора: PDF или DOCX, до 20 МБ.'
+    DeskPartnerFromArchiveInRequest:
+      type: object
+      description: '«Уже подписано на бумаге» (ОСН-1): реальная дата подписи и сканы по документам пакета; всё, кроме даты,
+        необязательно.'
+      properties:
+        signed_on:
+          type: string
+          format: date
+          description: Когда пакет подписан на бумаге; не позже сегодняшнего дня.
+        contract_number:
+          type: string
+          description: Прежний номер договора; пусто — присвоится новый.
+          maxLength: 64
+        note:
+          type: string
+          description: Где оригинал, как подписали.
+          maxLength: 1000
+        company_id:
+          type: integer
+          nullable: true
+        create_new_company:
+          type: boolean
+          default: false
+        signed_on_partnership:
+          type: string
+          format: date
+          nullable: true
+        signed_on_nda:
+          type: string
+          format: date
+          nullable: true
+        signed_on_offer:
+          type: string
+          format: date
+          nullable: true
+        scan_partnership:
+          type: string
+          format: binary
+          description: 'Скан договора о партнёрстве: PDF или изображение.'
+        scan_nda:
+          type: string
+          format: binary
+          description: 'Скан соглашения о неразглашении: PDF или изображение.'
+        scan_offer:
+          type: string
+          format: binary
+          description: 'Скан оферты: PDF или изображение.'
+      required:
+      - signed_on
     DeskPartnerInviteInRequest:
       type: object
       description: '«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора.'
@@ -32424,6 +32655,11 @@ components:
           oneOf:
           - $ref: '#/components/schemas/DocumentTemplateSubjectEnum'
           - $ref: '#/components/schemas/BlankEnum'
+        base_role:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/BaseRoleEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         term_rule:
           readOnly: true
           oneOf:
@@ -32482,6 +32718,7 @@ components:
       - approval_status
       - approved_at
       - approved_by_name
+      - base_role
       - body_html_en
       - body_html_uz
       - confidentiality_years
@@ -36651,6 +36888,9 @@ components:
           title: Какие договоры ограничивают новые сделки
           description: 'Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП
             не закрывает.'
+        partner_base_roles:
+          title: Базовые документы для партнёров
+          description: Роли базовых документов (`partnership`, `nda`, `offer`), которые получает кандидат в партнёры.
         doc_number_prefix:
           type: string
           title: Префикс нумерации документов

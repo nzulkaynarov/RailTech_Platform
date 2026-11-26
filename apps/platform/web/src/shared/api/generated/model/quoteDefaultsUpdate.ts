@@ -7,6 +7,7 @@ import type { QuoteDefaultsUpdateCatalogPriceVisibility } from "./quoteDefaultsU
 import type { QuoteDefaultsUpdateContractExpiredAction } from "./quoteDefaultsUpdateContractExpiredAction";
 import type { QuoteDefaultsUpdateContractGatingKindsItem } from "./quoteDefaultsUpdateContractGatingKindsItem";
 import type { QuoteDefaultsUpdateContractTermRule } from "./quoteDefaultsUpdateContractTermRule";
+import type { QuoteDefaultsUpdatePartnerBaseRolesItem } from "./quoteDefaultsUpdatePartnerBaseRolesItem";
 import type { QuoteDefaultsUpdateRequestResolution } from "./quoteDefaultsUpdateRequestResolution";
 
 /**
@@ -149,4 +150,6 @@ export interface QuoteDefaultsUpdate {
   contract_gating_kinds?: QuoteDefaultsUpdateContractGatingKindsItem[];
   /** ДС-1: после окончания срока — не создавать новые КП и сделки или только предупреждать; начатая работа не блокируется никогда */
   contract_expired_action?: QuoteDefaultsUpdateContractExpiredAction;
+  /** ОСН-1: какие базовые документы получает кандидат в партнёры; по умолчанию договор о партнёрстве и соглашение о неразглашении */
+  partner_base_roles?: QuoteDefaultsUpdatePartnerBaseRolesItem[];
 }

@@ -17,6 +17,7 @@ from app.schemas_contract_templates import (
     ContractTemplate,
     ContractTemplateIn,
     ContractTemplateList,
+    ContractTemplateRoleIn,
     OfferedContractTemplates,
     TemplateWordCheck,
     to_contract_template,
@@ -73,7 +74,27 @@ async def create_contract_template(body: ContractTemplateIn, authed: Writer) -> 
     raw = await _erp(authed).data(
         "POST",
         f"{BASE}/create-contract/",
-        json={"name": body.name, "counterparty_kind": body.counterparty, "subject": body.subject},
+        json={
+            "name": body.name,
+            "counterparty_kind": body.counterparty,
+            "subject": body.subject,
+            **({"base_role": body.base_role} if body.base_role else {}),
+        },
+    )
+    return to_contract_template(raw)
+
+
+@router.patch(
+    "/document-templates/contracts/{id}/base-role",
+    response_model=ContractTemplate,
+    operation_id="setContractTemplateBaseRole",
+)
+async def set_base_role(
+    id: ItemId, body: ContractTemplateRoleIn, authed: Writer
+) -> ContractTemplate:
+    """Пометка «Базовый документ» в черновике; закреплённый текст и неверную роль отклоняет ERP."""
+    raw = await _erp(authed).data(
+        "PATCH", f"{BASE}/{id}/", json={"base_role": body.base_role or ""}
     )
     return to_contract_template(raw)
 

@@ -383,5 +383,79 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       expect(screen.queryByLabelText('Скан подписанного договора')).toBeNull();
       await expectNoAxeViolations();
     });
+
+    describe('пакет базовых документов (ОСН-1)', () => {
+      const pack = {
+        ...base,
+        documents: [
+          { id: 11, base_role: 'partnership' as const, title: 'Договор о партнёрстве', number: 'PA-2026-0007', file_kind: 'pdf' as const, remark: '' },
+          { id: 12, base_role: 'nda' as const, title: 'Соглашение о неразглашении', number: 'PA-2026-0007/2', file_kind: 'pdf' as const, remark: '' },
+        ],
+      };
+
+      it('документы пакета открываются по одному, принятие и замечания — одно на пакет', async () => {
+        signedIn('actor');
+        setMockPartnerApplication({ id: 611, status: 'contract_sent', ...pack });
+        const user = userEvent.setup();
+        renderApp('/company');
+        await heading('Компания');
+
+        const list = await screen.findByRole('list', { name: 'Документы для принятия' });
+        const links = within(list).getAllByRole('link');
+        expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+          'Открыть: Договор о партнёрстве',
+          'Открыть: Соглашение о неразглашении',
+        ]);
+        expect(links[1]?.getAttribute('href')).toMatch(/contract-pdf\?doc=12$/);
+        expect(screen.getAllByRole('button', { name: 'Принять редакцию' })).toHaveLength(1);
+        expect(screen.getAllByRole('button', { name: 'Есть замечания' })).toHaveLength(1);
+
+        await user.click(screen.getByRole('button', { name: 'Принять редакцию' }));
+        const agree = await screen.findByRole('dialog');
+        expect(within(agree).getByText(/принимаете редакцию всех документов/)).toBeInTheDocument();
+      });
+
+      it('замечание называет документ; своя редакция без названия документа не уходит', async () => {
+        signedIn('actor');
+        setMockPartnerApplication({ id: 612, status: 'contract_sent', ...pack });
+        const user = userEvent.setup();
+        const body = captureBody('/company/partner-application/return');
+        renderApp('/company');
+        await heading('Компания');
+
+        await user.click(await screen.findByRole('button', { name: 'Есть замечания' }));
+        const dialog = await screen.findByRole('dialog');
+        const submit = within(dialog).getByRole('button', { name: 'Вернуть договор' });
+        await user.type(within(dialog).getByLabelText('Замечание к договору'), 'Срок тайны 5 лет');
+        await user.click(within(dialog).getByRole('combobox', { name: 'К какому документу' }));
+        await user.click(await screen.findByRole('option', { name: 'Соглашение о неразглашении' }));
+        await expectNoAxeViolations();
+        await user.click(submit);
+
+        await waitFor(() => expect(body.current).toEqual({ notes: 'Срок тайны 5 лет', document: 12 }));
+        expect(await screen.findByText(/Вы вернули договор с замечанием/)).toBeInTheDocument();
+      });
+
+      it('файл своей редакции требует названия документа', async () => {
+        signedIn('actor');
+        setMockPartnerApplication({ id: 613, status: 'contract_sent', ...pack });
+        const user = userEvent.setup();
+        renderApp('/company');
+        await heading('Компания');
+
+        await user.click(await screen.findByRole('button', { name: 'Есть замечания' }));
+        const dialog = await screen.findByRole('dialog');
+        const file = new File(['PK'], 'my.docx', {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+        await user.upload(within(dialog).getByLabelText('Файл своей редакции договора'), file);
+
+        expect(within(dialog).getByRole('button', { name: 'Вернуть договор' })).toBeDisabled();
+        expect(within(dialog).getByText('Выберите документ, к которому относится ваша редакция.')).toBeInTheDocument();
+        await user.click(within(dialog).getByRole('combobox', { name: 'К какому документу' }));
+        await user.click(await screen.findByRole('option', { name: 'Договор о партнёрстве' }));
+        expect(within(dialog).getByRole('button', { name: 'Вернуть договор' })).toBeEnabled();
+      });
+    });
   });
 });

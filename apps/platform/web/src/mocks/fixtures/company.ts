@@ -193,6 +193,7 @@ function seed(): CompanyMock {
       contract_expired_action: "block",
       contract_foreign_by_agreement: true,
       contract_gating_kinds: [],
+      partner_base_roles: ["partnership", "nda"],
     },
     chargeTypes: [
       { id: "1", code: "FREIGHT", name: "Фрахт" },

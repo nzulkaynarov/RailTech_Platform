@@ -3,8 +3,10 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { PartnerContractTemplateOption } from "./partnerContractTemplateOption";
+import type { PartnerPackageOptions } from "./partnerPackageOptions";
 
 export interface PartnerContractOptions {
+  package: PartnerPackageOptions;
   templates: PartnerContractTemplateOption[];
   /** @nullable */
   default_template_id: string | null;

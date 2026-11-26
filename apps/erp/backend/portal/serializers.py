@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Optional
 
 from django.utils import timezone
+from documents.models.documents import BaseRole
 from drf_spectacular.utils import extend_schema_field
 from parties.models import Company, CompanyRelationship, Contact, RelationshipStatus
 from portal import projections
@@ -1081,6 +1082,17 @@ class DocumentVerificationSerializer(serializers.ModelSerializer):
         ]
 
 
+class PartnerPackageDocumentSerializer(serializers.Serializer):
+    """ОСН-1: документ пакета, который видит кандидат; открывается по `id` (`contract-pdf?doc=`)."""
+
+    id = serializers.IntegerField()
+    base_role = serializers.ChoiceField(choices=BaseRole.choices)
+    title = serializers.CharField()
+    number = serializers.CharField(allow_blank=True)
+    file_kind = serializers.ChoiceField(choices=["pdf", "docx"])
+    remark = serializers.CharField(allow_blank=True, help_text="Что кандидат вернул по этому документу.")
+
+
 class PartnerApplicationSerializer(serializers.ModelSerializer):
     """`PartnerApplication` контракта (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD)."""
 
@@ -1095,6 +1107,7 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
     contract_file_kind = serializers.SerializerMethodField()
     has_signed_scan = serializers.SerializerMethodField()
     rejected_reason = serializers.CharField(allow_null=True, required=False)
+    documents = serializers.SerializerMethodField()
 
     class Meta:
         from parties.models import PartnerApplication
@@ -1119,6 +1132,7 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
             "candidate_notes",
             "has_contract_pdf",
             "contract_file_kind",
+            "documents",
             "candidate_returned_at",
             "has_signed_scan",
             "signed_scan_at",
@@ -1140,6 +1154,31 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
 
     def get_has_signed_scan(self, obj) -> bool:
         return bool(getattr(obj, "signed_scan", None))
+
+    @extend_schema_field(PartnerPackageDocumentSerializer(many=True))
+    def get_documents(self, obj) -> list:
+        """Пакет базовых документов (ОСН-1): виден после отправки, как и сам договор; прежняя заявка — пустой список."""
+        import os
+
+        from parties.models import PartnerApplicationStatus
+
+        if obj.from_archive or obj.status not in (
+            PartnerApplicationStatus.CONTRACT_SENT,
+            PartnerApplicationStatus.CANDIDATE_AGREED,
+            PartnerApplicationStatus.APPROVED,
+        ):
+            return []  # из архива: в Кабинет ничего не уходило
+        return [
+            {
+                "id": row.id,
+                "base_role": row.base_role,
+                "title": row.title,
+                "number": row.number,
+                "file_kind": "docx" if os.path.splitext(row.file.name)[1].lower() == ".docx" else "pdf",
+                "remark": row.candidate_remark,
+            }
+            for row in obj.package_documents.all()
+        ]
 
     def get_contract_file_kind(self, obj) -> str | None:
         """`pdf` или `docx` — по чему кандидат читает договор (расширение файла)."""

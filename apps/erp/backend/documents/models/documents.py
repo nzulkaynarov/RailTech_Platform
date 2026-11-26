@@ -37,6 +37,14 @@ class CounterpartyKind(models.TextChoices):
     PARTNER = "partner", _("Партнёр")
 
 
+class BaseRole(models.TextChoices):
+    """ОСН-1: роль базового документа компании. Три фиксированных кода; текст документа — всегда шаблон, не код."""
+
+    PARTNERSHIP = "partnership", _("Договор о партнёрстве")
+    NDA = "nda", _("Соглашение о неразглашении")
+    OFFER = "offer", _("Оферта")
+
+
 class ContractSubject(models.TextChoices):
     SUPPLY = "supply", _("Поставка")
     SERVICES = "services", _("Услуги")
@@ -121,6 +129,15 @@ class DocumentTemplate(models.Model):
     subject = models.CharField(
         max_length=16, choices=ContractSubject.choices, blank=True, default="", verbose_name=_("Предмет")
     )
+    # ОСН-1: базовый документ компании (договор о партнёрстве, NDA, оферта); пусто — обычный шаблон.
+    base_role = models.CharField(
+        max_length=16,
+        choices=BaseRole.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Базовый документ"),
+        help_text=_("Одна утверждённая действующая редакция на роль в компании; новая редакция — исключение."),
+    )
     # ДС-1: срок договора по шаблону; пусто — правило компании (`CompanySettings.contract_*`).
     term_rule = models.CharField(
         max_length=16,
@@ -179,6 +196,14 @@ class DocumentTemplate(models.Model):
         indexes = [
             models.Index(fields=["company", "is_active"], name="doctpl_company_active_idx"),
             models.Index(fields=["is_sample"], name="doctpl_sample_idx"),
+        ]
+        constraints = [
+            # ОСН-1: одна утверждённая действующая редакция базового документа на роль и компанию
+            models.UniqueConstraint(
+                fields=["company", "base_role"],
+                condition=models.Q(approval_status="approved", is_active=True) & ~models.Q(base_role=""),
+                name="doctpl_one_active_base_role",
+            ),
         ]
 
     def __str__(self):

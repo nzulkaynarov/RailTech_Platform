@@ -319,6 +319,12 @@ def partner_application_scan_path(instance, filename):
     return f"partner_applications/{instance.pk or 'new'}/scans/{name}"
 
 
+def partner_package_document_path(instance, filename):
+    """partner_applications/{application_id}/package/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"partner_applications/{instance.application_id}/package/{name}"
+
+
 def company_document_path(instance, filename):
     """companies/{company_id}/documents/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)
