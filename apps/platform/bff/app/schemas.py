@@ -149,7 +149,7 @@ def initials_of(name: str, email: str) -> str:
 
 
 def build_me(data: SessionData) -> Me:
-    """`Me` по снимку профиля: модули, разделы и поля — по объединению всего, что делегировано сотруднику."""
+    """`Me` по снимку профиля: модули, разделы и поля — по объединению делегированного."""
     shown = View.of(data.roles)
     return Me(
         id=str(data.user_id),
