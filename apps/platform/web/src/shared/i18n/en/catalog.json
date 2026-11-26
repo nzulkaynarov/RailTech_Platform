@@ -1249,7 +1249,7 @@
       "deviationHint": "Optional. A deviation goes to the Legal zone holder and becomes part of the contract once approved.",
       "needsApproval": "To be decided by: {{who}}. You can send it after approval.",
       "readyToSend": "No approval needed: approved template without deviations.",
-      "package": "Document package",
+      "package": "Package",
       "packageHint": "The company’s base documents: the same terms for everyone, the candidate accepts the edition.",
       "packageItem": "{{name}} · ed. {{edition}}",
       "packageMissing": "No approved template: {{role}}.",

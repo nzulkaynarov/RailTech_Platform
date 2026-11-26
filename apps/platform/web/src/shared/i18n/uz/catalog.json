@@ -1249,7 +1249,7 @@
         "en": "English",
         "uz": "Özbekça"
       },
-      "package": "Hujjatlar paketi",
+      "package": "Paket",
       "packageHint": "Kompaniyaning asosiy hujjatlari: şartlar hamma uçun bir xil, nomzod tahrirni qabul qiladi.",
       "packageItem": "{{name}} · {{edition}}-tahrir",
       "packageMissing": "Tasdiqlangan şablon yöq: {{role}}.",
