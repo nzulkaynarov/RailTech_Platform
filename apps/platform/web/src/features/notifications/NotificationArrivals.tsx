@@ -14,6 +14,8 @@ import { useNotifications, useReadNotifications } from "./useNotifications";
 export const MAX_TOASTS = 3;
 /** Информационное закрывается само через столько секунд; «требует действия» — только по закрытию. */
 export const INFO_SECONDS = 8;
+/** «Требует действия» держится долго, но не вечно: окно в углу закрывает кнопки бокового окна (e2e CI), и забытое не копится. */
+export const ACTION_SECONDS = 45;
 const MORE_KEY = "notify-more";
 
 const at = (item: Notification) => Date.parse(item.created_at);
@@ -111,7 +113,7 @@ export function NotificationArrivals({
       notify.push({
         key: MORE_KEY,
         title: t("notifications.toast.more", { count: rest }),
-        duration: all.some((n) => n.needs_action === true) ? 0 : INFO_SECONDS,
+        duration: all.some((n) => n.needs_action === true) ? ACTION_SECONDS : INFO_SECONDS,
         action: { label: t("notifications.toast.moreAction"), onClick: onOpenCenter },
       });
     }
@@ -122,7 +124,7 @@ export function NotificationArrivals({
         key: item.id,
         title: item.title,
         text: item.subtitle,
-        duration: item.needs_action === true ? 0 : INFO_SECONDS,
+        duration: item.needs_action === true ? ACTION_SECONDS : INFO_SECONDS,
         action: item.object
           ? {
               label: t("notifications.toast.open"),
