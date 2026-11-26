@@ -782,16 +782,20 @@ function FromArchiveModal({
   const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
   const needsChoice = Boolean(item.company_match_pending);
   const today = new Date().toISOString().slice(0, 10);
-  const dateOk = signedOn !== "" && signedOn <= today;
+  const dateOk =
+    signedOn !== "" && signedOn <= today && Object.values(roleDates).every((own) => own <= today);
 
   const record = useRecordPartnerPackageFromArchive({ mutation: { onSuccess: onDone } });
+
+  const { company_id: chosenCompany, ...decision } = companyDecision(item, companyChoice);
 
   const send = () => {
     const data: PartnerFromArchiveUpload = {
       signed_on: signedOn,
       ...(number.trim() ? { contract_number: number.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
-      ...companyDecision(item, companyChoice),
+      ...decision,
+      ...(chosenCompany ? { company_id: Number(chosenCompany) } : {}),
     };
     for (const role of roles) {
       const own = roleDates[role.base_role];
@@ -844,6 +848,7 @@ function FromArchiveModal({
               <DateField
                 id={dateId}
                 value={roleDates[role.base_role] ?? ""}
+                max={today}
                 onChange={(value) => {
                   setRoleDates((prev) => ({ ...prev, [role.base_role]: value }));
                 }}

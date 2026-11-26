@@ -243,6 +243,30 @@ class TestFromArchive:
         assert app.from_archive and app.signed_scan and app.signed_note.startswith("Оригиналы")
         assert PartnerApplicationDocument.objects.filter(application=app, from_archive=True).count() == 2
 
+    def test_a_refused_approval_changes_nothing(self, world, supply):
+        """Одобрение отказало (приостановленный партнёр): пакет, номер, дата и скан остаются как были — ничего не записано."""
+        from parties.models import Company, CompanyRelationship, RelationshipRole, RelationshipStatus
+
+        both(world)
+        app = prepared(supply)
+        company = Company.objects.create(name="Партнёр", inn="7744444444", is_active=True)
+        CompanyRelationship.objects.create(
+            company=company, role=RelationshipRole.PARTNER, status=RelationshipStatus.SUSPENDED, modules=[]
+        )
+        app.company = company
+        app.save()
+        app.refresh_from_db()
+        was = (app.contract_number, app.contract_date, app.status)
+        package_before = sorted(app.package_documents.values_list("pk", "number", "from_archive"))
+
+        response = self._record(supply, app, scan_partnership=upload("p.pdf"))
+
+        assert response.status_code == 400 and response.json()["detail"] == "PARTNER_SUSPENDED"
+        app.refresh_from_db()
+        assert (app.contract_number, app.contract_date, app.status) == was
+        assert not app.signed_scan and not app.from_archive
+        assert sorted(app.package_documents.values_list("pk", "number", "from_archive")) == package_before
+
     def test_incomplete_data_is_fine_and_a_future_date_is_not(self, world, supply):
         both(world)
         app = make_app()
@@ -295,6 +319,7 @@ class TestFromArchive:
         assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={nda.pk}").content == PDF
         none = app.package_documents.get(base_role="partnership")
         assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={none.pk}").status_code == 404
+
 
 def test_preparing_again_keeps_the_candidates_reply_per_document(world, supply):
     """Кандидат вернул NDA своим файлом и замечанием; повторная подготовка пересобирает пакет,

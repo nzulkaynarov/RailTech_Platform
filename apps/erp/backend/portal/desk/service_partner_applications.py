@@ -697,14 +697,14 @@ def record_from_archive(pk: int, data: dict, files: dict, user) -> dict:
         app.save()
         _store_archive_package(app, data, files, number, signed_on)
         app.save()
-    approve_data = {
-        "contract_number": number,
-        "contract_date": signed_on,
-        "signed_note": (data.get("note") or "").strip()[:1000],
-        "company_id": data.get("company_id"),
-        "create_new_company": bool(data.get("create_new_company")),
-    }
-    return approve_application(pk, approve_data, user, archive=True, signed_on=signed_on)
+        approve_data = {
+            "contract_number": number,
+            "contract_date": signed_on,
+            "signed_note": (data.get("note") or "").strip()[:1000],
+            "company_id": data.get("company_id"),
+            "create_new_company": bool(data.get("create_new_company")),
+        }
+        return approve_application(pk, approve_data, user, archive=True, signed_on=signed_on)
 
 
 def _close_candidate_access(app: PartnerApplication) -> None:
