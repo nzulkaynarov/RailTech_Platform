@@ -25,6 +25,7 @@ export function ViewerToolbar({
   onDownload,
   onFull,
   onClose,
+  showDownload = true,
 }: {
   api: ViewerApi;
   mode: "panel" | "full";
@@ -32,6 +33,7 @@ export function ViewerToolbar({
   onDownload: () => void;
   onFull?: () => void;
   onClose?: () => void;
+  showDownload?: boolean;
 }) {
   const { t } = useTranslation("ui");
   const ready = api.status === "ready";
@@ -150,14 +152,16 @@ export function ViewerToolbar({
         </div>
       ) : null}
       <div className="pf-dv-actions">
-        <Button
-          size={mode === "full" ? "middle" : "small"}
-          type={mode === "full" ? "primary" : "default"}
-          icon={<DownloadIcon />}
-          onClick={onDownload}
-        >
-          {t("documentViewer.download")}
-        </Button>
+        {showDownload ? (
+          <Button
+            size={mode === "full" ? "middle" : "small"}
+            type={mode === "full" ? "primary" : "default"}
+            icon={<DownloadIcon />}
+            onClick={onDownload}
+          >
+            {t("documentViewer.download")}
+          </Button>
+        ) : null}
         {mode === "panel" && onFull ? (
           <Button size="small" icon={<ExpandIcon />} onClick={onFull} data-testid="dv-full">
             {t("documentViewer.full")}

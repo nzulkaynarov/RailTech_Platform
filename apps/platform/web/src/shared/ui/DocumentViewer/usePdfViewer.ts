@@ -98,17 +98,35 @@ export function usePdfViewer(
     bus.current = eventBus;
     fitRef.current = true;
 
+    // Переход на страницу из адреса: после раскладки прокрутка может сбросить её на первую — пока страница не
+    // подтверждена, смена страницы в адрес не пишется, а переход повторяется на каждой отрисовке (не дольше 2 с).
+    let restoring = 0;
+    const restoreUntil = () => Date.now() + 2000;
+    let deadline = 0;
     eventBus.on("pagesinit", () => {
       if (cancelled) return;
       fitWidth(pdfViewer);
       const target = Math.min(Math.max(1, initialPage), pdfViewer.pagesCount);
-      if (target > 1) pdfViewer.currentPageNumber = target;
+      if (target > 1) {
+        restoring = target;
+        deadline = restoreUntil();
+        pdfViewer.currentPageNumber = target;
+      }
       setPages(pdfViewer.pagesCount);
       setPage(pdfViewer.currentPageNumber);
       setStatus("ready");
     });
+    eventBus.on("pagerendered", () => {
+      if (restoring === 0) return;
+      if (pdfViewer.currentPageNumber === restoring || Date.now() > deadline) {
+        restoring = 0;
+      } else {
+        pdfViewer.currentPageNumber = restoring;
+      }
+    });
     eventBus.on("pagechanging", (event: { pageNumber: number }) => {
       setPage(event.pageNumber);
+      if (restoring !== 0 && event.pageNumber !== restoring) return;
       onPageRef.current?.(event.pageNumber);
     });
     eventBus.on("scalechanging", (event: { scale: number }) => {
