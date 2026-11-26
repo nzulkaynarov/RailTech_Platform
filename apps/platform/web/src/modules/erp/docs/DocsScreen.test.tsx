@@ -12,9 +12,21 @@ import { setViewportWidth } from "../../../test/viewport";
 
 // jsdom не рисует canvas: настоящий просмотр PDF проверяет e2e на сборке; здесь — что ему отдали байты PDF.
 vi.mock("./PdfViewer", () => ({
-  default: ({ data, name }: { data: ArrayBuffer; name: string }) => (
+  default: ({
+    data,
+    name,
+    onDownload,
+  }: {
+    data: ArrayBuffer;
+    name: string;
+    onDownload?: () => void;
+  }) => (
     <div data-testid="pdf-stub">
       {name}: {new TextDecoder().decode(data.slice(0, 8))}
+      {/* «Скачать» — на панели просмотра, он вызывает скачивание с именем файла от сервера */}
+      <button type="button" onClick={onDownload}>
+        Скачать
+      </button>
     </div>
   ),
 }));

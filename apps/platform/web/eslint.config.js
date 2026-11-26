@@ -21,6 +21,10 @@ const QUERY_KEY_METHODS = [
   "ensureQueryData",
   "query",
 ].join("|");
+// Один просмотр документа (ПРОСМ-1): pdf.js импортируется только внутри `shared/ui/DocumentViewer`.
+const PDFJS_MESSAGE =
+  "pdf.js — только внутри shared/ui/DocumentViewer; в экранах — DocumentViewer / PdfViewer.";
+const PDFJS_PATTERN = { group: ["pdfjs-dist", "pdfjs-dist/*"], message: PDFJS_MESSAGE };
 const LITERAL_KEY_MESSAGE = "Ключ кэша — сгенерированный orval (get…QueryKey), не массив-литерал.";
 
 const QUERY_KEY_RULES = [
@@ -147,6 +151,7 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
+          patterns: [PDFJS_PATTERN],
           paths: [
             {
               name: "@ant-design/icons",
@@ -169,6 +174,7 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
+          patterns: [PDFJS_PATTERN],
           paths: [
             {
               name: "@ant-design/icons",
@@ -204,6 +210,27 @@ export default tseslint.config(
   {
     files: ["src/shared/ui/lucide.tsx"],
     rules: { "no-restricted-imports": "off" },
+  },
+  {
+    // сам просмотр документа — единственное место, где можно импортировать pdf.js (значки — по-прежнему из lucide.tsx)
+    files: ["src/shared/ui/DocumentViewer/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@ant-design/icons",
+              message: "Значки — из shared/ui/lucide (стандарт интерфейса §5).",
+            },
+            {
+              name: "lucide-react",
+              message: "Значки — из shared/ui/lucide: там заданы размер 16 и линия 1,75.",
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     files: ["**/*.js"],

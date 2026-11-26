@@ -83,11 +83,30 @@
     "tooLarge": "File “{{name}}” is larger than {{max}} — choose a smaller one",
     "wrongType": "File “{{name}}” is not allowed: use {{accept}}"
   },
-  "pdfViewer": {
-    "region": "Pages of the file “{{name}}”",
-    "page": "“{{name}}”, page {{page}} of {{total}}",
-    "error": "Could not open the file for preview. Download it.",
-    "truncated": "Showing {{shown}} pages of {{total}}. The rest is in the downloaded file."
+  "documentViewer": {
+    "toolbar": "Viewer tools",
+    "scaleMode": "Zoom",
+    "fit": "Fit width",
+    "actual": "100 %",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "page": "Page",
+    "pageOf": "of {{total}}",
+    "search": "Search in text",
+    "searchPlaceholder": "Find in document",
+    "matches": "{{current}} of {{total}}",
+    "noMatches": "Not found",
+    "prevMatch": "Previous match",
+    "nextMatch": "Next match",
+    "download": "Download",
+    "full": "Full screen",
+    "collapse": "Collapse",
+    "thumbs": "Pages",
+    "thumbPage": "Page {{page}}",
+    "pageLabel": "\"{{name}}\", page {{page}} of {{total}}",
+    "pagesCount": "PDF · {{count}} pages",
+    "region": "Pages of file \"{{name}}\"",
+    "error": "Could not open the file for viewing. Download it instead."
   },
   "bodyEditor": {
     "addRow": "+ row",
