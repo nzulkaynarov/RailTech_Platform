@@ -142,9 +142,9 @@ describe("Типы входящих писем: тег, фильтр, основ
     await heading("Запрос КП на стрелочные переводы");
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
     fireEvent.click(await screen.findByTitle("Счёт партнёра"));
-    fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Передать на оплату" }));
     expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
-    const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
+    const [, confirm] = screen.getAllByRole("button", { name: "Передать на оплату" });
     fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
     expect(await screen.findByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
     cleanup();
@@ -177,15 +177,15 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(await screen.findByText(/сменил тип — Рассылка/)).toBeVisible();
   });
 
-  it("счёт партнёра: «Передать бухгалтеру» — письмо уходит выбранному сотруднику, из «Новых» пропадает", async () => {
+  it("счёт партнёра: «Передать на оплату» — письмо уходит выбранному сотруднику, из «Новых» пропадает", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/18");
     await heading("Запрос КП на стрелочные переводы");
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
     fireEvent.click(await screen.findByTitle("Счёт партнёра"));
-    fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Передать на оплату" }));
     expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
-    const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
+    const [, confirm] = screen.getAllByRole("button", { name: "Передать на оплату" });
     fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
     expect(await screen.findByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
     const list = await listOf("Письма, ждущие разбора");

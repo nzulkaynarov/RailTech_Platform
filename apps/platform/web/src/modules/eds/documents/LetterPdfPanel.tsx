@@ -146,7 +146,7 @@ export function LetterPdfPanel({
           showIcon
           role="alert"
           message={
-            pdf.error ? t("preview.failed", { error: pdf.error }) : t("preview.failedNoReason")
+            pdf.error ? t("preview.failed", { reason: pdf.error }) : t("preview.failedNoReason")
           }
         />
       );

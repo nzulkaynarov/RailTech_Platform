@@ -29,7 +29,6 @@ import { TabsBar } from "../../../shared/ui/TabsBar";
 import { DocumentSheet } from "./DocumentSheet";
 import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
-import { StatusTag } from "../../../shared/ui/StatusTag";
 
 import "./documents.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
@@ -241,8 +240,8 @@ function RowStatus({ row }: { row: EdsDocumentRow }) {
         kind={row.kind}
         status={row.status}
         awaitingSignature={row.awaiting_signature}
+        undelivered={row.undelivered}
       />
-      {row.undelivered ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
       {row.awaiting_signature && row.signer ? (
         <div className="pf-hint">{t("list.onSigningAt", { name: row.signer.full_name })}</div>
       ) : null}

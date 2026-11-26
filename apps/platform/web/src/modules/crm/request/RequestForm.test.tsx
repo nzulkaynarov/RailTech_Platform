@@ -577,7 +577,7 @@ describe("письмо директору: из переписки и при с�
     const { router } = renderAt("/crm/messages?lead=L-2041");
     const button = await screen.findByRole(
       "link",
-      { name: "В заявку: Заявка-демо.pdf — письмом директору" },
+      { name: "В заявку: Заявка-демо.pdf — письмом на согласование" },
       { timeout: 10_000 },
     );
     fireEvent.click(button);
@@ -629,7 +629,9 @@ describe("письмо директору: из переписки и при с�
       target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
     });
     expect(
-      await within(panel).findByText("Подходит PDF, изображение или документ Office"),
+      await within(panel).findByText(
+        "Подходит PDF, изображение или файл Word, Excel или PowerPoint",
+      ),
     ).toBeVisible();
     expect(submitButton(panel)).toBeDisabled();
     expect(within(remainingList(panel)).getByText(/Файл не загрузился — выберите/)).toBeVisible();

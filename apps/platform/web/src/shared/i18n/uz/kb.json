@@ -90,7 +90,7 @@
   "panel": {
     "actions": "Amallar",
     "active": "Bot qidiruvida iştirok etadi",
-    "ingestError": "Indekslaş bajarilmadi: {{error}}",
+    "ingestError": "Indekslaş bajarilmadi: {{reason}}",
     "fields": {
       "language": "Til",
       "product": "Mahsulot",
@@ -126,7 +126,7 @@
       "hint": "Bot qidiruvi hujjatni şunday köradi: bot şu matn bölaklari böyiça javob beradi.",
       "empty": "Parçalar hali yöq: hujjat hali indekslanmagan.",
       "number": "{{number}}-parça",
-      "tokens": "{{count}} token"
+      "tokens": "hajmi: {{count}}"
     }
   },
   "create": {

@@ -156,7 +156,7 @@
       "site": "Website form",
       "site-customer": "Website · customer",
       "site-partner": "Website · manufacturer or partner",
-      "cabinet_request": "Cabinet request",
+      "cabinet_request": "Account request",
       "request": "Request form"
     },
     "campaign": "campaign {{name}}"

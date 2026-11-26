@@ -70,7 +70,7 @@ async def _scan_body(request: Request) -> tuple[bytes, str]:
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Скан нужно передать формой multipart.",
+            "Приложите скан к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )

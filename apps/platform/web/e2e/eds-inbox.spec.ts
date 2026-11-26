@@ -65,7 +65,7 @@ test.describe("Входящие письма: директор", () => {
     await first.getByText("ООО «Демо-Рейл»").click();
     const panel = page.locator(PANEL);
     await expect(panel.getByRole("heading", { level: 3, name: "ВХ-104/26" })).toBeVisible();
-    await expect(panel.getByRole("form", { name: "Резолюция директора" })).toBeVisible();
+    await expect(panel.getByRole("form", { name: "Резолюция" })).toBeVisible();
     await expect(page).toHaveURL(/\/eds\/inbox\?/);
     await settledScreenshot(page, "list-panel");
 
@@ -83,7 +83,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByRole("link", { name: "Скачать файл запрос-на-кп.pdf" })).toBeVisible();
     await expect(page.getByRole("link", { name: "ЗВ-2026-104" })).toBeVisible();
 
-    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция" });
     await expect(form.getByRole("checkbox", { name: /Условия оплаты/ })).not.toBeChecked();
     await expect(form.getByRole("button", { name: "Вернуть менеджеру" })).toBeDisabled();
     await expect(form.getByText(/Кнопки неактивны, пока нет комментария/)).toBeVisible();
@@ -110,7 +110,7 @@ test.describe("Входящие письма: директор", () => {
     await confirmDialog(page);
 
     await expect(page.getByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Решение директора" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Решение по письму" })).toBeVisible();
     await expect(page.getByText("15 %")).toBeVisible();
     await expect(form).toHaveCount(0);
     await expect(steps.locator('[aria-current="step"]')).toContainText("Расчёт");
@@ -126,7 +126,7 @@ test.describe("Входящие письма: директор", () => {
   test("ошибка резолюции словами; введённое в форме не теряется", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-105%2F26");
-    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция" });
 
     await form.getByLabel("Текст резолюции").fill("Расчёт нужен срочно.");
     await chooseOption(form.getByLabel("Сотрудник: Снабжение"), "Демо Снабженцев");
@@ -150,7 +150,7 @@ test.describe("Входящие письма: директор", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-106%2F26");
-    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция" });
     const back = form.getByRole("button", { name: "Вернуть менеджеру" });
 
     await expect(back).toBeDisabled();
@@ -166,7 +166,7 @@ test.describe("Входящие письма: директор", () => {
   test("«Отклонить»: причина обязательна, на шкале — «Отказ»", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-105%2F26");
-    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    const form = page.locator(CENTER).getByRole("form", { name: "Резолюция" });
     const reject = form.getByRole("button", { name: "Отклонить" });
 
     await expect(reject).toBeDisabled();
@@ -220,12 +220,12 @@ test.describe("Входящие письма: роли только для чт�
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
       await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
       await expect(
-        page.locator(CENTER).getByRole("heading", { name: "Письмо ждёт резолюции директора" }),
+        page.locator(CENTER).getByRole("heading", { name: "Письмо ждёт резолюции" }),
       ).toBeVisible();
       await expect(page.getByRole("button", { name: SUBMIT })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Отклонить" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Вернуть менеджеру" })).toHaveCount(0);
-      await expect(page.getByRole("form", { name: "Резолюция директора" })).toHaveCount(0);
+      await expect(page.getByRole("form", { name: "Резолюция" })).toHaveCount(0);
       await expectNoViolations(page, `${email}: карточка`);
     });
   }
@@ -263,7 +263,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
 
     await page.getByRole("link", { name: "Показать письмо ВХ-104/26 в боковом окне" }).click();
     const sheet = page.getByRole("dialog", { name: /^Резолюция/ });
-    await expect(sheet.getByRole("form", { name: "Резолюция директора" })).toBeVisible();
+    await expect(sheet.getByRole("form", { name: "Резолюция" })).toBeVisible();
 
     const viewport = page.viewportSize();
     const box = await sheet.boundingBox();
@@ -298,7 +298,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await settledScreenshot(page, "mobile-card");
     await expectNoViolations(page, "телефон: карточка");
 
-    const sheet = page.locator(CENTER).getByRole("form", { name: "Резолюция директора" });
+    const sheet = page.locator(CENTER).getByRole("form", { name: "Резолюция" });
     await sheet.scrollIntoViewIfNeeded();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await sheet.getByLabel("Текст резолюции").fill("Нужен расчёт.");

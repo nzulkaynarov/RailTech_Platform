@@ -172,7 +172,7 @@ function HsView() {
           <Button
             type="link"
             className="pf-cat-linkbtn"
-            aria-label={t("refs.hs.editNamed", { code: row.code })}
+            aria-label={t("refs.hs.editNamed", { hs: row.code })}
             onClick={() => {
               setEditing(row);
             }}
@@ -317,7 +317,7 @@ function HsForm({ code, onClose }: { code?: HsCode | undefined; onClose: () => v
   const fields = errorFields(mutation.error);
   return (
     <FormPanel
-      title={code ? t("refs.hs.form.editTitle", { code: code.code }) : t("refs.hs.form.addTitle")}
+      title={code ? t("refs.hs.form.editTitle", { hs: code.code }) : t("refs.hs.form.addTitle")}
       okLabel={code ? t("save") : t("refs.hs.form.add")}
       loading={mutation.isPending}
       error={mutation.error}

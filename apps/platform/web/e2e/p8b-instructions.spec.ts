@@ -168,19 +168,15 @@ test.describe("P8b: поручения по входящим", () => {
     await both(page, "executor-task");
     // письмо срочное: запросить перенос можно, директор может только отклонить (Росархив 5.14)
     await expect(
-      page.getByText(
-        "Письмо срочное: срок не продлевается, директор может только отклонить запрос.",
-      ),
+      page.getByText("Письмо срочное: срок не продлевается, запрос можно только отклонить."),
     ).toBeVisible();
     await expect(page).toHaveURL(/\/eds\/tasks\/[0-9a-f-]{36}$/);
     const ext = page.getByRole("form", { name: "Не успеваете? Запросите перенос" });
     await fillDate(ext.getByLabel("Новый срок"), later);
     await (await reveal(ext.getByLabel("Причина"))).fill("Ждём выписку банка по контрагенту");
     await ext.getByRole("button", { name: "Запросить перенос" }).click();
-    await expect(page.getByText("Запрос переноса отправлен директору")).toBeVisible();
-    await expect(
-      page.getByText(`Запрос переноса на ${ru(later)} ждёт решения директора.`),
-    ).toBeVisible();
+    await expect(page.getByText("Запрос переноса отправлен на решение")).toBeVisible();
+    await expect(page.getByText(`Запрос переноса на ${ru(later)} ждёт решения.`)).toBeVisible();
 
     // 4. Директор: строка «Перенос срока» → «Отклонить перенос».
     await switchTo(page, "director@demo.example");
@@ -237,7 +233,7 @@ test.describe("P8b: поручения по входящим", () => {
     await fillDate(ext.getByLabel("Новый срок"), companyDay(30));
     await (await reveal(ext.getByLabel("Причина"))).fill("Нужна сверка с банком");
     await ext.getByRole("button", { name: "Запросить перенос" }).click();
-    await expect(page.getByText("Запрос переноса отправлен директору")).toBeVisible();
+    await expect(page.getByText("Запрос переноса отправлен на решение")).toBeVisible();
 
     await switchTo(page, "director@demo.example");
     await queueRow(page, "Решить перенос срока по письму ВХ-108/26")
@@ -256,7 +252,7 @@ test.describe("P8b: поручения по входящим", () => {
     await at(page, WIDE);
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
-    const form = page.getByRole("form", { name: "Резолюция директора" });
+    const form = page.getByRole("form", { name: "Резолюция" });
     await form.getByRole("radio", { name: /Для сведения/ }).check();
     await expect(form.getByLabel("Ответственный")).toHaveCount(0);
     await chooseOption(await reveal(form.getByLabel("Ознакомить")), "Демо Бухгалтеров");

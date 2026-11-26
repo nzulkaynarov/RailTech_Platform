@@ -254,7 +254,7 @@
       "group": "Amallar",
       "tag": "Amal",
       "inviteEmployee": "Xodimni taklif qiliş",
-      "create": "Yaratiş · {{kind}}"
+      "create": "Yaratiş · {{label}}"
     },
     "navGroup": "Bölimlar",
     "sectionTag": "Bölim",

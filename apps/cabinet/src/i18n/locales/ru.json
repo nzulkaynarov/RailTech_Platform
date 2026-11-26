@@ -152,7 +152,7 @@
     },
     "delivery": {
       "assembling": "Комплектуется",
-      "in_transit": "Едет на наш склад",
+      "in_transit": "В пути к вам",
       "ready_to_ship": "Готово к отгрузке",
       "shipped": "Отгружено",
       "delivered": "Доставлено",

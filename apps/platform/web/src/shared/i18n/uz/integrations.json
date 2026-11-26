@@ -328,7 +328,7 @@
       "other": "Xat yetkazilmadi"
     },
     "purpose": {
-      "quote_sent": "Mijozga TK",
+      "quote_sent": "Mijozga TT",
       "generated_document": "Mijozga hujjat",
       "portal_magic_link": "Kabinetga kiriş havolasi",
       "portal_invitation": "Kabinetga taklif",
@@ -339,8 +339,8 @@
       "payment_received": "Tölov qabul qilindi",
       "payment_reminder": "Tölov eslatmasi",
       "act_awaiting_acceptance": "Imzolaş uçun dalolatnoma",
-      "quote_acceptance_code": "TK tasdiqlaş kodi",
-      "quote_accepted_contact": "TK qabul qilindi",
+      "quote_acceptance_code": "TT tasdiqlaş kodi",
+      "quote_accepted_contact": "TT qabul qilindi",
       "account_created_by_operator": "Hisob yaratildi",
       "invite": "Xodimga taklif",
       "password_reset": "Vaqtinçalik parol",
@@ -418,7 +418,7 @@
       "personalOn": "Darhol xodimga — «{{label}}» belgisi",
       "personalOff": "Öçirilgan — hammasi «Yangi»ga",
       "trusted": "Işonçli poçta serverlari",
-      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Böş — IMAP manzili böyiça poçta provayderi serverlariga işonamiz (Yandex, Google, Microsoft 365, Mail.ru, Zoho). Kiritilgan röyxat buni almaştiradi. Jönatuvçini tasdiqlangan deb faqat şunday server belgilaydi: xatdagi soxta sarlavha hisobga olinmaydi.",
+      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Böş — qutingiz serveriga işonamiz; kiritilgan röyxat buni almaştiradi, «jönatuvçi tasdiqlangan» belgisini faqat şunday server qöyadi.",
       "trustedNone": "Yöq — IMAP manzili maʼlum provayderniki emas, jönatuvçi qoidalari qöllanmaydi",
       "trustedDerived": "IMAP manzili böyiça: {{list}}",
       "trustedExplicit": "Qölda kiritilgan: {{list}}"
@@ -754,7 +754,7 @@
     "CONFLICT": "Holat özgargan. Sahifani yangilab, qayta urinib köring.",
     "SESSION_EXPIRED": "Seans tugadi. Qaytadan kiring.",
     "fields": {
-      "model": "Model nomi qabul qilinmadi. Provayderdagi model nomini probelsiz kiriting, masalan claude-haiku-5-5. «provayder/» old qöşimçasini qoldiriş mumkin, lekin faqat tanlangan provayderniki.",
+      "model": "Model nomi qabul qilinmadi: uni probelsiz, provayderdagidek kiriting, masalan claude-haiku-5-5. «provayder/» old qöşimçasi faqat tanlangan provayderniki bölişi mumkin.",
       "api_key": "Kalit qabul qilinmadi: uning uzunligi 8 dan 512 gaça belgi bölişi kerak.",
       "api_base": "API manzili notöğri: u http:// yoki https:// bilan boşlanib, probelsiz bölişi kerak."
     },
@@ -846,7 +846,7 @@
     "actionAria": "{{action}}: {{subject}}",
     "recheck": {
       "fixed": "Tiklandi: {{subject}}",
-      "still": "Hali işlamayapti. Tekşiruv özi takrorlanadi: bir daqiqadan keyin, söng siyrakroq.",
+      "still": "Işlamayapti. Tekşiruv takrorlanadi: bir daqiqadan keyin, söng siyrakroq.",
       "error": "Tekşirib bölmadi: {{subject}}"
     },
     "write": {

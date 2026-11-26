@@ -362,7 +362,7 @@ export function RegisterLetterPage() {
     },
     {
       label: t("letters:register.addressee.label"),
-      value: addresseeName ?? t("letters:register.addressee.default"),
+      value: addresseeName ?? t("letters:register.addressee.unset"),
     },
     ...(values.urgent
       ? [{ label: t("letters:register.urgent"), value: t("letters:register.review.yes") }]

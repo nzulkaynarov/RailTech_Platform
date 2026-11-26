@@ -144,9 +144,9 @@
     },
     "status": {
       "draft": "Qoralama",
-      "sent": "Yuborilgan",
+      "sent": "Yetkazib beruvçiga yuborilgan",
       "confirmed": "Tasdiqlangan",
-      "received": "Olingan",
+      "received": "Omborga qabul qilingan",
       "cancelled": "Bekor qilingan"
     },
     "receipt": {
@@ -310,7 +310,7 @@
     },
     "offer": {
       "label": "Hamkor narxi: {{text}}",
-      "incoterms": "bazis {{code}}",
+      "incoterms": "bazis {{terms}}",
       "validUntil": "{{date}} gaça amal qiladi",
       "expired": "{{date}} da tugagan"
     },

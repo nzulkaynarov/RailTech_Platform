@@ -107,7 +107,7 @@ describe("Расчёт · «Запросить цену у партнёра»", 
 
     const log = await screen.findByRole("list", { name: "Запросы цены у партнёров" });
     expect(within(log).getByText("ООО «Вымышленная Сталь»")).toBeVisible();
-    expect(within(log).getByText("Ждём ответ")).toBeVisible();
+    expect(within(log).getByText("Ждёт ответа")).toBeVisible();
     expect(within(log).getByText(/Демо Снабженцев → sales@steel\.example/)).toBeVisible();
     expect(within(log).getByText(new RegExp(RAIL))).toBeVisible();
 
