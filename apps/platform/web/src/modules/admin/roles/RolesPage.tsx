@@ -29,6 +29,7 @@ import { NEW_ROLE, type RoleDraft, changesOf, draftOf, newDraft } from "./draft"
 import { LevelMark, type MatrixColumn, RoleMatrix } from "./RoleMatrix";
 import { RoleEditor, SystemRoleCard } from "./RoleEditor";
 import { RoleJournal } from "./RoleJournal";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../../../features/assign-role/assign-role.css";
 import "./roles.css";
@@ -355,7 +356,7 @@ function RolesEditorPage({
   }
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader
         title={title}
         extra={
@@ -406,6 +407,6 @@ function RolesEditorPage({
           <RoleJournal role={selected} />
         </PanelPortal>
       ) : null}
-    </>
+    </PageFrame>
   );
 }

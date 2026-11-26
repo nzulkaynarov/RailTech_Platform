@@ -42,6 +42,7 @@ import { queryLabels } from "../catalog/labels";
 
 import "../catalog/catalog.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PdfViewer = lazy(() => import("./PdfViewer"));
 
@@ -177,114 +178,116 @@ export function DocsScreen() {
     },
   ];
   return (
-    <div className="pf-cat">
-      <PageHeader title={t("modules:erp.sections.docs")} />
-      <FilterBar
-        tools
-        actions={
-          <>
-            {canEdit(me, "erp.stock") ? (
-              <Button
-                type="primary"
-                onClick={() => {
-                  setUploading(true);
-                }}
-              >
-                {t("catalog:docs.upload")}
-              </Button>
-            ) : null}
-          </>
-        }
-      >
-        <FilterField id={searchId} label={t("catalog:docs.search")} grow>
-          <Input
-            id={searchId}
-            type="search"
-            placeholder={t("catalog:docs.search")}
-            allowClear
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              setPage(1);
-            }}
-          />
-        </FilterField>
-        <FilterField id={kindId} label={t("catalog:docs.filterKind")} width={220}>
-          <Select
-            id={kindId}
-            allowClear
-            placeholder={t("catalog:docs.anyKind")}
-            value={kind}
-            onChange={(value: string | undefined) => {
-              setKind(value);
-              setPage(1);
-            }}
-            options={kinds.map((k) => ({ value: k.code, label: k.name }))}
-          />
-        </FilterField>
-        <FilterField id={reviewId} label={t("docs.review.filter")} width={220}>
-          <Select
-            id={reviewId}
-            value={pendingOnly ? "pending" : "all"}
-            onChange={(value: string) => {
-              setPendingOnly(value === "pending");
-              setPage(1);
-            }}
-            options={[
-              { value: "all", label: t("docs.review.all") },
-              { value: "pending", label: t("docs.review.pending") },
-            ]}
-          />
-        </FilterField>
-        {productFilter || dealFilter ? (
-          <Button onClick={clearLinks}>{t("catalog:docs.clearLinks")}</Button>
-        ) : null}
-      </FilterBar>
-      <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
-        {(data) =>
-          data.items.length === 0 ? (
-            <EmptyState
-              title={t("catalog:docs.empty.title")}
-              text={
-                q || kind || productFilter || dealFilter || pendingOnly
-                  ? t("catalog:docs.empty.filtered")
-                  : t("catalog:docs.empty.text")
-              }
-            />
-          ) : (
+    <PageFrame layout="registry">
+      <div className="pf-cat">
+        <PageHeader title={t("modules:erp.sections.docs")} />
+        <FilterBar
+          tools
+          actions={
             <>
-              <DataList
-                tableId="erp.docs"
-                label={t("catalog:docs.table")}
-                rows={data.items}
-                columns={columns}
-                rowKey={(row) => row.id}
-                selectedKey={opened}
-              />
-              <Pager total={data.total} page={page} onChange={setPage} />
+              {canEdit(me, "erp.stock") ? (
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setUploading(true);
+                  }}
+                >
+                  {t("catalog:docs.upload")}
+                </Button>
+              ) : null}
             </>
-          )
-        }
-      </QueryState>
-      {opened ? (
-        <DocDrawer
-          id={opened}
-          docs={query.data?.items ?? []}
-          onClose={() => {
-            setDoc(null);
-          }}
-        />
-      ) : null}
-      {uploading ? (
-        <UploadForm
-          {...(productFilter ? { productId: productFilter } : {})}
-          {...(dealFilter ? { dealId: dealFilter } : {})}
-          onClose={() => {
-            setUploading(false);
-          }}
-        />
-      ) : null}
-    </div>
+          }
+        >
+          <FilterField id={searchId} label={t("catalog:docs.search")} grow>
+            <Input
+              id={searchId}
+              type="search"
+              placeholder={t("catalog:docs.search")}
+              allowClear
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value);
+                setPage(1);
+              }}
+            />
+          </FilterField>
+          <FilterField id={kindId} label={t("catalog:docs.filterKind")} width={220}>
+            <Select
+              id={kindId}
+              allowClear
+              placeholder={t("catalog:docs.anyKind")}
+              value={kind}
+              onChange={(value: string | undefined) => {
+                setKind(value);
+                setPage(1);
+              }}
+              options={kinds.map((k) => ({ value: k.code, label: k.name }))}
+            />
+          </FilterField>
+          <FilterField id={reviewId} label={t("docs.review.filter")} width={220}>
+            <Select
+              id={reviewId}
+              value={pendingOnly ? "pending" : "all"}
+              onChange={(value: string) => {
+                setPendingOnly(value === "pending");
+                setPage(1);
+              }}
+              options={[
+                { value: "all", label: t("docs.review.all") },
+                { value: "pending", label: t("docs.review.pending") },
+              ]}
+            />
+          </FilterField>
+          {productFilter || dealFilter ? (
+            <Button onClick={clearLinks}>{t("catalog:docs.clearLinks")}</Button>
+          ) : null}
+        </FilterBar>
+        <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
+          {(data) =>
+            data.items.length === 0 ? (
+              <EmptyState
+                title={t("catalog:docs.empty.title")}
+                text={
+                  q || kind || productFilter || dealFilter || pendingOnly
+                    ? t("catalog:docs.empty.filtered")
+                    : t("catalog:docs.empty.text")
+                }
+              />
+            ) : (
+              <>
+                <DataList
+                  tableId="erp.docs"
+                  label={t("catalog:docs.table")}
+                  rows={data.items}
+                  columns={columns}
+                  rowKey={(row) => row.id}
+                  selectedKey={opened}
+                />
+                <Pager total={data.total} page={page} onChange={setPage} />
+              </>
+            )
+          }
+        </QueryState>
+        {opened ? (
+          <DocDrawer
+            id={opened}
+            docs={query.data?.items ?? []}
+            onClose={() => {
+              setDoc(null);
+            }}
+          />
+        ) : null}
+        {uploading ? (
+          <UploadForm
+            {...(productFilter ? { productId: productFilter } : {})}
+            {...(dealFilter ? { dealId: dealFilter } : {})}
+            onClose={() => {
+              setUploading(false);
+            }}
+          />
+        ) : null}
+      </div>
+    </PageFrame>
   );
 }
 
