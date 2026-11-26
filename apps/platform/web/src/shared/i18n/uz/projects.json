@@ -279,11 +279,6 @@
       "revise": "Loyihaga qaytariş",
       "mark_signed": "Belgilaş: imzolandi"
     },
-    "note": {
-      "label": "Izoh",
-      "hint": "Ixtiyoriy: jurnalga tuşadi.",
-      "placeholder": ""
-    },
     "reject": {
       "title": "Mijoz şartnomani rad etdi",
       "reason": {

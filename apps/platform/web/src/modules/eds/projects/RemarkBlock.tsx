@@ -102,7 +102,7 @@ export function RemarkBlock({
         <p style={{ margin: 0 }} data-testid="remark-summary">
           {parts.join("; ")}
           {(summary.more ?? 0) > 0
-            ? `; ${t("contract.remark.summary.more", { count: summary.more ?? 0 })}`
+            ? `; ${t("contract.remark.summary.more", { count: summary.more })}`
             : ""}
         </p>
       ) : remark.has_file && !summary.comparable ? (

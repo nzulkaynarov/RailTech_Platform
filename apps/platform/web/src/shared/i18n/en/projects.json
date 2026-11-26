@@ -279,11 +279,6 @@
       "revise": "Return to draft",
       "mark_signed": "Mark as signed"
     },
-    "note": {
-      "label": "Note",
-      "hint": "Optional: goes to the log.",
-      "placeholder": ""
-    },
     "reject": {
       "title": "The client rejected the contract",
       "reason": {
