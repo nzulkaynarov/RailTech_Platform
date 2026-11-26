@@ -44,5 +44,6 @@ class EmployeeDelegationUpdate(BaseModel):
     # Набор по должности, с которого начали: от него берутся ограничения полей (себестоимость и т.
     # п.)
     preset_id: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
-    # Лиды в работе у сотрудника, который теряет работу с лидами: кому передать (как у `PATCH /admin/users/{id}`)
+    # Лиды в работе у сотрудника, теряющего работу с лидами: кому передать
+    # (как у `PATCH /admin/users/{id}`)
     transfer_to_user_id: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")

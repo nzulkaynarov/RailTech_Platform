@@ -14,7 +14,6 @@ import { buildMe, endSession, readSession, startSession } from "../../../mocks/m
 import i18n from "../../../shared/i18n";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
-import { ROLE_ID, ref } from "../../../test/roles";
 
 function renderAt(path: string) {
   const queryClient = createQueryClient({ retry: false, staleTime: 0 });
