@@ -131,6 +131,7 @@ export function PartnerApplicationsPanel() {
     },
     {
       key: "source",
+      priority: 2,
       title: t("partnerApplications.columns.source"),
       render: (row) => <span>{t(`partnerApplications.source.${row.source}`)}</span>,
     },
@@ -162,13 +163,14 @@ export function PartnerApplicationsPanel() {
     },
     {
       key: "created",
+      priority: 1,
       title: t("partnerApplications.columns.created"),
       render: (row) => <span>{date(row.created_at)}</span>,
     },
     {
       key: "actions",
       title: t("partnerApplications.columns.actions"),
-      width: 220,
+      width: 215,
       render: (row) => {
         if (row.status === "approved" || row.status === "rejected") return null;
         const canPrepare =

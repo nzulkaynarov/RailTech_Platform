@@ -19,10 +19,11 @@ for (const width of WIDTHS) {
     await expect(list.getByText("Согласован кандидатом")).toBeVisible();
     await expect(list.getByText("Письмо-приглашение не доставлено")).toBeVisible();
     await expect(list.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
-    // Новая заявка: договор ещё не отправлен, одобрить нельзя (решение архитектора по #427)
+    // ПК-1: в строке одно главное действие, остальные — в «Ещё»; одобрить без согласия — не кнопкой в строке
     await expect(list.getByRole("button", { name: "Отметить: подписан без согласия" })).toHaveCount(
-      1,
+      0,
     );
+    await expect(list.getByRole("button", { name: "Ещё" }).first()).toBeVisible();
     await expectNoViolations(page, "заявки партнёров");
     await settledScreenshot(page, "fx-1-queue");
 
@@ -43,13 +44,19 @@ for (const width of WIDTHS) {
     await expect(send).toBeHidden();
 
     // Одобрение без согласия — только с причиной
-    await list.getByRole("button", { name: "Отметить: подписан без согласия" }).first().click();
+    await list
+      .getByRole("row", { name: /Восток Снаб/ })
+      .or(list.getByRole("listitem").filter({ hasText: "Восток Снаб" }))
+      .getByRole("button", { name: "Ещё" })
+      .click();
+    await page.getByRole("menuitem", { name: "Отметить: подписан без согласия" }).click();
     const approve = page.getByRole("dialog", { name: /Договор подписан/ });
     const approveOk = approve.getByRole("button", { name: "Отметить: подписан" });
     await expect(approveOk).toBeDisabled();
     await approve.getByLabel("Номер договора").fill("ПД-2026/501");
     await expect(approveOk).toBeDisabled();
     await approve.getByLabel("Причина одобрения без согласия").fill("Договор подписан на бумаге");
+    await approve.getByLabel("Заметка вместо скана").fill("Подписан на бумаге, оригинал в офисе");
     await expect(approveOk).toBeEnabled();
     await expectNoViolations(page, "заявки партнёров · обход согласия");
     await settledScreenshot(page, "fx-1-override");
@@ -57,8 +64,11 @@ for (const width of WIDTHS) {
     await expect(approve).toBeHidden();
 
     // Согласованная кандидатом: одобрение без причины
-    await list.getByRole("button", { name: "Отметить: подписан" }).click();
-    const agreed = page.getByRole("dialog", { name: /Одобрение заявки.*Рельс Сервис/ });
+    const agreedRow = list
+      .getByRole("row", { name: /Рельс Сервис/ })
+      .or(list.getByRole("listitem").filter({ hasText: "Рельс Сервис" }));
+    await agreedRow.getByRole("button", { name: "Отметить: подписан", exact: true }).click();
+    const agreed = page.getByRole("dialog", { name: /Договор подписан.*Рельс Сервис/ });
     await expect(agreed.getByText("Причина одобрения без согласия")).toBeHidden();
     await agreed.getByRole("button", { name: "Отмена", exact: true }).click();
     await expect(agreed).toBeHidden();
