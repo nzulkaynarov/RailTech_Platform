@@ -24,30 +24,30 @@ afterEach(() => {
   endSession();
 });
 
-/** Страницы группы — вложенный список под активной группой меню модуля (одно меню) */
+/** Страницы группы — пункты под заголовком группы единого меню Настроек (НАСТ-1) */
 const pages = (nav: HTMLElement, group: string) => {
-  const list = within(nav).getByRole("list", { name: group });
+  const list = within(nav).getByRole("group", { name: group });
   return within(list).getAllByRole("link");
 };
 
 describe("Настройки · рамка страницы (ЕВ-2а, отчёт §7 п. 20)", () => {
-  it("страницы своей группы — в меню модуля под активной группой; текущая отмечена", async () => {
+  it("все страницы — в одном меню по группам, открытая отмечена; второго меню нет", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/timing");
     const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
-      "Справочники",
-      "Шаблоны",
       "Уведомления",
+      "Шаблоны",
+      "Справочники",
     ]);
     expect(within(nav).getByRole("link", { name: "Время и сроки" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     // одно меню: колонки страниц группы внутри страницы больше нет
-    expect(screen.queryByRole("navigation", { name: /^Страницы группы/ })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: /^Страницы/ })).toBeNull();
     expect(await screen.findByRole("heading", { level: 1, name: "Время и сроки" })).toBeVisible();
   });
 
@@ -63,36 +63,36 @@ describe("Настройки · рамка страницы (ЕВ-2а, отчё�
     expect(entryAt("/admin/bus")?.key).toBe("audit");
   });
 
-  it("директор: в меню группы нет страниц фундамента — «Журнал» ему только «История», меню из одного пункта не рисуется", async () => {
+  it("директор: в меню нет страниц фундамента — «Журнал» ему только «История»; остальные группы на месте", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/audit");
     await screen.findByRole("heading", { level: 1, name: "История" });
-    expect(screen.queryByRole("list", { name: "Журнал" })).toBeNull();
+    const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(pages(nav, "Журнал").map((link) => link.textContent)).toEqual(["История"]);
+    expect(within(nav).queryByRole("link", { name: "Выгрузки" })).toBeNull();
   });
 
-  it("директор: «Правила работы» — Продажи, Время и сроки, Справочники, Шаблоны, Уведомления; коммерческие правит, остальное читает", async () => {
+  it("директор: «Правила работы» — Продажи, Время и сроки, Уведомления, Шаблоны, Справочники; коммерческие правит, остальное читает", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/sales");
     const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
-      "Справочники",
-      "Шаблоны",
       "Уведомления",
+      "Шаблоны",
+      "Справочники",
     ]);
     // «Продажи» — раздел `company.settings`, директор правит: плашки «Только просмотр» нет
     await screen.findByRole("heading", { level: 1, name: "Продажи" });
     expect(screen.queryByText("Только просмотр")).toBeNull();
   });
 
-  it("телефон: меню группы — выпадающий список над страницей, а не колонка слева", async () => {
+  it("телефон: одно меню — выпадающий список страниц над страницей, а не колонка слева", async () => {
     setViewportWidth(390);
     signInAs("admin@demo.example");
     renderApp("/admin/numbering");
-    expect(
-      await screen.findByRole("combobox", { name: /Страницы группы «Компания»/ }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: /^Страницы группы/ })).toBeNull();
+    expect(await screen.findByRole("combobox", { name: "Страницы настроек" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /^Страницы/ })).toBeNull();
   });
 });

@@ -136,7 +136,9 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "6px 8px",
+                padding: "4px 8px",
+                minHeight: 32,
+                lineHeight: "20px",
                 borderRadius: 4,
                 fontSize: 14,
                 textDecoration: "none",
@@ -165,10 +167,13 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
   return (
     <Popover
       placement="rightTop"
+      align={{ overflow: { adjustY: true, shiftY: true } }}
       trigger="hover"
       mouseEnterDelay={0.12}
       mouseLeaveDelay={0.15}
-      styles={{ body: { padding: 8, width: 232, maxHeight: "85vh", overflowY: "auto" } }}
+      styles={{
+        body: { padding: 8, width: 232, maxHeight: "calc(100vh - 16px)", overflowY: "auto" },
+      }}
       content={content}
       open={open}
       onOpenChange={setOpen}
