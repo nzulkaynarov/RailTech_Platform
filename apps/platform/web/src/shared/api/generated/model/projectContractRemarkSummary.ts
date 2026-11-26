@@ -8,6 +8,8 @@ export type ProjectContractRemarkSummary = {
   added: string[];
   removed: string[];
   total: number;
+  /** Сколько пунктов не поместилось в списки выше (предел 30 на вид) */
+  more?: number;
   /** Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет */
   comparable: boolean;
 };

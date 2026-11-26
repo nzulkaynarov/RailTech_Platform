@@ -12355,6 +12355,8 @@ export interface components {
         added: string[];
         removed: string[];
         total: number;
+        /** @description Сколько пунктов не поместилось в списки выше (предел 30 на вид) */
+        more?: number;
         /** @description Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет */
         comparable: boolean;
       };

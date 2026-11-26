@@ -873,7 +873,7 @@
       "journal": "Log"
     },
     "frame": {
-      "nav": "Pages of “{{group}}”"
+      "nav": "Settings pages"
     },
     "state": {
       "attention": "Needs attention · {{count}}",

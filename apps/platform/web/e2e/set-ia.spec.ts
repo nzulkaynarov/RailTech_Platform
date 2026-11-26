@@ -100,9 +100,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await spaGoto(page, "/admin/timing");
       await h1(page, "Время и сроки");
       if (mobile) {
-        await expect(
-          page.getByRole("combobox", { name: /Страницы группы «Правила работы»/ }),
-        ).toBeVisible();
+        await expect(page.getByRole("combobox", { name: /Страницы настроек/ })).toBeVisible();
       } else {
         const nav = page.getByRole("navigation", { name: "Разделы модуля" });
         await expect(nav.getByRole("link", { name: "Время и сроки" })).toHaveAttribute(
@@ -144,21 +142,17 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await spaGoto(page, "/admin/timing");
     await h1(page, "Время и сроки");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    for (const item of [
-      "Состояние",
+    await expect(menu.getByRole("link", { name: "Состояние", exact: true })).toBeVisible();
+    for (const group of [
       "Люди и доступ",
       "Компания",
       "Правила работы",
       "Каналы и подключения",
       "Журнал",
     ]) {
-      await expect(menu.getByRole("link", { name: item, exact: true })).toBeVisible();
+      await expect(menu.getByRole("group", { name: group, exact: true })).toBeVisible();
     }
-    // группа открыта (`true`), текущая страница под ней — `page`
-    await expect(menu.getByRole("link", { name: "Правила работы", exact: true })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    // НАСТ-1: все страницы видны сразу; текущая — `page`
     await expect(menu.getByRole("link", { name: "Время и сроки", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
@@ -166,11 +160,11 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await expectNoViolations(page, "menu");
     await shot(page, "menu-groups");
 
-    // «Обмен между системами» — вид «Истории»: подсвечен пункт «Журнал»
+    // «Обмен между системами» — вид «Истории»: подсвечена «История»
     await spaGoto(page, "/admin/bus");
-    await expect(menu.getByRole("link", { name: "Журнал", exact: true })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: "История", exact: true })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
     await settledScreenshot(page, "menu-bus");
 
@@ -237,8 +231,8 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await expect(page.getByRole("link", { name: "Продолжить настройку" })).toHaveCount(0);
       if (width === 1440) {
         const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-        await expect(menu.getByRole("link", { name: "Каналы и подключения" })).toHaveCount(0);
-        await expect(menu.getByRole("link", { name: "Компания", exact: true })).toBeVisible();
+        await expect(menu.getByRole("group", { name: "Каналы и подключения" })).toHaveCount(0);
+        await expect(menu.getByRole("group", { name: "Компания", exact: true })).toBeVisible();
       }
       // страницы раздела admin.system директору закрыты: кнопок на них на «Состоянии» нет
       for (const href of [

@@ -2889,11 +2889,11 @@ export interface components {
          *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
          *     с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
          *     безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
-         *     `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
+         *     `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`), `contract_remark_answered` — компания ответила на замечания клиента (ДП-1; `number`, `text`), `contract_awaiting_signature` — редакция принята, договор будет выставлен на подписание (`number`).
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login" | "contract_renewed" | "contract_renewal_declined";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login" | "contract_renewed" | "contract_renewal_declined" | "contract_remark_answered" | "contract_awaiting_signature";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}

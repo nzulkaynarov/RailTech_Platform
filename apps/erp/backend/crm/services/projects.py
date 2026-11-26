@@ -526,9 +526,18 @@ def _remark_card(contract, user) -> Optional[dict]:
     actions = []
     if user is not None and contract_flow.is_staff(user) and user.pk in reviewer_ids:
         actions.append("vote")
-    if dispute and user is not None and contract_flow.may(user, remarks.DECIDE_PERMISSION):
+    # Решающий голос закрывает замечания в любой момент: кто-то может так и не ответить (ДП-1)
+    if user is not None and contract_flow.is_staff(user) and contract_flow.may(user, remarks.DECIDE_PERMISSION):
         actions.append("decide")
-    summary = {"changed": [], "added": [], "removed": [], "total": 0, "comparable": False, **(remark.summary or {})}
+    summary = {
+        "changed": [],
+        "added": [],
+        "removed": [],
+        "total": 0,
+        "more": 0,
+        "comparable": False,
+        **(remark.summary or {}),
+    }
     return {
         "id": remark.id,
         "edition": remark.edition,

@@ -108,12 +108,12 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company-error");
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
+    await menu.getByRole("link", { name: "История", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Остаться" }).click();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("   ");
-    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
+    await menu.getByRole("link", { name: "История", exact: true }).click();
     await page
       .getByRole("dialog", { name: "Выйти без сохранения?" })
       .getByRole("button", { name: "Выйти без сохранения" })
@@ -371,10 +371,10 @@ test.describe("Настройки бота: права", () => {
     await spaGoto(page, "/admin/roles");
     // EV-2a: страницы фундамента (раздел `admin.system`) директору не показываются
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: "Правила работы", exact: true })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Каналы и подключения", exact: true })).toHaveCount(
-      0,
-    );
+    await expect(menu.getByRole("group", { name: "Правила работы", exact: true })).toBeVisible();
+    await expect(
+      menu.getByRole("group", { name: "Каналы и подключения", exact: true }),
+    ).toHaveCount(0);
   });
 });
 

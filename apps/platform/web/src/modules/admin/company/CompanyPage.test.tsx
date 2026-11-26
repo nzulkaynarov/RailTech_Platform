@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { chooseOption } from "../../../test/fields";
 import { pickRowAction, rowActionItems } from "../../../test/rowActions";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
@@ -229,12 +230,12 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(screen.queryByRole("link", { name: "Реквизиты и бланк" })).toBeNull();
   });
 
-  it("администратор видит «Реквизиты и бланк» в меню слева страниц группы «Компания»; ⚙ с `?group=` ведёт на первую страницу группы (ЕВ-2а)", async () => {
+  it("администратор видит «Реквизиты и бланк» в единое меню Настроек, группа «Компания»; ⚙ с `?group=` ведёт на первую страницу группы (ЕВ-2а)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin?group=company");
     const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(
-      within(await within(nav).findByRole("list", { name: "Компания" }))
+      within(await within(nav).findByRole("group", { name: "Компания" }))
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual([
@@ -244,10 +245,13 @@ describe("Admin · Компания: доступ и каркас", () => {
       "Статьи компании",
       "Оферта и политика",
     ]);
-    expect(within(nav).getByRole("link", { name: "Реквизиты и бланк" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    // `?group=` перенаправляет на первую страницу группы — подсветка появляется после перехода
+    await waitFor(() => {
+      expect(within(nav).getByRole("link", { name: "Реквизиты и бланк" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    });
   });
 
   it("своей компании в ERP нет — слово и действие «Проверить снова», а не пустая страница", async () => {
@@ -339,16 +343,10 @@ describe("Admin · Компания: доступ и каркас", () => {
         name: "Настройки",
       }),
     );
-    fireEvent.click(
-      await within(await screen.findByRole("navigation", { name: "Разделы модуля" })).findByRole(
-        "link",
-        { name: "Правила работы" },
-      ),
-    );
     fireEvent.click(await screen.findByRole("link", { name: "Справочники" }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Добавить значение" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
+    await chooseOption(screen.getByRole("combobox", { name: "Справочники по разделам" }), "Валюты");
     expect(await screen.findByText("Евро")).toBeInTheDocument();
   });
 });
@@ -981,7 +979,7 @@ describe("Справочники «Расчёта» на общем ресурс
     const turkey = readCompanyMock().reference.countries.find((c) => c.code === "TR");
     expect(turkey && (turkey as unknown as { name_en: string }).name_en).toBe("Turkey");
 
-    fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
+    await chooseOption(screen.getByRole("combobox", { name: "Справочники по разделам" }), "Валюты");
     expect(await screen.findByText("Евро")).toBeInTheDocument();
     await pickRowAction("Евро", "Скрыть");
     await waitFor(() => {

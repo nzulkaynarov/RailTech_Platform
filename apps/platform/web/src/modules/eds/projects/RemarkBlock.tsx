@@ -3,6 +3,10 @@ import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ProjectContractRemark } from "../../../shared/api/generated/model";
+import { canSee } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
+import { settingByKey } from "../../admin/settingsRegistry";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { RegistryTable } from "../../../shared/ui/RegistryTable";
@@ -11,6 +15,7 @@ type Item = ProjectContractRemark["items"][number];
 
 /** Слова пункта с подсветкой: слева удалённое, справа добавленное, общее — как есть. */
 function Segments({ item, side }: { item: Item; side: "ours" | "theirs" }) {
+  if (item.segments.length === 0) return <>{side === "ours" ? item.ours : item.theirs}</>;
   const own = side === "ours" ? "del" : "ins";
   const other = side === "ours" ? "ins" : "del";
   return (
@@ -57,6 +62,9 @@ export function RemarkBlock({
   send: Send;
 }) {
   const { t } = useTranslation("projects");
+  const { me } = useAuth();
+  const org = settingByKey("org");
+  const canOpenOrg = org !== undefined && canSee(me, org.access);
   const { date } = useFormat();
   const ids = { vote: useId(), counter: useId() };
   const [voteText, setVoteText] = useState("");
@@ -93,6 +101,9 @@ export function RemarkBlock({
       {parts.length > 0 ? (
         <p style={{ margin: 0 }} data-testid="remark-summary">
           {parts.join("; ")}
+          {(summary.more ?? 0) > 0
+            ? `; ${t("contract.remark.summary.more", { count: summary.more })}`
+            : ""}
         </p>
       ) : remark.has_file && !summary.comparable ? (
         <p className="pf-hint" style={{ margin: 0 }}>
@@ -214,13 +225,24 @@ export function RemarkBlock({
         </div>
       ) : null}
 
-      {remark.dispute ? (
+      {
         <>
-          <p className="pf-hint" style={{ margin: 0 }}>
-            {t("contract.remark.decide.who", {
-              names: remark.deciders.map((p) => p.name).join(", "),
-            })}
-          </p>
+          {remark.deciders.length > 0 ? (
+            <p className="pf-hint" style={{ margin: 0 }} data-testid="remark-deciders">
+              {t("contract.remark.decide.who", {
+                names: remark.deciders.map((p) => p.name).join(", "),
+              })}
+            </p>
+          ) : (
+            <div className="pf-hint" role="status" data-testid="remark-no-decider">
+              <p style={{ margin: 0 }}>{t("contract.remark.decide.nobody")}</p>
+              {canOpenOrg ? (
+                <LinkButton size="small" to="/admin/org">
+                  {t("contract.remark.decide.nobodyLink")}
+                </LinkButton>
+              ) : null}
+            </div>
+          )}
           {may("decide") ? (
             <div className="pf-fp-form">
               <div className="pf-fp-row">
@@ -276,11 +298,10 @@ export function RemarkBlock({
             </div>
           ) : null}
         </>
-      ) : (
-        <p className="pf-hint" style={{ margin: 0 }}>
-          {t("contract.remark.next")}
-        </p>
-      )}
+      }
+      <p className="pf-hint" style={{ margin: 0 }}>
+        {t("contract.remark.next")}
+      </p>
       <ErrorNote message={error} />
     </section>
   );

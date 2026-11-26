@@ -128,7 +128,7 @@
   flex-direction: column;
   gap: 2px;
 }
-/* Подменю с группами (Настройки, SET-IA): заголовок группы 12/20 #595959, пункты ниже — 30 px, чтобы пять групп
+/* Подменю с группами (Настройки, SET-IA): заголовок группы 12/20 #595959, пункты ниже — 32 px (макет 54), чтобы пять групп
    помещались на экран 1440×900; если не помещаются — прокручивается список, а не всё подменю. */
 .pf-menu-groups {
   flex: 1 1 auto;
@@ -158,7 +158,7 @@
 .pf-menu-list--grouped .pf-menu-item {
   /* Длинная подпись («Обмен между системами») переносится внутри подсветки, а не вылезает за неё */
   height: auto;
-  min-height: 30px;
+  min-height: 32px;
   padding-block: 4px;
   line-height: 20px;
 }
@@ -175,19 +175,6 @@
 .pf-menu-item:hover {
   background: var(--rt-color-surface-layout);
   color: var(--rt-color-text-default);
-}
-/* Пункт с открытыми страницами (Настройки): сам не подсвечен, подсвечена текущая страница под ним */
-.pf-menu-item--open {
-  font-weight: 600;
-}
-.pf-menu-pages {
-  list-style: none;
-  margin: 0 0 4px;
-  padding: 0;
-}
-.pf-menu-list--grouped .pf-menu-item--page {
-  padding-left: 24px;
-  font-size: 14px;
 }
 .pf-menu-item[aria-current="page"] {
   background: var(--rt-color-primary-bg);

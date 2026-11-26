@@ -283,6 +283,7 @@ class RemarkSummary(BaseModel):
     added: list[str]
     removed: list[str]
     total: int
+    more: int = 0
     comparable: bool
 
 

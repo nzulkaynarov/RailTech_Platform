@@ -1,0 +1,134 @@
+[
+ {
+  "p": "/admin",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 0
+ },
+ {
+  "p": "/admin/org",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/roles",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/zones",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/signing",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/company",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/numbering",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/taxes",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/articles",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/sales",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/legal",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/timing",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/dictionaries",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 2
+ },
+ {
+  "p": "/admin/templates",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/notifications",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/telegram",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/mail",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/forms",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 0
+ },
+ {
+  "p": "/admin/integrations",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/spend",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 0
+ },
+ {
+  "p": "/admin/audit",
+  "menu": 0,
+  "innerNavs": 1,
+  "pickers": 1
+ },
+ {
+  "p": "/admin/exports",
+  "menu": 0,
+  "innerNavs": 0,
+  "pickers": 1
+ }
+]

@@ -6,55 +6,11 @@
   flex-direction: column;
   gap: 16px;
 }
-.pf-bot-layout {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 767px) {
-  .pf-bot-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 .pf-bot-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-.pf-bot-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: var(--rt-color-surface-background);
-  border: 1px solid var(--rt-color-surface-split);
-  border-radius: 8px;
-}
-.pf-bot-nav-title {
-  margin: 0 0 4px;
-  color: var(--rt-color-text-secondary);
-  font-size: 12px;
-  line-height: 20px;
-  font-weight: 600;
-}
-.pf-bot-nav ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pf-bot-nav-link {
-  display: block;
-  padding: 6px 8px;
-  border-radius: 6px;
-  color: var(--rt-color-text-default);
-  line-height: 22px;
-}
-.pf-bot-nav-link[aria-current="page"] {
-  background: var(--rt-color-primary-bg);
-  color: var(--rt-color-primary-text);
-  font-weight: 500;
 }
 .pf-bot-section-title {
   margin: 0;
