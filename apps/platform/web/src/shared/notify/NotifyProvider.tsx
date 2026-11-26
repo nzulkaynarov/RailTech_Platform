@@ -77,6 +77,6 @@ export function NotifyProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components -- хук рядом со своим провайдером
 export function useNotify(): Notify {
   const value = useContext(NotifyContext);
-  if (!value) throw new Error("useNotify вне NotifyProvider");
+  if (!value) throw new Error("Уведомления недоступны вне оболочки приложения");
   return value;
 }
