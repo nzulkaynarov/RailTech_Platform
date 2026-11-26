@@ -174,11 +174,160 @@ def test_director_can_answer_with_our_edition_and_the_client_can_remark_again(wo
     assert error is None and again.edition == 2
 
 
-def test_no_dispute_no_decision(world):
+def test_director_closes_the_remark_at_any_time_even_if_someone_never_answered(world):
+    """Один из ответственных не ответил: договор не застревает, решающий голос принимает редакцию сам."""
     submit(world)
     contract_remarks.vote(world.contract.id, world.director, agree=True)
-    _, error = contract_remarks.decide(world.contract.id, world.director, accept=True)
-    assert error == "REMARK_NO_DISPUTE"
+    assert status(world.contract) == S.PENDING_CLIENT
+    _, error = contract_remarks.decide(world.contract.id, world.legal, accept=True)
+    assert error == "REMARK_DECISION_FORBIDDEN"
+    _, error = contract_remarks.decide(world.contract.id, world.accountant, accept=True)
+    assert error is None and status(world.contract) == S.PENDING_MANAGER
+    assert ContractRemark.objects.get().resolution == "accepted"
+
+
+def test_director_can_answer_with_our_edition_before_everyone_answered(world):
+    submit(world)
+    _, error = contract_remarks.decide(world.contract.id, world.director, accept=False, text="Нет")
+    assert error is None and status(world.contract) == S.PENDING_CLIENT
+    assert ContractRemark.objects.get().resolution == "countered"
+
+
+def test_client_is_told_about_acceptance_and_about_our_answer(world):
+    from portal.models import PortalNotice
+
+    submit(world)
+    contract_remarks.decide(world.contract.id, world.director, accept=False, text="Предоплата 40 %")
+    notice = PortalNotice.objects.filter(kind="contract_remark_answered", company=world.client).first()
+    assert notice is not None and "Предоплата 40 %" in str(notice.params)
+    again, _ = submit(world, comment="Ещё раз")
+    contract_remarks.decide(world.contract.id, world.director, accept=True)
+    assert PortalNotice.objects.filter(kind="contract_awaiting_signature", company=world.client).exists()
+
+
+def test_card_shows_empty_deciders_when_nobody_holds_the_signing_right(world, monkeypatch):
+    from crm.services import projects
+
+    submit(world)
+    monkeypatch.setattr(contract_remarks, "deciders", lambda contract: [])
+    card = projects._contract_card(world.contract, world.manager, [])
+    assert card["remark"]["deciders"] == [] and card["remark"]["actions"] == []
+
+
+def test_upload_of_another_company_is_not_found(world):
+    from portal.models import PortalUpload
+
+    other = PortalUpload.objects.create(
+        company=world.own, name="x.docx", file=ContentFile(docx_bytes(THEIRS), name="x.docx"), size_bytes=10
+    )
+    _, error = contract_remarks.submit_remark(
+        world.contract.id, contact=world.contact, comment="x", upload_id=str(other.upload_id)
+    )
+    assert error == "UPLOAD_NOT_FOUND"
+    assert not ContractRemark.objects.exists()
+
+
+def zip_bomb():
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("word/document.xml", b"0" * (200 * 1024 * 1024))
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+    return buf.getvalue()
+
+
+def test_zip_bomb_is_refused_before_python_docx_opens_it(world):
+    from portal.models import PortalUpload
+
+    bomb = PortalUpload.objects.create(
+        company=world.client, name="bomb.docx", file=ContentFile(zip_bomb(), name="bomb.docx"), size_bytes=300_000
+    )
+    _, error = contract_remarks.submit_remark(
+        world.contract.id, contact=world.contact, comment="x", upload_id=str(bomb.upload_id)
+    )
+    assert error == "FILE_INVALID" and not ContractRemark.objects.exists()
+
+
+def forged_bomb():
+    """DOCX, где часть в 120 МБ нулей заявлена в каталоге архива как 1000 байт (подделанный размер)."""
+    import io
+    import struct
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+        with archive.open("word/media/big.png", "w") as part:
+            for _ in range(120):
+                part.write(b"\0" * (1 << 20))
+    data = bytearray(buf.getvalue())
+    pos = data.find(b"PK\x01\x02")
+    while pos >= 0:
+        name_len = struct.unpack("<H", data[pos + 28 : pos + 30])[0]
+        if bytes(data[pos + 46 : pos + 46 + name_len]) == b"word/media/big.png":
+            data[pos + 24 : pos + 28] = struct.pack("<I", 1000)
+        pos = data.find(b"PK\x01\x02", pos + 4)
+    return bytes(data)
+
+
+def test_forged_declared_size_does_not_hide_a_zip_bomb_and_memory_stays_bounded():
+    import tracemalloc
+
+    data = forged_bomb()
+    import zipfile
+    from io import BytesIO
+
+    assert zipfile.ZipFile(BytesIO(data)).getinfo("word/media/big.png").file_size == 1000
+    tracemalloc.start()
+    with pytest.raises(contract_compare.HostileFile):
+        contract_compare.check_archive(data)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert peak < 20 * 1024 * 1024
+
+
+def test_long_paragraphs_are_not_compared_pairwise_for_minutes():
+    import random
+    import time
+
+    random.seed(1)
+    words = ["поставка", "оплата", "покупатель", "поставщик", "срок", "договор", "цена", "товар", "акт", "склад"]
+
+    def long_text():
+        return " ".join(random.choice(words) for _ in range(300))[:2000]
+
+    ours = [long_text() for _ in range(120)]
+    theirs = [long_text() for _ in range(83)]
+    started = time.monotonic()
+    with pytest.raises(contract_compare.TooBig):
+        contract_compare.compare(ours, theirs)
+    assert time.monotonic() - started < 5
+
+
+def test_many_adjacent_edits_in_a_normal_contract_are_still_compared():
+    ours = [f"{i}.1. Пункт {i}: " + "условие договора поставки " * 12 for i in range(1, 101)]
+    theirs = [t.replace("условие", "изменённое условие", 1) if 40 <= i < 50 else t for i, t in enumerate(ours)]
+    result = contract_compare.compare(ours, theirs)
+    assert [i["point"] for i in result["items"] if i["kind"] == "changed"] == [f"{n}.1" for n in range(41, 51)]
+    assert result["summary"]["total"] == 10
+
+
+def test_huge_document_is_not_compared_and_stays_fast(world):
+    import time
+
+    started = time.monotonic()
+    remark, error = submit(world, [f"{i}.1. Пункт номер {i} договора поставки." for i in range(2000)])
+    assert error is None and remark.summary["comparable"] is False and remark.items == []
+    assert time.monotonic() - started < 10
+
+
+def test_summary_is_capped_with_the_rest_counted(world):
+    ours = [f"{i}.1. Было {i}." for i in range(1, 80)]
+    result = contract_compare.compare(ours, [f"{i}.1. Стало {i}." for i in range(1, 80)])
+    assert len(result["summary"]["changed"]) == contract_compare.SUMMARY_POINTS
+    assert result["summary"]["more"] == 79 - contract_compare.SUMMARY_POINTS
 
 
 def test_only_those_in_charge_vote_and_disagreement_needs_words(world):
@@ -194,7 +343,7 @@ def test_card_tells_each_person_what_they_can_do(world):
 
     submit(world)
     card = projects._contract_card(world.contract, world.director, [])
-    assert card["remark"]["actions"] == ["vote"] and card["remark"]["summary"]["changed"] == ["2.2"]
+    assert card["remark"]["actions"] == ["vote", "decide"] and card["remark"]["summary"]["changed"] == ["2.2"]
     assert {p["name"] for p in card["remark"]["awaiting"]} >= {"", ""} or card["remark"]["awaiting"]
     vote_all(world, lambda user: user != world.legal)
     assert projects._contract_card(world.contract, world.director, [])["remark"]["actions"] == ["vote", "decide"]
