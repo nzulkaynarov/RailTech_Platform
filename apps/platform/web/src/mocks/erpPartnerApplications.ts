@@ -36,6 +36,7 @@ const NO_CONTRACT = {
   contract_last_notice_date: null,
   contract_renewal_mode: "",
   package: [],
+  from_archive: false,
 } as const satisfies Partial<PartnerApplicationItem>;
 
 /** Договор по утверждённому шаблону без отступлений: согласование не нужно, можно отправлять. */
@@ -410,6 +411,7 @@ export const erpPartnerApplicationsHandlers = [
           title: role.name,
           number: `${item.contract_number}${index === 0 ? "" : `/${String(index + 1)}`}`,
           template_edition: role.edition,
+          has_file: true,
           has_candidate_file: false,
           candidate_remark: "",
           valid_from: null,
@@ -465,6 +467,43 @@ export const erpPartnerApplicationsHandlers = [
       return HttpResponse.json(item);
     },
   ),
+
+  // ОСН-1: «Уже подписано на бумаге» — сразу одобрена, реальные даты, без Кабинета
+  http.post("*/erp/catalog/partner-applications/:id/from-archive", async ({ params, request }) => {
+    const session = readSession();
+    if (!session) return new HttpResponse(null, { status: 401 });
+    const item = items.find((i) => i.id === params["id"]);
+    if (!item) return new HttpResponse(null, { status: 404 });
+    const form = await request.formData();
+    const field = (name: string): string | undefined => {
+      const value = form.get(name);
+      return typeof value === "string" && value !== "" ? value : undefined;
+    };
+    const signedOn = field("signed_on") ?? "";
+    item.status = "approved";
+    item.from_archive = true;
+    item.contract_number = field("contract_number") ?? `ПД-2026/${item.id}`;
+    item.contract_date = signedOn;
+    item.contract_valid_from = signedOn;
+    item.contract_valid_until = `${signedOn.slice(0, 4)}-12-31`;
+    item.contract_blocker = null;
+    item.package = packageOptions().roles.map((role, index) => ({
+      id: String(950 + index),
+      base_role: role.base_role,
+      title: role.name ?? role.role_name,
+      number: `${item.contract_number}${index === 0 ? "" : `/${String(index + 1)}`}`,
+      template_edition: role.edition ?? 1,
+      has_file: false,
+      has_candidate_file: false,
+      candidate_remark: "",
+      valid_from: field(`signed_on_${role.base_role}`) ?? signedOn,
+      valid_until: role.base_role === "nda" ? null : `${signedOn.slice(0, 4)}-12-31`,
+      confidentiality_years: role.base_role === "nda" ? 3 : null,
+      trade_secret_indefinite: false,
+      from_archive: true,
+    }));
+    return HttpResponse.json(item);
+  }),
 
   http.post(
     "*/erp/catalog/partner-applications/:id/contract-decision",

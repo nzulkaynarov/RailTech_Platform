@@ -19,6 +19,7 @@ from portal.desk.serializers import (
     DeskPartnerContractDecisionIn,
     DeskPartnerContractOptions,
     DeskPartnerContractPrepareIn,
+    DeskPartnerFromArchiveIn,
     DeskPartnerInviteIn,
     DeskPartnerScanIn,
 )
@@ -44,6 +45,7 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         # Решает держатель зоны «Право»; тот же код права проверяет сервис (ДОК-10)
         "contract_decision": "contract.approve_template",
         "approve": SUPPLY_MANAGE,
+        "from_archive": SUPPLY_MANAGE,
         "reject": SUPPLY_MANAGE,
         "invite": SUPPLY_MANAGE,
         "signed_scan": SUPPLY_MANAGE,
@@ -180,6 +182,34 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
             return _refused(error)
 
     @extend_schema(
+        operation_id="catalog_partner_applications_from_archive",
+        summary="Record the signed paper package (from the archive)",
+        description=(
+            "ОСН-1: партнёр уже подписал бумажный пакет. Заявка сразу одобряется с реальными датами и сканами документов "
+            "пакета; в Кабинет и по почте ничего не уходит, пометка «внесено из архива». Multipart."
+        ),
+        request={"multipart/form-data": DeskPartnerFromArchiveIn},
+        responses={200: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="from-archive",
+        url_name="from-archive",
+        parser_classes=[MultiPartParser],
+    )
+    def from_archive(self, request, pk=None):
+        body = DeskPartnerFromArchiveIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = dict(body.validated_data)
+        files = {key: data.pop(key) for key in ("scan_partnership", "scan_nda", "scan_offer") if key in data}
+        try:
+            return Response(service.record_from_archive(int(pk), data, files, request.user))
+        except AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
         operation_id="catalog_partner_applications_reject",
         summary="Reject partner application",
         description="Отклоняет заявку с указанием обязательной причины (`rejected_reason`).",
@@ -282,7 +312,7 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
             if doc:  # ОСН-1: документ пакета
                 row = contract_step.package_document(app, doc)
                 field = {"scan": row.signed_scan, "candidate": row.candidate_file}.get(which) or (
-                    row.file if which == "contract" else None
+                    (row.file or row.signed_scan) if which == "contract" else None
                 )
             data, content_type, name = contract_step.read_file(field)
         except AccessError as error:

@@ -55,6 +55,7 @@ describe("Очередь заявок кандидатов в партнёры (
               contract_waiting_for: [],
               contract_votes: [],
               package: [],
+              from_archive: false,
             },
           ],
         }),

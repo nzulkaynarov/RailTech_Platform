@@ -43,6 +43,7 @@ class PackageDocument(Out):
     title: str
     number: str
     template_edition: int
+    has_file: bool
     has_candidate_file: bool
     candidate_remark: str
     valid_from: str | None
@@ -106,6 +107,9 @@ class PartnerApplicationItem(Out):
     contract_last_notice_date: str | None
     contract_renewal_mode: str
     package: list[PackageDocument]
+    from_archive: bool = Field(
+        description="Внесено из архива (ОСН-1): подписано на бумаге, в Кабинет ничего не уходило"
+    )
 
 
 class PartnerApplicationListResponse(Out):
@@ -307,6 +311,7 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         ),
         contract_renewal_mode=text(raw.get("contract_renewal_mode")),
         package=[_package_document(d) for d in raw.get("package") or []],
+        from_archive=bool(raw.get("from_archive")),
     )
 
 
@@ -317,6 +322,7 @@ def _package_document(raw: Mapping[str, Any]) -> PackageDocument:
         title=text(raw.get("title")),
         number=text(raw.get("number")),
         template_edition=int(raw.get("template_edition") or 1),
+        has_file=bool(raw.get("has_file")),
         has_candidate_file=bool(raw.get("has_candidate_file")),
         candidate_remark=text(raw.get("candidate_remark")),
         valid_from=str(raw["valid_from"]) if raw.get("valid_from") else None,

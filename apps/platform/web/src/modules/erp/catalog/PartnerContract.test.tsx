@@ -204,4 +204,31 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     expect(within(row).getByRole("button", { name: "Соглашение о неразглашении" })).toBeVisible();
     expect(within(row).getByRole("button", { name: "Отправить договор" })).toBeVisible();
   });
+
+  it("«Уже подписано на бумаге»: пакет вносится подписанным, дата обязательна и не из будущего (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "ready");
+    await openApplications("supply@demo.example");
+    await clickRowAction(rowOf("Nanjing Jichuang Co."), "Уже подписано на бумаге");
+    const modal = await findModal(/Уже подписано на бумаге: Nanjing Jichuang Co\./);
+
+    expect(await within(modal).findByText("Соглашение о неразглашении")).toBeVisible();
+    const submit = within(modal).getByRole("button", { name: "Внести" });
+    expect(submit).toBeDisabled();
+    const input = within(modal).getByLabelText("Когда подписано");
+    fireEvent.mouseDown(input);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "14.03.2025" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    fireEvent.click(submit);
+    await modalClosed(/Уже подписано на бумаге/);
+
+    const row = rowOf("Nanjing Jichuang Co.");
+    expect(await within(row).findByText("Внесено из архива")).toBeVisible();
+    expect(within(row).getByText(/Договор о партнёрстве: до/)).toBeVisible();
+    expect(within(row).getByText(/Соглашение о неразглашении: тайна ещё 3 л\./)).toBeVisible();
+    expect(within(row).queryByRole("button", { name: "Отправить договор" })).toBeNull();
+  });
 });

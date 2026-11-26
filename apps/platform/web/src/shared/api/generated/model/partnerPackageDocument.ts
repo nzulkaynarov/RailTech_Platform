@@ -10,6 +10,8 @@ export interface PartnerPackageDocument {
   title: string;
   number: string;
   template_edition: number;
+  /** Есть что открыть: файл документа или скан подписанного */
+  has_file: boolean;
   has_candidate_file: boolean;
   /** Что кандидат вернул по этому документу */
   candidate_remark: string;

@@ -6455,6 +6455,56 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/partner-applications/{id}/from-archive/:
+    post:
+      operationId: catalog_partner_applications_from_archive
+      description: 'ОСН-1: партнёр уже подписал бумажный пакет. Заявка сразу одобряется с реальными датами и сканами документов
+        пакета; в Кабинет и по почте ничего не уходит, пометка «внесено из архива». Multipart.'
+      summary: Record the signed paper package (from the archive)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerFromArchiveInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/partner-applications/{id}/invite/:
     post:
       operationId: catalog_partner_applications_invite
@@ -30212,6 +30262,9 @@ components:
           type: string
         template_edition:
           type: integer
+        has_file:
+          type: boolean
+          description: 'Есть что открыть: файл документа или скан подписанного.'
         has_candidate_file:
           type: boolean
         candidate_remark:
@@ -30238,6 +30291,7 @@ components:
       - confidentiality_years
       - from_archive
       - has_candidate_file
+      - has_file
       - id
       - number
       - template_edition
@@ -31032,6 +31086,55 @@ components:
           type: string
           format: binary
           description: 'Свой файл договора: PDF или DOCX, до 20 МБ.'
+    DeskPartnerFromArchiveInRequest:
+      type: object
+      description: '«Уже подписано на бумаге» (ОСН-1): реальная дата подписи и сканы по документам пакета; всё, кроме даты,
+        необязательно.'
+      properties:
+        signed_on:
+          type: string
+          format: date
+          description: Когда пакет подписан на бумаге; не позже сегодняшнего дня.
+        contract_number:
+          type: string
+          description: Прежний номер договора; пусто — присвоится новый.
+          maxLength: 64
+        note:
+          type: string
+          description: Где оригинал, как подписали.
+          maxLength: 1000
+        company_id:
+          type: integer
+          nullable: true
+        create_new_company:
+          type: boolean
+          default: false
+        signed_on_partnership:
+          type: string
+          format: date
+          nullable: true
+        signed_on_nda:
+          type: string
+          format: date
+          nullable: true
+        signed_on_offer:
+          type: string
+          format: date
+          nullable: true
+        scan_partnership:
+          type: string
+          format: binary
+          description: 'Скан договора о партнёрстве: PDF или изображение.'
+        scan_nda:
+          type: string
+          format: binary
+          description: 'Скан соглашения о неразглашении: PDF или изображение.'
+        scan_offer:
+          type: string
+          format: binary
+          description: 'Скан оферты: PDF или изображение.'
+      required:
+      - signed_on
     DeskPartnerInviteInRequest:
       type: object
       description: '«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора.'

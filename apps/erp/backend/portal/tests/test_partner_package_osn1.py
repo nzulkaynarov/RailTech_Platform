@@ -10,11 +10,13 @@
 import datetime
 
 import pytest
+from django.core import mail
 from documents.models.documents import TemplateApproval
 from parties.models import PartnerApplicationDocument
 from parties.models.company_settings import CompanySettings
 from portal.tests.test_partner_contract_pd1 import (  # noqa: F401
     DESK,
+    PDF,
     PORTAL,
     _locmem_mail,
     director,
@@ -199,3 +201,97 @@ class TestSignedTerms:
         assert nda.confidentiality_years == 3, "NDA хранит свой срок тайны из шаблона"
         card = supply.get(f"{DESK}/{app.pk}/").json()
         assert {d["base_role"]: d["confidentiality_years"] for d in card["package"]}["nda"] == 3
+
+
+class TestFromArchive:
+    """«Уже подписано на бумаге»: сразу конечное состояние, настоящие даты, без Кабинета и уведомлений."""
+
+    def _record(self, supply, app, **extra):
+        body = {"signed_on": "2025-03-14", "contract_number": "ДП-2025/17", **extra}
+        return supply.post(f"{DESK}/{app.pk}/from-archive/", body, format="multipart")
+
+    def test_package_is_recorded_signed_with_real_dates_scans_and_no_mail(self, world, supply):
+        both(world)
+        app = make_app()
+        before = Notification.objects.count()
+
+        response = self._record(
+            supply,
+            app,
+            signed_on_nda="2025-03-20",
+            scan_partnership=upload("p.pdf"),
+            scan_nda=upload("n.pdf"),
+            note="Оригиналы в папке «Партнёры 2025»",
+        )
+
+        assert response.status_code == 200, response.content
+        card = response.json()
+        assert card["status"] == "approved" and card["from_archive"] is True
+        assert card["contract_number"] == "ДП-2025/17" and card["contract_date"] == "2025-03-14"
+        rows = {r.base_role: r for r in app.package_documents.all()}
+        assert rows["partnership"].signed_on == datetime.date(2025, 3, 14)
+        assert rows["nda"].signed_on == datetime.date(2025, 3, 20)
+        assert all(r.from_archive and r.signed_scan for r in rows.values())
+        # срок считается от настоящей даты подписи, а не от сегодняшнего дня
+        assert rows["partnership"].valid_from == datetime.date(2025, 3, 14)
+        assert rows["partnership"].valid_until == datetime.date(2025, 12, 31)
+        assert rows["nda"].valid_from == datetime.date(2025, 3, 20) and rows["nda"].confidentiality_years == 3
+        # ничего не ушло: ни писем, ни уведомлений; в Кабинете у кандидата документов пакета нет
+        assert len(mail.outbox) == 0
+        assert Notification.objects.count() == before
+        app.refresh_from_db()
+        assert app.from_archive and app.signed_scan and app.signed_note.startswith("Оригиналы")
+        assert PartnerApplicationDocument.objects.filter(application=app, from_archive=True).count() == 2
+
+    def test_incomplete_data_is_fine_and_a_future_date_is_not(self, world, supply):
+        both(world)
+        app = make_app()
+        future = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
+        bad = self._record(supply, app, signed_on=future)
+        assert bad.status_code == 400 and bad.json()["detail"] == "SIGNED_ON_INVALID"
+        app.refresh_from_db()
+        assert app.status == "submitted" and not app.package_documents.exists()
+
+        bad_scan = self._record(supply, app, scan_nda=upload("s.exe", b"MZ", "application/octet-stream"))
+        assert bad_scan.status_code == 400 and bad_scan.json()["detail"] == "SCAN_INVALID"
+
+        ok = self._record(supply, app)  # ни сканов, ни заметки: неполные данные допустимы
+        assert ok.status_code == 200 and ok.json()["status"] == "approved"
+        again = self._record(supply, app)
+        assert again.status_code == 400 and again.json()["detail"] == "APPLICATION_ALREADY_DECIDED"
+
+    def test_candidate_cabinet_shows_no_documents_of_an_archived_package(self, world, supply):
+        both(world)
+        app = make_app()
+        assert self._record(supply, app, scan_partnership=upload("p.pdf")).status_code == 200
+        app.refresh_from_db()
+        candidate = session_client(app.applicant_contact, app.company)
+        assert candidate.get(PORTAL).json()["application"]["documents"] == []
+
+    def test_an_ordinary_approval_still_invites_the_candidate(self, world, supply):
+        """Пара к тесту выше: письмо уходит только при обычном пути, не из архива."""
+        both(world)
+        app = make_app()
+        post(supply, app, "prepare-contract", {"package": True})
+        post(supply, app, "send-contract")
+        mail.outbox.clear()
+        app.refresh_from_db()
+        response = post(
+            supply,
+            app,
+            "approve",
+            {"contract_number": app.contract_number, "signed_note": "ok", "override_reason": "по телефону"},
+        )
+        assert response.status_code == 200 and response.json()["from_archive"] is False
+
+    def test_archived_document_opens_its_scan_and_says_when_there_is_nothing(self, world, supply):
+        both(world)
+        app = make_app()
+        assert self._record(supply, app, scan_nda=upload("n.pdf")).status_code == 200
+        card = supply.get(f"{DESK}/{app.pk}/").json()
+        has_file = {d["base_role"]: d["has_file"] for d in card["package"]}
+        assert has_file == {"partnership": False, "nda": True}
+        nda = app.package_documents.get(base_role="nda")
+        assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={nda.pk}").content == PDF
+        none = app.package_documents.get(base_role="partnership")
+        assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={none.pk}").status_code == 404

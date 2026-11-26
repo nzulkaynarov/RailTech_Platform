@@ -143,12 +143,14 @@ def apply_to_package(app, *, signed_on: Optional[dt.date] = None) -> None:
     for row in app.package_documents.select_related("template"):
         if row.valid_from is not None:
             continue
-        row.valid_from = signed_on
+        # Из архива у документа своя реальная дата подписи (ОСН-1); иначе — момент отметки
+        row_signed_on = row.signed_on or signed_on
+        row.valid_from = row_signed_on
         if row.base_role == "nda":
             row.confidentiality_years = row.template.confidentiality_years if row.template_id else None
             row.trade_secret_indefinite = bool(row.template_id and row.template.trade_secret_indefinite)
         else:
-            _, term = compute_term(own_company(), row.template, app.company, signed_on)
+            _, term = compute_term(own_company(), row.template, app.company, row_signed_on)
             row.valid_from = term.valid_from
             row.valid_until = term.valid_until
         row.save()

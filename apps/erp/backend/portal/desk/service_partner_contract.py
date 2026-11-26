@@ -243,6 +243,7 @@ def package_facts(app: PartnerApplication) -> list[dict]:
             "title": row.title,
             "number": row.number,
             "template_edition": row.template_edition,
+            "has_file": bool(row.file or row.signed_scan),
             "has_candidate_file": bool(row.candidate_file),
             "candidate_remark": row.candidate_remark,
             "valid_from": row.valid_from,
@@ -327,6 +328,7 @@ def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
         "contract_last_notice_date": app.contract_last_notice_date,
         "contract_renewal_mode": app.contract_renewal_mode,
         "package": package_facts(app),
+        "from_archive": app.from_archive,
     }
 
 

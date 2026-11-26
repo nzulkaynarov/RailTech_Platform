@@ -83,4 +83,31 @@ for (const width of WIDTHS) {
     await expectNoViolations(page, "заявки партнёров · нет шаблона роли");
     await settledScreenshot(page, "osn1-package-missing");
   });
+
+  test(`уже подписано на бумаге, ${String(width)} px`, async ({ page }) => {
+    await page.addInitScript(`window.localStorage.setItem("rt-pf-mock-package", "ready");`);
+    await size(page, width);
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/crm/clients?kind=applications");
+    const list = page.getByRole(width === 390 ? "list" : "table", { name: QUEUE });
+    const nanjing = list
+      .getByText("Nanjing Jichuang Co.")
+      .locator("xpath=ancestor::*[self::tr or self::li][1]");
+    await nanjing.getByRole("button", { name: "Ещё" }).click();
+    await page.getByRole("menuitem", { name: "Уже подписано на бумаге" }).click();
+    const dialog = page.getByRole("dialog", { name: /Уже подписано на бумаге: Nanjing/ });
+    await expect(
+      dialog.getByText("в Кабинет и по почте ничего не уйдёт", { exact: false }),
+    ).toBeVisible();
+    const date = dialog.getByLabel("Когда подписано");
+    await date.fill("14.03.2025");
+    await date.press("Enter");
+    await expectNoViolations(page, "заявки партнёров · уже подписано на бумаге");
+    await settledScreenshot(page, "osn1-archive");
+    await dialog.getByRole("button", { name: "Внести" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(list.getByText("Внесено из архива").first()).toBeVisible();
+    await expectNoViolations(page, "заявки партнёров · внесено из архива");
+    await settledScreenshot(page, "osn1-archive-done");
+  });
 }

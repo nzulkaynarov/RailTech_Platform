@@ -1144,7 +1144,8 @@
       "reject": "Reject",
       "prepare": "Prepare contract",
       "prepareAgain": "Prepare again",
-      "decide": "Decide on contract"
+      "decide": "Decide on contract",
+      "fromArchive": "Already signed on paper"
     },
     "empty": {
       "title": "No partner applications",
@@ -1223,7 +1224,8 @@
       "documentRemark": "{{title}}: {{note}}",
       "documentUntil": "{{title}}: until {{date}}",
       "secretYears": "{{title}}: secrecy for {{years}} more years after the end",
-      "secretIndefinite": "{{title}}: secrecy without a time limit"
+      "secretIndefinite": "{{title}}: secrecy without a time limit",
+      "fromArchive": "Entered from the archive"
     },
     "prepareModal": {
       "title": "Contract for the candidate: {{name}}",
@@ -1270,6 +1272,17 @@
       "selfConfirm": "There are no other holders — the decision will be recorded as self-made",
       "hintRemarks": "The candidate returned the contract with remarks and their own edition. Everyone responsible agrees.",
       "hintDirector": "There is an objection: the director decides."
+    },
+    "archiveModal": {
+      "title": "Already signed on paper: {{name}}",
+      "ok": "Record",
+      "hint": "The partner signed the documents earlier. The application becomes approved at once; nothing is sent to the Cabinet or by e-mail.",
+      "signedOn": "Signed on",
+      "signedOnHint": "The real date from the paper: the term counts from it.",
+      "numberPlaceholder": "The old number; empty — a new one is assigned",
+      "ownDate": "Own date (if different)",
+      "scan": "Scan",
+      "scanHint": "Optional: PDF or image up to 20 MB"
     }
   },
   "backToItems": "Back to items"

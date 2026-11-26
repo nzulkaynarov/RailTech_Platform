@@ -225,6 +225,30 @@ async def upload_contract_file(
 
 
 @router.post(
+    "/erp/catalog/partner-applications/{id}/from-archive",
+    response_model=PartnerApplicationItem,
+    operation_id="recordPartnerPackageFromArchive",
+)
+async def record_from_archive(
+    id: ApplicationId, request: Request, authed: Writer
+) -> PartnerApplicationItem:
+    """«Уже подписано на бумаге» (ОСН-1): дата и сканы пакета, multipart уходит в ERP как есть."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Дату и сканы нужно передать формой multipart.",
+            status_code=422,
+            details={"fields": ["signed_on"], "reason": "multipart_required"},
+        )
+    body = await _read_limited(request)
+    response = await _erp(authed).request(
+        "POST", _path(id, "from-archive/"), content=body, content_type=content_type
+    )
+    return to_partner_application(response.json())
+
+
+@router.post(
     "/erp/catalog/partner-applications/{id}/contract-decision",
     response_model=PartnerApplicationItem,
     operation_id="decidePartnerContract",

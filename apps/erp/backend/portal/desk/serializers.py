@@ -157,6 +157,7 @@ class DeskPackageDocument(serializers.Serializer):
     title = serializers.CharField()
     number = serializers.CharField(allow_blank=True)
     template_edition = serializers.IntegerField()
+    has_file = serializers.BooleanField(help_text="Есть что открыть: файл документа или скан подписанного.")
     has_candidate_file = serializers.BooleanField()
     candidate_remark = serializers.CharField(allow_blank=True)
     valid_from = serializers.DateField(allow_null=True)
@@ -348,6 +349,28 @@ class DeskPartnerApplicationApproveIn(serializers.Serializer):
 
 class DeskPartnerScanIn(serializers.Serializer):
     file = serializers.FileField(help_text="Скан подписанного договора: PDF или изображение до 20 МБ")
+
+
+class DeskPartnerFromArchiveIn(serializers.Serializer):
+    """«Уже подписано на бумаге» (ОСН-1): реальная дата подписи и сканы по документам пакета; всё, кроме даты, необязательно."""
+
+    signed_on = serializers.DateField(help_text="Когда пакет подписан на бумаге; не позже сегодняшнего дня.")
+    contract_number = serializers.CharField(
+        required=False, allow_blank=True, max_length=64, help_text="Прежний номер договора; пусто — присвоится новый."
+    )
+    note = serializers.CharField(
+        required=False, allow_blank=True, max_length=1000, help_text="Где оригинал, как подписали."
+    )
+    company_id = serializers.IntegerField(required=False, allow_null=True)
+    create_new_company = serializers.BooleanField(required=False, default=False)
+    signed_on_partnership = serializers.DateField(required=False, allow_null=True)
+    signed_on_nda = serializers.DateField(required=False, allow_null=True)
+    signed_on_offer = serializers.DateField(required=False, allow_null=True)
+    scan_partnership = serializers.FileField(
+        required=False, help_text="Скан договора о партнёрстве: PDF или изображение."
+    )
+    scan_nda = serializers.FileField(required=False, help_text="Скан соглашения о неразглашении: PDF или изображение.")
+    scan_offer = serializers.FileField(required=False, help_text="Скан оферты: PDF или изображение.")
 
 
 class DeskPartnerInviteIn(serializers.Serializer):

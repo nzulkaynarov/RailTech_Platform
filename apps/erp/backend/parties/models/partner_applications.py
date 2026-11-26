@@ -273,6 +273,13 @@ class PartnerApplication(models.Model):
     contract_term_rule = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Правило срока"))
     contract_renewal_mode = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Продление"))
     contract_notice_days = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name=_("Дней на отказ"))
+    from_archive = models.BooleanField(
+        default=False,
+        verbose_name=_("Внесено из архива"),
+        help_text=_(
+            "ОСН-1: партнёр подписал бумажный пакет раньше; записано сразу в конечном состоянии, без Кабинета и уведомлений"
+        ),
+    )
     contract_draft_sent_at = models.DateTimeField(
         null=True,
         blank=True,

@@ -1162,12 +1162,12 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
 
         from parties.models import PartnerApplicationStatus
 
-        if obj.status not in (
+        if obj.from_archive or obj.status not in (
             PartnerApplicationStatus.CONTRACT_SENT,
             PartnerApplicationStatus.CANDIDATE_AGREED,
             PartnerApplicationStatus.APPROVED,
         ):
-            return []
+            return []  # из архива: в Кабинет ничего не уходило
         return [
             {
                 "id": row.id,

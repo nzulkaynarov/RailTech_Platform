@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pghistory
 from django.db import transaction
 from django.db.models import Q
@@ -30,6 +32,7 @@ from parties.models import (
     PartnerApplication,
     PartnerApplicationSource,
     PartnerApplicationStatus,
+    PartnerContractSource,
     PartnerKind,
     RelationshipRole,
     RelationshipStatus,
@@ -460,7 +463,9 @@ def invite_candidate(pk: int, data: dict, user) -> dict:
     return get_application(app.pk, user)
 
 
-def approve_application(pk: int, data: dict, user) -> dict:
+def approve_application(pk: int, data: dict, user, *, archive: bool = False, signed_on=None) -> dict:
+    """Одобрить заявку. `archive` (ОСН-1): бумажный пакет подписан раньше — согласия кандидата и скана не ждём, приглашение
+    и письма не отправляем; срок договора считается от `signed_on` (реальная дата подписи), а не от сегодняшнего дня."""
     contract_number = (data.get("contract_number") or "").strip()
     if not contract_number:
         raise AccessError("CONTRACT_NUMBER_REQUIRED", 400)
@@ -477,14 +482,14 @@ def approve_application(pk: int, data: dict, user) -> dict:
             if app.status == PartnerApplicationStatus.REJECTED:
                 raise AccessError("APPLICATION_ALREADY_DECIDED", 400)
             # Без согласия кандидата — только явный обход с причиной в журнале и только после отправки договора (FX-1)
-            bypassed_agreement = app.status != PartnerApplicationStatus.CANDIDATE_AGREED
+            bypassed_agreement = app.status != PartnerApplicationStatus.CANDIDATE_AGREED and not archive
             may_bypass = app.status == PartnerApplicationStatus.CONTRACT_SENT and override_reason
             if bypassed_agreement and not may_bypass:
                 raise AccessError("CANDIDATE_AGREEMENT_REQUIRED", 400)
 
             # ПК-1: «Отметить: подписан» — скан ИЛИ заметка (скан не обязателен); договор подготовлен в системе
             signed_note = (data.get("signed_note") or "").strip()[:1000]
-            if app.contract_source and not app.signed_scan and not (signed_note or override_reason):
+            if app.contract_source and not archive and not app.signed_scan and not (signed_note or override_reason):
                 raise AccessError("SIGNED_PROOF_REQUIRED", 400)
 
             # 1. Компания: выбранная сотрудником, уже привязанная или новая
@@ -556,12 +561,14 @@ def approve_application(pk: int, data: dict, user) -> dict:
             # Срок договора считается в момент отметки по правилу компании (ДС-1, тот же сервис, что у клиентов)
             from crm.services.contract_term import apply_to_package, apply_to_partner_application
 
-            apply_to_partner_application(app, signed_on=timezone.localdate())
-            apply_to_package(app, signed_on=timezone.localdate())
+            apply_to_partner_application(app, signed_on=signed_on or timezone.localdate())
+            apply_to_package(app, signed_on=signed_on or timezone.localdate())
+            app.from_archive = archive
 
             # 5. Приглашение и интеграция с CRM
             if (
-                app.source != PartnerApplicationSource.CLIENT_CABINET
+                not archive
+                and app.source != PartnerApplicationSource.CLIENT_CABINET
                 and not contact.last_login_at
                 and (contact.email or "").strip()
             ):
@@ -576,7 +583,18 @@ def approve_application(pk: int, data: dict, user) -> dict:
             after = {"status": app.status, "company": company.pk, "contract_number": contract_number}
             if signed_note:
                 after["signed_note"] = signed_note
-            if bypassed_agreement:
+            if archive:
+                record(
+                    user,
+                    entity="partner_application",
+                    instance=app,
+                    event="approved_from_archive",
+                    action="Пакет кандидата в партнёры внесён из архива",
+                    before=None,
+                    after={**after, "signed_on": str(signed_on)},
+                    detail=app.company_name,
+                )
+            elif bypassed_agreement:
                 record(
                     user,
                     entity="partner_application",
@@ -604,6 +622,89 @@ def approve_application(pk: int, data: dict, user) -> dict:
         raise AccessError(code) from None
 
     return get_application(app.pk, user)
+
+
+@transaction.atomic
+def _store_archive_package(app: PartnerApplication, data: dict, files: dict, number: str, signed_on) -> None:
+    """Документы пакета, подписанные на бумаге: настоящая дата подписи и скан — по каждому; неполные данные допустимы."""
+    from django.core.exceptions import ValidationError
+    from django.core.files.base import ContentFile
+    from documents.models.documents import BaseRole
+    from parties.models import PartnerApplicationDocument
+
+    from core.validators import validate_scan_upload
+
+    plan = contract_step.package_plan()
+    app.package_documents.all().delete()
+    primary = next((i for i in plan if i["role"] == "partnership"), plan[0] if plan else None)
+    for position, item in enumerate(plan):
+        tpl = item["template"]
+        role = item["role"]
+        row = PartnerApplicationDocument(
+            application=app,
+            base_role=role,
+            template=tpl,
+            template_edition=tpl.edition if tpl else 1,
+            title=tpl.name if tpl else str(BaseRole(role).label),
+            number=number if item is primary else f"{number}/{position + 1}",
+            position=position,
+            signed_on=data.get(f"signed_on_{role}") or signed_on,
+            from_archive=True,
+        )
+        scan = files.get(f"scan_{role}")
+        if scan is not None:
+            try:
+                validate_scan_upload(scan)
+            except ValidationError:
+                raise AccessError("SCAN_INVALID") from None
+            payload = scan.read()
+            row.signed_scan.save(scan.name, ContentFile(payload), save=False)
+            if item is primary:
+                app.signed_scan.save(scan.name, ContentFile(payload), save=False)
+                app.signed_scan_at = timezone.now()
+        row.save()
+    if primary is not None and primary["template"] is not None:
+        app.contract_template = primary["template"]
+        app.contract_source = PartnerContractSource.TEMPLATE
+    else:
+        app.contract_source = PartnerContractSource.UPLOAD
+    app.contract_language = app.language if app.language in LANGUAGES else "ru"
+
+
+def record_from_archive(pk: int, data: dict, files: dict, user) -> dict:
+    """«Уже подписано на бумаге» (ОСН-1, правило владельца 26.11 о прошлом): пакет записывается подписанным сразу, с реальными
+    датами и сканами, без Кабинета и уведомлений; пометка «внесено из архива». Номер — прежний, если задан."""
+    signed_on = data.get("signed_on")
+    if not isinstance(signed_on, date) or signed_on > timezone.localdate():
+        raise AccessError("SIGNED_ON_INVALID")
+    for role in ("partnership", "nda", "offer"):
+        own = data.get(f"signed_on_{role}")
+        if own is not None and (not isinstance(own, date) or own > timezone.localdate()):
+            raise AccessError("SIGNED_ON_INVALID")
+    with transaction.atomic():
+        app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
+        if app is None:
+            raise AccessError("NOT_FOUND", 404)
+        if app.status in (PartnerApplicationStatus.APPROVED, PartnerApplicationStatus.REJECTED):
+            raise AccessError("APPLICATION_ALREADY_DECIDED", 400)
+        number = (data.get("contract_number") or "").strip() or app.contract_number
+        if not number:
+            from portal.services import partner_contract as contract_service
+
+            number = contract_service.generate_partner_contract_number(app.pk)
+        app.contract_number = number
+        app.contract_date = signed_on
+        app.save()
+        _store_archive_package(app, data, files, number, signed_on)
+        app.save()
+    approve_data = {
+        "contract_number": number,
+        "contract_date": signed_on,
+        "signed_note": (data.get("note") or "").strip()[:1000],
+        "company_id": data.get("company_id"),
+        "create_new_company": bool(data.get("create_new_company")),
+    }
+    return approve_application(pk, approve_data, user, archive=True, signed_on=signed_on)
 
 
 def _close_candidate_access(app: PartnerApplication) -> None:

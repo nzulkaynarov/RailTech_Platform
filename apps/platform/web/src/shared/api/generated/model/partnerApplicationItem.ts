@@ -113,4 +113,6 @@ export interface PartnerApplicationItem {
   contract_renewal_mode: string;
   /** Пакет базовых документов (ОСН-1); пусто — договор одним файлом */
   package: PartnerPackageDocument[];
+  /** Внесено из архива (ОСН-1): подписано на бумаге раньше, в Кабинет ничего не уходило */
+  from_archive: boolean;
 }

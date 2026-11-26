@@ -547,6 +547,7 @@ async def test_prepare_package_and_card_documents(
                 "title": "Соглашение о неразглашении",
                 "number": "PA-2026-0015/2",
                 "template_edition": 1,
+                "has_file": True,
                 "has_candidate_file": False,
                 "candidate_remark": "",
                 "valid_from": None,
@@ -589,3 +590,34 @@ async def test_package_document_is_requested_by_id(web: Web, be: Any) -> None:
     assert dict(route.calls.last.request.url.params) == {"which": "contract", "doc": "7"}
     bad = await web.client.get(f"/api/v1{BASE}/15/document", params={"doc": "x"})
     assert bad.status_code == 422
+
+
+async def test_from_archive_goes_to_erp_as_multipart(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/from-archive/")
+        .mock(
+            return_value=httpx.Response(
+                200, json={**APPLICATION_RAW, "status": "approved", "from_archive": True}
+            )
+        )
+    )
+    response = await web.client.post(
+        f"/api/v1{BASE}/15/from-archive",
+        data={"signed_on": "2025-03-14", "contract_number": "ДП-2025/17"},
+        files={"scan_nda": ("n.pdf", b"%PDF-1.4 n", "application/pdf")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/{id}/from-archive", "post")
+    assert response.json()["from_archive"] is True
+    sent = route.calls.last.request
+    assert sent.headers["content-type"].startswith("multipart/form-data")
+    assert b"2025-03-14" in sent.content
+    assert b"%PDF-1.4 n" in sent.content
+    plain = await call(web, "POST", f"{BASE}/15/from-archive", {"signed_on": "2025-03-14"})
+    assert plain.status_code == 422
+    assert plain.json()["details"]["reason"] == "multipart_required"

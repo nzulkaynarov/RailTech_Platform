@@ -891,6 +891,7 @@ export * from "./partnerContractTemplateOption";
 export * from "./partnerContractTemplateOptionLanguagesItem";
 export * from "./partnerContractVote";
 export * from "./partnerContractVoteDecision";
+export * from "./partnerFromArchiveUpload";
 export * from "./partnerHandoffIn";
 export * from "./partnerHandoffView";
 export * from "./partnerNameIn";

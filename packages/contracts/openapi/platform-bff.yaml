@@ -17033,6 +17033,39 @@ paths:
                 $ref: '#/components/schemas/Error'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/from-archive:
+    post:
+      tags: [erp-catalog]
+      operationId: recordPartnerPackageFromArchive
+      summary: 'Расчёт · Заявка в партнёры: «Уже подписано на бумаге»'
+      description: >-
+        ОСН-1: партнёр подписал бумажный пакет раньше — заявка сразу одобряется с реальными датами и сканами документов пакета; в Кабинет и по почте ничего не уходит, пометка `from_archive`. ERP `POST catalog/partner-applications/{id}/from-archive/` — право `supply.manage`. Только `multipart/form-data`; тело уходит в ERP как есть. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PartnerFromArchiveUpload'
+      responses:
+        '200':
+          description: Заявка одобрена, пакет внесён из архива
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/partner-applications/{id}/document:
     get:
       tags: [erp-catalog]
@@ -32163,7 +32196,7 @@ components:
     PartnerApplicationItem:
       type: object
       additionalProperties: false
-      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, decision_needs_confirmation, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at, contract_votes, contract_waiting_for, contract_disagreement, has_candidate_file, signed_note, contract_valid_from, contract_valid_until, contract_last_notice_date, contract_renewal_mode, package]
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, decision_needs_confirmation, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at, contract_votes, contract_waiting_for, contract_disagreement, has_candidate_file, signed_note, contract_valid_from, contract_valid_until, contract_last_notice_date, contract_renewal_mode, package, from_archive]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
@@ -32229,16 +32262,18 @@ components:
           type: array
           items: {$ref: '#/components/schemas/PartnerPackageDocument'}
           description: 'Пакет базовых документов (ОСН-1); пусто — договор одним файлом'
+        from_archive: {type: boolean, description: 'Внесено из архива (ОСН-1): подписано на бумаге раньше, в Кабинет ничего не уходило'}
     PartnerPackageDocument:
       type: object
       additionalProperties: false
-      required: [id, base_role, title, number, template_edition, has_candidate_file, candidate_remark, valid_from, valid_until, confidentiality_years, trade_secret_indefinite, from_archive]
+      required: [id, base_role, title, number, template_edition, has_file, has_candidate_file, candidate_remark, valid_from, valid_until, confidentiality_years, trade_secret_indefinite, from_archive]
       properties:
         id: {type: string}
         base_role: {type: string, enum: [partnership, nda, offer]}
         title: {type: string}
         number: {type: string}
         template_edition: {type: integer}
+        has_file: {type: boolean, description: 'Есть что открыть: файл документа или скан подписанного'}
         has_candidate_file: {type: boolean}
         candidate_remark: {type: string, description: 'Что кандидат вернул по этому документу'}
         valid_from: {type: [string, 'null'], format: date}
@@ -32265,6 +32300,21 @@ components:
         deviation_text: {type: string, maxLength: 4000}
         contract_number: {type: string, maxLength: 64}
         contract_date: {type: string, format: date}
+    PartnerFromArchiveUpload:
+      type: object
+      required: [signed_on]
+      properties:
+        signed_on: {type: string, format: date, description: 'Когда пакет подписан на бумаге; не позже сегодняшнего дня'}
+        contract_number: {type: string, maxLength: 64, description: 'Прежний номер договора; пусто — присвоится новый'}
+        note: {type: string, maxLength: 1000, description: 'Где оригинал, как подписали'}
+        company_id: {type: integer}
+        create_new_company: {type: boolean}
+        signed_on_partnership: {type: string, format: date}
+        signed_on_nda: {type: string, format: date}
+        signed_on_offer: {type: string, format: date}
+        scan_partnership: {type: string, format: binary, description: 'PDF или изображение до 20 МБ'}
+        scan_nda: {type: string, format: binary, description: 'PDF или изображение до 20 МБ'}
+        scan_offer: {type: string, format: binary, description: 'PDF или изображение до 20 МБ'}
     PartnerSignedScanUpload:
       type: object
       required: [file]

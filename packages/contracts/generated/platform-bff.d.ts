@@ -9419,6 +9419,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/partner-applications/{id}/from-archive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: «Уже подписано на бумаге»
+     * @description ОСН-1: партнёр подписал бумажный пакет раньше — заявка сразу одобряется с реальными датами и сканами документов пакета; в Кабинет и по почте ничего не уходит, пометка `from_archive`. ERP `POST catalog/partner-applications/{id}/from-archive/` — право `supply.manage`. Только `multipart/form-data`; тело уходит в ERP как есть. Раздел `erp.stock` — полный.
+     */
+    post: operations["recordPartnerPackageFromArchive"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/partner-applications/{id}/document": {
     parameters: {
       query?: never;
@@ -19686,6 +19706,8 @@ export interface components {
       contract_renewal_mode: string;
       /** @description Пакет базовых документов (ОСН-1); пусто — договор одним файлом */
       package: components["schemas"]["PartnerPackageDocument"][];
+      /** @description Внесено из архива (ОСН-1): подписано на бумаге раньше, в Кабинет ничего не уходило */
+      from_archive: boolean;
     };
     PartnerPackageDocument: {
       id: string;
@@ -19694,6 +19716,8 @@ export interface components {
       title: string;
       number: string;
       template_edition: number;
+      /** @description Есть что открыть: файл документа или скан подписанного */
+      has_file: boolean;
       has_candidate_file: boolean;
       /** @description Что кандидат вернул по этому документу */
       candidate_remark: string;
@@ -19738,6 +19762,40 @@ export interface components {
       contract_number?: string;
       /** Format: date */
       contract_date?: string;
+    };
+    PartnerFromArchiveUpload: {
+      /**
+       * Format: date
+       * @description Когда пакет подписан на бумаге; не позже сегодняшнего дня
+       */
+      signed_on: string;
+      /** @description Прежний номер договора; пусто — присвоится новый */
+      contract_number?: string;
+      /** @description Где оригинал, как подписали */
+      note?: string;
+      company_id?: number;
+      create_new_company?: boolean;
+      /** Format: date */
+      signed_on_partnership?: string;
+      /** Format: date */
+      signed_on_nda?: string;
+      /** Format: date */
+      signed_on_offer?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_partnership?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_nda?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_offer?: string;
     };
     PartnerSignedScanUpload: {
       /**
@@ -37486,6 +37544,41 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  recordPartnerPackageFromArchive: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PartnerFromArchiveUpload"];
+      };
+    };
+    responses: {
+      /** @description Заявка одобрена, пакет внесён из архива */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
