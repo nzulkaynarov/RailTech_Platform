@@ -596,9 +596,11 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Response({"detail": "WORD_LANGUAGE_INVALID"}, status=400)
         template = self.get_object()
         if request.method == "GET":
-            from accounts.models import Company
-            from django.http import HttpResponse
             from urllib.parse import quote
+
+            from django.http import HttpResponse
+
+            from accounts.models import Company
 
             company_id = crm_services.resolve_owner_company_id(request.user)
             brand = document_brand_context(Company.objects.filter(pk=company_id).first()) if company_id else {}

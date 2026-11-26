@@ -420,12 +420,12 @@
   color: var(--rt-color-text-secondary);
 }
 .pf-co-word-change del {
-  background: #ffe7e7;
-  color: #8c1d1d;
+  background: var(--rt-color-error-bg);
+  color: var(--rt-color-error-text);
 }
 .pf-co-word-change ins {
-  background: #e3f5e1;
-  color: #135200;
+  background: var(--rt-color-success-bg);
+  color: var(--rt-color-success-text);
   text-decoration: none;
 }
 @media (min-width: 640px) {
