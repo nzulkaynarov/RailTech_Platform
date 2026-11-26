@@ -337,8 +337,11 @@ class RequestFormIn(BaseModel):
 
 
 class PartnerHandoffIn(BaseModel):
-    """ЛП-1, «Кто это?» → «Партнёр»: заявка кандидата из карточки лида; почта обязательна (по ней
-    ERP приглашает кандидата), формат проверяет CRM — `invalid_email` у поля `email`."""
+    """ЛП-1, «Кто это?» → «Партнёр»: заявка кандидата из карточки лида.
+
+    Почта не обязательна (ПК-1): хватает телефона или Telegram лида, приглашение в Кабинет
+    уйдёт, когда почта появится. Если указана — формат проверяет CRM: `invalid_email` у поля
+    `email`."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -347,7 +350,7 @@ class PartnerHandoffIn(BaseModel):
     inn: str = Field(default="", max_length=32)
     offer: str = Field(min_length=1, max_length=4000)
     contact_name: str = Field(min_length=1, max_length=255)
-    email: str = Field(min_length=3, max_length=254)
+    email: str = Field(default="", max_length=254)
     phone: str = Field(default="", max_length=32)
 
 

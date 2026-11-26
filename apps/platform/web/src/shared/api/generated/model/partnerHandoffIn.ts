@@ -4,7 +4,7 @@
  */
 
 /**
- * Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
+ * Почта не обязательна (ПК-1) — хватает телефона или Telegram лида, приглашение в Кабинет уйдёт, когда почта появится; если указана — формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
  */
 export interface PartnerHandoffIn {
   /**
@@ -30,11 +30,8 @@ export interface PartnerHandoffIn {
    * @maxLength 255
    */
   contact_name: string;
-  /**
-   * @minLength 3
-   * @maxLength 254
-   */
-  email: string;
+  /** @maxLength 254 */
+  email?: string;
   /** @maxLength 32 */
   phone?: string;
 }

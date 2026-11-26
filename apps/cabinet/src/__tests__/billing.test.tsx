@@ -45,7 +45,7 @@ describe('Скачивание из меню строки', () => {
 });
 
 describe('Договоры', () => {
-  it('статусы договора; «Согласовать» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
+  it('статусы договора; «Принять редакцию» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/contracts');
@@ -55,18 +55,18 @@ describe('Договоры', () => {
     const signed = card('Договоры', 'D-2026-0035');
     expect(within(signed).getByText('Подписан')).toBeInTheDocument();
     expect(within(signed).getByText('20 авг. 2026 г., 15:30')).toBeInTheDocument();
-    expect(within(signed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(signed).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
 
     const pending = card('Договоры', 'D-2026-0029');
     expect(within(pending).getByText('Ждёт вашего согласования')).toBeInTheDocument();
     await openRowMenu(user, pending, 'D-2026-0029');
     expect(await screen.findByRole('menuitem', { name: 'Файл ещё не выпущен' })).toHaveAttribute('aria-disabled', 'true');
     await user.keyboard('{Escape}');
-    await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
+    await user.click(within(pending).getByRole('button', { name: 'Принять редакцию договора D-2026-0029' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Принять редакцию договора D-2026-0029' });
     expect(within(dialog).getByText(/выставим договор на подписание/)).toBeInTheDocument();
     await expectNoAxeViolations();
-    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Принять редакцию' }));
 
     // согласие клиента не делает договор подписанным: честный статус «будет выставлен на подписание», кнопки «согласовать» больше нет
     expect(await screen.findByText('Договор D-2026-0029 согласован. Он будет выставлен на подписание.')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('Договоры', () => {
     expect(within(agreed).getByText('Согласован')).toBeInTheDocument();
     expect(within(agreed).getByText('Договор будет выставлен на подписание')).toBeInTheDocument();
     expect(within(agreed).queryByText('Подписан')).not.toBeInTheDocument();
-    expect(within(agreed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(agreed).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
     expect(await screen.findByText('1 договор ждёт вашего согласования')).toBeInTheDocument();
   });
 
@@ -84,9 +84,9 @@ describe('Договоры', () => {
     const user = userEvent.setup();
     renderApp('/contracts');
     await heading('Договоры');
-    await user.click(await screen.findByRole('button', { name: 'Согласовать договор D-2026-0048' }));
+    await user.click(await screen.findByRole('button', { name: 'Принять редакцию договора D-2026-0048' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Принять редакцию' }));
     expect(await within(dialog).findByText('Договор уже согласован, подписан или отменён — обновите страницу.')).toBeInTheDocument();
   });
 
@@ -96,9 +96,39 @@ describe('Договоры', () => {
     const user = userEvent.setup();
     renderApp('/contracts');
     await screen.findByRole('list', { name: 'Договоры' });
-    expect(screen.queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
     await openRowMenu(user, card('Договоры', 'D-2026-0048'), 'D-2026-0048');
     expect(await screen.findByRole('menuitem', { name: 'Скачать' })).toBeInTheDocument();
+  });
+
+  it('«Есть замечания» (ДП-1): одно окно, свою редакцию можно приложить; пока замечания на согласовании — принять редакцию нельзя', async () => {
+    signedIn();
+    window.localStorage.setItem('cabinet.language', 'ru');
+    const user = userEvent.setup({ applyAccept: false });
+    const sent = captureBody('/contracts/402/remarks');
+    renderApp('/contracts');
+    await heading('Договоры');
+    await user.click(await screen.findByRole('button', { name: 'Есть замечания к договору D-2026-0048' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Замечания к договору D-2026-0048' });
+    // без слов не уходит
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить замечания' }));
+    expect(await within(dialog).findByText('Напишите, что изменить.')).toBeInTheDocument();
+    expect(sent.current).toBeUndefined();
+    // не Word и не Excel — отказ на месте
+    await user.upload(within(dialog).getByLabelText('Ваша редакция (необязательно)'), new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+    expect(await within(dialog).findByText('Нужен файл Word (.docx) или Excel (.xlsx).')).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Что изменить'), 'Предоплата 30 %');
+    await user.upload(within(dialog).getByLabelText('Ваша редакция (необязательно)'), new File(['x'], 'our.docx'));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить замечания' }));
+    await vi.waitFor(() => expect(sent.current).toMatchObject({ comment: 'Предоплата 30 %' }));
+    expect((sent.current as { upload_id?: string }).upload_id).toBeTruthy();
+    const row = await vi.waitFor(() => {
+      const found = card('Договоры', 'D-2026-0048');
+      expect(within(found).getByText('Ваши замечания на согласовании у нас')).toBeInTheDocument();
+      return found;
+    });
+    expect(within(row).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: /Есть замечания/ })).not.toBeInTheDocument();
   });
 
   it('пусто', async () => {
@@ -415,19 +445,16 @@ describe('Срок договора (ДС-1)', () => {
     expect(within(signed).getByText('до 31 дек. 2026 г. · продлится сам')).toBeInTheDocument();
     // без срока (договор не подписан) — прочерк, и меню без отказа
     const sent = card('Договоры', 'D-2026-0048');
-    await openRowMenu(user, sent, 'D-2026-0048');
-    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
-    await user.keyboard('{Escape}');
+    expect(within(sent).queryByRole('button', { name: /Отказаться от продления/ })).not.toBeInTheDocument();
 
-    await openRowMenu(user, signed, 'D-2026-0035');
-    await user.click(await screen.findByRole('menuitem', { name: 'Отказаться от продления' }));
+    await user.click(within(signed).getByRole('button', { name: 'Отказаться от продления договора D-2026-0035' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Договор действует до 31 дек. 2026 г./)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Отказаться от продления' }));
     expect(await screen.findByText('Вы отказались от продления договора D-2026-0035.')).toBeInTheDocument();
     expect(within(card('Договоры', 'D-2026-0035')).getByText('до 31 дек. 2026 г. · закончится в срок')).toBeInTheDocument();
+    expect(within(card('Договоры', 'D-2026-0035')).queryByRole('button', { name: /Отказаться от продления/ })).not.toBeInTheDocument();
     await openRowMenu(user, card('Договоры', 'D-2026-0035'), 'D-2026-0035');
-    expect(screen.queryByRole('menuitem', { name: 'Отказаться от продления' })).not.toBeInTheDocument();
     // свой отказ можно вернуть до последнего дня отказа
     await user.click(await screen.findByRole('menuitem', { name: 'Вернуть продление' }));
     expect(await screen.findByText('Продление договора D-2026-0035 возвращено.')).toBeInTheDocument();

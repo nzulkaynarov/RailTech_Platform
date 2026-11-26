@@ -463,8 +463,8 @@ test('ТЕКСТ-1: согласованный договор — статус �
   await signIn(page, 'actor');
   await page.goto('/contracts');
   await heading(page, 'Договоры');
-  await page.getByRole('button', { name: /^Согласовать договор D-2026-0048/ }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Согласовать договор', exact: true }).click();
+  await page.getByRole('button', { name: /^Принять редакцию договора D-2026-0048/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Принять редакцию', exact: true }).click();
   await expect(page.getByText('Договор будет выставлен на подписание').first()).toBeVisible();
   await snap(page, 'text1-contract-agreed');
   await page.getByRole('link', { name: /ПР-2026-048/ }).first().click(); // состояние мока живёт до перезагрузки — переходим по ссылке

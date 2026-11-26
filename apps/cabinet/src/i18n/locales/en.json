@@ -634,11 +634,11 @@
       },
       "notSigned": "Not yet",
       "willBeSent": "The contract will be sent for signing",
-      "sign": "Agree",
-      "signNamed": "Agree contract {{number}}",
-      "signTitle": "Agree contract {{number}}",
+      "sign": "Accept the edition",
+      "signNamed": "Accept the edition of contract {{number}}",
+      "signTitle": "Accept the edition of contract {{number}}",
       "signText": "You confirm, on behalf of your company, that you agree with the contract text. We will send the contract for signing and tell you when it is signed.",
-      "signConfirm": "Agree contract",
+      "signConfirm": "Accept the edition",
       "signedClient": "Contract {{number}} is agreed. It will be sent for signing.",
       "signedBoth": "Contract {{number}} is signed by both parties.",
       "term": {
@@ -652,11 +652,32 @@
           "expired": "term over"
         },
         "decline": "Decline renewal",
+        "declineNamed": "Decline renewal of contract {{number}}",
+        "declineHint": "The contract ends on its date; started deliveries and payments are not affected.",
         "declineTitle": "Decline renewal of contract {{number}}",
         "declineText": "The contract is valid until {{until}} and ends after that. Started deliveries, payments and claims are not affected. You can decline until {{notice}}.",
         "declined": "You declined the renewal of contract {{number}}.",
         "restore": "Restore renewal",
         "restored": "Renewal of contract {{number}} restored."
+      },
+      "remarks": {
+        "open": "I have remarks",
+        "openNamed": "Remarks on contract {{number}}",
+        "title": "Remarks on contract {{number}}",
+        "text": "Say what to change. You can attach your own edition: download ours as Word, edit it and upload.",
+        "comment": "What to change",
+        "file": "Your edition (optional)",
+        "fileHint": "Word or Excel, up to 10 MB. The file stays attached to your remarks.",
+        "confirm": "Send remarks",
+        "sent": "Remarks on contract {{number}} sent. We will reply.",
+        "review": "Your remarks are being reviewed by us",
+        "answered": "Our reply: {{text}}",
+        "docx": "Download for edits (DOCX)",
+        "problem": {
+          "commentMissing": "Say what to change.",
+          "tooLarge": "The file is larger than 10 MB.",
+          "badType": "A Word (.docx) or Excel (.xlsx) file is needed."
+        }
       }
     },
     "invoices": {
@@ -965,7 +986,7 @@
         "appliedAt": "Submitted on {{date}}",
         "contractNumber": "Contract",
         "downloadDraftPdf": "Open contract",
-        "agreeContractBtn": "Agree to draft contract",
+        "agreeContractBtn": "Accept the edition",
         "agreeDialogTitle": "Draft contract agreement",
         "agreeDialogDesc": "By confirming, you accept the partner contract terms.",
         "agreeNotesLabel": "Notes or comments for agreement (optional)",
@@ -985,9 +1006,14 @@
         "dialogSubmit": "Submit Application",
         "dialogSuccess": "Application successfully submitted for review.",
         "returnedDesc": "You returned the contract with a remark. We will prepare a new version and let you know.",
-        "returnContractBtn": "Return with a remark",
+        "returnContractBtn": "I have remarks",
         "returnDialogTitle": "Return the contract with a remark",
-        "returnDialogDesc": "Write what should change. We will prepare a new version of the contract.",
+        "returnDialogDesc": "Write what should change. You can attach your own edition of the contract (DOCX) — we take it as the basis and come back with a new edition.",
+        "returnFileHint": "Your own edition is optional. The file becomes the basis and we will agree it.",
+        "returnFileAttach": "Attach your own edition",
+        "returnFileReplace": "Replace the file",
+        "returnFileInput": "File with your edition of the contract",
+        "willBeIssued": "The contract will be issued for signing.",
         "returnNotesLabel": "Remark on the contract",
         "returnSubmit": "Return contract",
         "returnSuccess": "Remark sent. We will prepare a new version of the contract.",
@@ -996,7 +1022,15 @@
         "scanUpload": "Upload scan",
         "scanReplace": "Replace scan",
         "scanInput": "Scan of the signed contract",
-        "scanSuccess": "Scan received."
+        "scanSuccess": "Scan received.",
+        "packageList": "Documents to accept",
+        "openDocument": "Open: {{title}}",
+        "openDocumentBtn": "Open",
+        "documentRemark": "Your remark: {{note}}",
+        "returnDocumentLabel": "Which document",
+        "returnDocumentAll": "All documents",
+        "returnDocumentNeeded": "Choose the document your edition belongs to.",
+        "agreePackageDesc": "By confirming you accept the edition of all the documents."
       },
       "bankChange": {
         "title": "Bank details change request",
@@ -1463,7 +1497,10 @@
     "GENERATING": "The file is still being prepared — try again in a few seconds.",
     "SCAN_NOT_EXPECTED": "The scan is not expected now.",
     "SCAN_INVALID": "The file was not accepted: a PDF or an image up to 20 MB.",
-    "RETURN_NOTE_REQUIRED": "Write a remark."
+    "RETURN_NOTE_REQUIRED": "Write a remark.",
+    "REMARK_OPEN": "Your remarks are still being reviewed — wait for the reply.",
+    "CONTRACT_REMARK_NOT_ALLOWED": "Remarks can no longer be sent for this contract.",
+    "COMMENT_REQUIRED": "Say what to change."
   },
   "widgets": {
     "actionRequired": {
@@ -1472,7 +1509,7 @@
       "quoteBadge": "Quote",
       "reviewQuote": "Review quote",
       "contractBadge": "Contract",
-      "signContract": "Agree contract",
+      "signContract": "Accept the edition",
       "invoiceBadge": "Invoice",
       "payInvoice": "Pay invoice",
       "actBadge": "Act",
@@ -1822,7 +1859,9 @@
       "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}",
       "new_device_login": "{{name}} signed in from a new device",
       "contract_renewed": "Contract {{number}} renewed until {{until}}",
-      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}"
+      "contract_renewal_declined": "We declined the renewal of contract {{number}}: it ends on {{until}}",
+      "contract_remark_answered": "Our reply to your remarks on contract {{number}}: {{text}}",
+      "contract_awaiting_signature": "Contract {{number}} will be issued for signature"
     }
   },
   "verify": {
@@ -1959,7 +1998,7 @@
       "reject": "Return with remarks",
       "question": "Ask a question",
       "open": "Open your account",
-      "accept_contract": "Agree the contract",
+      "accept_contract": "Accept the edition",
       "accept_act": "Accept the act",
       "answer": "Answer the request",
       "confirm": "Confirm the order"
@@ -2012,7 +2051,7 @@
       "memberText": "Total {{total}}. The contract will appear in your account.",
       "working": "Working…",
       "openTitle": "Open your account",
-      "memberTitle_contract": "Agree the contract?",
+      "memberTitle_contract": "Accept the edition of the contract?",
       "memberText_contract": "Total {{total}}. You confirm that you agree with the contract text.",
       "memberTitle_act": "Accept the act?",
       "memberText_act": "Amount {{total}}. An accepted act cannot be returned.",

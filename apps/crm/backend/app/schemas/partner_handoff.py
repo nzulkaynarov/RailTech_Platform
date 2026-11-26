@@ -6,8 +6,10 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class PartnerHandoffIn(BaseModel):
-    """Форма «Партнёр»: компания, страна, ИНН, контакт и что предлагает кандидат. Почта обязательна:
-    договорный шлюз ERP приглашает кандидата по ней; формат проверяет сервис (`invalid_email`)."""
+    """Форма «Партнёр»: компания, страна, ИНН, контакт и что предлагает кандидат.
+
+    Почта не обязательна (ПК-1): хватает телефона или Telegram лида, приглашение в Кабинет
+    уйдёт позже; если почта указана — формат проверяет сервис (`invalid_email`)."""
 
     company_name: str = Field(min_length=1, max_length=255)
     country: str = Field(default="UZ", min_length=2, max_length=2)
@@ -15,7 +17,7 @@ class PartnerHandoffIn(BaseModel):
     kind: Literal["manufacturer", "supplier", "principal", "other"] = "supplier"
     offer: str = Field(min_length=1, max_length=4000)
     contact_name: str = Field(min_length=1, max_length=255)
-    email: str = Field(min_length=3, max_length=254)
+    email: str = Field(default="", max_length=254)
     phone: str = Field(default="", max_length=32)
 
     @field_validator("country")

@@ -307,6 +307,12 @@ def _clean_term_fields(data: dict) -> dict:
         if not isinstance(data["trade_secret_indefinite"], bool):
             raise ValidationError("TEMPLATE_TERM_INVALID")
         out["trade_secret_indefinite"] = data["trade_secret_indefinite"]
+    if "base_role" in data:
+        from .contract_templates import BASE_ROLES
+
+        if data["base_role"] not in ("", None, *BASE_ROLES):
+            raise ValidationError("TEMPLATE_BASE_ROLE_INVALID")
+        out["base_role"] = data["base_role"] or ""
     if "renewal_notice" in data:
         notice = data["renewal_notice"] or {}
         if not isinstance(notice, dict) or any(

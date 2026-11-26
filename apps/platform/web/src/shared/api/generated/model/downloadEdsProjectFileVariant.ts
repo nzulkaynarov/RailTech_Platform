@@ -9,4 +9,6 @@ export type DownloadEdsProjectFileVariant =
 export const DownloadEdsProjectFileVariant = {
   pdf: "pdf",
   scan: "scan",
+  docx: "docx",
+  remark: "remark",
 } as const;

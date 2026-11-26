@@ -6,6 +6,7 @@ platform-admin viewers are refused on every mutation via the services.
 """
 
 from django.db.models import ProtectedError, Q
+from documents.models.documents import BaseRole
 from drf_spectacular.utils import (
     OpenApiParameter,
     OpenApiResponse,
@@ -36,6 +37,7 @@ from crm.serializers import (
 )
 
 _TERM_KEYS = (
+    "base_role",
     "term_rule",
     "renewal_mode",
     "notice_days",
@@ -329,6 +331,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "name": drf_serializers.CharField(),
                 "counterparty_kind": drf_serializers.ChoiceField(choices=["client", "partner"]),
                 "subject": drf_serializers.ChoiceField(choices=["supply", "services"]),
+                "base_role": drf_serializers.ChoiceField(choices=BaseRole.choices, required=False),
             },
         ),
         responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL},
@@ -350,6 +353,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name", ""),
                 counterparty_kind=request.data.get("counterparty_kind", ""),
                 subject=request.data.get("subject", ""),
+                base_role=request.data.get("base_role", "") or "",
             )
         except DjangoValidationError as exc:
             return _template_error(exc)
@@ -381,7 +385,11 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         from crm.services import contract_templates as svc
 
         self._assert_owned(self.get_object())
-        return self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        response = self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        if response.status_code == 200:
+            # Предупреждение, не запрет: подстановки, которых система не знает, остаются в договоре как есть
+            response.data["unknown_placeholders"] = svc.unknown_placeholders(self.get_object())
+        return response
 
     @extend_schema(
         summary="Approve a contract template (holder of contract.approve_template)",

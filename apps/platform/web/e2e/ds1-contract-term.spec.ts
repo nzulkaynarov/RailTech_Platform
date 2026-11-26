@@ -49,6 +49,7 @@ for (const width of WIDTHS) {
       await expect(
         page.getByRole("spinbutton", { name: "За сколько дней можно отказаться от продления" }),
       ).toHaveValue("30");
+      await page.getByRole("button", { name: "Дополнительно" }).click();
       await page
         .getByRole("combobox", { name: "Когда срок договора вышел" })
         .scrollIntoViewIfNeeded();

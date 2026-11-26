@@ -56,7 +56,7 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
         calc: queueRow(page, "Начать расчёт по заявке ЗВ-2026-103"),
         pay: queueRow(page, "Подтвердить оплату по счёту СЧ-2026/145"),
         issue: queueRow(page, "Выставить счёт СЧ-2026/143"),
-        scan: queueRow(page, "Прикрепить скан подписанного договора ДОГ-2026/106"),
+        scan: queueRow(page, "Отметить подписанным договор ДОГ-2026/106"),
       };
       for (const row of Object.values(rows)) await expect(row).toHaveCount(1);
       await shot(page, "queue-manager-all");
@@ -79,7 +79,9 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       ).toBeVisible();
       if (width >= 768) {
         // вкладка «Договор» бокового окна: шаг «Прикрепить подписанный скан»
-        await expect(page.getByRole("button", { name: /Прикрепить скан/ }).first()).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: /Отметить: подписан/ }).first(),
+        ).toBeVisible();
       }
       await shot(page, "contract-scan");
       await expectNoViolations(page, `договор ждёт скана ${String(width)}`);

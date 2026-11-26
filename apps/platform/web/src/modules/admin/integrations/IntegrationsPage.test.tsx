@@ -278,11 +278,8 @@ describe("Admin · Внешние интеграции: доступ", () => {
     renderAt("/admin/integrations");
 
     const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    // группа открыта, текущая страница — под ней
-    expect(within(menu).getByRole("link", { name: /Каналы и подключения/ })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
+    // все страницы видны сразу, текущая — подсвечена
+    expect(within(menu).getByRole("group", { name: "Каналы и подключения" })).toBeVisible();
     expect(within(menu).getByRole("link", { name: "Сервисы" })).toHaveAttribute(
       "aria-current",
       "page",

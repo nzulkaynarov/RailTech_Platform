@@ -63,9 +63,8 @@ test.describe("Статьи компании", () => {
       .click();
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Компания" })
+      .getByRole("link", { name: "Статьи компании" })
       .click();
-    await page.getByRole("link", { name: /Статьи компании/ }).click();
     await expect(page).toHaveURL(/\/admin\/articles/);
     await expect(page.getByRole("heading", { level: 1, name: "Статьи компании" })).toBeVisible();
     await expect(

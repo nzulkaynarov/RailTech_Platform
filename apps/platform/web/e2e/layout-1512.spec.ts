@@ -136,8 +136,8 @@ test.describe("Polish pw2 · раскладка на 1512 и 1280", () => {
     await expect(page.locator("main h1").first()).toHaveText("Продажи");
     const margin = page.getByLabel("Маржа по умолчанию", { exact: false }).first();
     await expect(margin).toHaveValue(/^\d+(,\d)?$/);
-    await expect(page.getByRole("navigation", { name: /^Страницы группы/ })).toHaveCount(0);
-    const group = page.getByRole("navigation", { name: "Разделы модуля" }).getByRole("list", {
+    await expect(page.getByRole("navigation", { name: /^Страницы настроек/ })).toHaveCount(0);
+    const group = page.getByRole("navigation", { name: "Разделы модуля" }).getByRole("group", {
       name: "Правила работы",
     });
     await expect(group.getByRole("link", { name: "Продажи" })).toHaveAttribute(
@@ -151,7 +151,7 @@ test.describe("Polish pw2 · раскладка на 1512 и 1280", () => {
       await spaGoto(page, "/admin/timing");
       await expect(page.locator("main h1").first()).toHaveText("Время и сроки");
       await expect(
-        page.getByRole("combobox", { name: /Страницы группы «Правила работы»/ }),
+        page.getByRole("combobox", { name: /Страницы настроек/ }),
         `страницы группы доступны на ${String(width)}`,
       ).toBeVisible();
     }

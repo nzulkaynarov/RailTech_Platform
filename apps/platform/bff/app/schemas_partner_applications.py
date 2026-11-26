@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas_company import Body, ident, text
+from app.schemas_company import Body, ident, opt_ident, text
 
 PartnerApplicationSource = Literal["public", "client_cabinet", "letter", "lead"]
 PartnerApplicationStatus = Literal[
@@ -24,6 +24,33 @@ ContractBlocker = Literal[
 
 class Out(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class ContractVote(Out):
+    name: str
+    decision: Literal["approve", "return"]
+    note: str = ""
+
+
+BaseRole = Literal["partnership", "nda", "offer"]
+
+
+class PackageDocument(Out):
+    """ОСН-1: документ пакета базовых документов кандидата; открывается по `id`."""
+
+    id: str
+    base_role: BaseRole
+    title: str
+    number: str
+    template_edition: int
+    has_file: bool
+    has_candidate_file: bool
+    candidate_remark: str
+    valid_from: str | None
+    valid_until: str | None
+    confidentiality_years: int | None
+    trade_secret_indefinite: bool
+    from_archive: bool
 
 
 class PartnerApplicationItem(Out):
@@ -68,6 +95,21 @@ class PartnerApplicationItem(Out):
     candidate_returned_at: str | None
     has_signed_scan: bool
     signed_scan_at: str | None
+    # ПК-1: общий путь договора: голоса ответственных, редакция кандидата,
+    # «подписан» со сканом или заметкой, срок
+    contract_votes: list[ContractVote]
+    contract_waiting_for: list[str]
+    contract_disagreement: bool
+    has_candidate_file: bool
+    signed_note: str
+    contract_valid_from: str | None
+    contract_valid_until: str | None
+    contract_last_notice_date: str | None
+    contract_renewal_mode: str
+    package: list[PackageDocument]
+    from_archive: bool = Field(
+        description="Внесено из архива (ОСН-1): подписано на бумаге, в Кабинет ничего не уходило"
+    )
 
 
 class PartnerApplicationListResponse(Out):
@@ -91,6 +133,16 @@ class PartnerApplicationApproveRequest(Body):
     create_new_company: bool | None = None
     kind: PartnerApplicationKind | None = None
     override_reason: str | None = Field(default=None, max_length=1000)
+    # ПК-1: «Отметить: подписан» — скан (загружается отдельно) ИЛИ заметка
+    signed_note: str | None = Field(default=None, max_length=1000)
+
+
+class PartnerApplicationInviteRequest(Body):
+    """«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора."""
+
+    email: str | None = Field(
+        default=None, max_length=254, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
 
 
 class PartnerApplicationCreateRequest(Body):
@@ -111,6 +163,9 @@ class PartnerContractPrepareRequest(Body):
     """«Подготовить договор» из шаблона библиотеки; свой файл — отдельным запросом multipart."""
 
     template_id: str | None = None
+    package: bool | None = Field(
+        default=None, description="Пакет из утверждённых базовых шаблонов (ОСН-1), без отступлений"
+    )
     language: Language | None = None
     deviation_text: str | None = Field(default=None, max_length=4000)
     contract_number: str | None = Field(default=None, max_length=64)
@@ -131,12 +186,27 @@ class PartnerContractTemplateOption(Out):
     is_default: bool
 
 
+class PackageRole(Out):
+    base_role: BaseRole
+    role_name: str
+    template_id: str | None
+    name: str | None
+    edition: int | None
+    languages: list[Language]
+
+
+class PackageOptions(Out):
+    roles: list[PackageRole]
+    ready: bool
+
+
 class PartnerContractOptions(Out):
     templates: list[PartnerContractTemplateOption]
     default_template_id: str | None
     deviations_allowed: bool
     approvers: list[str]
     can_decide: bool
+    package: PackageOptions
 
 
 class PartnerApplicationRejectRequest(Body):
@@ -218,6 +288,48 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         ),
         has_signed_scan=bool(raw.get("has_signed_scan")),
         signed_scan_at=str(raw["signed_scan_at"]) if raw.get("signed_scan_at") else None,
+        contract_votes=[
+            ContractVote(
+                name=text(v.get("name")),
+                decision="return" if v.get("decision") == "return" else "approve",
+                note=text(v.get("note")),
+            )
+            for v in raw.get("contract_votes") or []
+        ],
+        contract_waiting_for=[str(name) for name in raw.get("contract_waiting_for") or []],
+        contract_disagreement=bool(raw.get("contract_disagreement")),
+        has_candidate_file=bool(raw.get("has_candidate_file")),
+        signed_note=text(raw.get("signed_note")),
+        contract_valid_from=str(raw["contract_valid_from"])
+        if raw.get("contract_valid_from")
+        else None,
+        contract_valid_until=str(raw["contract_valid_until"])
+        if raw.get("contract_valid_until")
+        else None,
+        contract_last_notice_date=(
+            str(raw["contract_last_notice_date"]) if raw.get("contract_last_notice_date") else None
+        ),
+        contract_renewal_mode=text(raw.get("contract_renewal_mode")),
+        package=[_package_document(d) for d in raw.get("package") or []],
+        from_archive=bool(raw.get("from_archive")),
+    )
+
+
+def _package_document(raw: Mapping[str, Any]) -> PackageDocument:
+    return PackageDocument(
+        id=ident(raw.get("id")),
+        base_role=_one_of(raw.get("base_role"), ("partnership", "nda", "offer")) or "partnership",
+        title=text(raw.get("title")),
+        number=text(raw.get("number")),
+        template_edition=int(raw.get("template_edition") or 1),
+        has_file=bool(raw.get("has_file")),
+        has_candidate_file=bool(raw.get("has_candidate_file")),
+        candidate_remark=text(raw.get("candidate_remark")),
+        valid_from=str(raw["valid_from"]) if raw.get("valid_from") else None,
+        valid_until=str(raw["valid_until"]) if raw.get("valid_until") else None,
+        confidentiality_years=raw.get("confidentiality_years"),
+        trade_secret_indefinite=bool(raw.get("trade_secret_indefinite")),
+        from_archive=bool(raw.get("from_archive")),
     )
 
 
@@ -248,4 +360,21 @@ def to_contract_options(raw: Mapping[str, Any]) -> PartnerContractOptions:
         deviations_allowed=bool(raw.get("deviations_allowed", True)),
         approvers=[str(name) for name in raw.get("approvers") or []],
         can_decide=bool(raw.get("can_decide")),
+        package=_package_options(raw.get("package") or {}),
     )
+
+
+def _package_options(raw: Mapping[str, Any]) -> PackageOptions:
+    roles = [
+        PackageRole(
+            base_role=_one_of(item.get("base_role"), ("partnership", "nda", "offer"))
+            or "partnership",
+            role_name=text(item.get("role_name")),
+            template_id=opt_ident(item.get("template_id")),
+            name=item.get("name") or None,
+            edition=item.get("edition"),
+            languages=[lang for lang in item.get("languages") or [] if lang in ("ru", "uz", "en")],
+        )
+        for item in raw.get("roles") or []
+    ]
+    return PackageOptions(roles=roles, ready=bool(raw.get("ready")))

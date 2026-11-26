@@ -20,7 +20,7 @@ export function fileUrl(
   objectId: string,
   kind: "contract" | "invoice" | "act",
   docId: number,
-  variant: "pdf" | "scan",
+  variant: "pdf" | "scan" | "docx" | "remark",
 ): string {
   return `/api/v1/eds/projects/${projectRef(objectId)}/files/${kind}/${String(docId)}?variant=${variant}`;
 }

@@ -19,6 +19,9 @@ from portal.desk.serializers import (
     DeskPartnerContractDecisionIn,
     DeskPartnerContractOptions,
     DeskPartnerContractPrepareIn,
+    DeskPartnerFromArchiveIn,
+    DeskPartnerInviteIn,
+    DeskPartnerScanIn,
 )
 from portal.desk.service import AccessError
 from rest_framework.decorators import action
@@ -40,9 +43,12 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         "send_contract": SUPPLY_MANAGE,
         "prepare_contract": SUPPLY_MANAGE,
         # Решает держатель зоны «Право»; тот же код права проверяет сервис (ДОК-10)
-        "contract_decision": "contract.approve_template",
+        "contract_decision": ("contract.approve_template", "contract.sign"),
         "approve": SUPPLY_MANAGE,
+        "from_archive": SUPPLY_MANAGE,
         "reject": SUPPLY_MANAGE,
+        "invite": SUPPLY_MANAGE,
+        "signed_scan": SUPPLY_MANAGE,
     }
     lookup_value_regex = r"\d+"
     queryset = PartnerApplication.objects.none()
@@ -131,6 +137,79 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
             return _refused(error)
 
     @extend_schema(
+        operation_id="catalog_partner_applications_invite",
+        summary="Invite the candidate to the Cabinet (later, when the e-mail appears)",
+        description=(
+            "ПК-1: договор можно отправить и без почты кандидата; когда адрес появился — `email` (или уже записанный) "
+            "и приглашение в Кабинет уходит письмом."
+        ),
+        request=DeskPartnerInviteIn,
+        responses={200: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="invite", url_name="invite")
+    def invite(self, request, pk=None):
+        body = DeskPartnerInviteIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            return Response(service.invite_candidate(int(pk), dict(body.validated_data), request.user))
+        except AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
+        operation_id="catalog_partner_applications_signed_scan",
+        summary="Attach the scan of the signed contract (optional)",
+        description="ПК-1: скан не обязателен — «Отметить: подписан» принимает скан ИЛИ заметку. Multipart, `file`.",
+        request={"multipart/form-data": DeskPartnerScanIn},
+        responses={200: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="signed-scan",
+        url_name="signed-scan",
+        parser_classes=[MultiPartParser],
+    )
+    def signed_scan(self, request, pk=None):
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"detail": "FILE_REQUIRED"}, status=400)
+        try:
+            contract_step.staff_attach_scan(int(pk), upload, request.user)
+            return Response(service.get_application(int(pk), request.user))
+        except AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
+        operation_id="catalog_partner_applications_from_archive",
+        summary="Record the signed paper package (from the archive)",
+        description=(
+            "ОСН-1: партнёр уже подписал бумажный пакет. Заявка сразу одобряется с реальными датами и сканами документов "
+            "пакета; в Кабинет и по почте ничего не уходит, пометка «внесено из архива». Multipart."
+        ),
+        request={"multipart/form-data": DeskPartnerFromArchiveIn},
+        responses={200: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="from-archive",
+        url_name="from-archive",
+        parser_classes=[MultiPartParser],
+    )
+    def from_archive(self, request, pk=None):
+        body = DeskPartnerFromArchiveIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = dict(body.validated_data)
+        files = {key: data.pop(key) for key in ("scan_partnership", "scan_nda", "scan_offer") if key in data}
+        try:
+            return Response(service.record_from_archive(int(pk), data, files, request.user))
+        except AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
         operation_id="catalog_partner_applications_reject",
         summary="Reject partner application",
         description="Отклоняет заявку с указанием обязательной причины (`rejected_reason`).",
@@ -211,8 +290,11 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
     @extend_schema(
         operation_id="catalog_partner_applications_document",
         summary="Download the contract or the signed scan",
-        description="`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного.",
-        parameters=[OpenApiParameter("which", str, required=True, enum=["contract", "scan"])],
+        description="`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат.",
+        parameters=[
+            OpenApiParameter("which", str, required=True, enum=["contract", "scan", "candidate"]),
+            OpenApiParameter("doc", int, required=False, description="Документ пакета базовых документов (ОСН-1)."),
+        ],
         responses={(200, "application/octet-stream"): bytes, 404: NOT_FOUND},
         tags=["Catalog"],
     )
@@ -222,8 +304,16 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         if app is None:
             return Response({"detail": "NOT_FOUND"}, status=404)
         which = request.query_params.get("which", "contract")
-        field = app.signed_scan if which == "scan" else contract_step.current_document(app)
+        field = {"scan": app.signed_scan, "candidate": app.candidate_file}.get(which) or (
+            contract_step.current_document(app) if which == "contract" else None
+        )
         try:
+            doc = request.query_params.get("doc")
+            if doc:  # ОСН-1: документ пакета
+                row = contract_step.package_document(app, doc)
+                field = {"scan": row.signed_scan, "candidate": row.candidate_file}.get(which) or (
+                    (row.file or row.signed_scan) if which == "contract" else None
+                )
             data, content_type, name = contract_step.read_file(field)
         except AccessError as error:
             return _refused(error)

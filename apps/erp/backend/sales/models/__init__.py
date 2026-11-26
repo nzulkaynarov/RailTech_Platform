@@ -6,7 +6,7 @@ from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTri
 from .calc_lines import CalcLine, CalcLineKind, CalcPriceBasis
 from .calc_tasks import CalcTask, CalcTaskAssignee, CalcZone
 from .charges import ChargeTemplate, QuoteCharge
-from .contracts import Contract
+from .contracts import Contract, ContractRemark, ContractRemarkVote
 from .deals import ActivityLog, Deal, DealNumberCounter
 from .delivery import DeliveryLine, DeliveryLineStatus
 from .fulfillment import Fulfillment
@@ -25,6 +25,8 @@ __all__ = [
     "ChargeTemplate",
     "ChargeType",
     "Contract",
+    "ContractRemark",
+    "ContractRemarkVote",
     "ContractStatus",
     "Deal",
     "DealCloseReason",
