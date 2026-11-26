@@ -19402,6 +19402,36 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/parties/organizations/role-states/:
+    get:
+      operationId: parties_organizations_role_states
+      description: 'КОНТР-1б. Роли с состояниями компаний `ids` (до 100, через запятую) — для списка «Контрагенты», где компания
+        приходит из CRM: тип в списке берётся из ролей компании, а не из того, откуда она пришла. Компании без ролей возвращаются
+        с пустым списком; чужие и неизвестные id в ответ не входят. Те же границы, что у списка контрагентов и связанных с
+        CRM компаний.'
+      summary: Role states of several counterparties
+      parameters:
+      - in: query
+        name: ids
+        schema:
+          type: string
+        description: id компаний через запятую, до 100
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterpartyRoleStates'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/parties/organizations/{id}/:
     get:
       operationId: parties_organizations_retrieve
@@ -19707,6 +19737,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/parties/organizations/{id}/not-client/:
+    get:
+      operationId: parties_organizations_not_client_plan
+      description: 'КОНТР-1б. Что сделает «Не клиент» и что в компании настоящее: открытые заявки, которые закроются «заведена
+        по ошибке», заявки с отправленным КП (остаются), история (КП, договоры, счета, проекты), контакты. Ничего не меняет.
+        Право `deal.manage` или `supply.manage`.'
+      summary: Preview «Not a client»
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskNotClientPlan'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    post:
+      operationId: parties_organizations_not_client
+      description: 'КОНТР-1б. «Не клиент»: открытые заявки без отправленного клиенту КП закрываются причиной «Оформлена по
+        ошибке» (остаются в журнале, из открытых списков и очереди уходят), снимается тип клиента, компания выходит из «Клиентов»;
+        контакты остаются, их кабинет следует оставшимся ролям (идёт заявка на подключение партнёром — они видят «заявка рассматривается»).
+        Настоящая история не блокирует — сотрудник решает сам. Повтор безопасен; кто и когда — в журнале. Право `deal.manage`
+        или `supply.manage`.'
+      summary: Remove the client role put on a company by mistake
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskNotClientResult'
           description: ''
         '403':
           description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
@@ -28789,6 +28898,43 @@ components:
           maxLength: 500
         is_active:
           type: boolean
+    DeskCabinetTruth:
+      type: object
+      description: Что с кабинетом компании на самом деле (КОНТР-1б).
+      properties:
+        opened:
+          type: boolean
+          description: Хотя бы одна роль открывает кабинет
+        roles:
+          type: array
+          items:
+            type: string
+          description: 'Роли кабинета сейчас: `client`, `partner`'
+        sees:
+          allOf:
+          - $ref: '#/components/schemas/SeesEnum'
+          description: |-
+            Что видит вошедший: раздел клиента, партнёра, оба или «заявка рассматривается»
+
+            * `none` - none
+            * `client` - client
+            * `partner` - partner
+            * `both` - both
+            * `application` - application
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Последний вход любого контакта; `null` — не входили
+        logged_in_contacts:
+          type: integer
+          description: Сколько контактов входили в кабинет
+      required:
+      - last_login_at
+      - logged_in_contacts
+      - opened
+      - roles
+      - sees
     DeskCatalogPrice:
       type: object
       description: 'Что покажет каталог клиенту (PART-3): уровень видимости и цена-витрина.'
@@ -28885,6 +29031,15 @@ components:
           description: Версия логотипа; `null` — логотипа нет
         roles:
           $ref: '#/components/schemas/DeskCounterpartyRoles'
+        role_states:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskRoleState'
+          description: Роли компании со своими состояниями (КОНТР-1б)
+        cabinet:
+          allOf:
+          - $ref: '#/components/schemas/DeskCabinetTruth'
+          description: 'Правда о кабинете: открыт ли, когда входили, что видят'
         people:
           type: array
           items:
@@ -28915,6 +29070,7 @@ components:
       - accounts_masked
       - bank_accounts
       - brands
+      - cabinet
       - country
       - crm_client_id
       - do_not_work
@@ -28925,6 +29081,7 @@ components:
       - name
       - people
       - registration_number
+      - role_states
       - roles
     DeskCounterpartyAccount:
       type: object
@@ -29008,12 +29165,34 @@ components:
       type: object
       properties:
         role:
-          $ref: '#/components/schemas/RoleEnum'
+          $ref: '#/components/schemas/DeskCounterpartyRoleInRoleEnum'
         'on':
           type: boolean
       required:
       - 'on'
       - role
+    DeskCounterpartyRoleInRoleEnum:
+      enum:
+      - supplier
+      - manufacturer
+      - client
+      type: string
+      description: |-
+        * `supplier` - supplier
+        * `manufacturer` - manufacturer
+        * `client` - client
+    DeskCounterpartyRoleStates:
+      type: object
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DeskRoleState'
+          description: id компании → её роли с состояниями
+      required:
+      - results
     DeskCounterpartyRoles:
       type: object
       properties:
@@ -29888,6 +30067,75 @@ components:
             $ref: '#/components/schemas/DeskMxikHit'
       required:
       - results
+    DeskNotClientPlan:
+      type: object
+      description: '«Не клиент»: что изменится или изменилось. Только числа и номера заявок — без персональных данных.'
+      properties:
+        company_id:
+          type: integer
+        dry_run:
+          type: boolean
+          description: '`true` — ничего не изменено, это отчёт'
+        is_client:
+          type: boolean
+        has_client_type:
+          type: boolean
+        has_crm_link:
+          type: boolean
+        requests_to_close:
+          type: array
+          items:
+            type: string
+        requests_kept:
+          type: array
+          items:
+            type: string
+          description: 'Открытые заявки, где клиенту уже отправляли КП: не закрываются'
+        history:
+          type: object
+          additionalProperties:
+            type: integer
+          description: КП отправлено, договоры, счета, проекты
+        has_history:
+          type: boolean
+          description: 'Есть настоящая история: сотрудник решает сам, действие не блокируется'
+        contacts:
+          type: integer
+        contacts_with_cabinet:
+          type: integer
+        remaining_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskRoleState'
+        requests_closed:
+          type: array
+          items:
+            type: string
+        candidate_entry:
+          type: boolean
+      required:
+      - company_id
+      - contacts
+      - contacts_with_cabinet
+      - dry_run
+      - has_client_type
+      - has_crm_link
+      - has_history
+      - history
+      - is_client
+      - remaining_roles
+      - requests_kept
+      - requests_to_close
+    DeskNotClientResult:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/DeskNotClientPlan'
+        card:
+          $ref: '#/components/schemas/DeskCounterparty'
+      required:
+      - card
+      - result
     DeskOffer:
       type: object
       properties:
@@ -31219,6 +31467,12 @@ components:
           $ref: '#/components/schemas/DeskRef'
         kind:
           $ref: '#/components/schemas/DeskPersonKindEnum'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskPersonKindEnum'
+          description: 'Роли компании человека (КОНТР-1б): человек идёт по ролям компании и виден на обеих вкладках, если
+            держит обе'
         photo_version:
           type: string
           nullable: true
@@ -31233,6 +31487,7 @@ components:
       - name
       - photo_version
       - position
+      - roles
     DeskPersonContacts:
       type: object
       description: 'Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал.'
@@ -31432,6 +31687,42 @@ components:
       - overdue
       - partner
       - submitted_at
+    DeskRoleState:
+      type: object
+      description: 'Роль компании и её состояние (КОНТР-1б): единый источник для карточки, списков и «Людей».'
+      properties:
+        role:
+          $ref: '#/components/schemas/DeskPersonKindEnum'
+        state:
+          allOf:
+          - $ref: '#/components/schemas/DeskRoleStateStateEnum'
+          description: |-
+            `client`: `active`. `partner`: `application` — заявка на подключение рассматривается, `invited` — приглашён, `active` — действует, `suspended` — приостановлен
+
+            * `active` - active
+            * `application` - application
+            * `invited` - invited
+            * `suspended` - suspended
+        kind:
+          type: string
+          nullable: true
+          description: Вид партнёра (`manufacturer`, `supplier`, `principal`, `other`); у клиента `null`
+      required:
+      - kind
+      - role
+      - state
+    DeskRoleStateStateEnum:
+      enum:
+      - active
+      - application
+      - invited
+      - suspended
+      type: string
+      description: |-
+        * `active` - active
+        * `application` - application
+        * `invited` - invited
+        * `suspended` - suspended
     DeskSupplierAccess:
       type: object
       properties:
@@ -31464,10 +31755,15 @@ components:
           allOf:
           - $ref: '#/components/schemas/DeskSupplierAccessCrmClient'
           description: 'Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении.'
+        cabinet:
+          allOf:
+          - $ref: '#/components/schemas/DeskCabinetTruth'
+          description: 'Правда о кабинете: открыт ли, когда входили, что видят (КОНТР-1б)'
         can_manage:
           type: boolean
           description: 'У сотрудника есть `supply.manage`: контакты, приглашение, приостановка.'
       required:
+      - cabinet
       - cabinet_modules
       - cabinet_roles
       - can_manage
@@ -41935,14 +42231,6 @@ components:
         * `approved` - approved
         * `pending` - pending
         * `rejected` - rejected
-    RoleEnum:
-      enum:
-      - supplier
-      - manufacturer
-      type: string
-      description: |-
-        * `supplier` - supplier
-        * `manufacturer` - manufacturer
     SearchDocument:
       type: object
       properties:
@@ -41987,6 +42275,20 @@ components:
         * `db` - db
         * `env` - env
         * `none` - none
+    SeesEnum:
+      enum:
+      - none
+      - client
+      - partner
+      - both
+      - application
+      type: string
+      description: |-
+        * `none` - none
+        * `client` - client
+        * `partner` - partner
+        * `both` - both
+        * `application` - application
     SelectContractWordingRequest:
       type: object
       properties:

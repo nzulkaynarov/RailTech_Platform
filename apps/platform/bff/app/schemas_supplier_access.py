@@ -29,6 +29,51 @@ class Out(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+RoleState = Literal["active", "application", "invited", "suspended"]
+CabinetSees = Literal["none", "client", "partner", "both", "application"]
+
+
+class CounterpartyRoleState(Out):
+    """Роль компании и её состояние (КОНТР-1б): клиент — `active`; партнёр — заявка
+    рассматривается, приглашён, действует, приостановлен; `kind` — вид партнёра."""
+
+    role: CabinetRole
+    state: RoleState
+    kind: str | None = None
+
+
+class CabinetTruth(Out):
+    """Правда о кабинете (КОНТР-1б): открыт ли, кем (роли), последний вход и что видят."""
+
+    opened: bool
+    roles: list[CabinetRole]
+    sees: CabinetSees
+    last_login_at: str | None
+    logged_in_contacts: int
+
+
+def role_states_of(raw: Any) -> list[CounterpartyRoleState]:
+    rows = raw if isinstance(raw, list) else []
+    return [
+        CounterpartyRoleState(role=r["role"], state=r["state"], kind=text(r.get("kind")) or None)
+        for r in rows
+        if isinstance(r, Mapping) and r.get("role") in ("client", "partner")
+    ]
+
+
+def cabinet_truth_of(raw: Any) -> CabinetTruth:
+    row: Mapping[str, Any] = raw if isinstance(raw, Mapping) else {}
+    return CabinetTruth(
+        opened=bool(row.get("opened")),
+        roles=[r for r in (row.get("roles") or []) if r in ("client", "partner")],
+        sees=row.get("sees")
+        if row.get("sees") in ("none", "client", "partner", "both", "application")
+        else "none",
+        last_login_at=row.get("last_login_at") or None,
+        logged_in_contacts=int(row.get("logged_in_contacts") or 0),
+    )
+
+
 class CabinetPerson(Out):
     id: str
     name: str
@@ -81,6 +126,7 @@ class SupplierCabinetAccess(Out):
     partner_modules: SupplierCabinetModules
     cabinet_roles: list[CabinetRole]
     cabinet_modules: list[str]
+    cabinet: CabinetTruth
     can_manage: bool
 
 
@@ -190,6 +236,7 @@ def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:
             "cabinet_roles": list(raw.get("cabinet_roles") or []),
             "cabinet_modules": list(raw.get("cabinet_modules") or []),
             "crm_client": _crm_client(raw.get("crm_client")),
+            "cabinet": cabinet_truth_of(raw.get("cabinet")),
             "can_manage": bool(raw.get("can_manage")),
         }
     )

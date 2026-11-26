@@ -156,12 +156,12 @@ describe("Очередь заявок кандидатов в партнёры (
     const okBtn = within(modal).getByRole("button", { name: "Отправить договор" });
     expect(within(modal).getByText(/Это та же компания\?/)).toBeInTheDocument();
     expect(within(modal).queryByRole("radio", { name: /Создать новую/ })).toBeNull();
-    expect(okBtn).toBeDisabled();
-    fireEvent.click(
+    // КОНТР-1б: совпадение по ИНН — «Привязать к найденной» выбрано заранее, кнопка не стоит серой без причины
+    expect(
       within(modal).getByRole("radio", {
         name: /Привязать к найденной организации: АО «Южный Металл»/,
       }),
-    );
+    ).toBeChecked();
     expect(okBtn).not.toBeDisabled();
     // ПД-1: номер и дата заданы при подготовке договора, здесь их не вводят
     expect(within(modal).queryByLabelText("Номер договора")).toBeNull();

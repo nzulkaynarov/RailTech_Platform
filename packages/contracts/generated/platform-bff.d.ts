@@ -8947,6 +8947,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/counterparties/{id}/not-client": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка контрагента: что сделает «Не клиент»
+     * @description ERP `GET parties/organizations/{id}/not-client/` (КОНТР-1б): открытые заявки, которые закроются как заведённые по ошибке, заявки с отправленным КП (остаются), настоящая история (КП, договоры, счета, проекты) и контакты. Ничего не меняет; персональных данных нет. Раздел `crm.clients` или `erp.stock` — чтение.
+     */
+    get: operations["getCounterpartyNotClientPlan"];
+    put?: never;
+    /**
+     * Карточка контрагента: «Не клиент» — снять роль клиента, поставленную по ошибке
+     * @description ERP `POST parties/organizations/{id}/not-client/` (КОНТР-1б). Открытые заявки без отправленного клиенту КП закрываются причиной «Оформлена по ошибке» (остаются в журнале, из открытых списков и очереди уходят), снимается тип клиента, компания выходит из «Клиентов»; контакты остаются, их кабинет следует оставшимся ролям (идёт заявка на подключение партнёром — они видят «заявка рассматривается»). Настоящая история не блокирует — решает сотрудник (предупреждение строит `getCounterpartyNotClientPlan`). Повтор безопасен; кто и когда — в журнале ERP. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+     */
+    post: operations["setCounterpartyNotClient"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/counterparties/{id}/roles": {
     parameters: {
       query?: never;
@@ -18399,6 +18423,10 @@ export interface components {
       do_not_work?: boolean;
       /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
       logo_url?: string | null;
+      /** @description КОНТР-1б: компания ERP (null — клиент ещё не передан) */
+      company_id?: string | null;
+      /** @description КОНТР-1б: роли компании ERP с состояниями — «Клиент» и «Партнёр» в списке говорит ERP; null — ERP не ответил или компании нет */
+      roles?: components["schemas"]["CounterpartyRoleState"][] | null;
     };
     TelegramGroup: {
       chat_id: number;
@@ -19202,6 +19230,8 @@ export interface components {
       company: components["schemas"]["CounterpartyRef"];
       /** @enum {string} */
       kind: "client" | "partner";
+      /** @description КОНТР-1б: роли компании человека; «Кто это» идёт по ним, держит обе — человек на обеих вкладках (`kind` — первая роль) */
+      roles: ("client" | "partner")[];
       /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
       photo_url?: string | null;
       /** @description Логотип компании человека: адрес на BFF с `?v=<версия>`, пакетно на список (ЕД-3); null или нет права на раздел — буквы названия */
@@ -19311,6 +19341,9 @@ export interface components {
       /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
       logo_url?: string | null;
       roles: components["schemas"]["CounterpartyRoles"];
+      /** @description КОНТР-1б: роли компании списком, у каждой своё состояние — единый источник для карточки, списка «Контрагенты» и «Людей» */
+      role_states: components["schemas"]["CounterpartyRoleState"][];
+      cabinet: components["schemas"]["CabinetTruth"];
       people: components["schemas"]["CounterpartyCardPerson"][];
       bank_accounts: components["schemas"]["CounterpartyAccount"][];
       /** @description Номера счетов скрыты: нет финансовых прав */
@@ -19321,6 +19354,56 @@ export interface components {
       do_not_work?: components["schemas"]["DoNotWork"] | null;
       /** @description ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
       contract_term?: components["schemas"]["CounterpartyContractTerm"] | null;
+    };
+    /** @description Роль компании и её состояние (КОНТР-1б): клиент — `active`; партнёр — заявка рассматривается, приглашён, действует, приостановлен */
+    CounterpartyRoleState: {
+      /** @enum {string} */
+      role: "client" | "partner";
+      /** @enum {string} */
+      state: "active" | "application" | "invited" | "suspended";
+      /** @description Вид партнёра (manufacturer, supplier, principal, other); у клиента null */
+      kind: string | null;
+    };
+    /** @description Правда о кабинете компании (КОНТР-1б): открыт ли, кем (роли), последний вход любого контакта и что видят вошедшие */
+    CabinetTruth: {
+      opened: boolean;
+      roles: ("client" | "partner")[];
+      /**
+       * @description Раздел клиента, партнёра, оба или «заявка на подключение рассматривается»
+       * @enum {string}
+       */
+      sees: "none" | "client" | "partner" | "both" | "application";
+      last_login_at: string | null;
+      logged_in_contacts: number;
+    };
+    NotClientHistory: {
+      quotes_sent: number;
+      contracts: number;
+      invoices: number;
+      projects: number;
+    };
+    /** @description «Не клиент» (КОНТР-1б): что изменится или изменилось; только числа и номера заявок, персональных данных нет */
+    NotClientPlan: {
+      company_id: components["schemas"]["CompanyItemRef"];
+      dry_run: boolean;
+      is_client: boolean;
+      /** @description Открытые заявки, которые закроются как заведённые по ошибке */
+      requests_to_close: string[];
+      /** @description Открытые заявки, где клиенту уже отправляли КП: не закрываются */
+      requests_kept: string[];
+      history: components["schemas"]["NotClientHistory"];
+      /** @description Есть настоящая история: сотрудник решает сам, действие не блокируется */
+      has_history: boolean;
+      contacts: number;
+      contacts_with_cabinet: number;
+      remaining_roles: components["schemas"]["CounterpartyRoleState"][];
+      requests_closed: string[];
+      /** @description Контактам оставлен вход кандидата: заявка на подключение рассматривается */
+      candidate_entry: boolean;
+    };
+    NotClientResult: {
+      result: components["schemas"]["NotClientPlan"];
+      card: components["schemas"]["CounterpartyCard"];
     };
     CounterpartyContractTerm: {
       contract_id: number;
@@ -19369,7 +19452,7 @@ export interface components {
     };
     CounterpartyRoleIn: {
       /** @enum {string} */
-      role: "supplier" | "manufacturer";
+      role: "supplier" | "manufacturer" | "client";
       on: boolean;
     };
     CounterpartyPersonPage: {
@@ -19518,6 +19601,7 @@ export interface components {
       cabinet_roles: ("client" | "partner")[];
       /** @description Разделы, которые откроются сессии компании */
       cabinet_modules: string[];
+      cabinet: components["schemas"]["CabinetTruth"];
       /** @description У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка */
       can_manage: boolean;
     };
@@ -36665,6 +36749,61 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCounterpartyNotClientPlan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Что изменится */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotClientPlan"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setCounterpartyNotClient: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Что сделано и карточка с новыми ролями */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotClientResult"];
         };
       };
       401: components["responses"]["SessionExpired"];

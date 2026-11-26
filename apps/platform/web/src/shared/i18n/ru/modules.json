@@ -370,6 +370,10 @@
         "ru": "Русский",
         "en": "English",
         "uz": "Özbekça"
+      },
+      "roleNames": {
+        "client": "Клиент",
+        "partner": "Партнёр"
       }
     }
   },

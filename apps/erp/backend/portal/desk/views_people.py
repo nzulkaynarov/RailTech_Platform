@@ -17,13 +17,18 @@ from parties.models import Company, Contact
 from parties.models.contacts import active_contact_q
 from parties.models.relationships import RelationshipRole, RelationshipStatus
 from parties.people import contact_names
+from portal.desk import company_roles
 from portal.desk import service_counterparty as counterparty
+from portal.desk.company_roles import PENDING_APPLICATION
 from portal.desk.serializers import (
     DeskCounterparty,
     DeskCounterpartyLogos,
     DeskCounterpartyRequisitesIn,
     DeskCounterpartyRoleIn,
+    DeskCounterpartyRoleStates,
     DeskDoNotWorkIn,
+    DeskNotClientPlan,
+    DeskNotClientResult,
     DeskOrganizationIn,
     DeskOrganizationPage,
     DeskOrganizationPeople,
@@ -48,14 +53,19 @@ KINDS = ("client", "partner")
 
 
 def counterparty_ids(user) -> tuple[set, set]:
-    """Клиенты своей компании и не клиенты — партнёры и организации-адресаты (компания и клиент, и поставщик — клиент)."""
+    """Клиенты своей компании и партнёры (КОНТР-1б): компания держит обе роли — она в обоих наборах, а не «клиент побеждает».
+
+    Партнёр — поставщик или изготовитель, компания с отношением «партнёр», с заявкой кандидата в партнёры на рассмотрении,
+    либо организация-адресат."""
     client_ids = set(seller_clients(user).values_list("pk", flat=True))
     partner_ids = set(suppliers.supplier_queryset({}).values_list("pk", flat=True)) | set(
         Company.objects.filter(
-            Q(relationships__role=RelationshipRole.PARTNER) | Q(types__code="ORGANIZATION")
+            Q(relationships__role=RelationshipRole.PARTNER)
+            | Q(types__code="ORGANIZATION")
+            | Q(partner_applications__status__in=PENDING_APPLICATION)
         ).values_list("pk", flat=True)
     )
-    return client_ids, partner_ids - client_ids
+    return client_ids, partner_ids
 
 
 def people_queryset(user, kind: str | None, q: str):
@@ -64,10 +74,10 @@ def people_queryset(user, kind: str | None, q: str):
     queryset = Contact.objects.select_related("company").filter(active_contact_q(), company_id__in=wanted)
     if q:
         queryset = queryset.filter(Q(name__icontains=q) | Q(company__name__icontains=q) | Q(position__icontains=q))
-    return queryset.order_by("name", "pk"), client_ids
+    return queryset.order_by("name", "pk"), (client_ids, partner_ids)
 
 
-def person_row(contact: Contact, client_ids: set) -> dict:
+def person_row(contact: Contact, client_ids: set, partner_ids: set) -> dict:
     return {
         "id": contact.pk,
         "name": contact.name,
@@ -77,6 +87,9 @@ def person_row(contact: Contact, client_ids: set) -> dict:
         "is_primary": contact.is_primary,
         "company": {"id": contact.company_id, "name": contact.company.name},
         "kind": "client" if contact.company_id in client_ids else "partner",
+        "roles": [
+            role for role, ids in (("client", client_ids), ("partner", partner_ids)) if contact.company_id in ids
+        ],
         "photo_version": pictures.version(contact.photo),
     }
 
@@ -132,8 +145,8 @@ class PeopleDeskViewSet(DeskViewSet):
         if kind not in KINDS:
             kind = None
         q = (request.query_params.get("q") or "").strip()[:100]
-        queryset, client_ids = people_queryset(request.user, kind, q)
-        return self.page_of(queryset, lambda rows: [person_row(row, client_ids) for row in rows])
+        queryset, (client_ids, partner_ids) = people_queryset(request.user, kind, q)
+        return self.page_of(queryset, lambda rows: [person_row(row, client_ids, partner_ids) for row in rows])
 
     @extend_schema(
         operation_id="parties_people_contacts",
@@ -331,11 +344,15 @@ class OrganizationsDeskViewSet(DeskViewSet):
         "logo": PICTURE_EDITORS,
         # Х-8: «Не работать» ставит и снимает тот же, кто правит реквизиты контрагента
         "do_not_work": ("deal.manage", "supply.manage"),
+        # КОНТР-1б: «Не клиент» — тот же, кто правит реквизиты и ведёт заявки
+        "not_client": ("deal.manage", "supply.manage"),
     }
 
     def _company(self, request, pk) -> tuple[Company, set]:
         client_ids, partner_ids = counterparty_ids(request.user)
-        company = Company.objects.filter(pk=pk, pk__in=client_ids | partner_ids).first()
+        # КОНТР-1б: компания, у которой сняли роль клиента, остаётся строкой CRM: её карточка открывается и без ролей
+        linked = set(CrmClientMapping.objects.values_list("company_id", flat=True))
+        company = Company.objects.filter(pk=pk, pk__in=client_ids | partner_ids | linked).first()
         if company is None:
             raise NotFound()
         return company, client_ids
@@ -483,6 +500,35 @@ class OrganizationsDeskViewSet(DeskViewSet):
         return Response({"results": {str(c.pk): pictures.version(c.logo) for c in rows}})
 
     @extend_schema(
+        operation_id="parties_organizations_role_states",
+        summary="Role states of several counterparties",
+        description=(
+            "КОНТР-1б. Роли с состояниями компаний `ids` (до 100, через запятую) — для списка «Контрагенты», где компания "
+            "приходит из CRM: тип в списке берётся из ролей компании, а не из того, откуда она пришла. Компании без ролей "
+            "возвращаются с пустым списком; чужие и неизвестные id в ответ не входят. Те же границы, что у списка контрагентов "
+            "и связанных с CRM компаний."
+        ),
+        parameters=[OpenApiParameter("ids", str, required=True, description="id компаний через запятую, до 100")],
+        responses={200: DeskCounterpartyRoleStates},
+        tags=["Parties"],
+    )
+    @action(detail=False, methods=["get"], url_path="role-states", url_name="role-states")
+    def role_states(self, request):
+        wanted = [int(x) for x in (request.query_params.get("ids") or "").split(",") if x.strip().isdigit()][:100]
+        client_ids, partner_ids = counterparty_ids(request.user)
+        linked = set(CrmClientMapping.objects.filter(company_id__in=wanted).values_list("company_id", flat=True))
+        allowed = sorted(set(wanted) & (client_ids | partner_ids | linked))
+        states = company_roles.role_states_for(allowed)
+        return Response(
+            {
+                "results": {
+                    str(pk): [s for s in rows if not (s["role"] == "client" and pk not in client_ids)]
+                    for pk, rows in states.items()
+                }
+            }
+        )
+
+    @extend_schema(
         operation_id="parties_organizations_people",
         summary="People of a counterparty for a picker",
         description=(
@@ -551,7 +597,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
             counterparty.set_role(company, body.validated_data["role"], body.validated_data["on"], actor=request.user)
         except ItemError as error:
             return refuse(error)
-        # снятая роль может вывести компанию из списка контрагентов — карточка отдаётся по прежним границам
+        # роль меняет книгу клиентов («+ Клиент»), снятая — выводит из списка: границы считаются заново
+        client_ids, _partner_ids = counterparty_ids(request.user)
         return Response(counterparty.card(company, client_ids, request.user))
 
     @extend_schema(
@@ -592,3 +639,41 @@ class OrganizationsDeskViewSet(DeskViewSet):
                 return refuse(error)
         company.refresh_from_db()
         return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        methods=["GET"],
+        operation_id="parties_organizations_not_client_plan",
+        summary="Preview «Not a client»",
+        description=(
+            "КОНТР-1б. Что сделает «Не клиент» и что в компании настоящее: открытые заявки, которые закроются «заведена по "
+            "ошибке», заявки с отправленным КП (остаются), история (КП, договоры, счета, проекты), контакты. Ничего не "
+            "меняет. Право `deal.manage` или `supply.manage`."
+        ),
+        responses={200: DeskNotClientPlan, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["POST"],
+        operation_id="parties_organizations_not_client",
+        summary="Remove the client role put on a company by mistake",
+        description=(
+            "КОНТР-1б. «Не клиент»: открытые заявки без отправленного клиенту КП закрываются причиной «Оформлена по "
+            "ошибке» (остаются в журнале, из открытых списков и очереди уходят), снимается тип клиента, компания выходит "
+            "из «Клиентов»; контакты остаются, их кабинет следует оставшимся ролям (идёт заявка на подключение партнёром — "
+            "они видят «заявка рассматривается»). Настоящая история не блокирует — сотрудник решает сам. Повтор безопасен; "
+            "кто и когда — в журнале. Право `deal.manage` или `supply.manage`."
+        ),
+        request=None,
+        responses={200: DeskNotClientResult, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["get", "post"], url_path="not-client", url_name="not-client")
+    def not_client(self, request, pk=None):
+        company, _client_ids = self._company(request, pk)
+        if request.method == "GET":
+            return Response(company_roles.client_role_plan(company))
+        result = company_roles.remove_client_role(company, actor=request.user)
+        company.refresh_from_db()
+        # границы пересчитываются заново: компания могла выйти из «Клиентов»
+        client_ids, _partner_ids = counterparty_ids(request.user)
+        return Response({"result": result, "card": counterparty.card(company, client_ids, request.user)})

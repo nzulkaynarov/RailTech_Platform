@@ -25,6 +25,7 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
+from portal.desk.company_roles import cabinet_truth
 from portal.services.access import cabinet_company_q, company_access
 from portal.services.invitation import invite_contact
 from portal.services.roles import PARTNER, PARTNER_DEFAULT_TOGGLEABLE, PARTNER_TOGGLEABLE, ROLE_MODULES, partner_toggled
@@ -132,6 +133,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
         "cabinet_roles": roles,
         "cabinet_modules": modules,
         "crm_client": crm_client_state(company),
+        "cabinet": cabinet_truth(company),
         "can_manage": can_manage,
     }
 

@@ -16217,6 +16217,61 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/not-client:
+    get:
+      tags: [chats]
+      operationId: getCounterpartyNotClientPlan
+      summary: 'Карточка контрагента: что сделает «Не клиент»'
+      description: >-
+        ERP `GET parties/organizations/{id}/not-client/` (КОНТР-1б): открытые заявки, которые закроются как заведённые по
+        ошибке, заявки с отправленным КП (остаются), настоящая история (КП, договоры, счета, проекты) и контакты. Ничего не
+        меняет; персональных данных нет. Раздел `crm.clients` или `erp.stock` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Что изменится
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotClientPlan'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [chats]
+      operationId: setCounterpartyNotClient
+      summary: 'Карточка контрагента: «Не клиент» — снять роль клиента, поставленную по ошибке'
+      description: >-
+        ERP `POST parties/organizations/{id}/not-client/` (КОНТР-1б). Открытые заявки без отправленного клиенту КП закрываются
+        причиной «Оформлена по ошибке» (остаются в журнале, из открытых списков и очереди уходят), снимается тип клиента,
+        компания выходит из «Клиентов»; контакты остаются, их кабинет следует оставшимся ролям (идёт заявка на подключение
+        партнёром — они видят «заявка рассматривается»). Настоящая история не блокирует — решает сотрудник (предупреждение
+        строит `getCounterpartyNotClientPlan`). Повтор безопасен; кто и когда — в журнале ERP. Раздел `crm.clients` или
+        `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Что сделано и карточка с новыми ролями
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotClientResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}/roles:
     post:
       tags: [chats]
@@ -30906,6 +30961,11 @@ components:
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
         do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
         logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
+        company_id: {type: [string, 'null'], description: 'КОНТР-1б: компания ERP (null — клиент ещё не передан)'}
+        roles:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/CounterpartyRoleState'}
+          description: 'КОНТР-1б: роли компании ERP с состояниями — «Клиент» и «Партнёр» в списке говорит ERP; null — ERP не ответил или компании нет'
 
     TelegramGroup:
       type: object
@@ -31769,7 +31829,7 @@ components:
     CounterpartyPerson:
       type: object
       additionalProperties: false
-      required: [id, name, position, has_email, has_phone, is_primary, company, kind]
+      required: [id, name, position, has_email, has_phone, is_primary, company, kind, roles]
       description: >-
         Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не
         входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал.
@@ -31782,6 +31842,10 @@ components:
         is_primary: {type: boolean}
         company: {$ref: '#/components/schemas/CounterpartyRef'}
         kind: {type: string, enum: [client, partner]}
+        roles:
+          type: array
+          items: {type: string, enum: [client, partner]}
+          description: 'КОНТР-1б: роли компании человека; «Кто это» идёт по ним, держит обе — человек на обеих вкладках (`kind` — первая роль)'
         photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}
         company_logo_url: {type: [string, 'null'], description: 'Логотип компании человека: адрес на BFF с `?v=<версия>`, пакетно на список (ЕД-3); null или нет права на раздел — буквы названия'}
     CounterpartyContacts:
@@ -31889,7 +31953,7 @@ components:
       type: object
       additionalProperties: false
       description: Карточка контрагента — одна компания во всех ролях (ADR-0028)
-      required: [id, name, inn, registration_number, country, legal_address, crm_client_id, roles, people, bank_accounts, accounts_masked, brands]
+      required: [id, name, inn, registration_number, country, legal_address, crm_client_id, roles, role_states, cabinet, people, bank_accounts, accounts_masked, brands]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
@@ -31900,6 +31964,11 @@ components:
         crm_client_id: {type: [integer, 'null'], description: 'Клиент CRM, с которым связана компания'}
         logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
         roles: {$ref: '#/components/schemas/CounterpartyRoles'}
+        role_states:
+          type: array
+          items: {$ref: '#/components/schemas/CounterpartyRoleState'}
+          description: 'КОНТР-1б: роли компании списком, у каждой своё состояние — единый источник для карточки, списка «Контрагенты» и «Людей»'
+        cabinet: {$ref: '#/components/schemas/CabinetTruth'}
         people: {type: array, items: {$ref: '#/components/schemas/CounterpartyCardPerson'}}
         bank_accounts: {type: array, items: {$ref: '#/components/schemas/CounterpartyAccount'}}
         accounts_masked: {type: boolean, description: 'Номера счетов скрыты: нет финансовых прав'}
@@ -31917,6 +31986,60 @@ components:
             - $ref: '#/components/schemas/CounterpartyContractTerm'
             - type: 'null'
           description: 'ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет'
+    CounterpartyRoleState:
+      type: object
+      additionalProperties: false
+      description: 'Роль компании и её состояние (КОНТР-1б): клиент — `active`; партнёр — заявка рассматривается, приглашён, действует, приостановлен'
+      required: [role, state, kind]
+      properties:
+        role: {type: string, enum: [client, partner]}
+        state: {type: string, enum: [active, application, invited, suspended]}
+        kind: {type: [string, 'null'], description: 'Вид партнёра (manufacturer, supplier, principal, other); у клиента null'}
+    CabinetTruth:
+      type: object
+      additionalProperties: false
+      description: 'Правда о кабинете компании (КОНТР-1б): открыт ли, кем (роли), последний вход любого контакта и что видят вошедшие'
+      required: [opened, roles, sees, last_login_at, logged_in_contacts]
+      properties:
+        opened: {type: boolean}
+        roles: {type: array, items: {type: string, enum: [client, partner]}}
+        sees: {type: string, enum: [none, client, partner, both, application], description: 'Раздел клиента, партнёра, оба или «заявка на подключение рассматривается»'}
+        last_login_at: {type: [string, 'null']}
+        logged_in_contacts: {type: integer, minimum: 0}
+    NotClientHistory:
+      type: object
+      additionalProperties: false
+      required: [quotes_sent, contracts, invoices, projects]
+      properties:
+        quotes_sent: {type: integer, minimum: 0}
+        contracts: {type: integer, minimum: 0}
+        invoices: {type: integer, minimum: 0}
+        projects: {type: integer, minimum: 0}
+    NotClientPlan:
+      type: object
+      additionalProperties: false
+      description: '«Не клиент» (КОНТР-1б): что изменится или изменилось; только числа и номера заявок, персональных данных нет'
+      required: [company_id, dry_run, is_client, requests_to_close, requests_kept, history, has_history, contacts, contacts_with_cabinet, remaining_roles, requests_closed, candidate_entry]
+      properties:
+        company_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        dry_run: {type: boolean}
+        is_client: {type: boolean}
+        requests_to_close: {type: array, items: {type: string}, description: 'Открытые заявки, которые закроются как заведённые по ошибке'}
+        requests_kept: {type: array, items: {type: string}, description: 'Открытые заявки, где клиенту уже отправляли КП: не закрываются'}
+        history: {$ref: '#/components/schemas/NotClientHistory'}
+        has_history: {type: boolean, description: 'Есть настоящая история: сотрудник решает сам, действие не блокируется'}
+        contacts: {type: integer, minimum: 0}
+        contacts_with_cabinet: {type: integer, minimum: 0}
+        remaining_roles: {type: array, items: {$ref: '#/components/schemas/CounterpartyRoleState'}}
+        requests_closed: {type: array, items: {type: string}}
+        candidate_entry: {type: boolean, description: 'Контактам оставлен вход кандидата: заявка на подключение рассматривается'}
+    NotClientResult:
+      type: object
+      additionalProperties: false
+      required: [result, card]
+      properties:
+        result: {$ref: '#/components/schemas/NotClientPlan'}
+        card: {$ref: '#/components/schemas/CounterpartyCard'}
     CounterpartyContractTerm:
       type: object
       additionalProperties: false
@@ -31960,7 +32083,7 @@ components:
       additionalProperties: false
       required: [role, 'on']
       properties:
-        role: {type: string, enum: [supplier, manufacturer]}
+        role: {type: string, enum: [supplier, manufacturer, client]}
         'on': {type: boolean}
     CounterpartyPersonPage:
       type: object
@@ -32094,7 +32217,7 @@ components:
     SupplierCabinetAccess:
       type: object
       additionalProperties: false
-      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, crm_client, can_manage]
+      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, cabinet, crm_client, can_manage]
       properties:
         company_id: {$ref: '#/components/schemas/CompanyItemRef'}
         company_name: {type: string}
@@ -32112,6 +32235,7 @@ components:
           type: array
           items: {type: string}
           description: Разделы, которые откроются сессии компании
+        cabinet: {$ref: '#/components/schemas/CabinetTruth'}
         can_manage: {type: boolean, description: 'У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка'}
     SupplierCabinetCrmClient:
       type: object

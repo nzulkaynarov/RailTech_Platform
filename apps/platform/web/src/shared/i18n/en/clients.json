@@ -140,7 +140,8 @@
     "both": "Client and partner",
     "applications": "Join requests",
     "bank_changes": "Bank details change",
-    "do_not_work": "Not working"
+    "do_not_work": "Not working",
+    "none": "No role set"
   },
   "addPartner": "Add partner",
   "counterparty": {
@@ -159,6 +160,37 @@
       "organization": "Organization",
       "inUse": "The role is in use: the company has offers or brands.",
       "failed": "Could not change the role. Try again."
+    },
+    "roleState": {
+      "client": {
+        "active": "Client"
+      },
+      "partner": {
+        "application": "Partner{{kind}} — connection request under review",
+        "invited": "Partner{{kind}} — invited",
+        "active": "Partner{{kind}} — active",
+        "suspended": "Partner{{kind}} — suspended"
+      }
+    },
+    "partnerKind": {
+      "manufacturer": "manufacturer",
+      "supplier": "supplier",
+      "principal": "principal",
+      "other": "other"
+    },
+    "notClient": {
+      "action": "Not a client",
+      "hint": "The company was entered as a client by mistake",
+      "title": "Remove the client role?",
+      "text": "The company leaves «Clients»; its contacts stay.",
+      "close": "Will be closed as entered by mistake: {{list}}.",
+      "kept": "Will stay (a quote was already sent to the client): {{list}}.",
+      "history": "Real history: quotes sent — {{quotes}}, contracts — {{contracts}}, invoices — {{invoices}}, projects — {{projects}}.",
+      "ask": "This looks like a real client. Remove the role anyway?",
+      "confirm": "Remove the role anyway",
+      "cancel": "Cancel",
+      "done": "Client role removed. Requests closed: {{count}}.",
+      "failed": "Could not remove the role. Try again."
     },
     "people": {
       "title": "People",

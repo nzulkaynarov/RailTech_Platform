@@ -118,11 +118,25 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
       : t("cabinetAccess.invite");
   const roles = data.cabinet_roles.map((r) => t(`cabinetAccess.roles.${r}`)).join(" · ");
   const suspended = relationship?.status === "suspended";
+  // КОНТР-1б: статус говорит правду о кабинете: открыт клиентской ролью — «Открыт», а не «Не открыт»
+  const tagStatus = relationship?.status ?? (data.cabinet.opened ? "opened" : "none");
+  const truth = [
+    {
+      label: t("cabinetAccess.seesLabel"),
+      value: t(`cabinetAccess.sees.${data.cabinet.sees}`),
+    },
+    {
+      label: t("cabinetAccess.lastLogin"),
+      value: data.cabinet.last_login_at
+        ? dateTime(data.cabinet.last_login_at)
+        : t("cabinetAccess.neverLoggedIn"),
+    },
+  ];
   return (
     <div className="pf-cat">
       <div className="pf-cat-actions" aria-live="polite">
-        <StatusTag kind="cabinetAccess" status={relationship?.status ?? "none"}>
-          {t(`cabinetAccess.status.${relationship?.status ?? "none"}`)}
+        <StatusTag kind="cabinetAccess" status={tagStatus}>
+          {t(`cabinetAccess.status.${tagStatus}`)}
         </StatusTag>
         <span className="pf-cat-note">
           {roles ? t("cabinetAccess.rolesLine", { roles }) : t("cabinetAccess.closed")}
@@ -137,6 +151,7 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
       {relationship ? (
         <DefinitionList
           items={[
+            ...truth,
             {
               label: t("cabinetAccess.invitedBy"),
               value: [
@@ -150,7 +165,9 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
               label: t("cabinetAccess.firstLogin"),
               value: relationship.activated_at
                 ? dateTime(relationship.activated_at)
-                : t("cabinetAccess.noLogin"),
+                : data.cabinet.last_login_at
+                  ? dateTime(data.cabinet.last_login_at)
+                  : t("cabinetAccess.noLogin"),
             },
             {
               label: t("cabinetAccess.contract"),
@@ -174,6 +191,8 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
               : []),
           ]}
         />
+      ) : data.cabinet.opened ? (
+        <DefinitionList items={truth} />
       ) : (
         <p className="pf-cat-note">{t("cabinetAccess.notOpened")}</p>
       )}

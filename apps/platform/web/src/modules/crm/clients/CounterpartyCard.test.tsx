@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetMarks } from "../../../mocks/doNotWorkMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
+import { resetNotClient } from "../../../mocks/notClient";
 import { resetPictures } from "../../../mocks/pictures";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -24,6 +25,7 @@ setupBotTests();
 beforeEach(() => {
   resetLeads();
   resetMarks();
+  resetNotClient();
   resetPictures();
 });
 
@@ -100,6 +102,17 @@ describe("Карточка контрагента", () => {
             partner: true,
             organization: false,
           },
+          role_states: [
+            { role: "client", state: "active", kind: null },
+            { role: "partner", state: "active", kind: "manufacturer" },
+          ],
+          cabinet: {
+            opened: true,
+            roles: ["client", "partner"],
+            sees: "both",
+            last_login_at: null,
+            logged_in_contacts: 0,
+          },
           people: [],
           bank_accounts: [],
           accounts_masked: false,
@@ -109,7 +122,7 @@ describe("Карточка контрагента", () => {
     );
     const panel = await open("director@demo.example", "/crm/clients/3?panel=open&tab=card");
     const roles = await within(panel).findByRole("list", { name: "Роли" });
-    expect(within(roles).getByText("Партнёр с кабинетом")).toBeVisible();
+    expect(within(roles).getByText("Партнёр, изготовитель — действует")).toBeVisible();
     for (const name of ["Обзор", "Заявки и проекты", "Товары поставщика"]) {
       expect(within(panel).getByRole("tab", { name })).toBeVisible();
     }
@@ -338,6 +351,14 @@ describe("Карточка контрагента: логотип и фото к
             partner: false,
             organization: false,
           },
+          role_states: [{ role: "client", state: "active", kind: null }],
+          cabinet: {
+            opened: true,
+            roles: ["client"],
+            sees: "client",
+            last_login_at: null,
+            logged_in_contacts: 0,
+          },
           people: [],
           bank_accounts: [],
           accounts_masked: true,
@@ -381,4 +402,104 @@ describe("Карточка контрагента: логотип и фото к
       );
     });
   }, 15_000);
+});
+
+/** КОНТР-1б: роли — список с состоянием каждой; «Не клиент» снимает ошибочную роль на месте. */
+describe("Роли контрагента и «Не клиент»", () => {
+  it("состояния ролей словами: клиент и партнёр с заявкой на подключение", async () => {
+    server.use(
+      http.get("*/people/clients/4/counterparty", () =>
+        HttpResponse.json({
+          id: "1004",
+          name: "ООО Демо-Вагон",
+          inn: "300000004",
+          registration_number: null,
+          country: "Узбекистан",
+          legal_address: null,
+          crm_client_id: 4,
+          roles: {
+            client: true,
+            supplier: false,
+            manufacturer: false,
+            partner: true,
+            organization: false,
+          },
+          role_states: [
+            { role: "client", state: "active", kind: null },
+            { role: "partner", state: "application", kind: "supplier" },
+          ],
+          cabinet: {
+            opened: true,
+            roles: ["client"],
+            sees: "client",
+            last_login_at: "2026-11-25T08:22:00Z",
+            logged_in_contacts: 1,
+          },
+          people: [],
+          bank_accounts: [],
+          accounts_masked: false,
+          brands: [],
+        }),
+      ),
+    );
+    const panel = await open("director@demo.example", "/crm/clients/4?panel=open&tab=card");
+    const roles = await within(panel).findByRole("list", { name: "Роли" });
+    expect(within(roles).getByText("Клиент")).toBeVisible();
+    expect(
+      within(roles).getByText("Партнёр, поставщик — заявка на подключение рассматривается"),
+    ).toBeVisible();
+  });
+
+  it("«Не клиент» без настоящей истории: одно действие, роль и вкладка клиента уходят, компания выходит из «Клиентов»", async () => {
+    const panel = await open("director@demo.example", "/crm/clients/4?panel=open&tab=card");
+    const roles = await within(panel).findByRole("list", { name: "Роли" });
+    expect(within(roles).getByText("Клиент")).toBeVisible();
+    expect(within(panel).getByRole("tab", { name: "Заявки и проекты" })).toBeVisible();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Не клиент" }));
+
+    await waitFor(() => {
+      expect(within(panel).queryByRole("tab", { name: "Заявки и проекты" })).toBeNull();
+    });
+    expect(within(panel).queryByRole("button", { name: "Не клиент" })).toBeNull();
+    expect(within(roles).queryByText("Клиент")).toBeNull();
+    // ничего не спрашивали: диалога нет
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("«Не клиент» у компании с настоящей историей: предупреждение списком, решает сотрудник", async () => {
+    const panel = await open("director@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("list", { name: "Роли" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Не клиент" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/КП отправлено — 2, договоров — 1, счетов — 1/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Останутся \(клиенту уже отправляли КП\): RQ-2026-004/),
+    ).toBeInTheDocument();
+    // отмена ничего не меняет
+    fireEvent.click(within(dialog).getByRole("button", { name: "Отмена" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(within(panel).getByRole("button", { name: "Не клиент" })).toBeVisible();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Не клиент" }));
+    fireEvent.click(
+      await within(await screen.findByRole("dialog")).findByRole("button", {
+        name: "Всё равно снять роль",
+      }),
+    );
+    await waitFor(() => {
+      expect(within(panel).queryByRole("button", { name: "Не клиент" })).toBeNull();
+    });
+  });
+
+  it("без права вести клиентов и поставщиков «Не клиент» не показывается", async () => {
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("list", { name: "Роли" });
+    expect(within(panel).queryByRole("button", { name: "Не клиент" })).toBeNull();
+  });
 });

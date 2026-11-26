@@ -78,6 +78,37 @@ class DeskSupplierAccessCrmClient(serializers.Serializer):
     )
 
 
+class DeskRoleState(serializers.Serializer):
+    """Роль компании и её состояние (КОНТР-1б): единый источник для карточки, списков и «Людей»."""
+
+    role = serializers.ChoiceField(choices=["client", "partner"])
+    state = serializers.ChoiceField(
+        choices=["active", "application", "invited", "suspended"],
+        help_text=(
+            "`client`: `active`. `partner`: `application` — заявка на подключение рассматривается, `invited` — приглашён, "
+            "`active` — действует, `suspended` — приостановлен"
+        ),
+    )
+    kind = serializers.CharField(
+        allow_null=True, help_text="Вид партнёра (`manufacturer`, `supplier`, `principal`, `other`); у клиента `null`"
+    )
+
+
+class DeskCabinetTruth(serializers.Serializer):
+    """Что с кабинетом компании на самом деле (КОНТР-1б)."""
+
+    opened = serializers.BooleanField(help_text="Хотя бы одна роль открывает кабинет")
+    roles = serializers.ListField(child=serializers.CharField(), help_text="Роли кабинета сейчас: `client`, `partner`")
+    sees = serializers.ChoiceField(
+        choices=["none", "client", "partner", "both", "application"],
+        help_text="Что видит вошедший: раздел клиента, партнёра, оба или «заявка рассматривается»",
+    )
+    last_login_at = serializers.DateTimeField(
+        allow_null=True, help_text="Последний вход любого контакта; `null` — не входили"
+    )
+    logged_in_contacts = serializers.IntegerField(help_text="Сколько контактов входили в кабинет")
+
+
 class DeskSupplierAccess(serializers.Serializer):
     company_id = serializers.IntegerField()
     company_name = serializers.CharField()
@@ -96,6 +127,7 @@ class DeskSupplierAccess(serializers.Serializer):
     crm_client = DeskSupplierAccessCrmClient(
         help_text="Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении."
     )
+    cabinet = DeskCabinetTruth(help_text="Правда о кабинете: открыт ли, когда входили, что видят (КОНТР-1б)")
     can_manage = serializers.BooleanField(
         help_text="У сотрудника есть `supply.manage`: контакты, приглашение, приостановка."
     )
@@ -485,6 +517,10 @@ class DeskPerson(serializers.Serializer):
     is_primary = serializers.BooleanField()
     company = DeskRef()
     kind = serializers.ChoiceField(choices=["client", "partner"])
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=["client", "partner"]),
+        help_text="Роли компании человека (КОНТР-1б): человек идёт по ролям компании и виден на обеих вкладках, если держит обе",
+    )
     photo_version = serializers.CharField(
         allow_null=True,
         help_text="Версия фото контакта (отпечаток файла); `null` — фото нет. Адреса хранилища не отдаются",
@@ -585,6 +621,8 @@ class DeskCounterparty(serializers.Serializer):
     crm_client_id = serializers.IntegerField(allow_null=True, help_text="Клиент CRM, с которым связана компания")
     logo_version = serializers.CharField(allow_null=True, help_text="Версия логотипа; `null` — логотипа нет")
     roles = DeskCounterpartyRoles()
+    role_states = DeskRoleState(many=True, help_text="Роли компании со своими состояниями (КОНТР-1б)")
+    cabinet = DeskCabinetTruth(help_text="Правда о кабинете: открыт ли, когда входили, что видят")
     people = DeskCounterpartyPerson(many=True)
     bank_accounts = DeskCounterpartyAccount(many=True)
     accounts_masked = serializers.BooleanField(help_text="Номера счетов скрыты: нет `finance.view`")
@@ -627,7 +665,7 @@ class DeskCounterpartyRequisitesIn(serializers.Serializer):
 
 
 class DeskCounterpartyRoleIn(serializers.Serializer):
-    role = serializers.ChoiceField(choices=["supplier", "manufacturer"])
+    role = serializers.ChoiceField(choices=["supplier", "manufacturer", "client"])
     on = serializers.BooleanField()
 
 
@@ -672,3 +710,37 @@ class DeskCounterpartyLogos(serializers.Serializer):
 class DeskPersonPhoto(serializers.Serializer):
     id = serializers.IntegerField()
     photo_version = serializers.CharField(allow_null=True, help_text="Новая версия фото; `null` — фото убрано")
+
+
+class DeskCounterpartyRoleStates(serializers.Serializer):
+    results = serializers.DictField(child=DeskRoleState(many=True), help_text="id компании → её роли с состояниями")
+
+
+class DeskNotClientPlan(serializers.Serializer):
+    """«Не клиент»: что изменится или изменилось. Только числа и номера заявок — без персональных данных."""
+
+    company_id = serializers.IntegerField()
+    dry_run = serializers.BooleanField(help_text="`true` — ничего не изменено, это отчёт")
+    is_client = serializers.BooleanField()
+    has_client_type = serializers.BooleanField()
+    has_crm_link = serializers.BooleanField()
+    requests_to_close = serializers.ListField(child=serializers.CharField())
+    requests_kept = serializers.ListField(
+        child=serializers.CharField(), help_text="Открытые заявки, где клиенту уже отправляли КП: не закрываются"
+    )
+    history = serializers.DictField(
+        child=serializers.IntegerField(), help_text="КП отправлено, договоры, счета, проекты"
+    )
+    has_history = serializers.BooleanField(
+        help_text="Есть настоящая история: сотрудник решает сам, действие не блокируется"
+    )
+    contacts = serializers.IntegerField()
+    contacts_with_cabinet = serializers.IntegerField()
+    remaining_roles = DeskRoleState(many=True)
+    requests_closed = serializers.ListField(child=serializers.CharField(), required=False)
+    candidate_entry = serializers.BooleanField(required=False)
+
+
+class DeskNotClientResult(serializers.Serializer):
+    result = DeskNotClientPlan()
+    card = DeskCounterparty()

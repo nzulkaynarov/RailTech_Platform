@@ -4,6 +4,7 @@
  */
 import type { CompanyItemRef } from "./companyItemRef";
 import type { CounterpartyPersonKind } from "./counterpartyPersonKind";
+import type { CounterpartyPersonRolesItem } from "./counterpartyPersonRolesItem";
 import type { CounterpartyRef } from "./counterpartyRef";
 
 /**
@@ -19,6 +20,8 @@ export interface CounterpartyPerson {
   is_primary: boolean;
   company: CounterpartyRef;
   kind: CounterpartyPersonKind;
+  /** КОНТР-1б: роли компании человека; «Кто это» идёт по ним, держит обе — человек на обеих вкладках (`kind` — первая роль) */
+  roles: CounterpartyPersonRolesItem[];
   /**
    * Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы
    * @nullable

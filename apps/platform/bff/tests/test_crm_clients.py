@@ -29,6 +29,7 @@ BASE = "/api/v1/crm/clients"
 
 
 LOGOS = f"{ERP_URL}/api/v1/parties/organizations/logos/"
+ROLES = f"{ERP_URL}/api/v1/parties/organizations/role-states/"
 
 
 @pytest.fixture(autouse=True)
@@ -36,6 +37,12 @@ def erp_logos(be: Backends) -> None:
     """ERP отдаёт версию логотипа только компании 501 (ЕД-5): остальные строки — без логотипа."""
     be.router.get(LOGOS).mock(
         return_value=httpx.Response(200, json={"results": {"501": "a1b2c3d4e5"}})
+    )
+    # КОНТР-1б: роли строк списка — ERP; у компании 501 она клиент, у остальных ответа нет
+    be.router.get(ROLES).mock(
+        return_value=httpx.Response(
+            200, json={"results": {"501": [{"role": "client", "state": "active", "kind": None}]}}
+        )
     )
 
 
@@ -507,3 +514,24 @@ def test_client_sees_follows_the_erp_stage_not_only_the_step(
         request_letter_file_id=None,
     )
     assert request_row(deal).client_sees == expected  # type: ignore[arg-type]
+
+
+async def test_list_takes_the_relation_type_from_erp_roles(
+    web: Web, be: Backends, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """КОНТР-1б: в списке «Клиент» и «Партнёр» говорит ERP, а не то, что строка пришла из CRM."""
+    await web.login(["DIRECTOR"])
+    items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
+    row = next(r for r in items if r["company_id"] == "501")
+    assert row["roles"] == [{"role": "client", "state": "active", "kind": None}]
+    assert all(r["roles"] is None for r in items if r["company_id"] is None)
+
+
+async def test_list_survives_when_erp_cannot_name_the_roles(
+    web: Web, be: Backends, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    be.router.get(ROLES).mock(return_value=httpx.Response(503, json={"detail": "down"}))
+    await web.login(["DIRECTOR"])
+    items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
+    assert items
+    assert all(row["roles"] is None for row in items)

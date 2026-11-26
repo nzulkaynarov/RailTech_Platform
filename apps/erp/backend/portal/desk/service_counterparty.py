@@ -20,7 +20,7 @@ from integration.models import CrmClientMapping
 from parties import do_not_work, pictures
 from parties.banking import grouped, masked
 from parties.models import Company, CompanyType
-from parties.models.relationships import CompanyRelationship, RelationshipRole, RelationshipStatus
+from portal.desk import company_roles
 
 from accounts.services.permissions import staff_has_permission
 from catalog.desk.audit import record
@@ -33,19 +33,29 @@ _TYPE_NAMES = {"SUPPLIER": "Поставщик", "MANUFACTURER": "Изготов
 _FULL_ACCOUNT = ("finance.view", "finance.payment")
 
 
+def _states(company_ids, client_ids: set) -> dict[int, list[dict]]:
+    """Роли с состояниями (`company_roles`); клиентом считается только то, что в книге продавца (`client_ids`)."""
+    return {
+        pk: [s for s in states if not (s["role"] == "client" and pk not in client_ids)]
+        for pk, states in company_roles.role_states_for(company_ids).items()
+    }
+
+
+def _flags(pk: int, states: list[dict], codes: set, offered: bool) -> dict:
+    partner = any(s["role"] == "partner" and s["state"] != "suspended" for s in states)
+    return {
+        "client": any(s["role"] == "client" for s in states),
+        "supplier": "SUPPLIER" in codes or offered,
+        "manufacturer": "MANUFACTURER" in codes,
+        "partner": partner,
+        "organization": "ORGANIZATION" in codes,
+    }
+
+
 def roles_of(company: Company, client_ids: set) -> dict:
     codes = set(company.types.values_list("code", flat=True))
     has_offers = SupplierOffer.objects.filter(supplier=company).exists()
-    return {
-        "client": company.pk in client_ids,
-        "supplier": "SUPPLIER" in codes or has_offers,
-        "manufacturer": "MANUFACTURER" in codes,
-        "partner": company.relationships.filter(
-            role=RelationshipRole.PARTNER,
-            status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
-        ).exists(),
-        "organization": "ORGANIZATION" in codes,
-    }
+    return _flags(company.pk, _states([company.pk], client_ids)[company.pk], codes, has_offers)
 
 
 def roles_for(companies, client_ids: set) -> dict[int, dict]:
@@ -56,23 +66,8 @@ def roles_for(companies, client_ids: set) -> dict[int, dict]:
         if code:
             codes.setdefault(company_id, set()).add(code)
     offered = set(SupplierOffer.objects.filter(supplier__in=ids).values_list("supplier", flat=True))
-    partners = set(
-        CompanyRelationship.objects.filter(
-            company__in=ids,
-            role=RelationshipRole.PARTNER,
-            status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
-        ).values_list("company", flat=True)
-    )
-    return {
-        pk: {
-            "client": pk in client_ids,
-            "supplier": "SUPPLIER" in codes.get(pk, ()) or pk in offered,
-            "manufacturer": "MANUFACTURER" in codes.get(pk, ()),
-            "partner": pk in partners,
-            "organization": "ORGANIZATION" in codes.get(pk, ()),
-        }
-        for pk in ids
-    }
+    states = _states(ids, client_ids)
+    return {pk: _flags(pk, states[pk], codes.get(pk, set()), pk in offered) for pk in ids}
 
 
 def _account_row(account, *, full: bool) -> dict:
@@ -107,6 +102,8 @@ def card(company: Company, client_ids: set, user) -> dict:
         "crm_client_id": mapping,
         "logo_version": pictures.version(company.logo),
         "roles": roles_of(company, client_ids),
+        "role_states": _states([company.pk], client_ids)[company.pk],
+        "cabinet": company_roles.cabinet_truth(company),
         "people": [
             {
                 "id": person.pk,
@@ -138,9 +135,35 @@ def _contract_term(company) -> Optional[dict]:
     return contract_term.counterparty_term(company)
 
 
+def _grant_client(company: Company, on: bool, *, actor) -> None:
+    """«+ Клиент» (КОНТР-1б): компания, заведённая письмом или мастером как «организация», получает роль клиента — ей
+    открывается кабинет клиента. Снять роль — только «Не клиент» (с закрытием заявок и журналом)."""
+    if not on:
+        raise ItemError("ROLE_NOT_EDITABLE", "role")
+    client_type, _ = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
+    if company.types.filter(code="CLIENT").exists():
+        return
+    company.types.add(client_type)
+    company.client_role_removed_at = None
+    company.client_role_removed_by = None
+    company.save(update_fields=["client_role_removed_at", "client_role_removed_by"])
+    record(
+        actor,
+        entity="company",
+        instance=company,
+        event="client_role_granted",
+        action="Роль «Клиент» отмечена",
+        before={"role": "client", "on": False},
+        after={"role": "client", "on": True},
+    )
+
+
 @transaction.atomic
 def set_role(company: Company, role: str, on: bool, *, actor) -> None:
     """Отметить или снять роль «поставщик» или «изготовитель». Снять нельзя, пока роль занята данными."""
+    if role == "client":
+        _grant_client(company, on, actor=actor)
+        return
     code = EDITABLE_ROLES.get(role)
     if code is None:
         raise ItemError("ROLE_NOT_EDITABLE", "role")

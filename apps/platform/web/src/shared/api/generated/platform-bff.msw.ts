@@ -305,6 +305,8 @@ import type {
   MenuCounters,
   MessageContext,
   MessageInbox,
+  NotClientPlan,
+  NotClientResult,
   NotificationPage,
   NotificationSettings,
   NumberingPreview,
@@ -36973,6 +36975,26 @@ export const getListCrmClientsResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    roles: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        role: faker.helpers.arrayElement(["client", "partner"] as const),
+        state: faker.helpers.arrayElement([
+          "active",
+          "application",
+          "invited",
+          "suspended",
+        ] as const),
+        kind: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+      null,
+    ]),
   })),
   ...overrideResponse,
 });
@@ -39775,6 +39797,7 @@ export const getListCounterpartyPeopleResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     kind: faker.helpers.arrayElement(["client", "partner"] as const),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
     photo_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -39986,6 +40009,26 @@ export const getGetCounterpartyResponseMock = (
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
   },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -40096,6 +40139,26 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
+  },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -40214,6 +40277,26 @@ export const getUploadCounterpartyLogoResponseMock = (
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
   },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -40327,6 +40410,26 @@ export const getDeleteCounterpartyLogoResponseMock = (
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
+  },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -40467,6 +40570,26 @@ export const getGetCounterpartyByClientResponseMock = (
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
   },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -40580,6 +40703,26 @@ export const getSetCounterpartyDoNotWorkResponseMock = (
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
+  },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -40695,6 +40838,26 @@ export const getClearCounterpartyDoNotWorkResponseMock = (
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
   },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -40746,6 +40909,233 @@ export const getClearCounterpartyDoNotWorkResponseMock = (
     { ...getClearCounterpartyDoNotWorkResponseCounterpartyContractTermMock() },
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetCounterpartyNotClientPlanResponseMock = (
+  overrideResponse: Partial<Extract<NotClientPlan, object>> = {},
+): NotClientPlan => ({
+  company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  dry_run: faker.datatype.boolean(),
+  is_client: faker.datatype.boolean(),
+  requests_to_close: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  requests_kept: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  history: {
+    quotes_sent: faker.number.int({ min: 0 }),
+    contracts: faker.number.int({ min: 0 }),
+    invoices: faker.number.int({ min: 0 }),
+    projects: faker.number.int({ min: 0 }),
+  },
+  has_history: faker.datatype.boolean(),
+  contacts: faker.number.int({ min: 0 }),
+  contacts_with_cabinet: faker.number.int({ min: 0 }),
+  remaining_roles: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    role: faker.helpers.arrayElement(["client", "partner"] as const),
+    state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+    kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  requests_closed: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  candidate_entry: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyNotClientResponseDoNotWorkMock = (
+  overrideResponse: Partial<DoNotWork> = {},
+): DoNotWork => ({
+  ...{
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    set_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    set_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyNotClientResponseCounterpartyContractTermMock = (
+  overrideResponse: Partial<CounterpartyContractTerm> = {},
+): CounterpartyContractTerm => ({
+  ...{
+    contract_id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    state: faker.helpers.arrayElement(["open", "renews", "ends", "expired"] as const),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    last_notice_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    foreign: faker.datatype.boolean(),
+    blocks_new_work: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getSetCounterpartyNotClientResponseMock = (
+  overrideResponse: Partial<Extract<NotClientResult, object>> = {},
+): NotClientResult => ({
+  result: {
+    company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    dry_run: faker.datatype.boolean(),
+    is_client: faker.datatype.boolean(),
+    requests_to_close: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+    requests_kept: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+    history: {
+      quotes_sent: faker.number.int({ min: 0 }),
+      contracts: faker.number.int({ min: 0 }),
+      invoices: faker.number.int({ min: 0 }),
+      projects: faker.number.int({ min: 0 }),
+    },
+    has_history: faker.datatype.boolean(),
+    contacts: faker.number.int({ min: 0 }),
+    contacts_with_cabinet: faker.number.int({ min: 0 }),
+    remaining_roles: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    })),
+    requests_closed: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+    candidate_entry: faker.datatype.boolean(),
+  },
+  card: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    registration_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    country: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    legal_address: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    logo_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    roles: {
+      client: faker.datatype.boolean(),
+      supplier: faker.datatype.boolean(),
+      manufacturer: faker.datatype.boolean(),
+      partner: faker.datatype.boolean(),
+      organization: faker.datatype.boolean(),
+    },
+    role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        role: faker.helpers.arrayElement(["client", "partner"] as const),
+        state: faker.helpers.arrayElement([
+          "active",
+          "application",
+          "invited",
+          "suspended",
+        ] as const),
+        kind: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+    cabinet: {
+      opened: faker.datatype.boolean(),
+      roles: faker.helpers.arrayElements(["client", "partner"] as const),
+      sees: faker.helpers.arrayElement([
+        "none",
+        "client",
+        "partner",
+        "both",
+        "application",
+      ] as const),
+      last_login_at: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      logged_in_contacts: faker.number.int({ min: 0 }),
+    },
+    people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        is_primary: faker.datatype.boolean(),
+        has_cabinet: faker.datatype.boolean(),
+        has_phone: faker.datatype.boolean(),
+        has_email: faker.datatype.boolean(),
+        photo_url: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+    bank_accounts: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    })),
+    accounts_masked: faker.datatype.boolean(),
+    brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    do_not_work: faker.helpers.arrayElement([
+      { ...getSetCounterpartyNotClientResponseDoNotWorkMock() },
+      null,
+    ]),
+    contract_term: faker.helpers.arrayElement([
+      { ...getSetCounterpartyNotClientResponseCounterpartyContractTermMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -40808,6 +41198,26 @@ export const getSetCounterpartyRoleResponseMock = (
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
     organization: faker.datatype.boolean(),
+  },
+  role_states: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      role: faker.helpers.arrayElement(["client", "partner"] as const),
+      state: faker.helpers.arrayElement(["active", "application", "invited", "suspended"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -41372,6 +41782,16 @@ export const getGetSupplierCabinetAccessResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -41520,6 +41940,16 @@ export const getUpdateSupplierCabinetRightsResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -41628,6 +42058,16 @@ export const getInviteSupplierToCabinetResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -41736,6 +42176,16 @@ export const getSuspendSupplierCabinetAccessResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -41844,6 +42294,16 @@ export const getConfirmSupplierCrmClientResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -41952,6 +42412,16 @@ export const getRejectSupplierCrmClientResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  cabinet: {
+    opened: faker.datatype.boolean(),
+    roles: faker.helpers.arrayElements(["client", "partner"] as const),
+    sees: faker.helpers.arrayElement(["none", "client", "partner", "both", "application"] as const),
+    last_login_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    logged_in_contacts: faker.number.int({ min: 0 }),
+  },
   can_manage: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -56096,6 +56566,54 @@ export const getClearCounterpartyDoNotWorkMockHandler = (
   );
 };
 
+export const getGetCounterpartyNotClientPlanMockHandler = (
+  overrideResponse?:
+    | NotClientPlan
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<NotClientPlan> | NotClientPlan),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/counterparties/:id/not-client",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCounterpartyNotClientPlanResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetCounterpartyNotClientMockHandler = (
+  overrideResponse?:
+    | NotClientResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<NotClientResult> | NotClientResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/counterparties/:id/not-client",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetCounterpartyNotClientResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSetCounterpartyRoleMockHandler = (
   overrideResponse?:
     | CounterpartyCard
@@ -57853,6 +58371,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetCounterpartyByClientMockHandler(),
   getSetCounterpartyDoNotWorkMockHandler(),
   getClearCounterpartyDoNotWorkMockHandler(),
+  getGetCounterpartyNotClientPlanMockHandler(),
+  getSetCounterpartyNotClientMockHandler(),
   getSetCounterpartyRoleMockHandler(),
   getListCatalogSuppliersMockHandler(),
   getCreateCatalogSupplierMockHandler(),

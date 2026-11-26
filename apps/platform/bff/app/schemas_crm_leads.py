@@ -22,6 +22,7 @@ from app.schemas_crm_messages import (
     ReplyBlocked,
 )
 from app.schemas_do_not_work import DoNotWork
+from app.schemas_supplier_access import CounterpartyRoleState
 
 LeadTab = Literal["all", "new", "dialog", "wants_quote", "client"]
 LeadScope = Literal["all", "mine", "overdue"]
@@ -183,6 +184,9 @@ class ClientRow(BaseModel):
     do_not_work: bool = False
     # ЕД-5: логотип компании ERP (адрес на BFF с версией); `None` — буквы названия
     logo_url: str | None = None
+    # КОНТР-1б: компания ERP и её роли с состояниями: тип в списке говорит ERP; `None` — ERP молчит
+    company_id: str | None = None
+    roles: list[CounterpartyRoleState] | None = None
 
 
 class ClientList(BaseModel):

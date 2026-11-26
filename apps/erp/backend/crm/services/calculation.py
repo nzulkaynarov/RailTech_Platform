@@ -1773,8 +1773,6 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
     отправленное КП закрывается (клиент не примет его после закрытия). «Ошибка» и «Тест» без отправленных клиенту
     документов скрывают заявку из списков (`hidden_in_lists`); запись и журнал остаются — удаления нет."""
     from ..models import DealCloseReason
-    from .deals import transition_deal_stage
-    from .quotes._shared import _set_quote_status
 
     _require_staff(user)
     deal = _locked_deal_or_404(deal_id)
@@ -1793,6 +1791,25 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
     sent = quote_sent_to_client(deal)
     if sent and not reason.allowed_after_quote_sent:
         raise CalcError("REASON_NOT_ALLOWED_AFTER_QUOTE", 409)
+    _close_checked(deal, user, reason, comment, stage, sent, task)
+    deal.refresh_from_db()
+    return _request_card(deal, task, user)
+
+
+def close_deal_as(deal: Deal, user, reason, comment: str = "") -> None:
+    """Закрыть заявку причиной из справочника без проверки прав (для служебных действий: «Не клиент», КОНТР-1б).
+
+    Вызывающий отвечает за право и за то, что заявка закрываема (`CLOSABLE_STAGES`, не проект); `user=None` — оболочка.
+    """
+    task = latest_task(deal.id)
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    _close_checked(deal, user, reason, (comment or "").strip(), stage, quote_sent_to_client(deal), task)
+
+
+def _close_checked(deal: Deal, user, reason, comment: str, stage: str, sent: bool, task) -> None:
+    from .deals import transition_deal_stage
+    from .quotes._shared import _set_quote_status
+
     lost_reason = f"{reason.name}: {comment}" if comment else reason.name
     _deal, err = transition_deal_stage(
         deal,
@@ -1834,8 +1851,6 @@ def close_request(deal_id: int, user, reason_code: str, comment: str = "") -> di
             "comment": comment,
         },
     )
-    deal.refresh_from_db()
-    return _request_card(deal, task, user)
 
 
 def line_visas(quote: Quote) -> list[tuple[str, Any, Any]]:
