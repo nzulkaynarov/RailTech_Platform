@@ -170,4 +170,22 @@ describe("DocumentViewer", () => {
     fireEvent.keyDown(region, { key: "0" });
     expect(calls.scaleValues.at(-1)).toBe("page-width");
   });
+
+  it("about: the full layer shows the «О документе» column, the panel does not", async () => {
+    renderUi(<DocumentViewer data={bytes} name="Договор" about={<p>ДОГ-2026/111</p>} />, {
+      route: "/docs?view=full&page=1",
+    });
+    const aside = await screen.findByRole("complementary", { name: "О документе" });
+    expect(aside).toHaveTextContent("ДОГ-2026/111");
+    expect(screen.getAllByText("ДОГ-2026/111")).toHaveLength(1);
+  });
+
+  it("sniffType: shows PDF and images by their first bytes, Word and Excel are left to download", async () => {
+    const { sniffType } = await import("./sniffType");
+    const of = (...codes: number[]) => new Uint8Array(codes).buffer;
+    expect(sniffType(of(0x25, 0x50, 0x44, 0x46, 0x2d))).toBe("application/pdf");
+    expect(sniffType(of(0x89, 0x50, 0x4e, 0x47))).toBe("image/png");
+    expect(sniffType(of(0xff, 0xd8, 0xff))).toBe("image/jpeg");
+    expect(sniffType(of(0x50, 0x4b, 0x03, 0x04))).toBeNull();
+  });
 });

@@ -38,7 +38,7 @@
     {
       "path": "src/modules/erp/docs/DocsScreen.tsx",
       "count": 1,
-      "reason": "Drawer 760; moves to the shared panel at 640 (ЕВ-1б)"
+      "reason": "Drawer 640 (width allowed) with actions and fields; moves to the shared panel (ЕВ-1б)"
     },
     {
       "path": "src/modules/erp/stock/ProductDrawer.tsx",

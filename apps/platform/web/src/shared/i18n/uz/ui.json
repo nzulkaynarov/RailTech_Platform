@@ -106,7 +106,18 @@
     "pageLabel": "«{{name}}», {{page}}-sahifa, jami {{total}}",
     "pagesCount": "PDF · {{count}} sahifa",
     "region": "«{{name}}» fayli sahifalari",
-    "error": "Faylni köriş uçun oçib bölmadi. Uni yuklab oling."
+    "error": "Faylni köriş uçun oçib bölmadi. Uni yuklab oling.",
+    "about": "Hüjjat haqida",
+    "open": "Oçiş",
+    "notReady": "Fayl hali tayyorlanmoqda — birozdan keyin qayta uring.",
+    "noPreview": "Bu faylni köriş keyinroq paydo böladi. Uni yuklab oling.",
+    "fields": {
+      "kind": "Turi",
+      "number": "Raqami",
+      "date": "Sana",
+      "status": "Holati",
+      "client": "Kontragent"
+    }
   },
   "bodyEditor": {
     "addRow": "+ qator",

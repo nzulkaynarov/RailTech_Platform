@@ -435,7 +435,7 @@ async def test_document_is_streamed_as_an_attachment(web: Web, be: Any) -> None:
     assert response.status_code == 200
     assert response.content == b"%PDF-1.4 scan"
     assert "attachment" in response.headers["content-disposition"]
-    assert response.headers["content-disposition"].endswith('-15.pdf"')
+    assert response.headers["content-disposition"].endswith(".pdf")  # filename*=UTF-8''…15.pdf
     assert dict(route.calls.last.request.url.params) == {"which": "scan"}
 
 

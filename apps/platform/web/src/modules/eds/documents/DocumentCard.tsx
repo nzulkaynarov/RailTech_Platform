@@ -1,10 +1,9 @@
-import { Alert, Button, Skeleton } from "antd";
+import { Button, Skeleton } from "antd";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
-import { downloadFile } from "../../../shared/api/download";
 import type { EdsDocument } from "../../../shared/api/generated/model";
 import {
   getDownloadEdsDocumentFileUrl,
@@ -14,6 +13,7 @@ import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { BodyView } from "../../../shared/ui/BodyEditor/BodyView";
+import { DocumentPeek } from "../../../shared/ui/DocumentViewer/DocumentPeek";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { History, type HistoryItem } from "../../../shared/ui/History";
@@ -21,7 +21,6 @@ import { routeStepState } from "../../../shared/ui/routeStepState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { reasonText } from "./errors";
 import { LetterSection } from "./LetterSection";
 import { DocumentStatusTag } from "./status";
 import { UndeliveredBanner } from "./UndeliveredBanner";
@@ -30,7 +29,9 @@ import "./documents.css";
 
 function Files({ doc }: { doc: EdsDocument }) {
   const { t, i18n } = useTranslation("documents");
-  const [error, setError] = useState<string | null>(null);
+  const { t: tu } = useTranslation("ui");
+  const { date } = useFormat();
+  const [opened, setOpened] = useState<EdsDocument["files"][number] | null>(null);
   if (doc.files.length === 0) return <p className="pf-fp-sub">{t("panel.noFiles")}</p>;
   return (
     <>
@@ -41,14 +42,10 @@ function Files({ doc }: { doc: EdsDocument }) {
               type="link"
               size="small"
               style={{ padding: 0, height: "auto", whiteSpace: "normal", textAlign: "left" }}
-              aria-label={t("panel.download", { name: file.name })}
+              aria-label={t("panel.open", { name: file.name })}
+              aria-haspopup="dialog"
               onClick={() => {
-                setError(null);
-                downloadFile(getDownloadEdsDocumentFileUrl(file.id), file.name).catch(
-                  (failure: unknown) => {
-                    setError(t("panel.downloadFailed", { reason: reasonText(t, failure) }));
-                  },
-                );
+                setOpened(file);
               }}
             >
               <span className="pf-doc-file-name">{file.name}</span>
@@ -57,7 +54,32 @@ function Files({ doc }: { doc: EdsDocument }) {
           </li>
         ))}
       </ul>
-      {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+      {opened ? (
+        <DocumentPeek
+          url={getDownloadEdsDocumentFileUrl(opened.id)}
+          title={opened.name}
+          fallbackName={opened.name}
+          about={[
+            { label: tu("documentViewer.fields.kind"), value: t(`kinds.${doc.kind}`) },
+            { label: tu("documentViewer.fields.number"), value: doc.number },
+            { label: tu("documentViewer.fields.date"), value: date(doc.created_at) },
+            {
+              label: tu("documentViewer.fields.status"),
+              value: (
+                <DocumentStatusTag
+                  kind={doc.kind}
+                  status={doc.status}
+                  awaitingSignature={doc.awaiting_signature}
+                />
+              ),
+            },
+            { label: t("panel.fields.author"), value: doc.author.full_name },
+          ]}
+          onClose={() => {
+            setOpened(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }

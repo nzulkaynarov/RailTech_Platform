@@ -36,6 +36,7 @@ from app.eds_approvals import (
 from app.eds_documents import API, EdsProxy
 from app.eds_projects import project_error
 from app.errors import backend_unavailable
+from app.file_names import content_disposition, document_file_name
 from app.schemas_eds_approvals import (
     MemoApprovalCard,
     MemoApprovalPage,
@@ -127,7 +128,9 @@ async def download_quote_client_decision_evidence(id: ApprovalId, authed: QuoteR
         finally:
             await upstream.aclose()
     headers = {
-        "Content-Disposition": f'attachment; filename="client-confirmation-{id}"',
+        "Content-Disposition": content_disposition(
+            document_file_name("Подтверждение клиента", str(id), ext="bin")
+        ),
         "Content-Security-Policy": "default-src 'none'; sandbox",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",

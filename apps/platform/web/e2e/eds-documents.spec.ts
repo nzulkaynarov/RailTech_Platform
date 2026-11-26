@@ -124,7 +124,7 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(panel.getByText("На согласовании")).toBeVisible();
     await expect(panel.getByText("Директор — ждёт решения")).toBeVisible();
     await expect(panel.getByText("Бухгалтер — дальше по маршруту")).toBeVisible();
-    await expect(panel.getByRole("button", { name: "Скачать: schet-mebel.pdf" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Открыть: schet-mebel.pdf" })).toBeVisible();
     await expect(panel.getByText("PRJ-2026-104")).toBeVisible();
     await settledScreenshot(page, "document-panel");
 

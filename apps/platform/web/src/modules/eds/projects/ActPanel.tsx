@@ -13,6 +13,8 @@ import { ActionToggle } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
+import { ActStatusTag } from "./status";
+import { useAboutDocument } from "./aboutDocument";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm, ScanForm } from "./forms";
 import { actStateKey } from "./model";
@@ -36,6 +38,7 @@ function ActBody({
   const apply = useApplyCard(objectId);
   const ref = projectRef(objectId);
   const act = card.act;
+  const about = useAboutDocument();
   const [returning, setReturning] = useState(false);
   // Какое действие выполняется сейчас: кнопка, появившаяся с новой карточкой, не должна вертеться.
   const [pending, setPending] = useState<string | null>(null);
@@ -92,6 +95,13 @@ function ActBody({
           ]}
         />
         <FileLinks
+          about={about({
+            kind: t("card.documents.act"),
+            number: act.number,
+            on: act.issued_at,
+            status: <ActStatusTag act={act} />,
+            client: card.client_name,
+          })}
           items={[
             act.has_pdf
               ? {

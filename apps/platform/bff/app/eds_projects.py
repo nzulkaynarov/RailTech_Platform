@@ -9,8 +9,9 @@ BFF не решает: проект, его шаг, статус для клие
 ошибок ERP в формат `Error` и потоковая выдача файлов.
 """
 
+import datetime as dt
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 import httpx
 
@@ -463,22 +464,44 @@ class ErpProjects:
 
     async def file_path(self, ref: str, kind: str, doc_id: int, variant: str) -> str:
         """Путь файла в ERP: документ обязан быть в карточке этого проекта."""
+        return (await self.file_ref(ref, kind, doc_id, variant))[0]
+
+    async def file_ref(
+        self, ref: str, kind: str, doc_id: int, variant: str
+    ) -> tuple[str, "FileTitle"]:
+        """Путь файла в ERP и части его имени — из той же карточки."""
         card = await self.raw_card(ref)
+        who = card.company_name
         if kind == "contract" and card.contract is not None and card.contract.id == doc_id:
             ok = variant == "pdf" or card.contract.has_scan
             tail = "download-pdf" if variant == "pdf" else "download-signed"
             base = "contracts"
+            title = FileTitle("Договор", card.contract.number, card.contract.created_at, who)
         elif kind == "act" and card.act is not None and card.act.id == doc_id:
             ok = variant == "pdf" or card.act.has_scan
             tail = "download-pdf" if variant == "pdf" else "download-signed"
             base = "acts"
+            title = FileTitle("Акт", card.act.number, card.act.issued_at, who)
         elif kind == "invoice" and variant == "pdf" and any(i.id == doc_id for i in card.invoices):
             ok, tail, base = True, "download-pdf", "invoices"
+            invoice = next(i for i in card.invoices if i.id == doc_id)
+            title = FileTitle("Счёт", invoice.number, invoice.issued_at, who)
         else:
             raise not_found()
         if not ok:
             raise not_found()
-        return f"{API}/{base}/{doc_id}/{tail}/"
+        if variant == "scan":
+            title = FileTitle(f"{title.kind} (скан)", title.number, title.date, title.counterparty)
+        return f"{API}/{base}/{doc_id}/{tail}/", title
+
+
+class FileTitle(NamedTuple):
+    """Из чего собрать имя файла (`app.file_names.document_file_name`)."""
+
+    kind: str
+    number: str
+    date: dt.date | dt.datetime | None
+    counterparty: str
 
 
 # --- сборка ответов -------------------------------------------------------------------------------

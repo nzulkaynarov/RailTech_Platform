@@ -21,6 +21,7 @@ import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { SigningButton } from "./SigningButton";
 import { fileUrl, projectRef } from "./api";
+import { useAboutDocument } from "./aboutDocument";
 import { FileLinks } from "./FileLinks";
 import { DeliveryActions } from "./DeliveryMarks";
 import { useStateLabels } from "./labels";
@@ -37,11 +38,19 @@ function InvoiceRows({ card, objectId }: { card: ProjectCard; objectId: string }
   const { t } = useTranslation("projects");
   const { me } = useAuth();
   const { date } = useFormat();
+  const about = useAboutDocument();
   const linkable = canSee(me, { resource: "eds.payments" });
   const action = (invoice: ProjectInvoice) => (
     <>
       {invoice.has_pdf ? (
         <FileLinks
+          about={about({
+            kind: t("card.documents.invoice"),
+            number: invoice.number,
+            on: invoice.issued_at,
+            status: <ProjectStatusTag kind="invoice" status={invoice.status} />,
+            client: card.client_name,
+          })}
           items={[
             {
               url: fileUrl(objectId, "invoice", invoice.id, "pdf"),
