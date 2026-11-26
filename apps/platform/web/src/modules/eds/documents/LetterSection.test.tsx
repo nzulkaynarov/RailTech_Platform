@@ -83,7 +83,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     // СЦ-8: слово статуса — по факту передачи; статус документа остаётся `draft`
     expect(card.getByText("На подписи")).toBeVisible();
     expect(card.getByText("Начальнику ГНИ")).toBeVisible();
-    expect(card.getByText("по бланку (директор)")).toBeVisible();
+    expect(card.getByText("по бланку")).toBeVisible();
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
     expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
     expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();

@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Checkbox, Collapse, Form, Input, Segmented } from "antd";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -104,7 +105,20 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
   const initial = useMemo(() => toValues(brand), [brand]);
   const watched = Form.useWatch([], form);
   const changed = changedFields(initial, watched);
-  const [kind, setKind] = useState<DocumentKind>("quote");
+  // Какой образец открыт — в адресе (`?sample=`): после F5 и по ссылке «на весь экран» тот же документ.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("sample");
+  const kind: DocumentKind = KINDS.find((value) => value === asked) ?? "quote";
+  const setKind = (next: DocumentKind) => {
+    setParams(
+      (previous) => {
+        const copy = new URLSearchParams(previous);
+        copy.set("sample", next);
+        return copy;
+      },
+      { replace: true },
+    );
+  };
 
   const keep = (next: BrandProfile) => {
     queryClient.setQueryData(getGetBrandProfileQueryKey(), next);
@@ -264,7 +278,7 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
         </div>
         <SamplePdf
           request={{ kind, ...(isEmptyObject(changed) ? {} : { draft: changed }) }}
-          title={t("brand.previewFrame", { kind: t(`kinds.${kind}`) })}
+          title={t("brand.previewFrame", { label: t(`kinds.${kind}`) })}
         />
         <p className="pf-co-hint">{t("brand.previewHint")}</p>
       </div>

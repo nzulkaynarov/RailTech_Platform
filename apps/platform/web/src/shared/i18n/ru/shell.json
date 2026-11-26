@@ -250,7 +250,7 @@
       "group": "Действия",
       "tag": "Действие",
       "inviteEmployee": "Пригласить сотрудника",
-      "create": "Создать · {{kind}}"
+      "create": "Создать · {{label}}"
     },
     "navGroup": "Разделы",
     "sectionTag": "Раздел",

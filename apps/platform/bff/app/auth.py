@@ -86,7 +86,7 @@ EDS_LOCK_WAIT_SECONDS = 12.0
 def _eds_not_granted() -> PlatformError:
     return PlatformError(
         "FORBIDDEN",
-        "Нет доступа к EDS.",
+        "Нет доступа к этому разделу. Его выдаёт тот, кто ведёт настройки.",
         status_code=403,
         source="eds",
         details={"reason": "eds_not_granted"},
@@ -474,7 +474,7 @@ class AuthService:
             if data.erp_state == "not_applicable":
                 raise PlatformError(
                     "FORBIDDEN",
-                    "Нет доступа к ERP.",
+                    "Нет доступа к этому разделу. Его выдаёт тот, кто ведёт настройки.",
                     status_code=403,
                     source="erp",
                     details={"reason": "erp_not_granted"},

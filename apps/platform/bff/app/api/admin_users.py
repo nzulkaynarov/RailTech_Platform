@@ -40,10 +40,8 @@ def _is_self(employee_id: str, authed: Authed) -> bool:
     return int(employee_id) == int(authed.data.user_id)
 
 
-INVITE_CRM_UNAVAILABLE = (
-    "CRM недоступна, повторите позже. Сотрудник уже добавлен, но письмо не отправлено."
-)
-RESEND_CRM_UNAVAILABLE = "CRM недоступна, повторите позже. Письмо не отправлено."
+INVITE_CRM_UNAVAILABLE = "Сотрудник добавлен, но приглашение не отправлено. Повторите позже."
+RESEND_CRM_UNAVAILABLE = "Приглашение не отправлено. Повторите позже."
 INVITE_NOT_SENT = (
     "Сотрудник добавлен, но письмо не отправлено: "
     "проверьте подключение почты в Настройках · Подключениях."

@@ -220,7 +220,7 @@ describe("EDS · Входящие письма: боковое окно из с�
     expect(
       within(panel).getByText("Нужен расчёт на 4 000 комплектов скреплений для участка пути."),
     ).toBeVisible();
-    expect(await within(panel).findByRole("form", { name: "Резолюция директора" })).toBeVisible();
+    expect(await within(panel).findByRole("form", { name: "Резолюция" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/eds/inbox");
     expect(router.state.location.search).toContain("letter=");
     expect(within(panel).getByRole("link", { name: "Открыть карточку письма" })).toHaveAttribute(
@@ -237,7 +237,7 @@ describe("EDS · Входящие письма: боковое окно из с�
 
     const panel = await panelEl();
     expect(
-      await within(panel).findByRole("heading", { name: "Письмо ждёт резолюции директора" }),
+      await within(panel).findByRole("heading", { name: "Письмо ждёт резолюции" }),
     ).toBeVisible();
     expect(within(panel).queryByRole("form")).toBeNull();
     expect(within(panel).queryByRole("button", { name: /Утвердить резолюцию/ })).toBeNull();
@@ -291,9 +291,7 @@ describe("EDS · Входящие письма: карточка", () => {
       .map((tab) => tab.textContent);
     expect(tabs).toContain("Сведения");
     expect(tabs).not.toContain("Резолюция");
-    expect(
-      within(await decisionEl()).getByRole("form", { name: "Резолюция директора" }),
-    ).toBeVisible();
+    expect(within(await decisionEl()).getByRole("form", { name: "Резолюция" })).toBeVisible();
   });
 
   it("прежний номер — одной строкой в реквизитах, только если он есть (СЦ-5)", async () => {
@@ -345,9 +343,9 @@ describe("EDS · Входящие письма: карточка", () => {
     expect(screen.getByRole("list", { name: /Путь заявки/ })).toBeVisible();
   });
 
-  it("решённое письмо: «Решение директора» и история; отклонённое — шаг «Отказ» и причина", async () => {
+  it("решённое письмо: «Решение по письму» и история; отклонённое — шаг «Отказ» и причина", async () => {
     await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-101%2F26");
-    expect(await screen.findByRole("heading", { name: "Решение директора" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Решение по письму" })).toBeVisible();
     expect(
       screen.getByText("Посчитать с запасом по складу, срок поставки — до конца ноября.", {
         selector: "dd",
@@ -375,8 +373,8 @@ describe("EDS · Входящие письма: карточка", () => {
     expect(screen.getByText("Только просмотр")).toBeVisible();
     expect(screen.queryByRole("button", { name: /резолюц/i })).toBeNull();
     const center = await decisionEl();
-    expect(await within(center).findByText("Письмо ждёт резолюции директора")).toBeVisible();
-    expect(screen.getAllByText("Письмо ждёт резолюции директора")).toHaveLength(1);
+    expect(await within(center).findByText("Письмо ждёт резолюции")).toBeVisible();
+    expect(screen.getAllByText("Письмо ждёт резолюции")).toHaveLength(1);
   });
 
   it("неизвестное письмо — «Письмо не найдено» со ссылкой на список", async () => {

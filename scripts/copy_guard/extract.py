@@ -38,6 +38,13 @@ SETTINGS_HINT = re.compile(
     r"providers?|mail_?connect|admin-integrations|admin-bus|admin-audit|admin-mail)",
     re.I,
 )
+# Daily budget and key fields of the AI model providers in the bot settings: connection settings, brands are the point.
+MODEL_KEY = re.compile(r"^bot:(fields|hints)\.(anthropic|gemini)$")
+
+# The help names a role as the heading of its guide and in the «who» column of the path: the role itself, not a job title in a sentence.
+# The «last Director» error must name the role it is about: the check is on the role, not on a right (CRM user_platform).
+ROLE_NAME_KEY = re.compile(r"^(help:(start\.kinds\.\w+\.title|path\.steps\[\d+\]\.who)|modules:admin\.org\.errors\.LAST_DIRECTOR)$")
+ROLE_NAME_PY_KEY = re.compile(r"(^|\.)LAST_DIRECTOR_MESSAGE$")
 
 
 def row(app, surface, audience, source, key, lang, text, ctx=""):
@@ -96,7 +103,9 @@ def extract_json(root: Path) -> Iterator[dict]:
             lines = key_lines(f)
             ns = f.stem
             for k, v in flat(json.loads(f.read_text(encoding="utf-8"))):
-                ctx = "settings" if ns in {"integrations", "bus", "audit"} or SETTINGS_HINT.search(k) else ""
+                ctx = "settings" if ns in {"integrations", "bus", "audit"} or SETTINGS_HINT.search(k) or MODEL_KEY.search(f"{ns}:{k}") else ""
+                if ROLE_NAME_KEY.search(f"{ns}:{k}"):
+                    ctx = "roles"
                 yield row("platform", "ui", "staff", f"{rel}:{lines.get(k, 1)}", f"{ns}:{k}", lang, v, ctx)
         f = root / "apps/cabinet/src/i18n/locales" / f"{lang}.json"
         rel = f.relative_to(root).as_posix()
@@ -142,7 +151,7 @@ def extract_ts(root: Path) -> Iterator[dict]:
             surface = "help" if "helpArticles" in f.name else "hardcoded-ui"
             if "rbac" in f.name:
                 surface = "roles"
-            if f.name == "settingsRegistry.ts":
+            if f.name in ("settingsRegistry.ts", "createKinds.ts"):  # keywords the user may type
                 surface = "search-terms"
             seen = set()
             for m in TS_STR.finditer(stripped):
@@ -331,7 +340,7 @@ class PyVisitor(ast.NodeVisitor):
             surface, audience = "notification", "staff"
         if self.app == "erp" and surface == "status" and not re.search(r"(Status|Choices|Code|Kind|Stage|Type|State)\b", key):
             surface, audience = "admin-model", "staff"
-        if re.search(r"(platform_roles|rbac)", self.rel):
+        if re.search(r"(platform_roles|rbac)", self.rel) or ROLE_NAME_PY_KEY.search(key):
             ctx = "roles"
         self.rows.append(row(self.app, surface, audience, f"{self.rel}:{node.lineno}", key, lang, text, ctx))
 

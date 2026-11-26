@@ -56,7 +56,7 @@
     "stop_word": "Stop word in the message",
     "other": "Other reason",
     "handed_over": "Handed over by the office clerk",
-    "cabinet_message": "Wrote in the cabinet"
+    "cabinet_message": "Wrote in the account"
   },
   "channels": {
     "telegram": "Telegram",
@@ -64,7 +64,7 @@
     "email": "Email",
     "phone": "Phone call",
     "referral": "Referral",
-    "cabinet": "Cabinet",
+    "cabinet": "Account",
     "other": "Other channel"
   },
   "timeline": {
@@ -148,8 +148,8 @@
       "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
     },
     "toRequest": "To request",
-    "toRequestLabel": "To request: {{name}} as the director letter",
-    "channelCabinet": "Cabinet",
+    "toRequestLabel": "To request: {{name}} as a letter for approval",
+    "channelCabinet": "Account",
     "channelEmail": "E-mail",
     "context": {
       "deal": "Request {{number}}",
@@ -188,15 +188,15 @@
     "readOnly": "View only.",
     "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered",
     "managerReplies": "A manager replies to the client. Triage the lead and press “Hand over to a manager” with a note on what the client needs.",
-    "selfHintCabinet": "Will be sent to the client in the cabinet",
+    "selfHintCabinet": "Will be sent to the client in the account",
     "selfHintEmail": "Will be sent as an e-mail to {{email}} from the company mailbox",
     "phoneOnly": "You can reply by phone only",
     "call": "Call",
     "logCall": "Log the call",
     "callDraft": "Call: ",
     "noConsent": "The client has not given consent — you cannot write to them in Telegram",
-    "noContact": "No way to reply: no Telegram, cabinet or e-mail",
-    "failedCabinet": "Not sent: the client's cabinet is unavailable.",
+    "noContact": "No way to reply: no Telegram, account or e-mail",
+    "failedCabinet": "Not sent: the client's account is unavailable.",
     "failedEmail": "Not sent: the e-mail did not go out.",
     "noEmailConsent": "There is an e-mail but no consent — mark «Consent given» to reply by letter",
     "emailUndeliverable": "Letters to this address do not arrive"
@@ -213,7 +213,7 @@
     "consent": "Data consent",
     "consentGiven": "given {{date}}",
     "consentMissing": "no — writing to the client is not allowed",
-    "consentMissingCabinet": "no — replying in the cabinet is allowed, in Telegram it is not",
+    "consentMissingCabinet": "no — replying in the account is allowed, in Telegram it is not",
     "client": "Client in records",
     "clientYes": "yes",
     "clientNo": "not yet",

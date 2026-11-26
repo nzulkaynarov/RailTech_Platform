@@ -116,7 +116,7 @@ class Patch(Body):
             raise ValueError("укажите хотя бы одно поле")
         for name in self.model_fields_set:
             if getattr(self, name) is None and name not in self.nullable:
-                raise ValueError(f"{name} не может быть null")
+                raise ValueError("поле не может быть пустым")
         return self
 
 

@@ -32,5 +32,5 @@ test("отправить письмо ещё раз", async ({ page }) => {
     page.getByText("Письмо для gni-mirabad@example.uz поставлено в очередь"),
   ).toBeVisible();
   await expect(table.getByRole("row").filter({ hasText: "gni-mirabad@example.uz" })).toHaveCount(2);
-  await expect(table.getByText("В очереди")).toBeVisible();
+  await expect(table.getByText("Отправляется")).toBeVisible();
 });

@@ -249,7 +249,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           id: `${listId}-a-${String(i)}`,
           index: next++,
           title: action.create
-            ? t("search.actions.create", { kind: t(`create.kinds.${action.key}`) })
+            ? t("search.actions.create", { label: t(`create.kinds.${action.key}`) })
             : t(`search.actions.${action.key}`),
           tag: t("search.actions.tag"),
           path: action.to,

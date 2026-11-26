@@ -37,6 +37,7 @@ import {
   readCompanyMock,
   updateCompanyMock,
 } from "./fixtures/company";
+import contractSampleUrl from "./fixtures/contract-sample.pdf?url";
 import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
 import { buildMe, readSession } from "./mockSession";
 
@@ -416,10 +417,16 @@ export const adminCompanyHandlers = [
       ...(warnings.length > 0 ? { warnings } : {}),
     });
   }),
-  http.get("*/admin/company/document-samples/:id/file", async () => {
+  http.get("*/admin/company/document-samples/:id/file", async ({ params }) => {
     let pdf: ArrayBuffer;
+    // образец шаблона документа (договор) — четыре страницы с текстом: поиск, миниатюры, переход по страницам
+    const asked = sampleRequests[Number.parseInt(String(params.id), 16) - 1];
+    const url =
+      asked?.template_kind !== undefined || asked?.kind === "contract"
+        ? contractSampleUrl
+        : letterSampleUrl;
     try {
-      pdf = await (await fetch(letterSampleUrl)).arrayBuffer();
+      pdf = await (await fetch(url)).arrayBuffer();
     } catch {
       pdf = new TextEncoder().encode("%PDF-1.7\n%%EOF\n").buffer;
     }

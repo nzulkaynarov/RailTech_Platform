@@ -52,7 +52,7 @@ async function openProject(page: Page, n: number): Promise<void> {
 test.describe("Проекты: бухгалтер", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
 
-  test("список → договор от проекта до «Подписан (скан)» → акт → «Выполнено»", async ({ page }) => {
+  test("список → договор от проекта до «Подписан» → акт → «Выполнено»", async ({ page }) => {
     await loginAndWait(page, "accountant@demo.example");
     await spaGoto(page, "/eds/projects");
     await expect(page.getByRole("heading", { level: 1, name: /Проекты/ })).toBeVisible();
@@ -84,7 +84,7 @@ test.describe("Проекты: бухгалтер", () => {
     await settledScreenshot(page, "contract-visas-not-requested");
     await expectNoViolations(page, "договор: визы не запрошены");
     await created.getByRole("button", { name: "На подпись" }).click();
-    await expect(blocker).toContainText("Нужны визы: бухгалтер, юрист");
+    await expect(blocker).toContainText("Нужны визы: финансы, право");
     // запрос открыт: повторное «На подпись» отказало бы, кнопки нет
     await expect(created.getByRole("button", { name: "На подпись" })).toHaveCount(0);
     await settledScreenshot(page, "contract-visas-pending");
@@ -277,7 +277,7 @@ test.describe("Проекты: телефон", () => {
       await expect(draft.getByRole("button", { name: "На согласование клиенту" })).toHaveCount(0);
       await draft.getByRole("button", { name: "На подпись" }).click();
       await expect(draft.getByTestId("contract-send-blocker")).toContainText(
-        "Нужны визы: бухгалтер, юрист",
+        "Нужны визы: финансы, право",
       );
       await expect(draft.getByRole("button", { name: "На подпись" })).toHaveCount(0);
       await settledScreenshot(page, "mobile-contract-visas-pending");

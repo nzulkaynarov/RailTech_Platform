@@ -22,18 +22,12 @@ for (const width of WIDTHS) {
       const label = page.getByLabel("Заявка", { exact: true });
       await label.scrollIntoViewIfNeeded();
       await label.fill("ВХ");
-      await expect(
-        page.getByText("Только латинские буквы A-Z и цифры", { exact: true }),
-      ).toBeVisible();
+      await expect(page.getByText("Только латинские буквы и цифры", { exact: true })).toBeVisible();
 
       await label.fill("IN");
-      await expect(
-        page.getByText("Только латинские буквы A-Z и цифры", { exact: true }),
-      ).toBeHidden();
+      await expect(page.getByText("Только латинские буквы и цифры", { exact: true })).toBeHidden();
       await label.fill("ВХ");
-      await expect(
-        page.getByText("Только латинские буквы A-Z и цифры", { exact: true }),
-      ).toBeVisible();
+      await expect(page.getByText("Только латинские буквы и цифры", { exact: true })).toBeVisible();
 
       await expectNoViolations(page, `numbering-latin ${String(width)}`);
       await settledScreenshot(page, "numbering-latin");

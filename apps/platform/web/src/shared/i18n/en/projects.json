@@ -60,6 +60,7 @@
     },
     "contract": {
       "project": "Draft",
+      "at_client": "With client for agreement",
       "client_agreed": "Awaiting signature",
       "issued_at_operator": "Awaiting signature",
       "signed": "Signed",
@@ -76,11 +77,11 @@
     },
     "act": {
       "project": "Draft",
-      "returned": "Returned with a reason",
+      "returned": "Returned with remarks",
       "issued": "Issued",
-      "signed": "Signed (scan)",
+      "signed": "Signed",
       "accepted": "Accepted by client",
-      "cancelled": "Voided"
+      "cancelled": "Cancelled"
     }
   },
   "problem": {
@@ -163,12 +164,12 @@
       },
       "lineStatus": {
         "assembling": "Being assembled",
-        "in_transit": "In transit",
+        "in_transit": "On the way to the client",
         "ready_to_ship": "Ready to ship",
         "shipped": "Shipped",
         "delivered": "Delivered",
         "accepted": "Accepted by client",
-        "disputed": "Disputed by client"
+        "disputed": "Client has remarks"
       },
       "proof": "Proof of delivery",
       "proofFile": "File"
@@ -333,7 +334,7 @@
       "steps": {
         "assembled": "Assembled",
         "our_signature": "Our signature",
-        "in_cabinet": "In the client Cabinet",
+        "in_cabinet": "In the client Account",
         "signed_both": "Signed by both"
       },
       "state": {
@@ -382,8 +383,8 @@
       "collecting": "Visas are being collected.",
       "askAdmin": "Ask an administrator to assign the role: {{roles}}.",
       "role": {
-        "visa_finance": "accountant",
-        "visa_legal": "lawyer"
+        "visa_finance": "finance",
+        "visa_legal": "legal"
       }
     },
     "term": {
@@ -491,7 +492,7 @@
       "project": "The act is a draft.",
       "issued": "The act is with the client for acceptance. When they sign, attach the scan.",
       "signed": "The act is signed, the scan is stored.",
-      "accepted": "The client accepted the act in the cabinet. No scan.",
+      "accepted": "The client accepted the act in the account. No scan.",
       "returned": "The client returned the act with a reason. Fix it and issue it again.",
       "cancelled": "The act is voided."
     },

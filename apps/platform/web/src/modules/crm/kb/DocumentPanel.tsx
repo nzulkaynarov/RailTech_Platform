@@ -160,7 +160,7 @@ function DocumentBody({ doc, editable }: { doc: KbDocument; editable: boolean })
       </div>
       {doc.ingest_error ? (
         <p className="pf-kb-error" role="status">
-          {t("panel.ingestError", { error: doc.ingest_error })}
+          {t("panel.ingestError", { reason: doc.ingest_error })}
         </p>
       ) : null}
       <DefinitionList

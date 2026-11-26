@@ -125,7 +125,7 @@
     "mismatch": "The total in records ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the author of the costing.",
     "clientComments": "Client comments",
     "clientCommentsList": "Client comments on the quote",
-    "clientCommentsHint": "The client writes them in the cabinet while the quote awaits a decision. Reply in Chats or with a new quote version.",
+    "clientCommentsHint": "The client writes them in the account while the quote awaits a decision. Reply in Chats or with a new quote version.",
     "clientCommentAuthor": "Client",
     "delivery": {
       "title": "Sending to the client",
@@ -148,7 +148,7 @@
       "reason": {
         "no_telegram": "the contact is not connected to the Telegram bot",
         "client_not_in_crm": "the client was not sent to records, the bot does not know them",
-        "no_cabinet": "the client is not in the cabinet yet — invite them from the client card",
+        "no_cabinet": "the client is not in the account yet — invite them from the client card",
         "no_email": "the contact has no e-mail — add it on the client card",
         "mail_not_configured": "email is not set up — Settings · Connections · Email",
         "mail_failed": "the email did not go out",
@@ -161,8 +161,8 @@
         "send_failed": "sending failed"
       },
       "error": "The system stopped the automatic sending: {{reason}}.",
-      "line": "{{channel}} — {{status}}",
-      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "line": "{{channel}} — {{label}}",
+      "lineReason": "{{channel}} — {{label}}: {{reason}}",
       "send": "Send",
       "resend": "Send again",
       "sendLabel": "{{action}}: {{channel}}",
@@ -199,7 +199,7 @@
         "fileHint": "Attach the client's confirmation: a letter, a chat or a scan",
         "fileRequired": "Attach the client's confirmation",
         "consequence": {
-          "accept": "The quote becomes accepted: the project and the draft contract open, as with acceptance in the cabinet.",
+          "accept": "The quote becomes accepted: the project and the draft contract open, as with acceptance in the account.",
           "reject": "The quote becomes declined: the request goes back to costing and reservations are released."
         },
         "cancel": "Cancel",
@@ -224,7 +224,7 @@
       "due": "Costing due"
     },
     "openReadOnly": {
-      "title": "The quote awaits the director's decision",
+      "title": "The quote awaits a decision",
       "text": "View only."
     },
     "decided": {
@@ -247,7 +247,7 @@
     "draft": "Comment restored from the draft.",
     "checklist": {
       "legend": "Approval checklist",
-      "visa_goods": "Supply visa",
+      "visa_goods": "“Goods and stock” sign-off",
       "visa_services": "Chief engineer visa",
       "margin": "Margin not below the resolution threshold",
       "due": "Client deadline met",
@@ -255,7 +255,7 @@
       "lateNote": "The quote was ready after the costing due date ({{due}}). You can approve: the journal will note \"approved late\"."
     },
     "blockedItem": {
-      "visa_goods": "no supply visa",
+      "visa_goods": "no “goods and stock” sign-off",
       "visa_services": "no chief engineer visa",
       "margin": "margin below the resolution threshold",
       "due": "costing due date"
@@ -274,7 +274,7 @@
         "name": "Telegram bot"
       },
       "cabinet": {
-        "name": "Cabinet"
+        "name": "Account"
       },
       "email": {
         "name": "Email"
@@ -282,7 +282,7 @@
       "reason": {
         "no_telegram": "Unavailable: the contact is not connected to the Telegram bot.",
         "client_not_in_crm": "Unavailable: the client was not sent to records, the bot does not know them.",
-        "no_cabinet": "Unavailable: the client is not in the cabinet yet.",
+        "no_cabinet": "Unavailable: the client is not in the account yet.",
         "no_email": "Unavailable: the contact has no e-mail.",
         "mail_not_configured": "Unavailable: email is not set up — Settings · Connections · Email."
       }
@@ -311,7 +311,7 @@
       "return": "Not saved: {{reason}}"
     },
     "reasons": {
-      "route_closed": "the quote was already decided by another director or replaced by a new version, the card is refreshed",
+      "route_closed": "the quote was already decided or replaced by a new version, the card is refreshed",
       "checklist_not_green": "the checklist is not complete ({{items}}), the card is refreshed",
       "checklist_not_green_plain": "the checklist is not complete, the card is refreshed",
       "not_your_step": "it is not your step now",
