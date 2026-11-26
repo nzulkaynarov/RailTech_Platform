@@ -38,9 +38,9 @@ describe("Настройки · рамка страницы (ЕВ-2а, отчё�
     expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
-      "Справочники",
-      "Шаблоны",
       "Уведомления",
+      "Шаблоны",
+      "Справочники",
     ]);
     expect(within(nav).getByRole("link", { name: "Время и сроки" })).toHaveAttribute(
       "aria-current",
@@ -72,16 +72,16 @@ describe("Настройки · рамка страницы (ЕВ-2а, отчё�
     expect(within(nav).queryByRole("link", { name: "Выгрузки" })).toBeNull();
   });
 
-  it("директор: «Правила работы» — Продажи, Время и сроки, Справочники, Шаблоны, Уведомления; коммерческие правит, остальное читает", async () => {
+  it("директор: «Правила работы» — Продажи, Время и сроки, Уведомления, Шаблоны, Справочники; коммерческие правит, остальное читает", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/sales");
     const nav = await screen.findByRole("navigation", { name: "Разделы модуля" });
     expect(pages(nav, "Правила работы").map((link) => link.textContent)).toEqual([
       "Продажи",
       "Время и сроки",
-      "Справочники",
-      "Шаблоны",
       "Уведомления",
+      "Шаблоны",
+      "Справочники",
     ]);
     // «Продажи» — раздел `company.settings`, директор правит: плашки «Только просмотр» нет
     await screen.findByRole("heading", { level: 1, name: "Продажи" });

@@ -34,10 +34,15 @@ async function snapshot(page: Page): Promise<MenuSnapshot> {
   };
 }
 
-async function expectNoViolations(page: Page, context: string): Promise<void> {
+async function expectNoViolations(
+  page: Page,
+  context: string,
+  disabledRules: string[] = [],
+): Promise<void> {
   await waitForMotionEnd(page);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .disableRules(disabledRules)
     .analyze();
   expect(
     results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
@@ -107,6 +112,47 @@ test.describe("Меню настроек не прыгает", () => {
     });
   }
 
+  test("прямой адрес последней страницы на 1440×790: открытый пункт меню виден без прокрутки руками", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 790 });
+    await loginAndWait(page, "admin@demo.example");
+    await spaGoto(page, "/admin/exports");
+    const item = page.locator(`${MENU} a.pf-menu-item[aria-current="page"]`);
+    await expect(item).toHaveAttribute("href", "/admin/exports");
+    await expect(item).toBeInViewport({ ratio: 1 });
+    await shot(page, "direct-exports");
+  });
+
+  test("1280: всплывающее меню значка «Настройки» — те же пункты, что в меню", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginAndWait(page, "admin@demo.example");
+    await spaGoto(page, "/admin");
+    await expect(page.locator(`${MENU} .pf-menu-group`)).toHaveCount(5);
+    const menuLinks: string[] = [];
+    for (const link of await page.locator(`${MENU} a.pf-menu-item`).all()) {
+      menuLinks.push(
+        `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
+      );
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await spaGoto(page, "/crm/clients");
+    await page
+      .getByRole("navigation", { name: "Модули" })
+      .getByRole("link", { name: "Настройки" })
+      .hover();
+    const flyout = page.locator(".ant-popover:not(.ant-popover-hidden)");
+    await expect(flyout.locator("a.pf-menu-item").first()).toBeVisible();
+    const flyLinks: string[] = [];
+    for (const link of await flyout.locator("a.pf-menu-item").all()) {
+      flyLinks.push(
+        `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
+      );
+    }
+    expect(flyLinks).toEqual(menuLinks);
+    await shot(page, "flyout-1280");
+  });
+
   test("@mobile 390: одно меню — выпадающий список страниц со всеми группами, как на доске 55", async ({
     page,
   }) => {
@@ -116,12 +162,11 @@ test.describe("Меню настроек не прыгает", () => {
     const picker = page.getByRole("combobox", { name: /Страницы настроек/ });
     await expect(picker).toBeVisible();
     await shot(page, "phone-closed");
-    // открытый список — виджет antd (известные замечания axe к его скрытым служебным узлам), проверяем закрытое состояние
     await expectNoViolations(page, "phone closed");
     await picker.click({ force: true });
     const options = page.locator(".ant-select-item-option");
     await expect(options.first()).toBeVisible();
-    // список виртуальный — рисует только окно; все группы проверяем по их заголовкам при прокрутке до последней
+    // список не виртуальный (virtual={false}): все группы в разметке
     await expect(page.getByTitle("Люди и доступ")).toBeAttached();
     // поиск находит страницу из последней группы — список один, со всеми страницами
     await page.keyboard.type("Выгрузки");
@@ -129,6 +174,9 @@ test.describe("Меню настроек не прыгает", () => {
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");
     await shot(page, "phone-open");
+    // Прокручиваемый список antd не берёт фокус сам (правило scrollable-region-focusable); с клавиатуры список листается
+    // стрелками из поля выбора, поэтому на открытом списке исключено только это правило.
+    await expectNoViolations(page, "phone open", ["scrollable-region-focusable"]);
     await page.locator(".ant-select-item-option", { hasText: "Нумерация" }).click();
     await expect(page).toHaveURL(/\/admin\/numbering/);
     await expect(page.locator("#main-content .ant-select-selection-item").first()).toHaveText(

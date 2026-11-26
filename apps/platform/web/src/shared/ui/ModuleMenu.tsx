@@ -1,5 +1,5 @@
 import { theme } from "antd";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
 import { CollapseLeftIcon, SettingsIcon } from "./icons";
@@ -109,8 +109,18 @@ export function ModuleMenuContent({
   settings,
 }: ModuleMenuContentProps) {
   const { token } = theme.useToken();
+  const nav = useRef<HTMLElement>(null);
+  const activeKey = items.find((item) => item.active)?.key;
+  // Длинное меню (Настройки) при открытии по прямому адресу или возврате из другого модуля: открытый пункт — в видимой
+  // части. `nearest` ничего не двигает, если пункт уже виден, поэтому нажатия внутри меню его не сдвигают.
+  useEffect(() => {
+    nav.current
+      ?.querySelector<HTMLElement>('a[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeKey]);
   return (
     <nav
+      ref={nav}
       aria-label={labels.nav}
       data-tour="menu"
       style={{ height: "100%", display: "flex", flexDirection: "column", padding: "0 8px 12px" }}

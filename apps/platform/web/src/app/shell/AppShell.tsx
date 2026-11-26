@@ -65,6 +65,24 @@ import { useOperatorLogo, useProductName } from "../../shared/lib/useProductName
 const PANEL_ID = "pf-context-panel";
 /** Module code of Настройки: not in the phone bottom bar */
 const SETTINGS_MODULE = "admin";
+
+/** Порядок страниц внутри групп Настроек по макету 54; остальные — как в реестре. */
+const SETTINGS_ORDER = [
+  "sales",
+  "timing",
+  "notifications",
+  "templates",
+  "dictionaries",
+  "mail",
+  "telegram",
+  "forms",
+  "spend",
+  "integrations",
+];
+const settingsRank = (key: string) => {
+  const index = SETTINGS_ORDER.indexOf(key);
+  return index === -1 ? -1 : index;
+};
 const MOBILE_BAR_HEIGHT = 60;
 const HEADER_HEIGHT = 56;
 // Insets of a notched phone (viewport-fit=cover): the top bar and the bottom bar grow by them, the content keeps clear.
@@ -259,14 +277,53 @@ export function AppShell() {
   const isActiveItem = (code: string, item: NavItem) =>
     nav?.module === code && nav.item.key === item.key;
 
+  // Настройки (НАСТ-1, макет 54): одно меню — «Состояние», затем все страницы по группам, всегда раскрытые; открытая подсвечена,
+  // по нажатию состав, порядок и ширина не меняются. Те же пункты — во всплывающем меню значка в рейке (на 768–1439 px).
+  const settingsCurrent = entryAt(location.pathname);
+  const stateItem = itemsOf(SETTINGS_MODULE).find(({ item }) => item.key === "state");
+  const settingsLinks: MenuItem[] = [
+    ...(stateItem
+      ? [
+          {
+            key: `${SETTINGS_MODULE}.state`,
+            to: stateItem.to,
+            label: itemLabel(SETTINGS_MODULE, stateItem.item),
+            active: isActiveItem(SETTINGS_MODULE, stateItem.item),
+            badge: badgeOfItem([...new Set(refsOf(stateItem.item))]),
+          },
+        ]
+      : []),
+    ...SETTINGS_GROUPS.flatMap((group) =>
+      SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)).sort(
+        (a, b) => settingsRank(a.key) - settingsRank(b.key),
+      ),
+    ).map((entry) => ({
+      key: `${SETTINGS_MODULE}.${entry.key}`,
+      to: entry.path,
+      label: t(`modules:admin.sections.${entry.key}`),
+      active: settingsCurrent?.key === entry.key,
+      group: t(`modules:admin.groups.${entry.group}`),
+    })),
+  ];
+
   const railItems: RailModule[] = railModules.map((module) => {
-    const sections = itemsOf(module.code).map(({ item, to }) => ({
-      key: `${module.code}.${item.key}`,
-      path: to,
-      label: itemLabel(module.code, item),
-      active: isActiveItem(module.code, item),
-      badge: badgeOfItem([...new Set(refsOf(item))]),
-    }));
+    const sections =
+      module.code === SETTINGS_MODULE
+        ? settingsLinks.map(({ key, to, label, active, badge, group }) => ({
+            key,
+            path: to,
+            label,
+            active,
+            badge,
+            group,
+          }))
+        : itemsOf(module.code).map(({ item, to }) => ({
+            key: `${module.code}.${item.key}`,
+            path: to,
+            label: itemLabel(module.code, item),
+            active: isActiveItem(module.code, item),
+            badge: badgeOfItem([...new Set(refsOf(item))]),
+          }));
     return {
       code: module.code,
       name: t(`modules:${module.code}.name`),
@@ -285,7 +342,6 @@ export function AppShell() {
     };
   });
 
-  const settingsCurrent = entryAt(location.pathname);
   const activeItems = itemsOf(activeModule.code);
   const moduleItems: MenuItem[] = activeItems.map(({ item, to }) => ({
     key: `${activeModule.code}.${item.key}`,
@@ -294,24 +350,7 @@ export function AppShell() {
     active: isActiveItem(activeModule.code, item),
     badge: badgeOfItem([...new Set(refsOf(item))]),
   }));
-  // Настройки (НАСТ-1, макет 54): одно меню — «Состояние», затем все страницы по группам, всегда раскрытые; открытая подсвечена,
-  // по нажатию состав, порядок и ширина не меняются (раньше раскрывалась только активная группа, и список «прыгал»).
-  const settingsMenu: MenuItem[] =
-    activeModule.code === SETTINGS_MODULE
-      ? [
-          ...moduleItems.filter((item) => item.key === `${SETTINGS_MODULE}.state`),
-          ...SETTINGS_GROUPS.flatMap((group) =>
-            SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)),
-          ).map((entry) => ({
-            key: `${SETTINGS_MODULE}.${entry.key}`,
-            to: entry.path,
-            label: t(`modules:admin.sections.${entry.key}`),
-            active: settingsCurrent?.key === entry.key,
-            group: t(`modules:admin.groups.${entry.group}`),
-          })),
-        ]
-      : [];
-  const menuItems: MenuItem[] = activeModule.code === SETTINGS_MODULE ? settingsMenu : moduleItems;
+  const menuItems: MenuItem[] = activeModule.code === SETTINGS_MODULE ? settingsLinks : moduleItems;
   const activeResolved = nav
     ? activeItems.find(({ item }) => item.key === nav.item.key)
     : undefined;
