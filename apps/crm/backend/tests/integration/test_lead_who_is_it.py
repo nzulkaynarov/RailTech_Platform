@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus.reasons import reason_code
 from app.config import Settings
 from app.domain.backoffice import BackofficeMode
+from app.domain.contacts import partner_email
 from app.domain.errors import (
     InvalidTransitionError,
     Reason,
@@ -243,9 +244,12 @@ async def test_partner_email_is_validated_like_erp_before_erp_is_called(
     assert erp.calls == []
 
 
-def test_partner_form_needs_an_email() -> None:
-    with pytest.raises(ValueError, match="email"):
-        _partner_body(email="")
+def test_partner_form_email_is_optional() -> None:
+    """ПК-1: без почты путь партнёра не останавливается; формат указанной почты проверяет сервис."""
+    assert _partner_body(email="").email == ""
+    assert partner_email("  ") == ""
+    with pytest.raises(ValidationFailedError):
+        partner_email("not-an-email")
 
 
 @pytest.mark.parametrize("stage", ["customer", "won"])
