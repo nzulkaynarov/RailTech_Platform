@@ -39,7 +39,7 @@ export interface MockCalc {
   number: string;
   title: string;
   client: string;
-  stage: "CALCULATION" | "QUOTE" | "LOST";
+  stage: "CALCULATION" | "QUOTE" | "LOST" | "DONE";
   letterNumber: string;
   letterSubject: string;
   resolution: string;
@@ -131,6 +131,79 @@ export const CATALOG: readonly MockCatalogItem[] = [
 
 export function seedCalcs(): MockCalc[] {
   return [
+    // ЗАЯВ-1: прошлые заявки реестра — закрытая с причиной, КП ушло клиенту, стала проектом
+    {
+      number: "ЗВ-2026-081",
+      title: "Щебень фракции 20–40",
+      client: "ООО «Демо-Депо»",
+      stage: "LOST",
+      letterNumber: "ВХ-081/26",
+      letterSubject: "Запрос цены на щебень",
+      resolution: "Посчитать, срок — три дня.",
+      decidedAt: "2026-10-12T06:00:00Z",
+      decidedBy: "Демо Директоров",
+      due: "2026-10-15",
+      minMargin: "15.00",
+      manager: "Демо Широков",
+      assignees: [{ zone: "goods", name: "Демо Широков" }],
+      requestText: "Нужно 40 т щебня фракции 20–40, доставка на станцию.",
+      requestLines: 1,
+      requestFiles: [{ id: 21, name: "zapros-shebyon.pdf", uploaded_at: "2026-10-12T05:40:00Z" }],
+      started: true,
+      state: "in_progress",
+      quoteNumber: null,
+      directorComment: null,
+      closeReason: "NO_REPLY",
+      closeComment: "",
+      lines: [],
+    },
+    {
+      number: "ЗВ-2026-084",
+      title: "Крепёж для стрелочных переводов",
+      client: "АО «Пример Логистик»",
+      stage: "QUOTE",
+      letterNumber: "ВХ-084/26",
+      letterSubject: "Запрос КП на крепёж",
+      resolution: "Посчитать со склада.",
+      decidedAt: "2026-10-14T06:00:00Z",
+      decidedBy: "Демо Директоров",
+      due: "2026-10-17",
+      minMargin: "15.00",
+      manager: "Демо Широков",
+      assignees: [{ zone: "goods", name: "Демо Широков" }],
+      requestText: "Нужны 200 комплектов накладок и болтов.",
+      requestLines: 2,
+      requestFiles: [{ id: 22, name: "kreplenie.xlsx", uploaded_at: "2026-10-14T05:40:00Z" }],
+      started: true,
+      state: "approved",
+      quoteNumber: "КП-2026/090",
+      directorComment: null,
+      version: 1,
+      lines: [],
+    },
+    {
+      number: "ЗВ-2026-079",
+      title: "Монтаж стрелочного перевода",
+      client: "ООО «Демо-Депо»",
+      stage: "DONE",
+      letterNumber: "ВХ-079/26",
+      letterSubject: "Запрос КП на монтаж",
+      resolution: "Посчитать бригаду.",
+      decidedAt: "2026-10-05T06:00:00Z",
+      decidedBy: "Демо Директоров",
+      due: "2026-10-08",
+      minMargin: "15.00",
+      manager: "Демо Широков",
+      assignees: [{ zone: "services", name: "Демо Инженеров" }],
+      requestText: "Монтаж одного стрелочного перевода на станции.",
+      requestLines: 1,
+      started: true,
+      state: "approved",
+      quoteNumber: "КП-2026/081",
+      directorComment: null,
+      version: 1,
+      lines: [],
+    },
     {
       number: "ЗВ-2026-097",
       title: "Стрелочные переводы Р65 с монтажом",

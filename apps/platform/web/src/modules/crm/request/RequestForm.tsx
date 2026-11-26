@@ -15,6 +15,9 @@ import {
   useCreateCrmRequest,
   useGetCrmClient,
   useGetCrmRequestResolution,
+  downloadCalcRequestFile,
+  getCalcRequestCard,
+  useUploadCrmRequestFile,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -124,6 +127,8 @@ export interface RequestFormProps {
   letterFrom?: LetterSource | null;
   /** Файл письма уже в EDS («Передать в работу» из входящего, план 1.9): форма получает готовое письмо */
   letterFile?: { id: string; name: string } | null;
+  /** «Создать по образцу» (ЗАЯВ-1): номер прежней заявки — суть и файл берутся из неё; ничего не уходит, пока человек не сохранит */
+  template?: string | null;
   /** Заявка создана — вызывающий связывает её со своим объектом (поручение по ВХ) */
   onCreated?: (result: RequestCreatedView) => void;
   onCancel: () => void;
@@ -195,6 +200,7 @@ export function RequestForm({
   clientId,
   letterFrom = null,
   letterFile = null,
+  template = null,
   onCreated,
   onCancel,
 }: RequestFormProps) {
@@ -236,6 +242,40 @@ export function RequestForm({
         }));
       });
   }, [letterFrom, lead, copy, t]);
+  const upload = useUploadCrmRequestFile();
+  const templated = useRef(false);
+  // По образцу (ЗАЯВ-1): суть и первый файл прежней заявки. Файл скачивается и загружается заново — у новой заявки своя копия, а не общая ссылка.
+  useEffect(() => {
+    if (!template || templated.current) return;
+    templated.current = true;
+    setState((prev) => ({ ...prev, letter: { name: "", status: "uploading" } }));
+    getCalcRequestCard(encodeURIComponent(template))
+      .then(async (card) => {
+        const note = t("request:template.note", { number: template });
+        const body = card.request.text.slice(0, 4900).trim();
+        setState((prev) => ({ ...prev, summary: body ? `${body}\n\n${note}` : note }));
+        const first = card.request.files?.[0];
+        if (!first) {
+          setState((prev) => ({ ...prev, letter: null }));
+          return;
+        }
+        const blob = await downloadCalcRequestFile(encodeURIComponent(template), first.id);
+        const ref = await upload.mutateAsync({ data: { file: new File([blob], first.name) } });
+        setState((prev) => ({ ...prev, letter: { name: ref.name, status: "done", id: ref.id } }));
+      })
+      .catch((error: unknown) => {
+        setState((prev) => ({
+          ...prev,
+          letter: {
+            name: "",
+            status: "error",
+            error: t("request:template.fileFailed", {
+              reason: reasonError(t, "request:errors", error),
+            }),
+          },
+        }));
+      });
+  }, [template, upload, t]);
   const [active, setActive] = useState<SectionKey>(() =>
     clientId !== null || lead?.client != null ? "contact" : "client",
   );

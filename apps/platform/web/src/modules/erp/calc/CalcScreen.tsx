@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { canSee } from "../../../app/access";
+import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
@@ -22,7 +22,14 @@ import { Sheet } from "../../../shared/ui/Sheet";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { AddLineForm } from "./AddLineForm";
-import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
+import {
+  calcRef,
+  copyPath,
+  readyHintKey,
+  useApplySheet,
+  useErrorText,
+  useStateLabels,
+} from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
@@ -275,6 +282,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation(["calc"]);
   const { date } = useFormat();
   const { mobile } = useViewport();
+  const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   // План 1.1: «Создать → Расчёт» открывает расчёт сразу с разбором файла заявки (`?parse=1`)
   // Разбор открывается только там, где строки ещё правятся: у КП на одобрении и в закрытом расчёте он кончился бы ошибкой (Б-6)
@@ -300,7 +308,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
     setDialog(null);
   };
   const state = stateOf(sheet);
-  const editable = state === "in_progress" || state === "returned";
+  // Закрытая заявка и заявка вне расчёта — только просмотр: кнопок правки нет, остаётся «Создать по образцу» (ЗАЯВ-1)
+  const frozen = sheet.step === "LOST" || sheet.ready.blocker === "not_in_calculation";
+  const editable = (state === "in_progress" || state === "returned") && !frozen;
+  const canCopy =
+    canEdit(me, "crm.clients") && !["REQUEST", "RESOLUTION", "CALCULATION"].includes(sheet.step);
   const canLines = sheet.rights.goods || sheet.rights.services;
   const subtitle = [
     t(sheet.task.letter_number ? "sheet.subtitle" : "sheet.subtitleNoLetter", {
@@ -334,6 +346,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 >
                   {t("sheet.requestPrice")}
                 </Button>
+              ) : null}
+              {canCopy ? (
+                <LinkButton to={copyPath(sheet.number, sheet.request.crm_client_id, mobile)}>
+                  {t("sheet.copy")}
+                </LinkButton>
               ) : null}
               {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
               {mobile ? (

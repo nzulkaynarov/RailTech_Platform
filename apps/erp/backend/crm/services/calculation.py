@@ -472,6 +472,9 @@ def _draft_or_409(deal: Deal, *, lock: bool = True) -> Quote:
     quote = calc_quote(deal)
     if quote is None:
         raise CalcError("CALC_NOT_STARTED", 409)
+    if deal.stage_id and deal.stage.code in EDIT_LOCKED_STAGES:
+        # закрытая заявка и заявка, ушедшая дальше расчёта, — только просмотр (ЗАЯВ-1)
+        raise CalcError("DEAL_NOT_IN_CALCULATION", 409, stage=deal.stage.code)
     if lock:
         quote = Quote.objects.select_for_update(of=("self",)).select_related("status", "deal").get(pk=quote.pk)
     code = quote_edit_lock_code(quote)
@@ -590,49 +593,112 @@ def _mapped_crm_ids(user) -> set[int]:
     return set(CrmUserMapping.objects.filter(user=user).values_list("crm_user_id", flat=True))
 
 
+#: «Закрытые» в реестре заявок: КП ушло клиенту, стала проектом (договор, исполнено) или закрыта с причиной.
+CLOSED_STAGES = (
+    DealStageCode.QUOTE_SENT,
+    DealStageCode.CONTRACT_SIGNED,
+    DealStageCode.CLOSED_WON,
+    DealStageCode.CLOSED_LOST,
+)
+#: Правка строк и условий закрыта: проект, закрытая заявка. QUOTE_SENT сюда не входит — после замечаний клиента менеджер пересчитывает
+#: цену (отправленное КП защищает `quote_edit_lock_code`).
+EDIT_LOCKED_STAGES = (DealStageCode.CONTRACT_SIGNED, DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST)
+STATE_FILTERS = ("open", "closed", "all")
+PAGE_MAX = 200
+
+
+def _crm_client_id(deal: Deal) -> Optional[int]:
+    """Клиент CRM компании заявки (сопоставление ERP↔CRM) — «Создать по образцу» открывает форму на нём."""
+    from integration.models import CrmClientMapping
+
+    if not deal.company_id:
+        return None
+    return CrmClientMapping.objects.filter(company_id=deal.company_id).values_list("crm_client_id", flat=True).first()
+
+
+def _task_row(task: CalcTask) -> dict:
+    deal = task.deal
+    quote = calc_quote(deal)
+    items = _billable(quote)
+    ctx = _context(items)
+    groups = _groups(items, ctx)
+    rejected_by, reject_reason = _rejection(quote)
+    return {
+        "deal": _deal_brief(deal),
+        "letter_number": task.letter_number,
+        "due": task.due.isoformat(),
+        "state": _calc_state(quote),
+        "rejected_by": rejected_by,
+        "reject_reason": reject_reason,
+        "lines": len(items),
+        "visas": {name: groups[name]["state"] for name in VISA_GROUPS},
+        "assignees": _assignees(task),
+    }
+
+
+def list_tasks_page(
+    user, *, mine: bool = False, state: str = "open", q: str = "", limit: int = MAX_ROWS, offset: int = 0
+) -> tuple[list[dict], int]:
+    """Реестр заявок (ЗАЯВ-1): `state` — open (в расчёте), closed (КП ушло, проект, закрыта), all; `q` — номер, клиент,
+    тема, письмо, текст заявки; страница `limit`/`offset`, второй элемент — всего подходящих. Права те же, что у списка
+    «Заявки в расчёте»: любой сотрудник; чужих закрытых заявок прав не прибавляет ни `state`, ни `q`. Скрытые «Ошибка»
+    и «Тест» не показываются (открываются по номеру)."""
+    _require_staff(user)
+    if state not in STATE_FILTERS:
+        state = "open"
+    limit = max(1, min(int(limit), PAGE_MAX))
+    offset = max(0, int(offset))
+    latest_ids = CalcTask.objects.values("deal_id").annotate(last=Max("id")).values("last")
+    tasks = CalcTask.objects.filter(pk__in=latest_ids).select_related("deal__company", "deal__stage", "deal__manager")
+    if state == "open":
+        tasks = tasks.filter(deal__stage__code__in=OPEN_STAGES)
+    else:
+        tasks = tasks.filter(deal__hidden_in_lists=False)
+        if state == "closed":
+            tasks = tasks.filter(deal__stage__code__in=CLOSED_STAGES)
+    if mine:
+        crm_ids = _mapped_crm_ids(user)
+        tasks = tasks.filter(Q(assignees__user=user) | Q(assignees__crm_user_id__in=crm_ids)).distinct()
+    needle = (q or "").strip()
+    if needle:
+        cond = (
+            Q(deal__number__icontains=needle)
+            | Q(deal__title__icontains=needle)
+            | Q(deal__company__name__icontains=needle)
+            | Q(letter_number__icontains=needle)
+            | Q(letter_subject__icontains=needle)
+            | Q(deal__notes__icontains=needle)
+            | Q(deal__portal_summary__text__icontains=needle)
+        )
+        parsed = deal_numbers.parse_query(needle)
+        if parsed is not None:
+            cond |= Q(deal__number_year=parsed[0], deal__number_seq=parsed[1])
+        tasks = tasks.filter(cond)
+    ordering = ("due", "deal_id") if state == "open" else ("-deal_id",)
+    tasks = tasks.order_by(*ordering)
+    total = tasks.count()
+    page = list(tasks[offset : offset + limit])
+    from integration.models import CrmClientMapping
+
+    clients = dict(
+        CrmClientMapping.objects.filter(
+            company_id__in={t.deal.company_id for t in page if t.deal.company_id}
+        ).values_list("company_id", "crm_client_id")
+    )
+    rows = []
+    for task in page:
+        row = _task_row(task)
+        row["crm_client_id"] = clients.get(task.deal.company_id)
+        rows.append(row)
+    return rows, total
+
+
 def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
     """Заявки с заданием расчёта: последняя резолюция каждой, срок, индикаторы виз, ответственный.
 
     `scope=open` — заявки на стадиях «Расчёт» (подбор, расчёт); `all` — все с заданием (адресация карточки по
     номеру). `mine` — где сотрудник исполнитель резолюции (по пользователю ERP или его `crm_user_id`)."""
-    _require_staff(user)
-    # Срез — с новых заявок: при потолке строк теряются старые, а не только что пришедшие.
-    tasks = CalcTask.objects.select_related("deal__company", "deal__stage", "deal__manager").order_by(
-        "-deal_id", "-decided_at", "-id"
-    )
-    if scope == "open":
-        tasks = tasks.filter(deal__stage__code__in=OPEN_STAGES)
-    else:
-        tasks = tasks.filter(
-            deal__hidden_in_lists=False
-        )  # «Ошибка» и «Тест» — скрыты по умолчанию, открываются по номеру
-    if mine:
-        crm_ids = _mapped_crm_ids(user)
-        tasks = tasks.filter(Q(assignees__user=user) | Q(assignees__crm_user_id__in=crm_ids)).distinct()
-    latest: dict[int, CalcTask] = {}
-    for task in tasks[: MAX_ROWS * 3]:
-        latest.setdefault(task.deal_id, task)
-    rows = []
-    for task in sorted(latest.values(), key=lambda t: (t.due, t.deal_id))[:MAX_ROWS]:
-        deal = task.deal
-        quote = calc_quote(deal)
-        items = _billable(quote)
-        ctx = _context(items)
-        groups = _groups(items, ctx)
-        rejected_by, reject_reason = _rejection(quote)
-        rows.append(
-            {
-                "deal": _deal_brief(deal),
-                "letter_number": task.letter_number,
-                "due": task.due.isoformat(),
-                "state": _calc_state(quote),
-                "rejected_by": rejected_by,
-                "reject_reason": reject_reason,
-                "lines": len(items),
-                "visas": {name: groups[name]["state"] for name in VISA_GROUPS},
-                "assignees": _assignees(task),
-            }
-        )
+    rows, _ = list_tasks_page(user, mine=mine, state="all" if scope == "all" else "open", limit=MAX_ROWS)
     return rows
 
 
@@ -697,12 +763,16 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     show_cost = has_perm(user, Permission.QUOTE_VIEW_COST_MARGIN.value)
     rights = zone_rights(user)
     editable = quote is not None and quote_edit_lock_code(quote) is None
-    lines = [line_payload(it, ctx, show_cost=show_cost, rights=rights, editable=editable) for it in items]
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    # Закрытая заявка и заявка вне расчёта открываются на просмотр: кнопок правки у строк нет (ЗАЯВ-1)
+    lines = [
+        line_payload(it, ctx, show_cost=show_cost, rights=rights, editable=editable and stage in OPEN_STAGES)
+        for it in items
+    ]
     purchase = sum((it.landed_cost * it.quantity for it in items), Decimal("0"))
     client = sum((line_amount(it.final_price_excl_vat, it.quantity) for it in items), Decimal("0"))
     groups = _groups(items, ctx)
     missing = sum(1 for line in lines if line["visa"] is None)
-    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
     if quote is None:
         blocker = "not_started"
     elif stage not in OPEN_STAGES and editable:
@@ -725,6 +795,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
             "files_pending": bool(task.request_file_pending),
+            "crm_client_id": _crm_client_id(deal),
         },
         "quote": (
             None
@@ -1738,6 +1809,7 @@ def _request_card(deal: Deal, task: Optional[CalcTask], user) -> dict:
             "lines": deal_request_lines_count(deal),
             "files": deal_request_files(deal),
             "files_pending": bool(task.request_file_pending) if task is not None else False,
+            "crm_client_id": _crm_client_id(deal),
         },
         "close": close_state(deal, user),
     }

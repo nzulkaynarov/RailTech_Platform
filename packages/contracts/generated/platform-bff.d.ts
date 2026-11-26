@@ -17230,9 +17230,13 @@ export interface components {
       assignees: components["schemas"]["CalcAssignee"][];
       /** @example /erp/calc/ЗВ-2026-104 */
       path: string;
+      /** @description ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём */
+      crm_client_id?: number | null;
     };
     CalcRequestList: {
       items: components["schemas"]["CalcRequestRow"][];
+      /** @description ЗАЯВ-1: всего подходящих заявок (для страниц); заполнено, когда в запросе есть `state` */
+      total?: number | null;
     };
     /** @description Задание расчёта — резолюция директора (проекция события EDS в ERP) */
     CalcTask: {
@@ -17260,6 +17264,8 @@ export interface components {
        * @default false
        */
       files_pending: boolean;
+      /** @description ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём; нет — форма без клиента */
+      crm_client_id?: number | null;
     };
     CalcQuote: {
       /** @description Номер КП появляется при «Расчёт готов» */
@@ -33421,6 +33427,12 @@ export interface operations {
     parameters: {
       query?: {
         mine?: boolean;
+        /** @description ЗАЯВ-1, вкладки реестра: `open` — в работе (расчёт), `closed` — закрытые (КП ушло клиенту, стала проектом, закрыта с причиной), `all` — все; скрытые «Ошибка» и «Тест» не показываются. Без параметра — прежний список «в работе». */
+        state?: "open" | "closed" | "all";
+        /** @description Поиск: номер заявки, клиент, тема, номер письма, текст заявки; действует вместе с `state` */
+        q?: string;
+        limit?: number;
+        offset?: number;
       };
       header?: never;
       path?: never;

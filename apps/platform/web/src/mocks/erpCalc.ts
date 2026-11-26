@@ -440,6 +440,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
       // РЕЗ-1: без резолюции файл письма клиента ещё загружается (флаг `rt-pf-mock-no-resolution`)
       files: mockFlag(NO_RESOLUTION) ? [] : (calc.requestFiles ?? []),
       files_pending: mockFlag(NO_RESOLUTION),
+      crm_client_id: CRM_CLIENT_ID,
     },
     quote: calc.started
       ? {
@@ -484,6 +485,9 @@ export type MockCalcRow = CalcRequestRow & {
   rejectReason: string | null;
 };
 
+/** Клиент CRM компании заявки: «Создать по образцу» открывает форму на нём (ЗАЯВ-1) */
+const CRM_CLIENT_ID = 3;
+
 function row(calc: MockCalc): CalcRequestRow {
   const g = groups(calc);
   return {
@@ -499,6 +503,7 @@ function row(calc: MockCalc): CalcRequestRow {
     responsible: calc.manager,
     assignees: calc.assignees,
     path: `/erp/calc/${encodeURIComponent(calc.number)}`,
+    crm_client_id: CRM_CLIENT_ID,
   };
 }
 
@@ -579,13 +584,36 @@ export const erpCalcHandlers = [
   http.get("*/api/v1/erp/calc/requests", ({ request }) => {
     const held = guard("erp.calc", "read");
     if ("error" in held) return held.error;
-    const onlyMine = new URL(request.url).searchParams.get("mine") === "true";
-    const items = read()
-      .filter((calc) => calc.stage === "CALCULATION")
+    const query = new URL(request.url).searchParams;
+    const onlyMine = query.get("mine") === "true";
+    const state = query.get("state") ?? "open";
+    const needle = (query.get("q") ?? "").trim().toLowerCase();
+    const limit = Number(query.get("limit") ?? 50);
+    const offset = Number(query.get("offset") ?? 0);
+    const all = read()
+      .filter((calc) =>
+        state === "open"
+          ? calc.stage === "CALCULATION"
+          : state === "closed"
+            ? calc.stage !== "CALCULATION"
+            : true,
+      )
       .filter((calc) => !onlyMine || mine(calc, held.user))
-      .sort((a, b) => a.due.localeCompare(b.due))
-      .map(row);
-    return HttpResponse.json<CalcRequestList>({ items });
+      .filter(
+        (calc) =>
+          !needle ||
+          [calc.number, calc.client, calc.title, calc.letterNumber, calc.requestText]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle),
+      )
+      .sort((a, b) =>
+        state === "open" ? a.due.localeCompare(b.due) : b.number.localeCompare(a.number),
+      );
+    return HttpResponse.json<CalcRequestList>({
+      items: all.slice(offset, offset + limit).map(row),
+      total: all.length,
+    });
   }),
 
   http.get("*/api/v1/erp/calc/catalog", ({ request }) => {

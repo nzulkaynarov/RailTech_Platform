@@ -13156,6 +13156,26 @@ paths:
           in: query
           required: false
           schema: {type: boolean, default: false}
+        - name: state
+          in: query
+          required: false
+          description: >-
+            ЗАЯВ-1, вкладки реестра: `open` — в работе (расчёт), `closed` — закрытые (КП ушло клиенту, стала проектом,
+            закрыта с причиной), `all` — все; скрытые «Ошибка» и «Тест» не показываются. Без параметра — прежний список «в работе».
+          schema: {type: string, enum: [open, closed, all]}
+        - name: q
+          in: query
+          required: false
+          description: 'Поиск: номер заявки, клиент, тема, номер письма, текст заявки; действует вместе с `state`'
+          schema: {type: string, maxLength: 200, default: ''}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        - name: offset
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, default: 0}
       responses:
         '200':
           description: Заявки в расчёте
@@ -29368,6 +29388,7 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CalcAssignee'}
         path: {type: string, examples: ['/erp/calc/ЗВ-2026-104']}
+        crm_client_id: {type: [integer, 'null'], description: 'ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём'}
 
     CalcRequestList:
       type: object
@@ -29377,6 +29398,9 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/CalcRequestRow'}
+        total:
+          type: [integer, 'null']
+          description: 'ЗАЯВ-1: всего подходящих заявок (для страниц); заполнено, когда в запросе есть `state`'
 
     CalcTask:
       type: object
@@ -29414,6 +29438,9 @@ components:
           type: boolean
           default: false
           description: 'РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается»'
+        crm_client_id:
+          type: [integer, 'null']
+          description: 'ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём; нет — форма без клиента'
 
     CalcQuote:
       type: object

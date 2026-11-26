@@ -215,6 +215,37 @@ async def test_requests_list(web: Web, erp: respx.MockRouter, check: ContractChe
     assert erp.calls.last.request.url.params["mine"] == "1"
 
 
+async def test_requests_registry_passes_state_search_and_paging(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    """ЗАЯВ-1: вкладки «Закрытые / Все», поиск и страницы уходят в ERP, `total` возвращается."""
+    be.router.get(f"{CALC}/tasks/").mock(
+        return_value=httpx.Response(200, json={"results": [task_row()], "count": 41})
+    )
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get(
+        "/api/v1/erp/calc/requests",
+        params={"state": "closed", "q": " Пример ", "limit": 20, "offset": 40},
+    )
+
+    assert response.status_code == 200
+    check(response, "/erp/calc/requests", "get")
+    assert response.json()["total"] == 41
+    sent = be.router.calls.last.request.url.params
+    assert dict(sent) == {"state": "closed", "q": "Пример", "limit": "20", "offset": "40"}
+
+
+async def test_requests_registry_needs_the_calc_section(web: Web, erp: respx.MockRouter) -> None:
+    """Видимость не шире прежней: без раздела «Расчёт» закрытые заявки не отдаются."""
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get("/api/v1/erp/calc/requests", params={"state": "closed"})
+
+    assert response.status_code == 403
+    assert erp_data_calls(erp) == []
+
+
 @pytest.mark.parametrize("role", ["REGISTRAR", "ADMIN"])  # 0.3: у менеджера расчёт есть
 async def test_without_calc_section_everything_is_403_and_erp_is_untouched(
     web: Web, erp: respx.MockRouter, role: str

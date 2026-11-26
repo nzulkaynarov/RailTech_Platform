@@ -3579,10 +3579,25 @@ paths:
       summary: Заявки с заданием расчёта
       parameters:
       - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Размер страницы (до 200); с `state`
+      - in: query
         name: mine
         schema:
           type: boolean
         description: Только где сотрудник — исполнитель резолюции
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: Сколько строк пропустить; с `state`
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 'Поиск: номер, клиент, тема, письмо, текст заявки'
       - in: query
         name: scope
         schema:
@@ -3591,6 +3606,15 @@ paths:
           - all
           - open
         description: open — стадии расчёта; all — все
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - all
+          - closed
+          - open
+        description: 'ЗАЯВ-1: реестр заявок — в работе, закрытые (КП ушло, проект, отказ), все; с ним приходит `count`'
       tags:
       - Calc
       security:
@@ -25045,6 +25069,10 @@ components:
       properties:
         text:
           type: string
+        crm_client_id:
+          type: integer
+          nullable: true
+          description: 'ЗАЯВ-1: клиент CRM компании заявки — для «Создать по образцу»'
         lines:
           type: integer
         files:
@@ -25248,6 +25276,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CalcTaskRow'
+        count:
+          type: integer
+          description: 'ЗАЯВ-1: всего подходящих заявок; только при `state`'
       required:
       - results
     CalcTaskRow:
@@ -25285,6 +25316,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CalcAssignee'
+        crm_client_id:
+          type: integer
+          nullable: true
+          description: 'ЗАЯВ-1: клиент CRM компании заявки; только при `state`'
       required:
       - assignees
       - deal
