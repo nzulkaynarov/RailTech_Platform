@@ -93,6 +93,46 @@ class TestEveryoneApprovesDirectorDecides:
         assert card["contract_approval"] == "returned" and card["contract_approval_note"] == "Нет"
 
 
+class TestAgreeWhileOurApprovalPending:
+    def test_candidate_cannot_agree_while_our_approval_of_his_edition_is_requested(self, world, supply, director):
+        tpl = template(world)
+        set_default(world, tpl)
+        app = make_app()
+        post(supply, app, "prepare-contract", {"language": "ru"})
+        assert post(supply, app, "send-contract").status_code == 200
+        app.refresh_from_db()
+        app.contract_approval = "requested"
+        app.save()
+        cabinet = session_client(app.applicant_contact, app.company)
+
+        refused = cabinet.post(f"{PORTAL}/agree/", {}, format="json")
+
+        assert refused.status_code == 400
+        app.refresh_from_db()
+        assert app.status == PartnerApplicationStatus.CONTRACT_SENT
+
+
+class TestSignOnlyHolder:
+    """Держатель только `contract.sign` — обязательный голос и решающий: гейт вьюхи его пускает."""
+
+    def test_holder_of_sign_only_votes_and_decides(self, world, supply, director):
+        signer = make_staff(world["own"], "director", permissions=["contract.sign"], label="signer")
+        lawyer = _lawyer(world)
+        app = _own_file(supply)
+
+        # голос: до исправления гейт вьюхи отвечал 403 ROLE_NOT_PERMITTED
+        voted = post(client_for(signer), app, "contract-decision", {"decision": "approve"})
+        assert voted.status_code == 200, voted.content
+        # разногласие: решает держатель подписи
+        assert (
+            post(client_for(lawyer), app, "contract-decision", {"decision": "return", "note": "Срок"}).status_code
+            == 200
+        )
+        decided = post(client_for(signer), app, "contract-decision", {"decision": "approve"})
+        assert decided.status_code == 200, decided.content
+        assert supply.get(f"{DESK}/{app.pk}/").json()["contract_approval"] == "approved"
+
+
 def director_name(world):
     user = world["users"]["director"]
     return (user.get_full_name() or user.email).strip()

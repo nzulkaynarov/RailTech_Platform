@@ -43,7 +43,7 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
         "send_contract": SUPPLY_MANAGE,
         "prepare_contract": SUPPLY_MANAGE,
         # Решает держатель зоны «Право»; тот же код права проверяет сервис (ДОК-10)
-        "contract_decision": "contract.approve_template",
+        "contract_decision": ("contract.approve_template", "contract.sign"),
         "approve": SUPPLY_MANAGE,
         "from_archive": SUPPLY_MANAGE,
         "reject": SUPPLY_MANAGE,

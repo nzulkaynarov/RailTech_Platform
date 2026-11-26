@@ -63,7 +63,7 @@ describe('Сделка (deep-link бота)', () => {
     await heading('Проект ПР-2026-029');
     const contracts = await screen.findByRole('region', { name: 'Договор' });
     expect(within(contracts).getByText('Ждёт вашего согласования')).toBeInTheDocument();
-    expect(within(contracts).getByText('Согласовать')).toBeInTheDocument();
+    expect(within(contracts).getByText('Принять редакцию')).toBeInTheDocument();
     const invoices = screen.getByRole('region', { name: 'Счета' });
     expect(within(invoices).getByText('Я оплатил')).toBeInTheDocument();
   });
@@ -72,7 +72,7 @@ describe('Сделка (deep-link бота)', () => {
     signedIn();
     renderApp('/deals/35');
     await heading('Проект ПР-2026-035');
-    expect(within(await screen.findByRole('region', { name: 'Договор' })).queryByText('Согласовать')).toBeNull();
+    expect(within(await screen.findByRole('region', { name: 'Договор' })).queryByText('Принять редакцию')).toBeNull();
     expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('Я оплатил')).toBeNull();
   });
 
@@ -98,7 +98,7 @@ describe('Сделка (deep-link бота)', () => {
     renderApp('/deals/29');
     await screen.findByText('D-2026-0029');
     expect(await screen.findByText('S-2026-0124')).toBeInTheDocument();
-    expect(screen.queryByText('Согласовать')).toBeNull();
+    expect(screen.queryByText('Принять редакцию')).toBeNull();
     expect(screen.queryByText('Я оплатил')).toBeNull();
   });
 

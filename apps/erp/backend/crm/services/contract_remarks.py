@@ -122,25 +122,25 @@ def load_upload(company, upload_id, deal):
         with upload.file.open("rb") as stream:
             content = stream.read()
         assert_content_matches_extension(ContentFile(content, name=name), label="Contract")
-    except (OSError, ValidationError):
+        contract_compare.check_archive(content)  # до python-docx: архив-бомба не разбирается вовсе
+    except (OSError, ValidationError, contract_compare.HostileFile):
         return None, None, "FILE_INVALID"
     return ContentFile(content, name=name), name, None
 
 
-@transaction.atomic
 def submit_remark(
     contract_id: int, *, contact, comment: str, upload_id=None
 ) -> Tuple[Optional[ContractRemark], Optional[str]]:
     """«Есть замечания» из Кабинета. Коды: `CONTRACT_NOT_FOUND`, `MEMBER_REQUIRED_FOR_ACTION` (не наш контакт или без права
     действовать), `CONTRACT_REMARK_NOT_ALLOWED` (договор не у контрагента), `REMARK_OPEN` (прежние ещё на согласовании),
-    `COMMENT_REQUIRED`, `UPLOAD_NOT_FOUND`, `FILE_INVALID`."""
+    `COMMENT_REQUIRED`, `UPLOAD_NOT_FOUND`, `FILE_INVALID`.
+
+    Файл читается и сравнивается ДО блокировки строки договора: разбор тяжёлый и не должен держать чужие записи; под
+    блокировкой только проверка состояния и запись."""
     from .contracts import portal_contact_may_sign
 
     contract = (
-        Contract.objects.select_for_update(of=("self",))
-        .select_related("deal__company", "status", "quote", "currency")
-        .filter(pk=contract_id)
-        .first()
+        Contract.objects.select_related("deal__company", "status", "quote", "currency").filter(pk=contract_id).first()
     )
     if contract is None:
         return None, "CONTRACT_NOT_FOUND"
@@ -148,8 +148,6 @@ def submit_remark(
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code != S.PENDING_CLIENT:
         return None, "CONTRACT_REMARK_NOT_ALLOWED"
-    if open_remark(contract) is not None:
-        return None, "REMARK_OPEN"
     comment = (comment or "").strip()
     if not comment or len(comment) > COMMENT_MAX:
         return None, "COMMENT_REQUIRED"
@@ -160,18 +158,35 @@ def submit_remark(
             return None, error
         analysis = contract_compare.compare_upload(contract, content, name)
         content.seek(0)
+    return _store_remark(contract_id, contact, comment, content, name, analysis)
+
+
+@transaction.atomic
+def _store_remark(contract_id, contact, comment, content, name, analysis):
+    from .contracts import portal_contact_may_sign
+
+    contract = _locked(contract_id)
+    if contract is None:
+        return None, "CONTRACT_NOT_FOUND"
+    if not portal_contact_may_sign(contact, contract):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
+    if contract.status_code != S.PENDING_CLIENT:
+        return None, "CONTRACT_REMARK_NOT_ALLOWED"
+    if open_remark(contract) is not None:
+        return None, "REMARK_OPEN"
     who = (getattr(contact, "name", "") or "").strip()
     try:
-        remark = ContractRemark.objects.create(
-            contract=contract,
-            edition=edition_of(contract),
-            comment=comment,
-            file=content,
-            file_name=name,
-            author_name=who,
-            summary={**analysis["summary"], "comparable": analysis.get("comparable", False)},
-            items=analysis["items"],
-        )
+        with transaction.atomic():
+            remark = ContractRemark.objects.create(
+                contract=contract,
+                edition=edition_of(contract),
+                comment=comment,
+                file=content,
+                file_name=name,
+                author_name=who,
+                summary={**analysis["summary"], "comparable": analysis.get("comparable", False)},
+                items=analysis["items"],
+            )
     except IntegrityError:
         return None, "REMARK_OPEN"
     _journal(contract, None, "contract.remark_received", "Получены замечания контрагента", contact=contact)
@@ -287,10 +302,11 @@ def _notify_deciders(contract) -> None:
 
 @transaction.atomic
 def decide(contract_id: int, user, *, accept: bool, text: str = "") -> Tuple[Optional[Contract], Optional[str]]:
-    """Решение директора при разногласии: принять редакцию контрагента или ответить своей (`text` обязателен).
+    """Решение директора: принять редакцию контрагента или ответить своей (`text` обязателен).
 
-    Коды: `CONTRACT_NOT_FOUND`, `REMARK_NOT_OPEN`, `REMARK_DECISION_FORBIDDEN` (нет права `contract.sign`),
-    `REMARK_NO_DISPUTE` (разногласия нет: все согласны или ещё не ответили), `COMMENT_REQUIRED` (ответ контрагенту)."""
+    Держатель права `contract.sign` закрывает замечания в любой момент: не дожидаясь ответов остальных (кто-то мог не
+    ответить) и без разногласия. Коды: `CONTRACT_NOT_FOUND`, `REMARK_NOT_OPEN`, `REMARK_DECISION_FORBIDDEN` (нет права
+    `contract.sign`), `COMMENT_REQUIRED` (ответ контрагенту)."""
     from .contract_flow import may
 
     contract = _locked(contract_id)
@@ -301,8 +317,6 @@ def decide(contract_id: int, user, *, accept: bool, text: str = "") -> Tuple[Opt
         return None, "REMARK_NOT_OPEN"
     if user is None or not may(user, DECIDE_PERMISSION):
         return None, "REMARK_DECISION_FORBIDDEN"
-    if tally(remark)["disagree"] == 0:
-        return None, "REMARK_NO_DISPUTE"
     text = (text or "").strip()
     if not accept and not text:
         return None, "COMMENT_REQUIRED"
@@ -329,6 +343,9 @@ def _accept(contract, remark, actor) -> None:
     contract.client_signed_at = now
     contract.save(update_fields=["status", "client_signed_at", "updated_at"])
     _journal(contract, actor, "contract.remark_accepted", "Принята редакция контрагента", file=bool(remark.file))
+    from portal.services import notice_sources
+
+    notice_sources.contract_awaiting_signature(contract)  # клиенту: «Договор будет выставлен на подписание»
     contract_flow.publish_current_status(contract, actor)
     recipient = _contract_seller_recipient(contract)
     if recipient is not None:
@@ -351,3 +368,6 @@ def _counter(contract, remark, actor, text: str) -> None:
     remark.resolved_by = actor
     remark.save(update_fields=["resolution", "response", "resolved_at", "resolved_by"])
     _journal(contract, actor, "contract.remark_countered", "Ответ контрагенту: наша редакция", comment=text[:200])
+    from portal.services import notice_sources
+
+    notice_sources.contract_remark_answered(contract, text)  # клиенту: «Наш ответ на ваши замечания»

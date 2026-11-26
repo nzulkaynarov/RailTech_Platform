@@ -47,6 +47,28 @@ def test_second_active_template_of_the_same_role_is_refused(pw, approver):  # no
     assert svc.approve(first, approver)[1] is None
     template, error = svc.approve(second, approver)
     assert (template, error) == (None, "TEMPLATE_BASE_ROLE_TAKEN")
+
+
+def test_concurrent_approval_of_the_same_role_is_a_refusal_not_a_500(pw, approver, monkeypatch):  # noqa: F811
+    """Параллельное утверждение двух шаблонов одной роли: уникальный индекс срабатывает после проверки — код отказа,
+    и ничего не меняется (прежняя редакция остаётся действующей)."""
+    from django.db import IntegrityError
+
+    first = draft(pw, "nda", name="NDA 1")
+    second = draft(pw, "nda", name="NDA 2")
+    assert svc.approve(first, approver)[1] is None
+    first_chain = svc.edition_chain_ids
+    monkeypatch.setattr(svc, "edition_chain_ids", lambda tpl: {first.pk, *first_chain(tpl)})
+
+    def boom(self, *args, **kwargs):
+        raise IntegrityError("doctpl_one_active_base_role")
+
+    monkeypatch.setattr(DocumentTemplate, "save", boom)
+    template, error = svc.approve(second, approver)
+    assert (template, error) == (None, "TEMPLATE_BASE_ROLE_TAKEN")
+    monkeypatch.undo()
+    first.refresh_from_db()
+    assert first.is_active and first.approval_status == TemplateApproval.APPROVED
     second.refresh_from_db()
     assert second.approval_status == TemplateApproval.ON_APPROVAL
     assert svc.base_template(pw.own, "nda").pk == first.pk

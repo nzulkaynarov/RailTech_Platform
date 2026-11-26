@@ -569,6 +569,10 @@ describe("Проект: договор — «Ожидает подписания
     );
     expect(within(block).getByText("50").tagName).toBe("DEL");
     expect(within(block).getByText("30").tagName).toBe("INS");
+    // решающий голос закрывает замечания, не дожидаясь тех, кто не ответил
+    expect(
+      within(block).getByRole("button", { name: "Принять редакцию контрагента" }),
+    ).toBeVisible();
     // основная кнопка «согласован клиентом» при замечаниях не предлагается
     expect(
       within(panel).queryByRole("button", { name: "Отметить: согласован клиентом" }),
@@ -581,6 +585,24 @@ describe("Проект: договор — «Ожидает подписания
     expect(readProjects().find((p) => p.id === 105)?.contract?.status).toBe("client_agreed");
   });
 
+  it("решающего голоса нет ни у кого: сказано, где его выдать, а не пустое «решает: »", async () => {
+    const project = readProjects().find((p) => p.id === 105);
+    if (!project?.contract) throw new Error("fixture");
+    writeProject({
+      ...project,
+      contract: { ...project.contract, remark: { ...remark(), deciders: [] }, remark_awaiting: [] },
+    });
+    const { panel } = await openCard("director@demo.example", 105);
+    const block = await within(panel).findByTestId("contract-remark");
+    expect(within(block).queryByTestId("remark-deciders")).toBeNull();
+    expect(within(block).getByTestId("remark-no-decider")).toHaveTextContent(
+      "Решающий голос не назначен",
+    );
+    expect(
+      within(block).queryByRole("button", { name: "Принять редакцию контрагента" }),
+    ).toBeNull();
+  });
+
   it("разногласие: решение за директором — принять редакцию контрагента или ответить своей", async () => {
     const project = readProjects().find((p) => p.id === 105);
     if (!project?.contract) throw new Error("fixture");
@@ -590,7 +612,7 @@ describe("Проект: договор — «Ожидает подписания
     });
     const { panel } = await openCard("director@demo.example", 105);
     const block = await within(panel).findByTestId("contract-remark");
-    expect(within(block).getByText("При разногласии решает: Д. Назаров")).toBeVisible();
+    expect(within(block).getByText("Решающий голос: Д. Назаров")).toBeVisible();
     fireEvent.click(within(block).getByRole("button", { name: "Ответить своей редакцией" }));
     const send = within(block).getByRole("button", { name: "Отправить ответ" });
     expect(send).toBeDisabled();

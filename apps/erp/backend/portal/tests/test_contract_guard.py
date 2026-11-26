@@ -230,7 +230,7 @@ PARTNER_GET_PATHS = {
 
 
 #: Логотип оператора (ДВ-3) отдаёт картинку без входа и зависит от «своей компании»: его опрашивает `test_pictures.py`.
-OTHER_TESTS_GET_PATHS = {"/operator/logo"}
+OTHER_TESTS_GET_PATHS = {"/operator/logo", "/contracts/{id}/docx"}  # последний — test_portal_contract_remarks.py
 
 
 def test_every_contract_get_is_covered_by_the_guard():

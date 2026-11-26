@@ -295,3 +295,27 @@ class TestFromArchive:
         assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={nda.pk}").content == PDF
         none = app.package_documents.get(base_role="partnership")
         assert supply.get(f"{DESK}/{app.pk}/document/?which=contract&doc={none.pk}").status_code == 404
+
+def test_preparing_again_keeps_the_candidates_reply_per_document(world, supply):
+    """Кандидат вернул NDA своим файлом и замечанием; повторная подготовка пересобирает пакет,
+    но ответ кандидата по роли не теряется."""
+    app, candidate = sent(world, supply)
+    nda = app.package_documents.get(base_role="nda")
+    reply = candidate.post(
+        f"{PORTAL}/return",
+        {"notes": "Срок тайны 5 лет", "document": nda.pk, "file": upload("nda.docx", DOCX, DOCX_TYPE)},
+        format="multipart",
+    )
+    assert reply.status_code == 200, reply.content
+    app.refresh_from_db()
+    old = app.package_documents.get(base_role="nda")
+    assert old.candidate_file and old.candidate_remark == "Срок тайны 5 лет"
+    kept_name = old.candidate_file.name
+
+    again = post(supply, app, "prepare-contract", {"package": True, "language": "ru"})
+    assert again.status_code == 200, again.content
+
+    new = app.package_documents.get(base_role="nda")
+    assert new.pk != old.pk
+    assert new.candidate_file.name == kept_name and new.candidate_remark == "Срок тайны 5 лет"
+    assert new.candidate_file.read() == DOCX

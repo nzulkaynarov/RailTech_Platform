@@ -4371,6 +4371,7 @@ export const getGetEdsProjectResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -4978,6 +4979,7 @@ export const getCreateEdsProjectContractResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -5618,6 +5620,7 @@ export const getActEdsProjectContractResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -6255,6 +6258,7 @@ export const getScanEdsProjectContractResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -6892,6 +6896,7 @@ export const getRequestEdsProjectSigningResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -7555,6 +7560,7 @@ export const getActEdsProjectActResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -8177,6 +8183,7 @@ export const getScanEdsProjectActResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -8805,6 +8812,7 @@ export const getMarkEdsProjectDeliveryResponseProjectContractRemarkMock = (
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
       total: faker.number.int(),
+      more: faker.helpers.arrayElement([faker.number.int(), undefined]),
       comparable: faker.datatype.boolean(),
     },
     items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(

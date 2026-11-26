@@ -695,3 +695,28 @@ export function langOf(language: string | undefined): Lang {
   const base = (language ?? "ru").slice(0, 2);
   return base === "uz" || base === "en" ? base : "ru";
 }
+
+/** Порядок страниц внутри групп Настроек по макету 54; остальные — как в реестре. */
+const MENU_ORDER = [
+  "sales",
+  "timing",
+  "notifications",
+  "templates",
+  "dictionaries",
+  "mail",
+  "telegram",
+  "forms",
+  "spend",
+  "integrations",
+];
+
+/**
+ * Страницы Настроек в порядке единого меню: группы по `SETTINGS_GROUPS`, внутри группы — по макету 54. Одна функция для меню,
+ * всплывающего меню значка и выбора над страницей — порядок везде один.
+ */
+export function settingsInMenuOrder(entries: readonly SettingEntry[]): SettingEntry[] {
+  const rank = (key: string) => MENU_ORDER.indexOf(key);
+  return SETTINGS_GROUPS.flatMap((group) =>
+    entries.filter((entry) => entry.group === group).sort((a, b) => rank(a.key) - rank(b.key)),
+  );
+}

@@ -180,7 +180,10 @@ export function PartnerApplicationsPanel() {
         const canPrepare =
           row.status === "submitted" ||
           (row.status === "contract_sent" && row.candidate_returned_at !== null);
-        const canSend = row.status === "submitted" && row.contract_blocker === null;
+        const canSend =
+          (row.status === "submitted" ||
+            (row.status === "contract_sent" && row.candidate_returned_at !== null)) &&
+          row.contract_blocker === null;
         const canResend = row.status === "contract_sent" && row.invite_delivery === "failed";
         const actions: { key: string; label: string; danger?: boolean; run: () => void }[] = [];
         if (row.can_decide_contract && row.contract_approval === "requested") {
