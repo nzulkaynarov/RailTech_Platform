@@ -64,7 +64,7 @@ function access(): {
 } | null {
   const session = readSession();
   if (!session) return null;
-  // Права операций — по объединению ролей, а не по активной роли («вид»), как в BFF.
+  // Права операций — по объединению ролей, как в BFF.
   const me = buildMe(session);
   if (!me) return null;
   return {
