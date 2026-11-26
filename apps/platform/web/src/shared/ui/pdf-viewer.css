@@ -20,8 +20,10 @@
   outline: 2px solid var(--rt-color-primary-default);
 }
 .pf-doc-viewer-pages canvas {
+  /* ширину в CSS-пикселях задаёт просмотрщик; холст внутри плотнее — для чёткости на экранах 2× */
   max-width: 100%;
-  height: auto;
+  height: auto; /* пропорции листа сохраняются, если панель уже нарисованной страницы */
+  align-self: center;
   background: var(--rt-color-surface-background);
   border: 1px solid var(--rt-color-surface-split);
 }

@@ -40,18 +40,13 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     expect(await screen.findByRole("region", { name: "Службы" })).toBeVisible();
     expect(await screen.findByRole("region", { name: /^Готовность · \d+ из \d+$/ })).toBeVisible();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    // НАСТ-1: «Состояние», затем пять групп со всеми страницами сразу
+    expect(within(menu).getAllByRole("link")[0]).toHaveTextContent("Состояние");
     expect(
       within(menu)
-        .getAllByRole("link")
-        .map((link) => link.textContent),
-    ).toEqual([
-      "Состояние",
-      "Люди и доступ",
-      "Компания",
-      "Правила работы",
-      "Каналы и подключения",
-      "Журнал",
-    ]);
+        .getAllByRole("group")
+        .map((group) => group.querySelector("p")?.textContent),
+    ).toEqual(["Люди и доступ", "Компания", "Правила работы", "Каналы и подключения", "Журнал"]);
   });
 
   it("внешняя проверка доступности — «не подключена», а не выдуманное «работает»", async () => {
@@ -136,8 +131,8 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     expect(within(ready).queryByText("Администратор")).toBeNull();
     expect(await within(ready).findByText("Бланк компании")).toBeVisible();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).queryByRole("link", { name: "Каналы и подключения" })).toBeNull();
-    expect(within(menu).getByRole("link", { name: "Компания" })).toBeVisible();
+    expect(within(menu).queryByRole("group", { name: "Каналы и подключения" })).toBeNull();
+    expect(within(menu).getByRole("group", { name: "Компания" })).toBeVisible();
   });
 
   it("строка сбоя службы: у директора нет кнопки на закрытую страницу «Telegram», у администратора есть; заголовок без названия поставщика", async () => {
