@@ -472,7 +472,7 @@ def _draft_or_409(deal: Deal, *, lock: bool = True) -> Quote:
     quote = calc_quote(deal)
     if quote is None:
         raise CalcError("CALC_NOT_STARTED", 409)
-    if deal.stage_id and deal.stage.code in CLOSED_STAGES:
+    if deal.stage_id and deal.stage.code in EDIT_LOCKED_STAGES:
         # закрытая заявка и заявка, ушедшая дальше расчёта, — только просмотр (ЗАЯВ-1)
         raise CalcError("DEAL_NOT_IN_CALCULATION", 409, stage=deal.stage.code)
     if lock:
@@ -600,6 +600,9 @@ CLOSED_STAGES = (
     DealStageCode.CLOSED_WON,
     DealStageCode.CLOSED_LOST,
 )
+#: Правка строк и условий закрыта: проект, закрытая заявка. QUOTE_SENT сюда не входит — после замечаний клиента менеджер пересчитывает
+#: цену (отправленное КП защищает `quote_edit_lock_code`).
+EDIT_LOCKED_STAGES = (DealStageCode.CONTRACT_SIGNED, DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST)
 STATE_FILTERS = ("open", "closed", "all")
 PAGE_MAX = 200
 
