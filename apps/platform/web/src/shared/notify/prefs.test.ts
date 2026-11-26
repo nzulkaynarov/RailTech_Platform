@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { readSeen, writeSeen } from "./prefs";
+import { readSeenIds, writeSeenIds } from "./prefs";
 
 describe("показанное не повторяется", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it("помнит время самого нового показанного по сотруднику", () => {
-    expect(readSeen("u1")).toBeNull();
-    writeSeen("u1", 1_700_000_000_000);
-    expect(readSeen("u1")).toBe(1_700_000_000_000);
-    expect(readSeen("u2")).toBeNull();
+  it("помнит показанные уведомления по сотруднику", () => {
+    expect(readSeenIds("u1")).toBeNull();
+    writeSeenIds("u1", ["erp:1", "crm:2"]);
+    expect(readSeenIds("u1")).toEqual(["erp:1", "crm:2"]);
+    expect(readSeenIds("u2")).toBeNull();
   });
 });

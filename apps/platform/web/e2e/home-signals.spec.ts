@@ -19,7 +19,7 @@ for (const width of WIDTHS) {
     expect(Number(count)).toBeGreaterThan(0);
     // тот же номер, что бейдж «Задачи» в подменю и заголовок вкладки
     await expect(page).toHaveTitle(new RegExp(`^\\(${count}\\) `));
-    await expect(page.getByRole("link", { name: /^Операции/ }).locator("b")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^Органайзер/ }).locator("b")).toHaveCount(0);
     await expectNoViolations(page, `значок задач ${String(width)}`);
     await settledScreenshot(page, "rail-count");
   });

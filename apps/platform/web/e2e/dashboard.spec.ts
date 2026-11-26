@@ -185,8 +185,10 @@ test.describe("Центр уведомлений", () => {
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-    await expect(center.getByRole("radio", { name: "Непрочитанные (3)" })).toBeChecked();
-    await expect(center.locator(".ant-segmented-item-label", { hasText: /^Все$/ })).toBeVisible();
+    await expect(center.getByRole("radio", { name: "Все" })).toBeChecked();
+    await expect(
+      center.locator(".ant-segmented-item-label", { hasText: "Требуют действия (2)" }),
+    ).toBeVisible();
     // тип — с числом непрочитанных
     await expect(center.getByRole("combobox", { name: "Тип уведомлений" })).toBeVisible();
     await center.locator(".ant-select-selector").click();
@@ -217,7 +219,7 @@ test.describe("Центр уведомлений", () => {
 
     const dialog = page.getByRole("dialog", { name: "Центр уведомлений" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("radio", { name: "Непрочитанные (3)" })).toBeFocused();
+    await expect(dialog.getByRole("radio", { name: "Все" })).toBeFocused();
 
     await page.keyboard.press("Tab");
     const inside = () =>

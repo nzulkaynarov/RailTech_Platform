@@ -16,7 +16,14 @@ async function shot(page: Page, name: string, width: number): Promise<void> {
   const dir = process.env["E2E_SCREENSHOT_DIR"];
   if (!dir) return;
   await page.waitForTimeout(400);
-  await page.screenshot({ path: `${dir}/${name}-${String(width)}.png` });
+  // значки модулей: только рейл (слева) или нижняя панель (390), чтобы число на значке было видно крупно
+  const clip =
+    name === "rail"
+      ? width < 768
+        ? { x: 0, y: 844 - 90, width, height: 90 }
+        : { x: 0, y: 0, width: 264, height: 520 }
+      : undefined;
+  await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, ...(clip ? { clip } : {}) });
 }
 
 async function push(page: Page, note: Record<string, unknown>): Promise<void> {
@@ -117,6 +124,10 @@ test.describe("Уведомления: одно решение", () => {
     await waitForMotionEnd(page);
     await shot(page, "bell-groups", 1440);
     await expectNoViolations(page, "колокольчик с группами");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await waitForMotionEnd(page);
+    await shot(page, "bell-groups", 390);
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     // «Требуют действия»: сводка недели (к сведению) пропадает
     await expect(center.getByText("Сводка недели готова")).toBeVisible();

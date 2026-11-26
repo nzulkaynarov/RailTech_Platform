@@ -85,16 +85,21 @@ export function useNotifyPrefs(
   return [prefs, update];
 }
 
-/** Время самого нового уже показанного уведомления (мс): после перезагрузки показанное не повторяется. */
-export function readSeen(personId: string): number | null {
+/** Идентификаторы уже показанных (или бывших при входе) уведомлений: опоздавшая запись со старым временем всё равно всплывает. */
+export function readSeenIds(personId: string): string[] | null {
   const raw = readRaw(seenKey(personId));
-  const value = raw === null ? Number.NaN : Number(raw);
-  return Number.isFinite(value) ? value : null;
+  if (raw === null) return null;
+  try {
+    const value: unknown = JSON.parse(raw);
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : null;
+  } catch {
+    return null;
+  }
 }
 
-export function writeSeen(personId: string, at: number): void {
+export function writeSeenIds(personId: string, ids: readonly string[]): void {
   try {
-    window.localStorage.setItem(seenKey(personId), String(at));
+    window.localStorage.setItem(seenKey(personId), JSON.stringify(ids.slice(-300)));
   } catch {
     // без хранилища показанное повторится после перезагрузки — не критично
   }

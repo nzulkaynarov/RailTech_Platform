@@ -6,7 +6,7 @@ import { objectLink } from "../../modules/objectLinks";
 import type { Notification } from "../../shared/api/generated/model";
 import { showBrowserNotification } from "../../shared/notify/browserNotify";
 import { useNotify } from "../../shared/notify/NotifyProvider";
-import { readSeen, useNotifyPrefs, writeSeen } from "../../shared/notify/prefs";
+import { readSeenIds, useNotifyPrefs, writeSeenIds } from "../../shared/notify/prefs";
 import { objectKey } from "./groupNotifications";
 import { useNotifications, useReadNotifications } from "./useNotifications";
 
@@ -21,7 +21,7 @@ const at = (item: Notification) => Date.parse(item.created_at);
 /**
  * Всплывающие уведомления о новом (УВЕД-1): следит за тем же списком, что и колокольчик (поток подсказок перезапрашивает
  * его), и показывает через единый слой `useNotify` то, что пришло после последнего показанного. Показанное не повторяется
- * после перезагрузки (`readSeen`). Вид «требует действия / к сведению» — поле `needs_action` записи, не код события.
+ * после перезагрузки (`readSeenIds`: по идентификаторам, а не по времени). Вид «требует действия / к сведению» — поле `needs_action` записи, не код события.
  */
 export function NotificationArrivals({
   personId,
@@ -41,11 +41,11 @@ export function NotificationArrivals({
   const [prefs] = useNotifyPrefs(personId);
   const items = query.data?.items;
   const itemsRef = useRef<readonly Notification[]>([]);
-  const open = useRef(new Set<string>());
+  const open = useRef(new Map<string, Notification>());
 
   useEffect(() => {
     if (!centerOpen) return;
-    for (const key of [...open.current, MORE_KEY]) notify.close(key);
+    for (const key of [...open.current.keys(), MORE_KEY]) notify.close(key);
     open.current.clear();
   }, [centerOpen, notify]);
 
@@ -53,27 +53,29 @@ export function NotificationArrivals({
     if (!items) return;
     itemsRef.current = items;
     // прочитанное в колокольчике или на другом устройстве закрывает своё окно
-    for (const key of [...open.current]) {
+    for (const key of [...open.current.keys()]) {
       if (items.find((n) => n.id === key)?.read) {
         notify.close(key);
         open.current.delete(key);
       }
     }
-    const newest = items.reduce((max, n) => Math.max(max, at(n)), 0);
-    const seen = readSeen(personId);
-    if (seen === null) {
+    const known = readSeenIds(personId);
+    if (known === null) {
       // первый вход на этом устройстве: накопленное не всплывает
-      writeSeen(personId, newest || Date.now());
+      writeSeenIds(
+        personId,
+        items.map((n) => n.id),
+      );
       return;
     }
-    if (newest <= seen) return;
-    writeSeen(personId, newest);
-
-    const fresh = items
-      .filter((n) => !n.read && at(n) > seen)
-      .filter((n) => !prefs.onlyAction || n.needs_action === true)
-      .sort((a, b) => at(a) - at(b));
+    const knownSet = new Set(known);
+    const fresh = items.filter((n) => !knownSet.has(n.id)).sort((a, b) => at(a) - at(b));
     if (fresh.length === 0) return;
+    writeSeenIds(personId, [...known, ...fresh.map((n) => n.id)]);
+    const shown = fresh
+      .filter((n) => !n.read)
+      .filter((n) => !prefs.onlyAction || n.needs_action === true);
+    if (shown.length === 0) return;
 
     const openObject = (item: Notification) => {
       const same = itemsRef.current.filter((n) => objectKey(n) === objectKey(item));
@@ -82,7 +84,7 @@ export function NotificationArrivals({
     };
 
     if (prefs.browser) {
-      for (const item of fresh) {
+      for (const item of shown) {
         showBrowserNotification({
           tag: item.id,
           title: item.title,
@@ -95,18 +97,27 @@ export function NotificationArrivals({
     }
     if (!prefs.popups) return;
 
-    const single = fresh.length > MAX_TOASTS ? fresh.slice(-(MAX_TOASTS - 1)) : fresh;
-    const rest = fresh.length - single.length;
+    // окон всего не больше трёх: старые открытые и новые вместе, лишнее — в «Ещё N новых»
+    const all = [...open.current.values(), ...shown].sort((x, y) => at(x) - at(y));
+    const single = all.length > MAX_TOASTS ? all.slice(-(MAX_TOASTS - 1)) : all;
+    const rest = all.length - single.length;
+    for (const [key] of [...open.current]) {
+      if (!single.some((n) => n.id === key)) {
+        notify.close(key);
+        open.current.delete(key);
+      }
+    }
     if (rest > 0) {
       notify.push({
         key: MORE_KEY,
         title: t("notifications.toast.more", { count: rest }),
-        duration: fresh.some((n) => n.needs_action === true) ? 0 : INFO_SECONDS,
+        duration: all.some((n) => n.needs_action === true) ? 0 : INFO_SECONDS,
         action: { label: t("notifications.toast.moreAction"), onClick: onOpenCenter },
       });
     }
     for (const item of single) {
-      open.current.add(item.id);
+      if (open.current.has(item.id)) continue;
+      open.current.set(item.id, item);
       notify.push({
         key: item.id,
         title: item.title,
