@@ -834,6 +834,9 @@ class DocumentTemplate(BaseModel):
         description="Текст на английском; пусто — в документе печатается русский"
     )
     edition: int
+    unknown_placeholders: list[str] = Field(
+        description="Неизвестные поля текстов (коды и обрывки): заметка, ничего не блокирует"
+    )
     is_locked: bool = Field(
         description="Закреплённый шаблон договора: правки только новой редакцией"
     )
@@ -911,6 +914,7 @@ def to_document_template(raw: Mapping[str, Any]) -> DocumentTemplate:
         body_html_en=text(raw.get("body_html_en")),
         edition=raw.get("edition") if isinstance(raw.get("edition"), int) else 1,
         is_locked=flag(raw.get("is_locked")),
+        unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
         is_sample=flag(raw.get("is_sample")),
         is_owned=flag(raw.get("is_owned")),
         is_active=flag(raw.get("is_active", True)),

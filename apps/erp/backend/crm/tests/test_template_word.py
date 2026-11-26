@@ -55,10 +55,10 @@ def make(
     )
 
 
-def upload(user, template, data: bytes, *, name="t.docx", mode="check", language="ru", base="", sha="", confirm=False):
+def upload(user, template, data: bytes, *, name="t.docx", mode="check", language="ru", base="", sha=""):
     url = URL.format(id=template.id) + f"?mode={mode}&language={language}" + (f"&base={base}" if base else "")
     sha = sha or (word.file_sha(data) if mode == "apply" else "")
-    url += (f"&file_sha={sha}" if sha else "") + ("&confirm_loss=true" if confirm else "")
+    url += f"&file_sha={sha}" if sha else ""
     return api(user).post(url, {"file": SimpleUploadedFile(name, data, content_type=DOCX)}, format="multipart")
 
 
@@ -258,29 +258,30 @@ def test_role_without_rights_cannot_upload_but_can_download(pw):  # noqa: F811
 # ── подстановки ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_unknown_placeholders_are_reported_by_name_and_block_approval(pw):  # noqa: F811
+def test_unknown_placeholders_are_named_but_do_not_stop_approval(pw):  # noqa: F811
     template = make(pw, body=BODY + "<p>Склад: {{warehouse.name}} и {{deal.sum}}.</p>")
     body = upload(pw.director, template, download(pw.director, template).content).json()
     assert body["unknown_placeholders"] == ["warehouse.name", "deal.sum"]
     response = api(pw.director).post(f"/api/v1/crm/document-templates/{template.id}/submit/")
-    assert response.status_code == 400
-    assert response.json() == {
-        "detail": "TEMPLATE_UNKNOWN_PLACEHOLDERS",
-        "unknown_placeholders": ["warehouse.name", "deal.sum"],
-    }
+    assert response.status_code == 200
+    # заметка «исправить» едет вместе с результатом, работа не стоит
+    assert response.json()["unknown_placeholders"] == ["warehouse.name", "deal.sum"]
     template.refresh_from_db()
-    assert template.approval_status == TemplateApproval.DRAFT
+    assert template.approval_status == TemplateApproval.ON_APPROVAL
 
 
-def test_unknown_placeholder_in_another_language_blocks_approval_too(pw):  # noqa: F811
+def test_unknown_placeholder_in_another_language_is_listed(pw):  # noqa: F811
     template = make(pw, body_html_en="<p>{{nope.code}}</p>")
+    row = api(pw.director).get("/api/v1/crm/document-templates/contracts/").json()
+    assert next(r for r in row if r["id"] == template.id)["unknown_placeholders"] == ["nope.code"]
     _template, error = svc.submit_for_approval(template, pw.director)
-    assert error == "TEMPLATE_UNKNOWN_PLACEHOLDERS"
+    assert error is None
 
 
 def test_template_with_known_placeholders_goes_to_approval(pw):  # noqa: F811
-    _template, error = svc.submit_for_approval(make(pw), pw.director)
+    template, error = svc.submit_for_approval(make(pw), pw.director)
     assert error is None
+    assert word.unknown_placeholders(template.body_html) == []
 
 
 def test_active_legal_template_cannot_lose_its_blocks_by_upload(pw, grant):  # noqa: F811
@@ -436,7 +437,7 @@ def test_field_with_formatting_inside_the_code_stays_whole(pw):  # noqa: F811
         ("{{counterparty.nme}}", "counterparty.nme"),
     ],
 )
-def test_broken_fields_are_named_and_block_approval(pw, bad, named):  # noqa: F811
+def test_broken_fields_are_named_and_stop_only_the_document(pw, bad, named):  # noqa: F811
     template = make(pw)
     src = download(pw.director, template).content
 
@@ -447,12 +448,12 @@ def test_broken_fields_are_named_and_block_approval(pw, bad, named):  # noqa: F8
 
     body = checked(pw, template, with_paragraph(src, "1. Предмет", ruin))
     assert named in body["unknown_placeholders"]
-    # черновик с таким текстом сохраняется, на утверждение не уходит и называет обрывок
+    # шаблон с таким текстом сохраняется и уходит на утверждение, обрывок назван
     DocumentTemplate.objects.filter(pk=template.pk).update(body_html=body["body_html"])
     template.refresh_from_db()
+    assert word.unknown_placeholders(template.body_html) == body["unknown_placeholders"]
     _t, error = svc.submit_for_approval(template, pw.director)
-    assert error == "TEMPLATE_UNKNOWN_PLACEHOLDERS"
-    assert named in word.unknown_placeholders(template.body_html)
+    assert error is None
 
 
 def test_erased_opening_bracket_leaves_a_named_leftover(pw):  # noqa: F811
@@ -572,7 +573,7 @@ def test_what_is_dropped_is_named_and_unchanged_needs_nothing_dropped(pw):  # no
     assert body["changes"]["summary"]["total"] == 0
 
 
-def test_markup_word_cannot_keep_needs_a_confirmation(pw):  # noqa: F811
+def test_markup_word_cannot_keep_is_listed_and_accepting_is_not_delayed(pw):  # noqa: F811
     rich = BODY.replace(
         "<p>2.",
         '<p>0. См. <a href="https://lex.uz/docs/1">закон</a>.</p><hr /><p><img src="data:image/png;base64,iVBORw0KGgo=" alt="x" /></p>'
@@ -583,14 +584,25 @@ def test_markup_word_cannot_keep_needs_a_confirmation(pw):  # noqa: F811
     body = checked(pw, template, data)
     kinds = {m["kind"] for m in body["lost_markup"]}
     assert {"links", "rules", "pictures", "merged_cells", "nested_lists"} <= kinds
-    refused = upload(pw.director, template, data, mode="apply", base=body["base"])
-    assert refused.status_code == 400 and refused.json() == {"detail": "WORD_LOSS_NOT_CONFIRMED"}
-    template.refresh_from_db()
-    assert "lex.uz" in template.body_html
-    done = upload(pw.director, template, data, mode="apply", base=body["base"], confirm=True)
+    done = upload(pw.director, template, data, mode="apply", base=body["base"])
     assert done.status_code == 200
     template.refresh_from_db()
     assert "lex.uz" not in template.body_html and "продажа" in template.body_html
+    # прежний текст остаётся в записи журнала
+    log = ActivityLog.objects.get(event_code="document_template.word_uploaded")
+    assert "lex.uz" in log.event_params["previous"]
+
+
+def test_a_contract_with_a_broken_field_is_stopped_at_generation_with_a_plain_reason(pw):  # noqa: F811
+    from crm.services.contracts import generate_contract_from_quote
+
+    template = make(
+        pw, status=TemplateApproval.APPROVED, body=BODY + "<p>Срок: {{deal.unknown_term}} и {{counterparty.name}</p>"
+    )
+    contract, error = generate_contract_from_quote(pw.quote.id, actor=None, template_id=template.id)
+    assert (contract, error) == (None, "CONTRACT_TEMPLATE_UNFILLED")
+    missing = ActivityLog.objects.get(event_code="contract.template_unfilled").event_params["missing"]
+    assert "deal.unknown_term" in missing and "{{counterparty.name}" in missing
 
 
 def test_a_file_downloaded_before_someones_edit_is_refused(pw):  # noqa: F811
@@ -693,3 +705,71 @@ def test_apply_without_the_file_fingerprint_is_refused(pw):  # noqa: F811
     url = URL.format(id=template.id) + f"?mode=apply&language=ru&base={base}"
     response = api(pw.director).post(url, {"file": SimpleUploadedFile("t.docx", data)}, format="multipart")
     assert response.status_code == 409 and response.json() == {"detail": "WORD_FILE_CHANGED"}
+
+
+# ── ревью #924, второй круг: длинный абзац, чужой файл ─────────────────────────────────────────────────────────────
+
+
+def _one_paragraph(text: str) -> bytes:
+    from docx import Document
+
+    doc = Document()
+    doc.add_paragraph(text)
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
+def test_a_million_character_paragraph_is_refused_fast(pw):  # noqa: F811
+    import time
+
+    template = make(pw)
+    data = _one_paragraph(" ".join(str(i * 7919) for i in range(200_000)))
+    for mode in ("check", "apply"):
+        started = time.monotonic()
+        response = upload(pw.director, template, data, mode=mode, base="0" * 16)
+        assert response.status_code == 400 and response.json() == {"detail": "WORD_TOO_BIG"}
+        assert time.monotonic() - started < 2
+    template.refresh_from_db()
+    assert template.body_html == BODY
+
+
+def test_a_long_but_allowed_paragraph_is_processed_linearly(pw):  # noqa: F811
+    import time
+
+    text = ("слово [ " * 6_000)[:49_000]  # скобки не рвут разбор полей: линейно и с ними
+    data = _one_paragraph(text)
+    started = time.monotonic()
+    blocks, _meta = word.read_upload(data, "a.docx")
+    assert time.monotonic() - started < 1
+    assert len(word.paragraphs_of(blocks)[0]) > 40_000
+    assert checked(pw, make(pw), data)["can_apply"] is True
+
+
+def test_many_runs_of_one_format_are_joined_linearly():
+    import time
+
+    runs = [word.Run("а") for _ in range(100_000)]
+    started = time.monotonic()
+    assert len(word._squash(runs)[0].text) == 100_000
+    assert time.monotonic() - started < 1
+
+
+def test_a_file_of_another_template_or_language_is_refused(pw):  # noqa: F811
+    a = make(pw, body_html_uz="<p>1. Shartnoma.</p>")
+    b = make(pw, name="Другой договор")
+    ru_of_a = download(pw.director, a).content
+    for mode in ("check", "apply"):
+        other_language = upload(pw.director, a, ru_of_a, language="uz", mode=mode, base="0" * 16)
+        assert other_language.status_code == 400 and other_language.json() == {"detail": "WORD_OTHER_LANGUAGE"}
+        other_template = upload(pw.director, b, ru_of_a, mode=mode, base="0" * 16)
+        assert other_template.status_code == 400 and other_template.json() == {"detail": "WORD_OTHER_TEMPLATE"}
+    a.refresh_from_db()
+    assert a.body_html_uz == "<p>1. Shartnoma.</p>"
+
+
+def test_a_file_without_our_marker_is_accepted_and_marked_as_from_elsewhere(pw):  # noqa: F811
+    template = make(pw)
+    src = download(pw.director, template).content
+    assert checked(pw, template, src)["from_elsewhere"] is False
+    assert checked(pw, template, untagged(src))["from_elsewhere"] is True

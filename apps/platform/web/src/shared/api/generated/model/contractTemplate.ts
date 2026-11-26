@@ -31,5 +31,7 @@ export interface ContractTemplate {
   locked: boolean;
   /** Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет) */
   languages: ContractTemplateLanguagesItem[];
+  /** Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует */
+  unknown_placeholders: string[];
   updated_at: string;
 }

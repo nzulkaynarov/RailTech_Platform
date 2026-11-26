@@ -214,11 +214,6 @@ def submit_for_approval(template, user) -> Tuple[Optional[DocumentTemplate], Opt
         return None, "TEMPLATE_COUNTERPARTY_REQUIRED"
     if missing_required_blocks(CONTRACT_KIND, template.body_html):
         return None, "TEMPLATE_MISSING_REQUIRED_BLOCKS"
-    # ШАБЛ-1: неизвестная подстановка в любом из трёх текстов — на утверждение нельзя (называются в `unknown_placeholders`).
-    from .template_word import unknown_placeholders
-
-    if unknown_placeholders(template.body_html, template.body_html_uz, template.body_html_en):
-        return None, "TEMPLATE_UNKNOWN_PLACEHOLDERS"
     template.approval_status = TemplateApproval.ON_APPROVAL
     template.submitted_at = timezone.now()
     template.save(update_fields=["approval_status", "submitted_at", "updated_at"])
@@ -346,6 +341,12 @@ def unfilled_variables(contract, body_html: str) -> list:
         code = match.group(1).strip()
         if code not in problems:
             problems.append(code)
+    # ШАБЛ-1: обрывки полей (`{{counterparty.name}`) напечатались бы клиенту фигурными скобками — договор останавливается здесь
+    from .template_word import broken_fields
+
+    for token in broken_fields(rendered):
+        if token not in problems:
+            problems.append(token)
     return problems
 
 

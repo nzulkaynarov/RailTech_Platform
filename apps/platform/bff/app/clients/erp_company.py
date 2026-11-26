@@ -263,11 +263,7 @@ def _validation_fields(body: Any) -> list[str]:
     """Поля DRF-ошибки `{"поле": ["текст"]}`; `detail` и `non_field_errors` полями не считаются."""
     if not isinstance(body, dict):
         return []
-    return sorted(
-        k
-        for k in body
-        if k not in ("detail", "non_field_errors", "missing_blocks", "unknown_placeholders")
-    )
+    return sorted(k for k in body if k not in ("detail", "non_field_errors", "missing_blocks"))
 
 
 _REASON = re.compile(r"^[a-z][a-z_]{1,40}$")
@@ -280,7 +276,7 @@ def _validation_reasons(body: Any) -> dict[str, str]:
     reasons: dict[str, str] = {}
     for key, value in body.items():
         first = value[0] if isinstance(value, list) and value else value
-        skip = key in ("detail", "non_field_errors", "missing_blocks", "unknown_placeholders")
+        skip = key in ("detail", "non_field_errors", "missing_blocks")
         if not skip and isinstance(first, str) and _REASON.match(first):
             reasons[key] = first
     return reasons
@@ -351,10 +347,6 @@ def erp_error(response: httpx.Response) -> PlatformError:
             details["field_reasons"] = reasons
     if erp_code == "TEMPLATE_MISSING_REQUIRED_BLOCKS" and (blocks := _missing_blocks(body)):
         details["missing_blocks"] = blocks
-    if erp_code == "TEMPLATE_UNKNOWN_PLACEHOLDERS":
-        codes = body.get("unknown_placeholders") if isinstance(body, dict) else None
-        if isinstance(codes, list):
-            details["unknown_placeholders"] = [c for c in codes[:50] if isinstance(c, str)]
     return PlatformError(
         "VALIDATION_FAILED",
         "Проверьте заполнение полей.",

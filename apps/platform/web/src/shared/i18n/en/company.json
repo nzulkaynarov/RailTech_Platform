@@ -497,7 +497,7 @@
       "locked": "The template is approved and its text cannot change. Create a new edition and upload the file into it.",
       "missingBlocks": "The document cannot be built without these blocks",
       "unknown": "Unknown fields: {{count}}",
-      "unknownHint": "A template with them cannot be sent for approval. Fix the code in the file or remove the field.",
+      "unknownHint": "They go into the document as they are until fixed: correct the code in the file or remove the field.",
       "changesLabel": "Changes by clause",
       "point": "Clause {{point}}",
       "noPoint": "No number",
@@ -522,8 +522,9 @@
         "word_file_required": "Choose a Word file.",
         "template_locked": "Approved text cannot be edited. Create a new edition.",
         "word_stale": "The template changed after the download: download it again and carry your edits over.",
-        "word_loss_not_confirmed": "Confirm that links, pictures and merged cells will be lost.",
-        "word_file_changed": "A different file was sent than the one checked. Upload the file again."
+        "word_file_changed": "A different file was sent than the one checked. Upload the file again.",
+        "word_other_template": "The file is from another template: download the right one and carry your edits over.",
+        "word_other_language": "The file is from another language: download the right one and carry your edits over."
       },
       "sameTextDropped": "The words are the same, but the file has things that are not saved.",
       "dropped": "The file has things that are not saved",
@@ -535,7 +536,7 @@
         "fonts": "Fonts: {{count}}",
         "highlights": "Highlighting: {{count}}"
       },
-      "loses": "The current text has things Word cannot keep: they will be gone after accepting",
+      "loses": "Will not be kept after accepting",
       "lostKind": {
         "links": "Links: {{count}}",
         "rules": "Horizontal rules: {{count}}",
@@ -544,7 +545,7 @@
         "nested_lists": "Nested lists: {{count}}",
         "nested_tables": "Nested tables: {{count}}"
       },
-      "understood": "I understand, these will be lost"
+      "fromElsewhere": "The file was not downloaded from here — compare carefully."
     }
   },
   "categories": {
@@ -853,10 +854,13 @@
       "template_transition_not_allowed": "The template is in another status. Refresh the page.",
       "template_edition_in_progress": "A new edition is already in progress.",
       "template_counterparty_required": "Choose who the template is for.",
-      "template_approval_forbidden": "Approved by the holder of the Legal zone.",
-      "template_unknown_placeholders": "The template has unknown fields: {{list}}. Fix them and try again."
+      "template_approval_forbidden": "Approved by the holder of the Legal zone."
     },
-    "fileLanguage": "File language"
+    "fileLanguage": "File language",
+    "warn": {
+      "unknown": "The template has unknown fields: {{list}}. A contract from it cannot be issued until they are fixed."
+    },
+    "unknownRow": "unknown fields: {{count}}"
   },
   "sample": {
     "language": "Document language",

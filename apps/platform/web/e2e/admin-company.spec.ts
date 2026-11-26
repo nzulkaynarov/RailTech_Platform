@@ -299,11 +299,13 @@ test.describe("Компания: статьи расхода, шаблоны, с
 
     await pickRowAction(page, "Договор поставки (рельсы)", "Изменить");
     const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
+    // ШАБЛ-1: разметка спрятана, правка текста руками — по «Показать разметку»
+    await editor.getByRole("button", { name: "Показать разметку" }).click();
     const body = editor.getByLabel(/^Текст шаблона/);
     await body.fill(
       "<p>{{buyer_name}} {{mystery}}</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
     );
-    await expect(editor.getByText("Неизвестная подстановка {{mystery}}")).toBeVisible();
+    await expect(editor.getByText("Неизвестное поле {{mystery}}")).toBeVisible();
     await expect(
       editor.getByRole("img", { name: /Образец документа по шаблону/ }).first(),
     ).toBeVisible();

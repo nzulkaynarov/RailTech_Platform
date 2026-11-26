@@ -497,7 +497,7 @@
       "locked": "Şablon tasdiqlangan, uning matni özgarmaydi. Yangi tahrir yarating va faylni unga yuklang.",
       "missingBlocks": "Bu bloklarsiz hujjat şakllanmaydi",
       "unknown": "Nomaʼlum maydonlar: {{count}}",
-      "unknownHint": "Ular bor şablonni tasdiqlaşga yuborib bölmaydi. Fayldagi kodni töğrilang yoki maydonni olib taşlang.",
+      "unknownHint": "Tuzatilmagunça ular hujjatga öz holiça tuşadi: fayldagi kodni töğrilang yoki maydonni olib taşlang.",
       "changesLabel": "Bandlar böyiça özgarişlar",
       "point": "{{point}}-band",
       "noPoint": "Raqamsiz",
@@ -522,8 +522,9 @@
         "word_file_required": "Word faylini tanlang.",
         "template_locked": "Tasdiqlangan matn özgartirilmaydi. Yangi tahrir yarating.",
         "word_stale": "Şablon yuklab olingandan keyin özgargan: uni qayta yuklab oling va tahrirlarni köçiring.",
-        "word_loss_not_confirmed": "Havolalar, rasmlar va birlaştirilgan kataklar yöqolişini tasdiqlang.",
-        "word_file_changed": "Tekşirilgan fayl örniga boşqa fayl yuborildi. Faylni qayta yuklang."
+        "word_file_changed": "Tekşirilgan fayl örniga boşqa fayl yuborildi. Faylni qayta yuklang.",
+        "word_other_template": "Fayl boşqa şablondan: kerakli şablonni yuklab oling va tahrirlarni köçiring.",
+        "word_other_language": "Fayl boşqa tildan: kerakli tilni yuklab oling va tahrirlarni köçiring."
       },
       "sameTextDropped": "Sözlar bir xil, lekin faylda saqlanmaydigan narsalar bor.",
       "dropped": "Faylda saqlanmaydigan narsalar bor",
@@ -535,7 +536,7 @@
         "fonts": "Şriftlar: {{count}}",
         "highlights": "Rangli ajratiş: {{count}}"
       },
-      "loses": "Joriy matnda Word saqlay olmaydigan narsalar bor: qabul qilingaç ular yöqoladi",
+      "loses": "Qabul qilingaç saqlanmaydi",
       "lostKind": {
         "links": "Havolalar: {{count}}",
         "rules": "Gorizontal çiziqlar: {{count}}",
@@ -544,7 +545,7 @@
         "nested_lists": "Içki röyxatlar: {{count}}",
         "nested_tables": "Içki jadvallar: {{count}}"
       },
-      "understood": "Tuşundim, bular yöqoladi"
+      "fromElsewhere": "Fayl bu yerdan yuklab olinmagan — diqqat bilan soliştiring."
     }
   },
   "categories": {
@@ -853,10 +854,13 @@
       "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
       "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
-      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi.",
-      "template_unknown_placeholders": "Şablonda nomaʼlum maydonlar bor: {{list}}. Ularni töğrilab, qayta urinib köring."
+      "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
     },
-    "fileLanguage": "Fayl tili"
+    "fileLanguage": "Fayl tili",
+    "warn": {
+      "unknown": "Şablonda nomaʼlum maydonlar bor: {{list}}. Ular tuzatilmagunça şablon böyiça şartnoma rasmiylaştirilmaydi."
+    },
+    "unknownRow": "nomaʼlum maydonlar: {{count}}"
   },
   "sample": {
     "language": "Hujjat tili",

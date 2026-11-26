@@ -23,6 +23,7 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
     approved_by_name = serializers.SerializerMethodField()
     is_locked = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
+    unknown_placeholders = serializers.SerializerMethodField()
     # Только у шаблонов договора; у остальных видов пусто — схема обязана это допускать.
     counterparty_kind = serializers.ChoiceField(choices=CounterpartyKind.choices, allow_blank=True, read_only=True)
     subject = serializers.ChoiceField(choices=ContractSubject.choices, allow_blank=True, read_only=True)
@@ -60,6 +61,7 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "renewal_notice",
             "is_locked",
             "languages",
+            "unknown_placeholders",
             "created_at",
             "updated_at",
         ]
@@ -91,6 +93,12 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
         from crm.services.contract_templates import is_locked
 
         return is_locked(obj)
+
+    def get_unknown_placeholders(self, obj) -> list:
+        """Неизвестные поля трёх текстов (коды и обрывки): заметка «исправить», работу не останавливает."""
+        from crm.services.template_word import unknown_placeholders
+
+        return unknown_placeholders(obj.body_html, obj.body_html_uz, obj.body_html_en)
 
     def get_languages(self, obj) -> list:
         """Языки, на которых текст заполнен (ДОК-16 дозаполняет uz и en; пустой — русский с пометкой)."""

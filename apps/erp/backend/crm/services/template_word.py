@@ -90,46 +90,39 @@ def _clean(text: str) -> str:
 
 
 def _squash(runs: list[Run]) -> list[Run]:
-    """Склеивает соседние куски с одинаковым оформлением, схлопывает пробелы, срезает края абзаца."""
-    out: list[Run] = []
+    """Склеивает соседние куски с одинаковым оформлением, схлопывает пробелы, срезает края абзаца (за один проход, без
+    попарного склеивания строк: абзац в десятки тысяч знаков не должен считаться квадратично)."""
+    groups: list[tuple[tuple[bool, bool, bool], list[str]]] = []
     for run in runs:
-        text = run.text
-        if not text:
+        if not run.text:
             continue
-        if out and (out[-1].bold, out[-1].italic, out[-1].underline) == (run.bold, run.italic, run.underline):
-            out[-1] = Run(out[-1].text + text, run.bold, run.italic, run.underline)
+        key = (run.bold, run.italic, run.underline)
+        if groups and groups[-1][0] == key:
+            groups[-1][1].append(run.text)
         else:
-            out.append(run)
+            groups.append((key, [run.text]))
     # пробелы и переносы: пробелы подряд — один, пробелы вокруг переноса убираются
-    joined = []
-    for run in out:
-        text = re.sub(r"[ \t\r\f\v\xa0]+", " ", run.text)
+    joined: list[Run] = []
+    for key, pieces in groups:
+        text = re.sub(r"[ \t\r\f\v\xa0]+", " ", "".join(pieces))
         text = re.sub(r" ?\n ?", "\n", text)
-        joined.append(Run(text, run.bold, run.italic, run.underline))
+        joined.append(Run(text, *key))
     # края абзаца
     while joined and not joined[0].text.strip(" \n"):
         joined.pop(0)
     while joined and not joined[-1].text.strip(" \n"):
         joined.pop()
     if joined:
-        first, last = joined[0], joined[-1]
+        first = joined[0]
         joined[0] = Run(first.text.lstrip(" \n"), first.bold, first.italic, first.underline)
         last = joined[-1]
         joined[-1] = Run(last.text.rstrip(" \n"), last.bold, last.italic, last.underline)
-    # соседи после подрезки снова склеиваем, пробелы на стыке — один
+    # пробел на стыке двух кусков — один
     merged: list[Run] = []
     for run in joined:
-        if merged and (merged[-1].bold, merged[-1].italic, merged[-1].underline) == (
-            run.bold,
-            run.italic,
-            run.underline,
-        ):
-            text = merged[-1].text + run.text
-            merged[-1] = Run(re.sub(r" {2,}", " ", text), run.bold, run.italic, run.underline)
-        else:
-            if merged and merged[-1].text.endswith(" ") and run.text.startswith(" "):
-                run = Run(run.text[1:], run.bold, run.italic, run.underline)
-            merged.append(run)
+        if merged and merged[-1].text.endswith(" ") and run.text.startswith(" "):
+            run = Run(run.text[1:], run.bold, run.italic, run.underline)
+        merged.append(run)
     return [r for r in merged if r.text]
 
 
@@ -635,6 +628,9 @@ MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 V_NS = "urn:schemas-microsoft-com:vml"
 MAX_PARSE_SECONDS = 5.0
+#: Знаков в одном абзаце и во всём тексте (как у сохранённого шаблона): больше — отказ ДО посимвольной обработки.
+MAX_PARAGRAPH_TEXT = 50_000
+MAX_TOTAL_TEXT = 100_000
 MAX_CELLS = 6000
 #: Что хранит «стоп-метка» файла: id шаблона, редакция, язык, отпечаток текста на момент скачивания.
 TAG_PREFIX = "rt-template"
@@ -666,7 +662,15 @@ class _Ctx:
     deadline: float = 0.0
     units: int = 0
     cells: int = 0
+    para_chars: int = 0
+    total_chars: int = 0
     dropped: dict = field(default_factory=lambda: {k: 0 for k in DROPPED_KINDS})
+
+    def add_chars(self, count: int) -> None:
+        self.para_chars += count
+        self.total_chars += count
+        if self.para_chars > MAX_PARAGRAPH_TEXT or self.total_chars > MAX_TOTAL_TEXT:
+            raise WordError("WORD_TOO_BIG")
 
     def tick(self, units: int = 1, cells: int = 0) -> None:
         self.units += units
@@ -737,6 +741,8 @@ def _run_chars(run, ctx: _Ctx, heading: bool) -> list[_Char]:
     text = _run_text(run)
     if not text:
         return []
+    ctx.add_chars(len(text))  # до посимвольной обработки: абзац в миллионы знаков отклоняется сразу
+    ctx.tick(0)
     props = run.find(_w("rPr"))
     style_name = ""
     bold = italic = underline = color = highlight = font = False
@@ -847,13 +853,14 @@ def _reduce_fields(chars: list[_Char], ctx: _Ctx) -> list[Run]:
             if now and not previous:
                 ctx.dropped[{"color": "colors", "font": "fonts", "highlight": "highlights"}[flag]] += 1
             previous = now
-    runs: list[Run] = []
+    groups: list[tuple[tuple[bool, bool, bool], list[str]]] = []
     for c in out:
         key = (c.bold, c.italic, c.underline)
-        if runs and (runs[-1].bold, runs[-1].italic, runs[-1].underline) == key:
-            runs[-1] = Run(runs[-1].text + c.ch, *key)
+        if groups and groups[-1][0] == key:
+            groups[-1][1].append(c.ch)
         else:
-            runs.append(Run(c.ch, *key))
+            groups.append((key, [c.ch]))
+    runs = [Run("".join(pieces), *key) for key, pieces in groups]
     return runs
 
 
@@ -887,6 +894,7 @@ def _list_kind(p, ctx: _Ctx, style_id: str) -> Optional[tuple[bool, str]]:
 
 def _para(p, ctx: _Ctx) -> tuple[Optional[Para], Optional[tuple[bool, str]], list]:
     ctx.tick()
+    ctx.para_chars = 0
     props = p.find(_w("pPr"))
     style = props.find(_w("pStyle")) if props is not None else None
     style_id = _val(style) if style is not None else ""
@@ -1055,13 +1063,21 @@ def _compare(ours: list[str], theirs: list[str]) -> dict:
         raise WordError("WORD_TOO_COMPLEX") from error
 
 
-def _assert_fresh(template, language: str, tag: str) -> None:
-    """Файл скачан с этого шаблона и текст с тех пор не менялся; чужой файл без метки принимается (сравнение всё покажет)."""
+def _assert_fresh(template, language: str, tag: str) -> bool:
+    """Файл скачан с этого шаблона, на этом языке, и текст с тех пор не менялся. Метка есть, но чужая — отказ (другой шаблон,
+    другой язык, устаревший текст). Возвращает `False` для файла без метки: он сделан не нашей выгрузкой, принимается, сравнение
+    покажет всё."""
     parts = tag.split(":") if tag.startswith(f"{TAG_PREFIX}:") else []
-    if len(parts) == 5 and parts[1] == str(template.pk) and parts[3] == language:
-        _prefix, _id, edition, _lang, fingerprint = parts
-        if edition != str(template.edition) or fingerprint != digest(template_body(template, language)):
-            raise WordError("WORD_STALE")
+    if len(parts) != 5:
+        return False
+    _prefix, template_id, edition, tagged_language, fingerprint = parts
+    if template_id != str(template.pk):
+        raise WordError("WORD_OTHER_TEMPLATE")
+    if tagged_language != language:
+        raise WordError("WORD_OTHER_LANGUAGE")
+    if edition != str(template.edition) or fingerprint != digest(template_body(template, language)):
+        raise WordError("WORD_STALE")
+    return True
 
 
 def check(template, language: str, content: bytes, name: str) -> dict:
@@ -1075,7 +1091,7 @@ def check(template, language: str, content: bytes, name: str) -> dict:
     from .document_blocks import DOCUMENT_BLOCKS, missing_required_blocks
 
     blocks, meta = read_upload(content, name)
-    _assert_fresh(template, language, meta["tag"])
+    marked = _assert_fresh(template, language, meta["tag"])
     current_html = template_body(template, language)
     new_html = sanitize_template_html(blocks_to_html(blocks))
     ours, theirs = paragraphs_of(html_to_blocks(current_html)), paragraphs_of(blocks)
@@ -1101,6 +1117,7 @@ def check(template, language: str, content: bytes, name: str) -> dict:
         "lost_markup": lost_markup(current_html) if differs else [],
         "base": digest(current_html),
         "file_sha": file_sha(content),
+        "from_elsewhere": not marked,
         "locked": locked,
         "can_apply": differs and not locked and not missing,
         "body_html": new_html,
@@ -1112,8 +1129,8 @@ def apply(template, user, language: str, content: bytes, name: str, base: str, *
 
     Закреплённый (утверждённый или на утверждении) шаблон договора не меняется — только новая редакция (`TEMPLATE_LOCKED`).
     Текст успели поменять после проверки — `WORD_BASE_CHANGED`; прислан другой файл, чем проверенный, — `WORD_FILE_CHANGED`;
-    в текущем тексте есть то, что Word не удержит (ссылки, рисунки, объединённые ячейки…), и это не подтверждено —
-    `WORD_LOSS_NOT_CONFIRMED`.
+    то, что Word не удержит (ссылки, рисунки, объединённые ячейки…), `check` перечисляет заранее, «Принять» не задерживает;
+    прежний текст остаётся в записи журнала (`event_params.previous`).
     """
     from django.core.exceptions import ValidationError
     from django.db import transaction
@@ -1133,8 +1150,6 @@ def apply(template, user, language: str, content: bytes, name: str, base: str, *
             raise WordError("WORD_BASE_CHANGED")
         before = template_body(template, language)
         new_html = sanitize_template_html(blocks_to_html(blocks))
-        if lost_markup(before) and canonical_html(before) != new_html and not confirm_loss:
-            raise WordError("WORD_LOSS_NOT_CONFIRMED")
         if len(new_html) > MAX_TEMPLATE_BODY_CHARS:
             raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
         if language == "ru":
@@ -1162,6 +1177,7 @@ def apply(template, user, language: str, content: bytes, name: str, base: str, *
             "Текст шаблона загружен из Word",
             language=language,
             file=re.sub(r"[\x00-\x1f]+", " ", name)[:120],
+            previous=before,
             **counts,
         )
     return template

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Checkbox, Segmented } from "antd";
+import { Alert, App, Button, Segmented } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -88,11 +88,10 @@ function CheckSheet({
   language: DocumentTemplateLanguage;
   applying: boolean;
   error: unknown;
-  onAccept: (confirmLoss: boolean) => void;
+  onAccept: () => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation("company");
-  const [understood, setUnderstood] = useState(false);
   const count = (kind: WordChange["kind"]) => check.items.filter((i) => i.kind === kind).length;
   const none = check.unchanged;
   const sameText = !none && !check.formatting_only && check.items.length === 0;
@@ -104,9 +103,9 @@ function CheckSheet({
       title={t("templates.word.sheetTitle", { language: language.toUpperCase() })}
       submitLabel={t("templates.word.accept")}
       saving={applying}
-      submitDisabled={!check.can_apply || (loses && !understood)}
+      submitDisabled={!check.can_apply}
       onSubmit={() => {
-        onAccept(loses);
+        onAccept();
       }}
       onCancel={onCancel}
       error={
@@ -133,6 +132,9 @@ function CheckSheet({
                 })}
           </p>
         )}
+        {check.from_elsewhere ? (
+          <p className="pf-co-hint">{t("templates.word.fromElsewhere")}</p>
+        ) : null}
         {check.locked ? (
           <Alert type="warning" showIcon message={t("templates.word.locked")} />
         ) : null}
@@ -208,14 +210,6 @@ function CheckSheet({
                     </li>
                   ))}
                 </ul>
-                <Checkbox
-                  checked={understood}
-                  onChange={(event) => {
-                    setUnderstood(event.target.checked);
-                  }}
-                >
-                  {t("templates.word.understood")}
-                </Checkbox>
               </>
             }
           />
@@ -325,7 +319,7 @@ export function useTemplateWord(
       },
     );
   };
-  const accept = (confirmLoss: boolean) => {
+  const accept = () => {
     if (!target || !file || !check) return;
     applying.mutate(
       {
@@ -335,7 +329,6 @@ export function useTemplateWord(
           language,
           base: check.base,
           file_sha: check.file_sha,
-          ...(confirmLoss ? { confirm_loss: true } : {}),
         },
       },
       {

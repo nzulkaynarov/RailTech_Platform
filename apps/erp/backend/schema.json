@@ -52081,6 +52081,12 @@
                         "description": "Языки, на которых текст заполнен (ДОК-16 дозаполняет uz и en; пустой — русский с пометкой).",
                         "readOnly": true
                     },
+                    "unknown_placeholders": {
+                        "type": "array",
+                        "items": {},
+                        "description": "Неизвестные поля трёх текстов (коды и обрывки): заметка «исправить», работу не останавливает.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -52121,6 +52127,7 @@
                     "submitted_at",
                     "term_rule",
                     "trade_secret_indefinite",
+                    "unknown_placeholders",
                     "updated_at"
                 ]
             },

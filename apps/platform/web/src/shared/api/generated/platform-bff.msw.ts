@@ -2602,6 +2602,10 @@ export const getListContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
   ...overrideResponse,
@@ -2637,6 +2641,10 @@ export const getCreateContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2677,6 +2685,10 @@ export const getListOfferedContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
   ...overrideResponse,
@@ -2693,6 +2705,7 @@ export const getCheckTemplateWordResponseMock = (
   can_apply: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   base: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  from_elsewhere: faker.datatype.boolean(),
   file_sha: faker.string.alpha({ length: { min: 10, max: 20 } }),
   dropped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -2757,6 +2770,10 @@ export const getApplyTemplateWordResponseMock = (
   body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
   edition: faker.number.int(),
   is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -2798,6 +2815,10 @@ export const getNewContractTemplateEditionResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2832,6 +2853,10 @@ export const getSubmitContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2866,6 +2891,10 @@ export const getApproveContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2900,6 +2929,10 @@ export const getReturnContractTemplateToDraftResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -19352,6 +19385,10 @@ export const getListDocumentTemplatesResponseMock = (
     body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
     edition: faker.number.int(),
     is_locked: faker.datatype.boolean(),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     is_sample: faker.datatype.boolean(),
     is_owned: faker.datatype.boolean(),
     is_active: faker.datatype.boolean(),
@@ -19376,6 +19413,10 @@ export const getCreateDocumentTemplateResponseMock = (
   body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
   edition: faker.number.int(),
   is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19469,6 +19510,10 @@ export const getUpdateDocumentTemplateResponseMock = (
   body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
   edition: faker.number.int(),
   is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19492,6 +19537,10 @@ export const getCopyDocumentTemplateResponseMock = (
   body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
   edition: faker.number.int(),
   is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),

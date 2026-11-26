@@ -1399,7 +1399,7 @@ export interface paths {
     put?: never;
     /**
      * Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)
-     * @description ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     * @description ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки), `word_other_template` и `word_other_language` (в файле метка другого шаблона или другого языка). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Предупреждения (неизвестные поля, что не сохранится) ничего не блокируют. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
      */
     post: operations["checkTemplateWord"];
     delete?: never;
@@ -1459,7 +1459,7 @@ export interface paths {
     put?: never;
     /**
      * На утверждение
-     * @description Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестная подстановка в любом из трёх языков — 422 `template_unknown_placeholders` и `details.unknown_placeholders` (коды по именам).
+     * @description Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестные поля не блокируют — ответ несёт их список в `unknown_placeholders` (заметка «исправить»), а договор с таким полем останавливается при оформлении понятной причиной.
      */
     post: operations["submitContractTemplate"];
     delete?: never;
@@ -14378,6 +14378,8 @@ export interface components {
       locked: boolean;
       /** @description Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет) */
       languages: ("ru" | "uz" | "en")[];
+      /** @description Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует */
+      unknown_placeholders: string[];
       updated_at: string;
     };
     ContractTemplateList: {
@@ -14588,11 +14590,13 @@ export interface components {
       locked: boolean;
       /** @description Отпечаток текущего текста; отдаётся обратно в «Принять» */
       base: string;
+      /** @description В файле нет метки нашей выгрузки (скачан не отсюда): сравнивать внимательно */
+      from_elsewhere: boolean;
       /** @description Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409 */
       file_sha: string;
       /** @description Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights` */
       dropped: components["schemas"]["WordCount"][];
-      /** @description Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя */
+      /** @description Что есть в ТЕКУЩЕМ тексте и не сохранится после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; панель только перечисляет, «Принять» не задерживается; прежний текст остаётся в записи журнала */
       lost_markup: components["schemas"]["WordCount"][];
       /** @description Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение */
       unknown_placeholders: string[];
@@ -14615,6 +14619,8 @@ export interface components {
       edition: number;
       /** @description Закреплённый шаблон договора (утверждён или на утверждении) — правки только новой редакцией */
       is_locked: boolean;
+      /** @description Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует */
+      unknown_placeholders: string[];
       /** @description Образец платформы: правится только копия (`/copy`) */
       is_sample: boolean;
       /** @description Шаблон своей компании */
@@ -23007,8 +23013,6 @@ export interface operations {
         base: string;
         /** @description Отпечаток файла из `checkTemplateWord`: другой файл — 409 */
         file_sha: string;
-        /** @description Подтверждение: пропадёт то, что в `lost_markup` проверки; без него при непустом списке — 422 `word_loss_not_confirmed` */
-        confirm_loss?: boolean;
       };
       header: {
         /** @description Значение cookie `rt_pf_csrf` */

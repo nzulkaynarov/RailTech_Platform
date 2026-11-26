@@ -842,6 +842,7 @@ describe("Шаблоны документов и писем", () => {
         body_html_en: "",
         edition: 1,
         is_locked: false,
+        unknown_placeholders: [],
         is_sample: true,
         is_owned: false,
         is_active: true,
@@ -882,9 +883,7 @@ describe("Шаблоны документов и писем", () => {
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
       target: { value: "<p>{{buyer_name}} {{mystery}}</p>" },
     });
-    expect(
-      await within(dialog).findByText("Неизвестная подстановка {{mystery}}"),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByText("Неизвестное поле {{mystery}}")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().docTemplates.find((t) => t.id === "3")?.body_html).toContain(
@@ -905,9 +904,7 @@ describe("Шаблоны документов и писем", () => {
     expect(
       await within(dialog).findByText("Нет в списке — в документ попадут как есть"),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/Доступные подстановки · Неизвестные подстановки: 1/),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/Доступные поля · Неизвестные поля: 1/)).toBeInTheDocument();
     expect(within(dialog).getByText("{{mystery}}", { selector: "code" })).toBeInTheDocument();
   });
 

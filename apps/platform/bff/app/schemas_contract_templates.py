@@ -31,6 +31,9 @@ class ContractTemplate(BaseModel):
     is_active: bool
     locked: bool = Field(description="Закреплённый текст: правится только новой редакцией")
     languages: list[Lang]
+    unknown_placeholders: list[str] = Field(
+        description="Неизвестные поля текстов: заметка, не блок"
+    )
     updated_at: str
 
 
@@ -81,6 +84,7 @@ def to_contract_template(raw: Mapping[str, Any]) -> ContractTemplate:
         is_active=raw.get("is_active") is True,
         locked=raw.get("is_locked") is True,
         languages=langs or ["ru"],
+        unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
         updated_at=text(raw.get("updated_at")),
     )
 
@@ -139,6 +143,7 @@ class TemplateWordCheck(BaseModel):
     )
     base: str
     file_sha: str
+    from_elsewhere: bool
     dropped: list[WordCount]
     lost_markup: list[WordCount]
     unknown_placeholders: list[str]
@@ -184,6 +189,7 @@ def to_word_check(raw: Mapping[str, Any]) -> TemplateWordCheck:
         locked=raw.get("locked") is True,
         base=text(raw.get("base")),
         file_sha=text(raw.get("file_sha")),
+        from_elsewhere=raw.get("from_elsewhere") is True,
         dropped=_counts(raw.get("dropped")),
         lost_markup=_counts(raw.get("lost_markup")),
         unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],

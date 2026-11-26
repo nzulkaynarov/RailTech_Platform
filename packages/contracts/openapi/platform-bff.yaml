@@ -2790,8 +2790,8 @@ paths:
         подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось
         относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные
         блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`,
-        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже.
-        Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Раздел `eds.projects`,
+        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки), `word_other_template` и `word_other_language` (в файле метка другого шаблона или другого языка). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже.
+        Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Предупреждения (неизвестные поля, что не сохранится) ничего не блокируют. Раздел `eds.projects`,
         `company.settings` или `eds.visa.legal` — полный.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -2842,7 +2842,6 @@ paths:
         - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
         - {name: base, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток текста из `checkTemplateWord`'}
         - {name: file_sha, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток файла из `checkTemplateWord`: другой файл — 409'}
-        - {name: confirm_loss, in: query, required: false, schema: {type: boolean}, description: 'Подтверждение: пропадёт то, что в `lost_markup` проверки; без него при непустом списке — 422 `word_loss_not_confirmed`'}
       requestBody:
         required: true
         content:
@@ -2905,7 +2904,7 @@ paths:
       operationId: submitContractTemplate
       summary: 'На утверждение'
       description: >-
-        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестная подстановка в любом из трёх языков — 422 `template_unknown_placeholders` и `details.unknown_placeholders` (коды по именам).
+        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестные поля не блокируют — ответ несёт их список в `unknown_placeholders` (заметка «исправить»), а договор с таким полем останавливается при оформлении понятной причиной.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CompanyItemId'
@@ -25042,7 +25041,7 @@ components:
       type: object
       additionalProperties: false
       description: 'Шаблон договора с утверждением (ДОК-10)'
-      required: [id, name, edition, status, counterparty, subject, approved_by, approved_at, submitted_at, is_active, locked, languages, updated_at]
+      required: [id, name, edition, status, counterparty, subject, approved_by, approved_at, submitted_at, is_active, locked, languages, unknown_placeholders, updated_at]
       properties:
         id: {type: string}
         name: {type: string}
@@ -25071,6 +25070,10 @@ components:
             enum: [ru, uz, en]
             type: string
           description: 'Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет)'
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует'
         updated_at: {type: string}
     ContractTemplateList:
       type: object
@@ -25371,13 +25374,14 @@ components:
       type: object
       additionalProperties: false
       description: Что изменится, если принять загруженный Word. Ничего не сохранено.
-      required: [unchanged, formatting_only, can_apply, locked, base, file_sha, dropped, lost_markup, unknown_placeholders, missing_blocks, summary, items]
+      required: [unchanged, formatting_only, can_apply, locked, base, file_sha, from_elsewhere, dropped, lost_markup, unknown_placeholders, missing_blocks, summary, items]
       properties:
         unchanged: {type: boolean, description: 'Изменений нет: текст и оформление те же и ничего не отброшено'}
         formatting_only: {type: boolean, description: 'Текст тот же, изменилось только оформление'}
         can_apply: {type: boolean, description: 'Принять можно: есть изменения, шаблон не закреплён, обязательные блоки на месте'}
         locked: {type: boolean, description: 'Закреплённый шаблон договора: правки только новой редакцией'}
         base: {type: string, description: 'Отпечаток текущего текста; отдаётся обратно в «Принять»'}
+        from_elsewhere: {type: boolean, description: 'В файле нет метки нашей выгрузки (скачан не отсюда): сравнивать внимательно'}
         file_sha: {type: string, description: 'Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409'}
         dropped:
           type: array
@@ -25388,7 +25392,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WordCount'
-          description: 'Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя'
+          description: 'Что есть в ТЕКУЩЕМ тексте и не сохранится после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; панель только перечисляет, «Принять» не задерживается; прежний текст остаётся в записи журнала'
         unknown_placeholders:
           type: array
           items: {type: string}
@@ -25416,6 +25420,7 @@ components:
         - body_html_en
         - edition
         - is_locked
+        - unknown_placeholders
         - is_sample
         - is_owned
         - is_active
@@ -25445,6 +25450,10 @@ components:
         is_locked:
           type: boolean
           description: Закреплённый шаблон договора (утверждён или на утверждении) — правки только новой редакцией
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует'
         is_sample:
           type: boolean
           description: 'Образец платформы: правится только копия (`/copy`)'

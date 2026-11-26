@@ -733,6 +733,7 @@ export const adminCompanyHandlers = [
           body_html_en: "",
           edition: 1,
           is_locked: false,
+          unknown_placeholders: [],
           is_sample: false,
           is_owned: true,
           is_active: body.is_active ?? true,
@@ -778,6 +779,7 @@ export const adminCompanyHandlers = [
       dropped: text.includes("IMAGES") ? [{ kind: "images", count: 2 }] : [],
       lost_markup: [],
       file_sha: "fedcba9876543210",
+      from_elsewhere: text.includes("ELSEWHERE"),
       unknown_placeholders: text.includes("UNKNOWN") ? ["warehouse.name"] : [],
       missing_blocks: [],
       summary: {

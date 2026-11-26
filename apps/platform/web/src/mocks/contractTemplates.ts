@@ -26,6 +26,7 @@ const seed = (): ContractTemplate[] => [
     is_active: true,
     locked: true,
     languages: ["ru"],
+    unknown_placeholders: [],
     updated_at: "2026-11-20T10:00:00+05:00",
   },
   {
@@ -41,6 +42,7 @@ const seed = (): ContractTemplate[] => [
     is_active: true,
     locked: true,
     languages: ["ru"],
+    unknown_placeholders: [],
     updated_at: "2026-11-18T10:00:00+05:00",
   },
   {
@@ -56,6 +58,7 @@ const seed = (): ContractTemplate[] => [
     is_active: false,
     locked: true,
     languages: ["ru"],
+    unknown_placeholders: [],
     updated_at: "2026-11-22T10:00:00+05:00",
   },
   {
@@ -71,6 +74,7 @@ const seed = (): ContractTemplate[] => [
     is_active: false,
     locked: false,
     languages: ["ru"],
+    unknown_placeholders: [],
     updated_at: "2026-11-21T10:00:00+05:00",
   },
 ];
@@ -149,6 +153,7 @@ export const contractTemplatesHandlers = [
       is_active: false,
       locked: false,
       languages: ["ru"],
+      unknown_placeholders: [],
       updated_at: new Date().toISOString(),
     };
     templates = [...templates, row];

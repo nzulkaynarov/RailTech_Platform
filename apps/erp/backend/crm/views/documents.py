@@ -274,14 +274,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     def _contract_action(self, request, fn, *args, status=200):
         template, err = fn(*args)
         if err:
-            body = {"detail": err}
-            if err == "TEMPLATE_UNKNOWN_PLACEHOLDERS":
-                from crm.services.template_word import unknown_placeholders
-
-                body["unknown_placeholders"] = unknown_placeholders(
-                    args[0].body_html, args[0].body_html_uz, args[0].body_html_en
-                )
-            return Response(body, status=403 if err.endswith("FORBIDDEN") else 400)
+            return Response({"detail": err}, status=403 if err.endswith("FORBIDDEN") else 400)
         return Response(self.get_serializer(template).data, status=status)
 
     @extend_schema(
@@ -629,7 +622,6 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     upload.name,
                     request.query_params.get("base") or "",
                     sha=request.query_params.get("file_sha") or "",
-                    confirm_loss=request.query_params.get("confirm_loss") == "true",
                 )
                 return Response(self.get_serializer(updated).data)
             return Response(word_service.check(template, language, content, upload.name))

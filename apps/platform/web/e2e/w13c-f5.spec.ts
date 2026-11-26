@@ -42,8 +42,9 @@ test.describe("Мелкие дефекты гейта C2a: G-5 и G-6", () => {
       await spaGoto(page, "/admin/company?tab=templates");
       await pickRowAction(page, "Договор поставки (наш)", "Изменить");
       const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
+      await editor.getByRole("button", { name: "Показать разметку" }).click();
       await editor.getByLabel(/^Текст шаблона/).fill("<p>{{buyer_name}} {{mystery}}</p>");
-      await expect(editor.getByText("Неизвестная подстановка {{mystery}}")).toBeVisible();
+      await expect(editor.getByText("Неизвестное поле {{mystery}}")).toBeVisible();
       await editor.getByRole("button", { name: /Сохранить/ }).click();
 
       const alert = editor.getByRole("alert");

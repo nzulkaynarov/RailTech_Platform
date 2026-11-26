@@ -38,6 +38,7 @@ const CHECK: TemplateWordCheck = {
   locked: false,
   base: "0123456789abcdef",
   file_sha: "fedcba9876543210",
+  from_elsewhere: false,
   dropped: [],
   lost_markup: [],
   unknown_placeholders: [],
@@ -222,6 +223,7 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
     pick("a.docx");
     const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
     expect(within(sheet).getByText("Неизвестные поля: 2")).toBeInTheDocument();
+    expect(within(sheet).queryByText(/утверждение/)).toBeNull();
     expect(within(sheet).getByText("{{warehouse_name}}")).toBeInTheDocument();
     expect(within(sheet).getByText("{{deal_sum}}")).toBeInTheDocument();
     expect(within(sheet).getByText("Блок: итоги и НДС")).toBeInTheDocument();
@@ -230,7 +232,7 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
     expect(within(sheet).getByRole("button", { name: "Принять изменения" })).toBeDisabled();
   });
 
-  it("в текущем тексте есть ссылки и рисунки: принять можно только после подтверждения, оно уходит в запрос", async () => {
+  it("то, что Word не удержит, перечислено над правками, а «Принять» работает сразу, без галочки", async () => {
     await openEditor();
     const calls = stubWord({
       lost_markup: [
@@ -240,16 +242,16 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
     });
     pick("a.docx");
     const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(within(sheet).getByText("После принятия не сохранятся")).toBeInTheDocument();
     expect(within(sheet).getByText("Ссылки: 2")).toBeInTheDocument();
     expect(within(sheet).getByText("Объединённые ячейки: 1")).toBeInTheDocument();
+    expect(within(sheet).queryByRole("checkbox")).toBeNull();
     const accept = within(sheet).getByRole("button", { name: "Принять изменения" });
-    expect(accept).toBeDisabled();
-    fireEvent.click(within(sheet).getByRole("checkbox", { name: "Понимаю, это пропадёт" }));
     expect(accept).toBeEnabled();
     fireEvent.click(accept);
     await screen.findByText("Текст шаблона обновлён");
     expect(calls[1]?.url).toBe(
-      "/api/v1/document-templates/2/word/apply?language=ru&base=0123456789abcdef&file_sha=fedcba9876543210&confirm_loss=true",
+      "/api/v1/document-templates/2/word/apply?language=ru&base=0123456789abcdef&file_sha=fedcba9876543210",
     );
   });
 
@@ -293,6 +295,40 @@ describe("шаблон в Word (ШАБЛ-1): редактор шаблона д�
       await screen.findByText(/Шаблон изменился после скачивания: скачайте его заново/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: /Что изменилось/ })).toBeNull();
+  });
+
+  it("файл без метки нашей выгрузки: тихая строка «сравните внимательно»; чужой шаблон или язык — отказ словами", async () => {
+    await openEditor();
+    stubWord({ from_elsewhere: true });
+    pick("a.docx");
+    const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(
+      within(sheet).getByText("Файл скачан не отсюда — сравните внимательно."),
+    ).toBeInTheDocument();
+  });
+
+  it("файл от другого шаблона называется словами", async () => {
+    await openEditor();
+    stubWord({}, "word_other_template");
+    pick("b.docx");
+    expect(await screen.findByText(/Файл от другого шаблона: скачайте нужный/)).toBeInTheDocument();
+  });
+
+  it("файл без метки нашей выгрузки: тихая строка «сравните внимательно»", async () => {
+    await openEditor();
+    stubWord({ from_elsewhere: true });
+    pick("a.docx");
+    const sheet = await screen.findByRole("dialog", { name: /Что изменилось/ });
+    expect(
+      within(sheet).getByText("Файл скачан не отсюда — сравните внимательно."),
+    ).toBeInTheDocument();
+  });
+
+  it("файл от другого шаблона называется словами", async () => {
+    await openEditor();
+    stubWord({}, "word_other_template");
+    pick("b.docx");
+    expect(await screen.findByText(/Файл от другого шаблона: скачайте нужный/)).toBeInTheDocument();
   });
 
   it("плохой файл: понятная причина, панель не открывается", async () => {

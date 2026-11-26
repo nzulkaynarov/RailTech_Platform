@@ -47,6 +47,7 @@ def erp_check(**over: Any) -> dict[str, Any]:
         "dropped": [{"kind": "images", "count": 2}, {"kind": "colors", "count": 1}],
         "lost_markup": [{"kind": "links", "count": 1}],
         "file_sha": "fedcba9876543210",
+        "from_elsewhere": False,
         "base": BASE,
         "locked": False,
         "can_apply": True,
@@ -66,6 +67,7 @@ def erp_template(**over: Any) -> dict[str, Any]:
         "body_html_en": "",
         "edition": 2,
         "is_locked": False,
+        "unknown_placeholders": [],
         "is_sample": False,
         "is_owned": True,
         "is_active": False,
@@ -147,14 +149,14 @@ async def test_apply_sends_the_base_and_returns_the_template(
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     response = await upload(
         web,
-        f"/api/v1/document-templates/12/word/apply?language=en&base={BASE}&file_sha=fedcba9876543210&confirm_loss=true",
+        f"/api/v1/document-templates/12/word/apply?language=en&base={BASE}&file_sha=fedcba9876543210",
     )
     assert response.status_code == 200, response.text
     check(response, "/document-templates/{id}/word/apply", "post")
     assert response.json()["edition"] == 2
     params = route.calls.last.request.url.params
     assert (params["mode"], params["language"], params["base"]) == ("apply", "en", BASE)
-    assert (params["file_sha"], params["confirm_loss"]) == ("fedcba9876543210", "true")
+    assert params["file_sha"] == "fedcba9876543210"
 
 
 async def test_apply_needs_a_proper_base(web: Web, be: Backends) -> None:
@@ -194,6 +196,10 @@ async def test_not_multipart_is_refused(web: Web, be: Backends) -> None:
         "WORD_UNREADABLE",
         "WORD_TOO_BIG",
         "WORD_TOO_COMPLEX",
+        "WORD_STALE",
+        "WORD_LOSS_NOT_CONFIRMED",
+        "WORD_OTHER_TEMPLATE",
+        "WORD_OTHER_LANGUAGE",
     ],
 )
 async def test_erp_refusals_come_as_reasons(web: Web, be: Backends, code: str) -> None:
@@ -239,19 +245,30 @@ async def test_reader_downloads_but_does_not_upload(web: Web, be: Backends) -> N
     assert denied.status_code == 403
 
 
-async def test_submit_names_the_unknown_placeholders(web: Web, be: Backends) -> None:
+async def test_submit_goes_through_and_carries_the_unknown_fields_as_a_note(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
     be.router.post(f"{ERP}/12/submit/").mock(
         return_value=httpx.Response(
-            400,
-            json={"detail": "TEMPLATE_UNKNOWN_PLACEHOLDERS", "unknown_placeholders": ["a.b", "c"]},
+            200,
+            json={
+                "id": 12,
+                "name": "Договор",
+                "approval_status": "on_approval",
+                "edition": 2,
+                "is_active": False,
+                "is_locked": True,
+                "languages": ["ru"],
+                "unknown_placeholders": ["a.b", "{{c}"],
+                "updated_at": "2026-11-26T10:00:00+05:00",
+            },
         )
     )
     assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
     response = await web.send("POST", "/api/v1/document-templates/contracts/12/submit")
-    assert response.status_code == 422
-    details = response.json()["details"]
-    assert details["reason"] == "template_unknown_placeholders"
-    assert details["unknown_placeholders"] == ["a.b", "c"]
+    assert response.status_code == 200
+    check(response, "/document-templates/contracts/{id}/submit", "post")
+    assert response.json()["unknown_placeholders"] == ["a.b", "{{c}"]
 
 
 async def test_sample_from_a_stored_template_takes_the_text_of_its_language(

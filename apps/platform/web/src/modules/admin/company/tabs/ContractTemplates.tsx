@@ -24,18 +24,9 @@ import { LanguageTabs, useTemplateWord } from "../TemplateWord";
 import type { DocumentTemplateLanguage } from "../templateWord";
 
 /** Текст отказа словами: подкод ERP (`details.reason`), иначе общий. */
-function refusal(
-  t: (key: string, options?: { defaultValue?: string; list?: string }) => string,
-  error: unknown,
-) {
+function refusal(t: (key: string, options?: { defaultValue?: string }) => string, error: unknown) {
   if (error instanceof ApiError) {
     const reason = error.details["reason"];
-    const unknown = error.details["unknown_placeholders"];
-    if (reason === "template_unknown_placeholders" && Array.isArray(unknown)) {
-      return t("contractTemplates.errors.template_unknown_placeholders", {
-        list: unknown.map((code) => `{{${String(code)}}}`).join(", "),
-      });
-    }
     if (typeof reason === "string") {
       const text = t(`contractTemplates.errors.${reason}`, { defaultValue: "" });
       if (text) return text;
@@ -81,7 +72,22 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
     mutation: { onSuccess: done("contractTemplates.done.edition"), onError: failed },
   });
   const submit = useSubmitContractTemplate({
-    mutation: { onSuccess: done("contractTemplates.done.submit"), onError: failed },
+    mutation: {
+      onSuccess: (next) => {
+        done("contractTemplates.done.submit")();
+        // Неизвестные поля не держат отправку: заметка рядом с результатом
+        if (next.unknown_placeholders.length > 0) {
+          void message.warning(
+            t("contractTemplates.warn.unknown", {
+              list: next.unknown_placeholders
+                .map((code) => (code.includes("{") ? code : `{{${code}}}`))
+                .join(", "),
+            }),
+          );
+        }
+      },
+      onError: failed,
+    },
   });
   const approve = useApproveContractTemplate({
     mutation: { onSuccess: done("contractTemplates.done.approve"), onError: failed },
@@ -199,6 +205,15 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                         <Typography.Text type="secondary">
                           {" "}
                           · {t("contractTemplates.notOffered")}
+                        </Typography.Text>
+                      ) : null}
+                      {row.unknown_placeholders.length > 0 ? (
+                        <Typography.Text type="secondary">
+                          {" "}
+                          ·{" "}
+                          {t("contractTemplates.unknownRow", {
+                            count: row.unknown_placeholders.length,
+                          })}
                         </Typography.Text>
                       ) : null}
                       {row.languages.length < 3 ? (

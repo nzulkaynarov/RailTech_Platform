@@ -21,11 +21,13 @@ export interface TemplateWordCheck {
   locked: boolean;
   /** Отпечаток текущего текста; отдаётся обратно в «Принять» */
   base: string;
+  /** В файле нет метки нашей выгрузки (скачан не отсюда): сравнивать внимательно */
+  from_elsewhere: boolean;
   /** Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409 */
   file_sha: string;
   /** Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights` */
   dropped: WordCount[];
-  /** Что есть в ТЕКУЩЕМ тексте и пропадёт после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; пока не подтверждено (`confirm_loss`), принять нельзя */
+  /** Что есть в ТЕКУЩЕМ тексте и не сохранится после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; панель только перечисляет, «Принять» не задерживается; прежний текст остаётся в записи журнала */
   lost_markup: WordCount[];
   /** Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение */
   unknown_placeholders: string[];
