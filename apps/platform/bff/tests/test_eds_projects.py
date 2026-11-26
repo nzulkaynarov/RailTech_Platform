@@ -405,6 +405,57 @@ async def test_contract_action_calls_the_erp_operation_of_the_contract_from_the_
     assert len(erp.posts()) == 1
 
 
+# ДП-1: «Подписан» заметкой и замечания контрагента — BFF лишь переводит тело в вызов ERP
+async def test_mark_signed_needs_a_note_and_goes_to_the_erp(web: Web, erp: ProjectsFake) -> None:
+    await _as(web, "ACCOUNTANT")
+    empty = await web.send(
+        "POST", f"{BASE}/{NUMBER}/contract", json={"action": "mark_signed", "note": "  "}
+    )
+    assert empty.status_code == 422
+    assert not erp.posts()
+    response = await web.send(
+        "POST",
+        f"{BASE}/{NUMBER}/contract",
+        json={"action": "mark_signed", "note": " Подписан в офисе "},
+    )
+    assert response.status_code == 200
+    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/mark-signed/") == {
+        "note": "Подписан в офисе"
+    }
+
+
+@pytest.mark.parametrize(
+    ("body", "slug", "expected"),
+    [
+        (
+            {"action": "remark_vote", "approve": False, "text": " Пеню оставляем "},
+            "remark-vote",
+            {"agree": False, "comment": "Пеню оставляем"},
+        ),
+        ({"action": "remark_vote", "approve": True}, "remark-vote", {"agree": True, "comment": ""}),
+        (
+            {"action": "remark_decide", "approve": False, "text": "Предоплата 40 %"},
+            "remark-decide",
+            {"accept": False, "text": "Предоплата 40 %"},
+        ),
+    ],
+)
+async def test_remark_answers_reach_the_erp_for_any_staff_role_the_erp_allows(
+    web: Web, erp: ProjectsFake, body: dict[str, Any], slug: str, expected: dict[str, Any]
+) -> None:
+    await _as(web, "MANAGER")  # ответственный без полного доступа к проектам: решает ERP по праву
+    response = await web.send("POST", f"{BASE}/{NUMBER}/contract", json=body)
+    assert response.status_code == 200, response.text
+    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/{slug}/") == expected
+
+
+async def test_remark_answer_without_a_choice_is_422(web: Web, erp: ProjectsFake) -> None:
+    await _as(web, "ACCOUNTANT")
+    response = await web.send("POST", f"{BASE}/{NUMBER}/contract", json={"action": "remark_vote"})
+    assert response.status_code == 422
+    assert not erp.posts()
+
+
 @pytest.mark.parametrize(
     "body",
     [

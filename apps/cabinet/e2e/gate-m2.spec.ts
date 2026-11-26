@@ -416,14 +416,14 @@ test.describe('C. КП: «Требует вашего решения», прин
 test.describe('D. Договор → счёт', () => {
   step('D1. договор: подписать (клиент)', async () => {
     await open('/requests');
-    await expect(client.getByText('Согласовать договор')).toBeVisible();
+    await expect(client.getByText('Принять редакцию')).toBeVisible();
     await snap(client, 'requests-action-required-contract');
     await open('/contracts');
     await expect(client.getByText('1 договор ждёт вашей подписи')).toBeVisible();
     await snap(client, 'contracts-awaiting-signature');
     await client.getByRole('button', { name: /^Подписать/ }).first().click();
     await snap(client, 'contract-sign-dialog');
-    await client.getByRole('dialog').getByRole('button', { name: 'Согласовать договор' }).click();
+    await client.getByRole('dialog').getByRole('button', { name: 'Принять редакцию' }).click();
     await expect(client.getByText(/подписан\. Ждём подписи исполнителя/)).toBeVisible();
     await snap(client, 'contracts-signed-by-client');
   });
@@ -689,7 +689,7 @@ test.describe('G. Новый запрос из каталога → отказ �
     await expect(client.getByText('Предложение принято').first()).toBeVisible();
     await open('/contracts');
     await client.getByRole('button', { name: /^Подписать/ }).first().click();
-    await client.getByRole('dialog').getByRole('button', { name: 'Согласовать договор' }).click();
+    await client.getByRole('dialog').getByRole('button', { name: 'Принять редакцию' }).click();
     await expect(client.getByText(/подписан\. Ждём подписи исполнителя/)).toBeVisible();
     const contractId = await contractIdByDeal(erp, state.dealB!);
     state.invoiceB = await signAndInvoice(erp, state.dealB!, contractId);

@@ -215,6 +215,15 @@ export const useAddQuoteComment = (id: number) =>
   useInvalidatingMutation((text: string) => portal.addQuoteComment(id, text), [keys.quote(id)]);
 
 export const useSignContract = () => useInvalidatingMutation(portal.signContract, [keys.contracts, ['documents']]);
+/** «Есть замечания»: сначала своя редакция в `POST /uploads` (если приложена), затем `POST /contracts/{id}/remarks`. */
+export const useSubmitContractRemarks = () =>
+  useInvalidatingMutation(
+    async ({ id, comment, file }: { id: number; comment: string; file: File | null }) => {
+      const upload_id = file ? (await portal.uploadFile(file)).upload_id : undefined;
+      return portal.submitContractRemarks(id, { comment, ...(upload_id ? { upload_id } : {}) });
+    },
+    [keys.contracts],
+  );
 export const useDeclineContractRenewal = () => useInvalidatingMutation(portal.declineContractRenewal, [keys.contracts]);
 export const useRestoreContractRenewal = () => useInvalidatingMutation(portal.restoreContractRenewal, [keys.contracts]);
 /**

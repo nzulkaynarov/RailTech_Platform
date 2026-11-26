@@ -5,7 +5,7 @@ derivation, numbering, status transitions), so these are thin read serializers p
 a couple of write fields the ViewSet hands to the services.
 """
 
-from documents.models.documents import ContractSubject, CounterpartyKind
+from documents.models.documents import BaseRole, ContractSubject, CounterpartyKind
 from rest_framework import serializers
 
 from core.contract_term import ContractRenewalMode, ContractTermRule
@@ -26,6 +26,8 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
     # Только у шаблонов договора; у остальных видов пусто — схема обязана это допускать.
     counterparty_kind = serializers.ChoiceField(choices=CounterpartyKind.choices, allow_blank=True, read_only=True)
     subject = serializers.ChoiceField(choices=ContractSubject.choices, allow_blank=True, read_only=True)
+    # ОСН-1: базовый документ компании; пусто — обычный шаблон. Правится `PATCH` в черновике.
+    base_role = serializers.ChoiceField(choices=BaseRole.choices, allow_blank=True, read_only=True)
     # ДС-1: срок договора по шаблону; пусто — как у компании. Правится `PATCH` как поля шаблона договора в черновике.
     term_rule = serializers.ChoiceField(choices=ContractTermRule.choices, allow_blank=True, read_only=True)
     renewal_mode = serializers.ChoiceField(choices=ContractRenewalMode.choices, allow_blank=True, read_only=True)
@@ -50,6 +52,7 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "submitted_at",
             "counterparty_kind",
             "subject",
+            "base_role",
             "term_rule",
             "renewal_mode",
             "notice_days",
@@ -70,6 +73,7 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
             "submitted_at",
             "counterparty_kind",
             "subject",
+            "base_role",
             "term_rule",
             "renewal_mode",
             "notice_days",

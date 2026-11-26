@@ -40,8 +40,10 @@ router = APIRouter(prefix="/eds", tags=["eds-projects"])
 Reader = Annotated[Authed, Depends(require("eds.projects", "read"))]
 Writer = Annotated[Authed, Depends(require("eds.projects", "full"))]
 # ДОК-10: решает по отступлению держатель «Право» (`eds.visa.legal`); «Проекты» у него — чтение.
+# ДП-1: отвечать на замечания контрагента может и автор КП с «Проекты» — чтение; остальные действия
+# по договору — только полный доступ (проверка в `contract_action`); вправе ли — решает ERP.
 Decider = Annotated[
-    Authed, Depends(require_any(("eds.projects", "full"), ("eds.visa.legal", "full")))
+    Authed, Depends(require_any(("eds.projects", "read"), ("eds.visa.legal", "full")))
 ]
 Ref = Annotated[str, Path(min_length=1, max_length=64)]
 
@@ -84,8 +86,11 @@ async def _scan_body(request: Request) -> tuple[bytes, str]:
     return bytes(body), content_type
 
 
+_ERP_DECIDES = frozenset({"decide_deviation", "remark_vote", "remark_decide"})
+
+
 def _extension(variant: str, upstream: httpx.Headers) -> str:
-    """Расширение скана — из имени файла ERP, только из белого списка; PDF — всегда `pdf`."""
+    """Расширение скана — из имени файла ERP (белый список — в `file_names`); PDF — всегда `pdf`."""
     if variant == "pdf":
         return "pdf"
     given = upstream.get("content-disposition") or ""
@@ -150,7 +155,8 @@ async def create_contract(ref: Ref, authed: Writer) -> ProjectCard:
     "/projects/{ref}/contract", response_model=ProjectCard, operation_id="actEdsProjectContract"
 )
 async def contract_action(ref: Ref, body: ContractActionIn, authed: Decider) -> ProjectCard:
-    if body.action != "decide_deviation" and not allows(authed.access, "eds.projects", "full"):
+    # Решение «Право», ответ на замечания и решение директора: кто вправе — определяет ERP (права).
+    if body.action not in _ERP_DECIDES and not allows(authed.access, "eds.projects", "full"):
         raise PlatformError(
             "FORBIDDEN",
             "Раздел или действие не положены вашей роли.",
@@ -275,7 +281,7 @@ async def download_file(
     kind: FileKind,
     doc_id: Annotated[int, Path(ge=1, le=2**31 - 1)],
     authed: Reader,
-    variant: Literal["pdf", "scan"] = "pdf",
+    variant: Literal["pdf", "scan", "docx", "remark"] = "pdf",
 ) -> Response:
     variant_: FileVariant = variant
     erp = _erp(authed)

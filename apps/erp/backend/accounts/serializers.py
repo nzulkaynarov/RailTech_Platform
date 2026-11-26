@@ -76,6 +76,7 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "contract_expired_action",
             "contract_foreign_by_agreement",
             "contract_gating_kinds",
+            "partner_base_roles",
             "doc_number_prefix",
             "created_at",
             "updated_at",
@@ -140,6 +141,7 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
             "contract_expired_action",
             "contract_foreign_by_agreement",
             "contract_gating_kinds",
+            "partner_base_roles",
             "doc_number_prefix",
         ]
         extra_kwargs = {"min_margin_percent": {"required": False}, "target_margin_percent": {"required": False}}

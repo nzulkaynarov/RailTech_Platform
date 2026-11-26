@@ -8,6 +8,7 @@ import {
   settledScreenshot,
   waitForMotionEnd,
 } from "./support/app";
+import { chooseOption } from "./support/fields";
 import { pickRowAction } from "./support/rowActions";
 
 // EDS-REG PR 1 на MSW: Настройки · Процессы · Справочники (до SET-IA — «Документооборот») — администратор добавляет способ получения и скрывает
@@ -64,17 +65,16 @@ test.describe("EDS-REG · справочники документооборот�
       .click();
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Правила работы", exact: true })
+      .getByRole("link", { name: "Справочники", exact: true })
       .click();
-    await page.getByRole("link", { name: /Справочники/ }).click();
     await expect(page).toHaveURL(/\/admin\/dictionaries/);
     await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
-    await page.getByRole("link", { name: "Виды входящих документов" }).click();
+    await chooseOption(page.getByLabel("Справочники по разделам"), "Виды входящих документов");
     await expect(page.getByText("Требование или уведомление ГНК", { exact: true })).toBeVisible();
     await shoot(page, "dictionaries-kinds");
 
     // 2. Способы получения: добавить «Фельдъегерская связь», скрыть «Курьер».
-    await page.getByText("Способы получения", { exact: true }).click();
+    await chooseOption(page.getByLabel("Справочники по разделам"), "Способы получения");
     await expect(
       page.getByText("Кабинет налогоплательщика my.soliq", { exact: true }),
     ).toBeVisible();

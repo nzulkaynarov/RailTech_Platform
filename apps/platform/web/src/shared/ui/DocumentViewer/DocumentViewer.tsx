@@ -30,6 +30,8 @@ export interface DocumentViewerProps {
   onDownload?: () => void;
   /** «О документе»: правая колонка слоя на весь экран (вид, номер, дата, статус, контрагент — что известно) */
   about?: ReactNode;
+  /** `false` — в панели нет своего «Скачать» (его уже даёт экран); на весь экран кнопка есть всегда */
+  panelDownload?: boolean;
 }
 
 function extensionOf(type: string | undefined): string {
@@ -135,6 +137,7 @@ function PdfSurface({
   initialPage = 1,
   onDownload,
   about,
+  panelDownload,
   onPage,
   onFull,
   onClose,
@@ -172,6 +175,7 @@ function PdfSurface({
       onFull={onFull}
       onClose={onClose}
       about={mode === "full" ? about : undefined}
+      showDownload={mode === "full" || panelDownload !== false}
       thumbs={
         thumbsShown && pdf && api.pages > 1 ? (
           <PageThumbs pdf={pdf} pages={api.pages} page={api.page} onGo={api.goTo} />
@@ -200,6 +204,7 @@ function ImageSurface({
   mode,
   onDownload,
   about,
+  panelDownload,
   onFull,
   onClose,
 }: SurfaceProps) {
@@ -254,6 +259,7 @@ function ImageSurface({
       onFull={onFull}
       onClose={onClose}
       about={mode === "full" ? about : undefined}
+      showDownload={mode === "full" || panelDownload !== false}
       thumbs={null}
       onStageClick={phone && mode === "panel" ? onFull : undefined}
     >
@@ -295,6 +301,7 @@ function Frame({
   onFull,
   onClose,
   about,
+  showDownload,
   thumbs,
   onStageClick,
   children,
@@ -307,6 +314,7 @@ function Frame({
   onFull?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
   about?: React.ReactNode;
+  showDownload: boolean;
   thumbs: React.ReactNode;
   onStageClick?: (() => void) | undefined;
   children: React.ReactNode;
@@ -366,6 +374,7 @@ function Frame({
         onDownload={onDownload}
         onFull={onFull}
         onClose={onClose}
+        showDownload={showDownload}
       />
       <div className="pf-dv-body">
         {thumbs}

@@ -12,6 +12,7 @@ export default function PdfViewer({
   type,
   onDownload,
   about,
+  panelDownload,
 }: {
   data: ArrayBuffer;
   name: string;
@@ -21,6 +22,8 @@ export default function PdfViewer({
   onDownload?: () => void;
   /** «О документе» в слое на весь экран */
   about?: ReactNode;
+  /** `false` — в панели нет своего «Скачать» (его уже даёт экран) */
+  panelDownload?: boolean;
 }) {
   return (
     <DocumentViewer
@@ -29,6 +32,7 @@ export default function PdfViewer({
       {...(type ? { type } : {})}
       {...(onDownload ? { onDownload } : {})}
       {...(about ? { about } : {})}
+      {...(panelDownload === false ? { panelDownload } : {})}
       mode="panel"
     />
   );

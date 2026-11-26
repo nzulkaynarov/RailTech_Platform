@@ -358,7 +358,8 @@ paths:
         очередь «Заявки партнёров» (`source = lead`, `source_ref` = номер лида `lead_number`). Согласия кандидата ещё нет —
         дальше обычный договорный шлюз; компания создаётся при одобрении, а не здесь. Идемпотентно по `lead_number`:
         повтор и параллельный повтор (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй строки в очереди;
-        отклонённая заявка повтор не блокирует. Почта обязательна.
+        отклонённая заявка повтор не блокирует. Почта не обязательна (ПК-1): хватает телефона или Telegram лида, приглашение
+        в Кабинет уйдёт, когда адрес появится.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -1155,7 +1156,7 @@ components:
     PartnerApplicationIn:
       type: object
       description: Заявка кандидата в партнёры из карточки лида CRM (ЛП-1)
-      required: [crm_lead_id, lead_number, company_name, categories_description, contact_name, email]
+      required: [crm_lead_id, lead_number, company_name, categories_description, contact_name]
       properties:
         crm_lead_id:
           type: integer
@@ -1195,7 +1196,7 @@ components:
           type: string
           format: email
           maxLength: 254
-          description: Почта кандидата — по ней договорный шлюз ERP приглашает его согласовать договор; обязательна
+          description: Почта кандидата (необязательна, ПК-1) — по ней ERP приглашает его в Кабинет; нет почты — приглашение позже
         phone:
           type: string
           maxLength: 32

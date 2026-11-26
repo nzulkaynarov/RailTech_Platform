@@ -150,7 +150,7 @@ describe("EDS · Документы: список", () => {
       "tr",
     ) as HTMLElement;
     expect(within(contract).getByText("ДОГ-2026/105")).toBeVisible();
-    expect(within(contract).getByText("Согласован клиентом")).toBeVisible();
+    expect(within(contract).getByText("Ожидает подписания")).toBeVisible();
     expect(
       within(contract).getByRole("link", {
         name: "Открыть в проекте: Поставка стрелочных переводов",

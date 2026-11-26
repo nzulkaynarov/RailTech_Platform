@@ -16,7 +16,12 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import get_private_storage, partner_application_contract_path, partner_application_scan_path
+from core.storage import (
+    get_private_storage,
+    partner_application_contract_path,
+    partner_application_scan_path,
+    partner_package_document_path,
+)
 
 from .relationships import PartnerKind
 
@@ -240,6 +245,41 @@ class PartnerApplication(models.Model):
         verbose_name=_("Скан подписанного договора"),
     )
     signed_scan_at = models.DateTimeField(null=True, blank=True)
+    # ПК-1: общий путь договора. Редакция контрагента (его DOCX) — вложение и точка правды; голоса ответственных за договор;
+    # «Подписан» отмечает менеджер со сканом ИЛИ заметкой; срок считается в этот момент по правилу компании (ДС-1).
+    candidate_file = models.FileField(
+        upload_to=partner_application_contract_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Редакция кандидата"),
+        help_text=_(
+            "Свой DOCX, который кандидат приложил к замечаниям; он же становится файлом договора на согласовании"
+        ),
+    )
+    contract_approval_votes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Голоса ответственных за договор"),
+        help_text=_("[{user_id, name, decision, note, at}]; сбрасывается новой редакцией"),
+    )
+    signed_note = models.TextField(
+        max_length=1000, blank=True, default="", verbose_name=_("Заметка об отметке «подписан»")
+    )
+    signed_marked_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Когда отмечено «подписан»"))
+    contract_valid_from = models.DateField(null=True, blank=True, verbose_name=_("Договор действует с"))
+    contract_valid_until = models.DateField(null=True, blank=True, verbose_name=_("Договор действует до"))
+    contract_last_notice_date = models.DateField(null=True, blank=True, verbose_name=_("Последний день отказа"))
+    contract_term_rule = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Правило срока"))
+    contract_renewal_mode = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Продление"))
+    contract_notice_days = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name=_("Дней на отказ"))
+    from_archive = models.BooleanField(
+        default=False,
+        verbose_name=_("Внесено из архива"),
+        help_text=_(
+            "ОСН-1: партнёр подписал бумажный пакет раньше; записано сразу в конечном состоянии, без Кабинета и уведомлений"
+        ),
+    )
     contract_draft_sent_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -290,3 +330,64 @@ class PartnerApplication(models.Model):
 
     def __str__(self):
         return f"{self.company_name} ({self.get_kind_display()}): {self.status}"
+
+
+class PartnerApplicationDocument(models.Model):
+    """ОСН-1: документ пакета базовых документов кандидата в партнёры.
+
+    Пакет собирается из утверждённых шаблонов ролей, которые компания выдаёт партнёрам (`CompanySettings.partner_base_roles`).
+    Принятие, замечания, подпись — у заявки целиком (одно действие на пакет); здесь — сам документ, редакция шаблона,
+    что с ним вернул кандидат и срок, посчитанный в момент отметки «подписан».
+    """
+
+    application = models.ForeignKey(PartnerApplication, on_delete=models.CASCADE, related_name="package_documents")
+    base_role = models.CharField(max_length=16, verbose_name=_("Базовый документ"))
+    template = models.ForeignKey(
+        "documents.DocumentTemplate",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Шаблон"),
+    )
+    template_edition = models.PositiveSmallIntegerField(default=1, verbose_name=_("Редакция шаблона"))
+    title = models.CharField(max_length=255, verbose_name=_("Название на момент подготовки"))
+    number = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Номер"))
+    position = models.PositiveSmallIntegerField(default=0, verbose_name=_("Порядок"))
+    file = models.FileField(
+        storage=get_private_storage, upload_to=partner_package_document_path, verbose_name=_("Файл документа")
+    )
+    candidate_file = models.FileField(
+        storage=get_private_storage,
+        upload_to=partner_package_document_path,
+        null=True,
+        blank=True,
+        verbose_name=_("Редакция кандидата"),
+    )
+    candidate_remark = models.TextField(max_length=1000, blank=True, default="", verbose_name=_("Замечание кандидата"))
+    valid_from = models.DateField(null=True, blank=True, verbose_name=_("Действует с"))
+    valid_until = models.DateField(null=True, blank=True, verbose_name=_("Действует до"))
+    confidentiality_years = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name=_("Тайна после окончания (лет)")
+    )
+    trade_secret_indefinite = models.BooleanField(default=False, verbose_name=_("Коммерческая тайна — без срока"))
+    from_archive = models.BooleanField(default=False, verbose_name=_("Внесён из архива"))
+    signed_on = models.DateField(null=True, blank=True, verbose_name=_("Подписан (дата на бумаге)"))
+    signed_scan = models.FileField(
+        storage=get_private_storage,
+        upload_to=partner_package_document_path,
+        null=True,
+        blank=True,
+        verbose_name=_("Скан подписанного"),
+    )
+
+    class Meta:
+        verbose_name = _("Документ пакета кандидата")
+        verbose_name_plural = _("Документы пакета кандидата")
+        ordering = ["position", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["application", "base_role"], name="part_pkg_one_per_role"),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.application_id})"

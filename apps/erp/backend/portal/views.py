@@ -21,6 +21,7 @@ from parties.models import (
     PartnerApplication,
     PartnerApplicationSource,
     PartnerApplicationStatus,
+    PartnerContractApproval,
     RelationshipRole,
     RelationshipStatus,
     active_contact_q,
@@ -106,7 +107,7 @@ from portal.throttles import (
     PortalVerifyRateThrottle,
 )
 from rest_framework import exceptions, status
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from sales.models import DeliveryLine
@@ -910,6 +911,8 @@ class ContractSignView(BasePortalView):
         if not contract:
             raise Http404
 
+        if contract.remarks.filter(resolution="").exists():
+            raise PortalConflict("REMARK_OPEN")  # ДП-1: сначала ответ компании на замечания
         # Подпись и переход статуса — только сервис ERP: двусторонняя подпись, аудит, закрытие сделки (P-5).
         _, error = sign_contract_by_client(contract.pk, portal_contact=request.portal_contact)
         if error == "CONTRACT_CLIENT_SIGN_NOT_ALLOWED":
@@ -917,6 +920,59 @@ class ContractSignView(BasePortalView):
         if error:
             raise exceptions.PermissionDenied("FORBIDDEN")
         return Response(ContractSerializer(_client_contracts(request.portal_company).get(pk=pk)).data)
+
+
+class ContractRemarksView(BasePortalView):
+    """POST /contracts/{id}/remarks — «Есть замечания»: комментарий и, при желании, своя редакция DOCX/XLSX (ДП-1)."""
+
+    required_module = "contracts"
+
+    def post(self, request, pk):
+        from crm.services import contract_remarks
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract:
+            raise Http404
+        data = request.data if isinstance(request.data, dict) else {}
+        comment, upload_id = data.get("comment"), data.get("upload_id")
+        if not isinstance(comment, str) or (upload_id is not None and not isinstance(upload_id, str)):
+            raise PortalValidationError("VALIDATION_ERROR")
+        _, error = contract_remarks.submit_remark(
+            contract.pk, contact=request.portal_contact, comment=comment, upload_id=upload_id
+        )
+        if error in ("CONTRACT_REMARK_NOT_ALLOWED", "REMARK_OPEN"):
+            raise PortalConflict(error)
+        if error in ("COMMENT_REQUIRED", "UPLOAD_NOT_FOUND", "FILE_INVALID"):
+            raise PortalValidationError(error if error != "FILE_INVALID" else "VALIDATION_ERROR")
+        if error:
+            raise exceptions.PermissionDenied("FORBIDDEN")
+        return Response(
+            ContractSerializer(
+                _client_contracts(request.portal_company).get(pk=pk),
+                context={"can_act": request.portal_contact.can_act},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ContractDocxView(BasePortalView):
+    """GET /contracts/{id}/docx — наша редакция в DOCX для правок, пока договор у клиента на согласовании (ДП-1)."""
+
+    required_module = "contracts"
+
+    def get(self, request, pk):
+        from crm.constants import ContractStatusCode
+        from crm.services import contract_compare
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract or contract.status_code != ContractStatusCode.PENDING_CLIENT:
+            raise Http404
+        response = HttpResponse(
+            contract_compare.contract_docx(contract),
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{contract.number}.docx"'
+        return response
 
 
 class ContractRestoreRenewalView(BasePortalView):
@@ -1717,8 +1773,11 @@ class CompanyPartnerContractPdfView(BasePortalView):
             PartnerApplicationStatus.APPROVED,
         ):
             raise exceptions.NotFound("NOT_FOUND")
+        doc = request.query_params.get("doc")
         try:
-            data, content_type, name = contract_step.read_file(contract_step.current_document(app))
+            # ОСН-1: документ пакета открывается по `doc`; без него — основной договор, как раньше
+            field = contract_step.package_document(app, doc).file if doc else contract_step.current_document(app)
+            data, content_type, name = contract_step.read_file(field)
         except AccessError:
             raise exceptions.NotFound("NOT_FOUND") from None
         response = HttpResponse(data, content_type=content_type)
@@ -1746,6 +1805,9 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
             )
             if not app:
                 raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
+            # Редакция кандидата ещё на согласовании у нас: принять договор рано, сначала ответ от нас (ПК-1)
+            if app.contract_approval == PartnerContractApproval.REQUESTED:
+                raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
 
             notes = (request.data.get("notes") or "").strip()
             app.status = PartnerApplicationStatus.CANDIDATE_AGREED
@@ -1759,9 +1821,13 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
 
 
 class CompanyPartnerContractReturnView(BasePortalView):
-    """POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1)."""
+    """POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.
+
+    JSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды. В пакете документов (ОСН-1)
+    `document` — id документа, к которому относится замечание или файл."""
 
     required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
+    parser_classes = [JSONParser, MultiPartParser]
 
     def post(self, request):
         from portal.desk import service_partner_contract as contract_step
@@ -1779,7 +1845,9 @@ class CompanyPartnerContractReturnView(BasePortalView):
             if not app:
                 raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
             try:
-                contract_step.candidate_return(app, request.data.get("notes") or "")
+                contract_step.candidate_return(
+                    app, request.data.get("notes") or "", request.FILES.get("file"), request.data.get("document")
+                )
             except AccessError as error:
                 raise PortalBadRequest(error.code) from None
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)

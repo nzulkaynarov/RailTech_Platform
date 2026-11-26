@@ -29,9 +29,11 @@ import { reasonText } from "./errors";
 import { ProjectStatusTag } from "./status";
 import { useAboutDocument } from "./aboutDocument";
 import { FileLinks } from "./FileLinks";
-import { NoteField, ReasonForm, ScanForm } from "./forms";
+import { ReasonForm } from "./forms";
 import { ContractTemplateBlock } from "./ContractTemplateBlock";
 import { ContractTermBlock } from "./ContractTermBlock";
+import { RemarkBlock } from "./RemarkBlock";
+import { SignedMark } from "./SignedMark";
 import { contractStateKey } from "./model";
 import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
@@ -46,15 +48,16 @@ function primaryOf(
 ): Action | "attach_scan" | null {
   const contract = card.contract;
   if (!contract) return null;
+  // ДП-1: пока замечания контрагента на согласовании, договор двигают ответы ответственных, а не отметка сотрудника
+  if (contract.remark) return null;
   const pick = (action: ProjectContractActionsItem) => (allowed.includes(action) ? action : null);
   switch (contract.status) {
     case "project":
       if (contract.sent_to_client) return pick("client_agreed");
       return pick("send_to_client"); // ДОК-10: ERP не отдаёт действие, пока договору по шаблону что-то мешает
     case "client_agreed":
-      return pick("mark_issued");
     case "issued_at_operator":
-      return pick("attach_scan");
+      return pick("mark_signed"); // «Ожидает подписания»: скан или заметка (ДП-1)
     case "rejected":
       return pick("revise");
     default:
@@ -127,7 +130,6 @@ function ContractBody({
   const ref = projectRef(objectId);
   const contract = card.contract;
   const about = useAboutDocument();
-  const [note, setNote] = useState("");
   // A2: «Согласован клиентом» — как клиент сообщил и кто со стороны клиента (обязательно).
   const agreedIds = { channel: useId(), person: useId() };
   const [channel, setChannel] = useState<OnBehalfChannel | null>(null);
@@ -145,7 +147,6 @@ function ContractBody({
   const done = (next: ProjectCard, key: string) => {
     setPending(null);
     setError(null);
-    setNote("");
     setChannel(null);
     setPerson("");
     setAgreedTouched(false);
@@ -189,31 +190,26 @@ function ContractBody({
     );
   };
   let primaryBlock: ReactNode = null;
-  if (primary === "attach_scan") {
+  if (primary === "mark_signed") {
     primaryBlock = (
-      <>
-        <ScanForm
-          labels={{
-            label: t("contract.scan.label"),
-            hint: t("contract.scan.hint"),
-            submit: t("contract.scan.submit"),
-            choose: t("contract.scan.choose"),
-          }}
-          busy={scan.isPending}
-          error={error}
-          onSubmit={(file) => {
-            setError(null);
-            scan.mutate(
-              { ref, data: { file } },
-              {
-                onSuccess: (next) => {
-                  done(next, "attach_scan");
-                },
+      <SignedMark
+        busy={busy}
+        error={error}
+        onScan={(file) => {
+          setError(null);
+          scan.mutate(
+            { ref, data: { file } },
+            {
+              onSuccess: (next) => {
+                done(next, "attach_scan");
               },
-            );
-          }}
-        />
-      </>
+            },
+          );
+        }}
+        onNote={(text) => {
+          send("mark_signed", { note: text });
+        }}
+      />
     );
   } else if (primary !== null) {
     primaryBlock = (
@@ -231,7 +227,7 @@ function ContractBody({
             send(primary, { channel, counterparty_person: person.trim() });
             return;
           }
-          send(primary, primary === "mark_issued" && note.trim() ? { note: note.trim() } : {});
+          if (primary !== "attach_scan") send(primary, {});
         }}
       >
         {primary === "client_agreed" ? (
@@ -242,15 +238,6 @@ function ContractBody({
             touched={agreedTouched}
             onChannel={setChannel}
             onPerson={setPerson}
-          />
-        ) : null}
-        {primary === "mark_issued" ? (
-          <NoteField
-            label={t("contract.note.label")}
-            hint={t("contract.note.hint")}
-            placeholder={t("contract.note.placeholder")}
-            value={note}
-            onChange={setNote}
           />
         ) : null}
         {error && !rejecting ? (
@@ -319,6 +306,13 @@ function ContractBody({
                   name: `${contract.number}.pdf`,
                 }
               : null,
+            contract.sent_to_client && !FINAL.has(contract.status)
+              ? {
+                  url: fileUrl(objectId, "contract", contract.id, "docx"),
+                  label: t("contract.files.docx"),
+                  name: `${contract.number}.docx`,
+                }
+              : null,
             contract.has_scan
               ? {
                   url: fileUrl(objectId, "contract", contract.id, "scan"),
@@ -343,6 +337,30 @@ function ContractBody({
       ) : null}
       {contract.send_blocker && !contract.sent_to_client ? (
         <SendBlocker blocker={contract.send_blocker} />
+      ) : null}
+      {contract.remark ? (
+        <RemarkBlock
+          remark={contract.remark}
+          busy={busy}
+          pending={pending}
+          error={error && !rejecting ? error : null}
+          send={(action, extra) => {
+            send(action, extra);
+          }}
+          fileHref={
+            contract.remark.has_file ? (
+              <FileLinks
+                items={[
+                  {
+                    url: fileUrl(objectId, "contract", contract.id, "remark"),
+                    label: t("contract.files.remark", { name: contract.remark.file_name }),
+                    name: contract.remark.file_name || `${contract.number}-remark`,
+                  },
+                ]}
+              />
+            ) : null
+          }
+        />
       ) : null}
       {primaryBlock}
       {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (

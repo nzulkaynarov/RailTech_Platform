@@ -375,3 +375,29 @@ def contract_renewal_declined(contract) -> None:
         link="/contracts",
         dedup=f"{contract.pk}:{until}",
     )
+
+
+def contract_remark_answered(contract, text: str) -> None:
+    """ДП-1: компания ответила на замечания клиента своей редакцией — текст ответа виден в «Договорах»."""
+    notify(
+        "contract_remark_answered",
+        company=contract.deal.company,
+        object_id=contract.pk,
+        object_number=contract.number,
+        params={"number": contract.number, "text": (text or "")[:300]},
+        link="/contracts",
+        dedup=f"{contract.pk}:{contract.remarks.count()}:answered",
+    )
+
+
+def contract_awaiting_signature(contract) -> None:
+    """ДП-1: редакция принята — договор будет выставлен на подписание."""
+    notify(
+        "contract_awaiting_signature",
+        company=contract.deal.company,
+        object_id=contract.pk,
+        object_number=contract.number,
+        params={"number": contract.number},
+        link="/contracts",
+        dedup=f"{contract.pk}:{contract.remarks.count()}:agreed",
+    )

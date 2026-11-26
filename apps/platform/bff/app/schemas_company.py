@@ -334,6 +334,7 @@ class DocumentSampleIn(Body):
     kind: DocumentKind | None = None
     template_kind: TemplateKind | None = None
     body_html: str | None = None
+    template_id: int | None = None
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None
 
@@ -537,6 +538,8 @@ class QuoteDefaults(BaseModel):
     contract_expired_action: Literal["block", "warn"] = "block"
     contract_foreign_by_agreement: bool = True
     contract_gating_kinds: list[Literal["partner", "supply", "services"]] = []
+    # ОСН-1: какие базовые документы получает кандидат в партнёры (настройка компании)
+    partner_base_roles: list[Literal["partnership", "nda", "offer"]] = ["partnership", "nda"]
 
 
 class QuoteDefaultsUpdate(Patch):
@@ -590,6 +593,7 @@ class QuoteDefaultsUpdate(Patch):
     contract_expired_action: Literal["block", "warn"] | None = None
     contract_foreign_by_agreement: bool | None = None
     contract_gating_kinds: list[Literal["partner", "supply", "services"]] | None = None
+    partner_base_roles: list[Literal["partnership", "nda", "offer"]] | None = None
 
 
 def _pick(value: Any, allowed: tuple[str, ...], default: str) -> str:
@@ -641,6 +645,11 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
             k
             for k in (raw.get("contract_gating_kinds") or [])
             if k in ("partner", "supply", "services")
+        ],
+        "partner_base_roles": [
+            r
+            for r in (raw.get("partner_base_roles") or ["partnership", "nda"])
+            if r in ("partnership", "nda", "offer")
         ],
         "contract_expired_action": _pick(
             raw.get("contract_expired_action"), ("block", "warn"), "block"
