@@ -8,7 +8,7 @@ import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
-import { SETTINGS, SETTINGS_GROUPS, entryAt } from "../../modules/admin/settingsRegistry";
+import { SETTINGS, entryAt, settingsInMenuOrder } from "../../modules/admin/settingsRegistry";
 import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { MaintenanceBanner } from "../../features/maintenance/MaintenanceBanner";
@@ -65,24 +65,6 @@ import { useOperatorLogo, useProductName } from "../../shared/lib/useProductName
 const PANEL_ID = "pf-context-panel";
 /** Module code of Настройки: not in the phone bottom bar */
 const SETTINGS_MODULE = "admin";
-
-/** Порядок страниц внутри групп Настроек по макету 54; остальные — как в реестре. */
-const SETTINGS_ORDER = [
-  "sales",
-  "timing",
-  "notifications",
-  "templates",
-  "dictionaries",
-  "mail",
-  "telegram",
-  "forms",
-  "spend",
-  "integrations",
-];
-const settingsRank = (key: string) => {
-  const index = SETTINGS_ORDER.indexOf(key);
-  return index === -1 ? -1 : index;
-};
 const MOBILE_BAR_HEIGHT = 60;
 const HEADER_HEIGHT = 56;
 // Insets of a notched phone (viewport-fit=cover): the top bar and the bottom bar grow by them, the content keeps clear.
@@ -293,11 +275,7 @@ export function AppShell() {
           },
         ]
       : []),
-    ...SETTINGS_GROUPS.flatMap((group) =>
-      SETTINGS.filter((entry) => entry.group === group && canSee(me, entry.access)).sort(
-        (a, b) => settingsRank(a.key) - settingsRank(b.key),
-      ),
-    ).map((entry) => ({
+    ...settingsInMenuOrder(SETTINGS.filter((entry) => canSee(me, entry.access))).map((entry) => ({
       key: `${SETTINGS_MODULE}.${entry.key}`,
       to: entry.path,
       label: t(`modules:admin.sections.${entry.key}`),

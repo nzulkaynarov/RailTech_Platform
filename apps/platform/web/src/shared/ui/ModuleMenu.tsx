@@ -111,16 +111,22 @@ export function ModuleMenuContent({
   const { token } = theme.useToken();
   const nav = useRef<HTMLElement>(null);
   const activeKey = items.find((item) => item.active)?.key;
+  // Переход нажатием в самом меню ничего не двигает (даже наполовину скрытый пункт): прокрутка только при другом пути сюда
+  const clickedHref = useRef<string | null>(null);
   // Длинное меню (Настройки) при открытии по прямому адресу или возврате из другого модуля: открытый пункт — в видимой
-  // части. `nearest` ничего не двигает, если пункт уже виден, поэтому нажатия внутри меню его не сдвигают.
+  // части (`nearest`); переход нажатием внутри меню не прокручивает.
   useEffect(() => {
-    nav.current
-      ?.querySelector<HTMLElement>('a[aria-current="page"]')
-      ?.scrollIntoView({ block: "nearest" });
+    const link = nav.current?.querySelector<HTMLElement>('a[aria-current="page"]');
+    if (!link || link.getAttribute("href") === clickedHref.current) return;
+    link.scrollIntoView({ block: "nearest" });
   }, [activeKey]);
   return (
     <nav
       ref={nav}
+      onClickCapture={(event) => {
+        clickedHref.current =
+          (event.target as HTMLElement).closest("a")?.getAttribute("href") ?? null;
+      }}
       aria-label={labels.nav}
       data-tour="menu"
       style={{ height: "100%", display: "flex", flexDirection: "column", padding: "0 8px 12px" }}

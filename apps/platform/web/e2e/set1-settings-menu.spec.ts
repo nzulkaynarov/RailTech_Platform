@@ -124,34 +124,88 @@ test.describe("Меню настроек не прыгает", () => {
     await shot(page, "direct-exports");
   });
 
-  test("1280: всплывающее меню значка «Настройки» — те же пункты, что в меню", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+  test("1440×790: нажатие на наполовину скрытый пункт не прокручивает меню", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 790 });
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin");
     await expect(page.locator(`${MENU} .pf-menu-group`)).toHaveCount(5);
-    const menuLinks: string[] = [];
-    for (const link of await page.locator(`${MENU} a.pf-menu-item`).all()) {
-      menuLinks.push(
-        `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
-      );
-    }
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await spaGoto(page, "/crm/clients");
-    await page
-      .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: "Настройки" })
-      .hover();
-    const flyout = page.locator(".ant-popover:not(.ant-popover-hidden)");
-    await expect(flyout.locator("a.pf-menu-item").first()).toBeVisible();
-    const flyLinks: string[] = [];
-    for (const link of await flyout.locator("a.pf-menu-item").all()) {
-      flyLinks.push(
-        `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
-      );
-    }
-    expect(flyLinks).toEqual(menuLinks);
-    await shot(page, "flyout-1280");
+    // пункт, у которого видна только часть: нижний край списка режет его
+    const href = await page.evaluate<string | null>(`(() => {
+      const list = document.querySelector('${MENU} .pf-menu-groups');
+      const edge = list.getBoundingClientRect().bottom;
+      const cut = [...list.querySelectorAll('a.pf-menu-item')].find((a) => {
+        const r = a.getBoundingClientRect();
+        return r.top < edge - 4 && r.bottom > edge + 4;
+      });
+      return cut ? cut.getAttribute('href') : null;
+    })()`);
+    expect(href, "в меню должен быть наполовину скрытый пункт").not.toBeNull();
+    const before = (await snapshot(page)).scrollTop;
+    // настоящий щелчок без прокрутки Playwright к пункту
+    await page.evaluate(
+      `document.querySelector('${MENU} a.pf-menu-item[href="${href ?? ""}"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))`,
+    );
+    await expect(page).toHaveURL(new RegExp(`${href ?? ""}$`));
+    await expect(page.locator(`${MENU} a.pf-menu-item[aria-current="page"]`)).toHaveAttribute(
+      "href",
+      href ?? "",
+    );
+    expect((await snapshot(page)).scrollTop).toBe(before);
   });
+
+  for (const size of [
+    { width: 1280, height: 800 },
+    { width: 1024, height: 768 },
+  ]) {
+    test(`${String(size.width)}×${String(size.height)}: всплывающее меню целиком достижимо, пункты как в меню; выбор над страницей в том же порядке`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await spaGoto(page, "/admin");
+      await expect(page.locator(`${MENU} .pf-menu-group`)).toHaveCount(5);
+      const menuLinks: string[] = [];
+      for (const link of await page.locator(`${MENU} a.pf-menu-item`).all()) {
+        menuLinks.push(
+          `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
+        );
+      }
+      await page.setViewportSize(size);
+      await spaGoto(page, "/crm/clients");
+      await page
+        .getByRole("navigation", { name: "Модули" })
+        .getByRole("link", { name: "Настройки" })
+        .hover();
+      const flyout = page.locator(".ant-popover:not(.ant-popover-hidden)");
+      await expect(flyout.locator("a.pf-menu-item").first()).toBeVisible();
+      const flyLinks: string[] = [];
+      for (const link of await flyout.locator("a.pf-menu-item").all()) {
+        flyLinks.push(
+          `${(await link.innerText()).trim()}|${(await link.getAttribute("href")) ?? ""}`,
+        );
+      }
+      expect(flyLinks).toEqual(menuLinks);
+      // меню помещается в экран: не ниже окна и первый, и последний пункт видны (после прокрутки внутри)
+      const box = await flyout.locator(".ant-popover-inner").boundingBox();
+      expect(box && box.y >= 0 && box.y + box.height <= size.height, "окно в пределах экрана").toBe(
+        true,
+      );
+      await flyout.locator("a.pf-menu-item").last().scrollIntoViewIfNeeded();
+      await expect(flyout.locator("a.pf-menu-item").last()).toBeInViewport({ ratio: 1 });
+      await expect(flyout.locator("a.pf-menu-item").first().locator("..")).toBeAttached();
+      await shot(page, `flyout-${String(size.width)}`);
+
+      // выбор над страницей (меню свёрнуто): те же названия в том же порядке
+      await page.keyboard.press("Escape");
+      await spaGoto(page, "/admin/company");
+      await page.locator("#pf-set-frame-nav").click({ force: true });
+      const options: string[] = [];
+      for (const option of await page.locator(".ant-select-item-option").all()) {
+        options.push(((await option.getAttribute("title")) ?? "").trim());
+      }
+      expect(options).toEqual(menuLinks.map((entry) => entry.split("|")[0] ?? ""));
+    });
+  }
 
   test("@mobile 390: одно меню — выпадающий список страниц со всеми группами, как на доске 55", async ({
     page,

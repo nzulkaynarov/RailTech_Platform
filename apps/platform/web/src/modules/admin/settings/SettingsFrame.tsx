@@ -9,7 +9,7 @@ import { USER_SCOPE, panelsKey, usePanelsStore } from "../../../app/shell/panels
 import { useViewport } from "../../../app/shell/useViewport";
 import { FormField } from "../../../shared/ui/FormParts";
 import { SETTINGS_HOME } from "../module";
-import { SETTINGS, SETTINGS_GROUPS, entryAt } from "../settingsRegistry";
+import { SETTINGS, SETTINGS_GROUPS, entryAt, settingsInMenuOrder } from "../settingsRegistry";
 
 import "./settings.css";
 
@@ -32,14 +32,14 @@ export function SettingsFrame({ children }: { children: ReactNode }) {
   const onState = pathname.replace(/\/+$/, "") === SETTINGS_HOME;
   if (!current && !onState) return <>{children}</>;
   const showPicker = mobile || !menuOpen;
-  const visible = SETTINGS.filter((entry) => canSee(me, entry.access));
+  const ordered = settingsInMenuOrder(SETTINGS.filter((entry) => canSee(me, entry.access)));
   const stateLabel = t("admin.nav.state");
   const options = [
     { value: SETTINGS_HOME, label: stateLabel },
     ...SETTINGS_GROUPS.map((group) => ({
       label: t(`admin.groups.${group}`),
       title: t(`admin.groups.${group}`),
-      options: visible
+      options: ordered
         .filter((entry) => entry.group === group)
         .map((entry) => ({ value: entry.path, label: t(`admin.sections.${entry.key}`) })),
     })).filter((group) => group.options.length > 0),
