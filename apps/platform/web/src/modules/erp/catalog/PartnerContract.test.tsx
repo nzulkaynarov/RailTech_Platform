@@ -162,4 +162,46 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     fireEvent.click(within(modal).getByLabelText(/Других держателей нет/));
     expect(ok).not.toBeDisabled();
   });
+
+  it("пакет базовых документов: роль без шаблона названа фразой со ссылкой, кнопка не действует (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "missing");
+    await openApplications("supply@demo.example");
+    fireEvent.click(
+      within(rowOf("Nanjing Jichuang Co.")).getByRole("button", { name: "Подготовить договор" }),
+    );
+    const modal = await findModal(/Договор для кандидата: Nanjing Jichuang Co\./);
+
+    expect(
+      await within(modal).findByText(/Нет утверждённого шаблона: Соглашение о неразглашении\./),
+    ).toBeVisible();
+    expect(within(modal).getByRole("link", { name: "Шаблоны договоров" })).toHaveAttribute(
+      "href",
+      "/eds/contract-templates",
+    );
+    expect(within(modal).getByRole("button", { name: "Подготовить договор" })).toBeDisabled();
+  });
+
+  it("пакет базовых документов: готовится одним действием, документы видны в строке заявки (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "ready");
+    await openApplications("supply@demo.example");
+    fireEvent.click(
+      within(rowOf("Nanjing Jichuang Co.")).getByRole("button", { name: "Подготовить договор" }),
+    );
+    const modal = await findModal(/Договор для кандидата: Nanjing Jichuang Co\./);
+
+    expect(await within(modal).findByText(/Договор о партнёрстве · ред. 1/)).toBeVisible();
+    expect(within(modal).getByText(/Соглашение о неразглашении · ред. 1/)).toBeVisible();
+    expect(within(modal).getByText(/пакет готов к отправке/)).toBeVisible();
+    // отступлений в пакете нет: поля отступления на экране нет
+    expect(within(modal).queryByLabelText(/Чем отличается от шаблона/)).toBeNull();
+    fireEvent.click(within(modal).getByRole("button", { name: "Подготовить договор" }));
+    await modalClosed(/Договор для кандидата/);
+
+    const row = rowOf("Nanjing Jichuang Co.");
+    expect(
+      await within(row).findByText(/Пакет: Договор о партнёрстве, Соглашение о неразглашении/),
+    ).toBeVisible();
+    expect(within(row).getByRole("button", { name: "Соглашение о неразглашении" })).toBeVisible();
+    expect(within(row).getByRole("button", { name: "Отправить договор" })).toBeVisible();
+  });
 });

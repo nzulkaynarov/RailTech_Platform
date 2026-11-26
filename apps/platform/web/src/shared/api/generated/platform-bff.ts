@@ -129,6 +129,7 @@ import type {
   ContractTemplateConflictResponse,
   ContractTemplateIn,
   ContractTemplateList,
+  ContractTemplateRoleIn,
   ConversationCard,
   ConversationThread,
   CounterpartyCard,
@@ -9714,6 +9715,139 @@ export const useNewContractTemplateEdition = <
   TContext
 > => {
   return useMutation(getNewContractTemplateEditionMutationOptions(options), queryClient);
+};
+
+export const getSetContractTemplateBaseRoleUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/base-role`;
+};
+
+/**
+ * Договор о партнёрстве, соглашение о неразглашении или оферта (ОСН-1): ERP `PATCH crm/document-templates/{id}/`. Пометка — часть текста: ставится и снимается в черновике, у закреплённого шаблона — 422 `template_locked`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+ * @summary Пометка «Базовый документ»
+ */
+export const setContractTemplateBaseRole = async (
+  id: string,
+  contractTemplateRoleIn: ContractTemplateRoleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ContractTemplate>(getSetContractTemplateBaseRoleUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contractTemplateRoleIn),
+  });
+};
+
+export const getSetContractTemplateBaseRoleMutationKey = () =>
+  ["setContractTemplateBaseRole"] as const;
+
+export const getSetContractTemplateBaseRoleMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+    TError,
+    SetContractTemplateBaseRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+  TError,
+  SetContractTemplateBaseRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetContractTemplateBaseRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+    SetContractTemplateBaseRoleMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setContractTemplateBaseRole(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetContractTemplateBaseRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>
+>;
+export type SetContractTemplateBaseRoleMutationBody = ContractTemplateRoleIn;
+export type SetContractTemplateBaseRoleMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type SetContractTemplateBaseRoleMutationVariables = {
+  id: string;
+  data: ContractTemplateRoleIn;
+};
+
+/**
+ * @summary Пометка «Базовый документ»
+ */
+export const useSetContractTemplateBaseRole = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+      TError,
+      SetContractTemplateBaseRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+  TError,
+  SetContractTemplateBaseRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetContractTemplateBaseRoleMutationOptions(options), queryClient);
 };
 
 export const getSubmitContractTemplateUrl = (id: string) => {

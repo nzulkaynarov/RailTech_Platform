@@ -13,6 +13,7 @@ import {
   useListContractTemplates,
   useNewContractTemplateEdition,
   useReturnContractTemplateToDraft,
+  useSetContractTemplateBaseRole,
   useSubmitContractTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { ApiError } from "../../../../shared/api/errors";
@@ -20,6 +21,9 @@ import { useFormat } from "../../../../shared/lib/useFormat";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { FormModal, ListTable, QueryGate, TabHeader } from "../common";
+
+/** Роли базовых документов компании (ОСН-1): три фиксированных кода, текст документа — всегда шаблон. */
+const BASE_ROLES = ["partnership", "nda", "offer"] as const;
 
 /** Текст отказа словами: подкод ERP (`details.reason`), иначе общий. */
 function refusal(
@@ -56,6 +60,8 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
   const format = useFormat();
   const query = useListContractTemplates();
   const [creating, setCreating] = useState(false);
+  const [marking, setMarking] = useState<ContractTemplate | null>(null);
+  const [markRole, setMarkRole] = useState<(typeof BASE_ROLES)[number] | null>(null);
   const [form] = Form.useForm<ContractTemplateIn>();
   // Утверждает держатель зоны «Право»; администратор — всегда. Решающее слово за ERP.
   const mayApprove = canEdit(me, "eds.visa.legal") || canEdit(me, "admin");
@@ -83,6 +89,14 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
   });
   const back = useReturnContractTemplateToDraft({
     mutation: { onSuccess: done("contractTemplates.done.back"), onError: failed },
+  });
+  const mark = useSetContractTemplateBaseRole({
+    mutation: {
+      onSuccess: () => {
+        setMarking(null);
+        done("contractTemplates.doneBase")();
+      },
+    },
   });
   const create = useCreateContractTemplate({
     mutation: {
@@ -149,7 +163,20 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                   id: "name",
                   header: t("contractTemplates.columns.name"),
                   width: null,
-                  cell: (row) => row.name,
+                  cell: (row) => (
+                    <span>
+                      {row.name}
+                      {row.base_role ? (
+                        <Typography.Text type="secondary">
+                          {" "}
+                          ·{" "}
+                          {t("contractTemplates.baseRoleMark", {
+                            role: t(`contractTemplates.baseRole.${row.base_role}`),
+                          })}
+                        </Typography.Text>
+                      ) : null}
+                    </span>
+                  ),
                 },
                 {
                   id: "counterparty",
@@ -216,6 +243,16 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                         : null,
                       row.status === "draft" && mayPrepare
                         ? {
+                            key: "base",
+                            label: t("contractTemplates.actionBase"),
+                            onClick: () => {
+                              setMarkRole(row.base_role ?? null);
+                              setMarking(row);
+                            },
+                          }
+                        : null,
+                      row.status === "draft" && mayPrepare
+                        ? {
                             key: "submit",
                             label: t("contractTemplates.actions.submit"),
                             onClick: () => {
@@ -253,6 +290,45 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
         )}
       </QueryGate>
       <Typography.Paragraph type="secondary">{t("contractTemplates.note")}</Typography.Paragraph>
+      <FormModal
+        open={marking !== null}
+        title={t("contractTemplates.baseRoleTitle", { name: marking?.name ?? "" })}
+        formId="pf-contract-template-base-form"
+        submitLabel={t("contractTemplates.baseRoleSave")}
+        saving={mark.isPending}
+        error={mark.error}
+        onCancel={() => {
+          setMarking(null);
+        }}
+      >
+        <Form
+          id="pf-contract-template-base-form"
+          layout="vertical"
+          onFinish={() => {
+            if (marking) mark.mutate({ id: marking.id, data: { base_role: markRole } });
+          }}
+        >
+          <Form.Item
+            label={t("contractTemplates.baseRoleLabel")}
+            extra={t("contractTemplates.baseRoleHint")}
+            htmlFor="pf-base-role"
+          >
+            <Select
+              id="pf-base-role"
+              allowClear
+              value={markRole}
+              placeholder={t("contractTemplates.baseRoleNone")}
+              options={BASE_ROLES.map((value) => ({
+                value,
+                label: t(`contractTemplates.baseRole.${value}`),
+              }))}
+              onChange={(value: (typeof BASE_ROLES)[number] | undefined) => {
+                setMarkRole(value ?? null);
+              }}
+            />
+          </Form.Item>
+        </Form>
+      </FormModal>
       <FormModal
         open={creating}
         title={t("contractTemplates.createTitle")}
@@ -293,6 +369,16 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
               options={(["supply", "services"] as const).map((value) => ({
                 value,
                 label: t(`contractTemplates.subject.${value}`),
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="base_role" label={t("contractTemplates.baseRoleLabel")}>
+            <Select
+              allowClear
+              placeholder={t("contractTemplates.baseRoleNone")}
+              options={BASE_ROLES.map((value) => ({
+                value,
+                label: t(`contractTemplates.baseRole.${value}`),
               }))}
             />
           </Form.Item>

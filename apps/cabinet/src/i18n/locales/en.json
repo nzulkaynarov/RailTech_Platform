@@ -1022,7 +1022,15 @@
         "scanUpload": "Upload scan",
         "scanReplace": "Replace scan",
         "scanInput": "Scan of the signed contract",
-        "scanSuccess": "Scan received."
+        "scanSuccess": "Scan received.",
+        "packageList": "Documents to accept",
+        "openDocument": "Open: {{title}}",
+        "openDocumentBtn": "Open",
+        "documentRemark": "Your remark: {{note}}",
+        "returnDocumentLabel": "Which document",
+        "returnDocumentAll": "All documents",
+        "returnDocumentNeeded": "Choose the document your edition belongs to.",
+        "agreePackageDesc": "By confirming you accept the edition of all the documents."
       },
       "bankChange": {
         "title": "Bank details change request",

@@ -150,3 +150,56 @@ async def test_submit_with_unknown_placeholders_names_them(web: Web, be: Backend
     details = response.json()["details"]
     assert details["reason"] == "template_unknown_placeholders"
     assert details["unknown_placeholders"] == ["foo.bar"]
+
+
+async def test_base_role_is_listed_and_set_through_the_erp(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    be.router.get(f"{ERP}/contracts/").mock(
+        return_value=httpx.Response(
+            200, json=[erp_row(base_role="nda"), erp_row(id=13, base_role="")]
+        )
+    )
+    patch = be.router.patch(f"{ERP}/13/").mock(
+        return_value=httpx.Response(200, json=erp_row(id=13, base_role="offer"))
+    )
+    assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
+    listed = await web.client.get("/api/v1/document-templates/contracts")
+    check(listed, "/document-templates/contracts", "get")
+    assert [row["base_role"] for row in listed.json()["items"]] == ["nda", None]
+
+    response = await web.send(
+        "PATCH", "/api/v1/document-templates/contracts/13/base-role", json={"base_role": "offer"}
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/document-templates/contracts/{id}/base-role", "patch")
+    import json
+
+    assert json.loads(patch.calls.last.request.content) == {"base_role": "offer"}
+    assert response.json()["base_role"] == "offer"
+
+    cleared = await web.send(
+        "PATCH", "/api/v1/document-templates/contracts/13/base-role", json={"base_role": None}
+    )
+    assert cleared.status_code == 200
+    assert json.loads(patch.calls.last.request.content) == {"base_role": ""}
+    bad = await web.send(
+        "PATCH", "/api/v1/document-templates/contracts/13/base-role", json={"base_role": "zzz"}
+    )
+    assert bad.status_code == 422
+
+
+async def test_create_with_a_base_role_sends_it(web: Web, be: Backends) -> None:
+    route = be.router.post(f"{ERP}/create-contract/").mock(
+        return_value=httpx.Response(201, json=erp_row(approval_status="draft", base_role="nda"))
+    )
+    assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
+    response = await web.send(
+        "POST",
+        "/api/v1/document-templates/contracts",
+        json={"name": "NDA", "counterparty": "partner", "subject": "supply", "base_role": "nda"},
+    )
+    assert response.status_code == 201
+    import json
+
+    assert json.loads(route.calls.last.request.content)["base_role"] == "nda"

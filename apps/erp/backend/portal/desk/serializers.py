@@ -215,7 +215,9 @@ class DeskPartnerContractFacts(serializers.Serializer):
     contract_valid_until = serializers.DateField(allow_null=True, help_text="Срок договора, посчитанный при отметке.")
     contract_last_notice_date = serializers.DateField(allow_null=True)
     contract_renewal_mode = serializers.CharField(allow_blank=True)
-    package = DeskPackageDocument(many=True, help_text="Пакет базовых документов (ОСН-1); пусто — договор одним файлом.")
+    package = DeskPackageDocument(
+        many=True, help_text="Пакет базовых документов (ОСН-1); пусто — договор одним файлом."
+    )
 
 
 class DeskPartnerApplicationListItem(DeskPartnerContractFacts):

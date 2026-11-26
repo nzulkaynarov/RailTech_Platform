@@ -40,6 +40,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { findCountry } from '@/lib/countries';
 import { LOCALES } from '@/i18n/locales';
@@ -1069,6 +1070,7 @@ export function PartnerApplicationCard() {
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [returnNotes, setReturnNotes] = useState('');
   const [returnFile, setReturnFile] = useState<File | null>(null);
+  const [returnDocument, setReturnDocument] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [agreeDialogOpen, setAgreeDialogOpen] = useState(false);
   const [agreeNotes, setAgreeNotes] = useState('');
@@ -1128,14 +1130,18 @@ export function PartnerApplicationCard() {
       );
     };
 
+    const documents = app.documents ?? [];
+    // Пакет из нескольких документов: свою редакцию принимаем только к названному документу (ОСН-1)
+    const needsDocument = documents.length > 1 && returnFile !== null && returnDocument === '';
     const handleReturn = () => {
       returnMutation.mutate(
-        { notes: returnNotes.trim(), file: returnFile },
+        { notes: returnNotes.trim(), file: returnFile, document: returnDocument ? Number(returnDocument) : null },
         {
           onSuccess: () => {
             setReturnDialogOpen(false);
             setReturnNotes('');
             setReturnFile(null);
+            setReturnDocument('');
             toast.success(t('pages.company.partner.returnSuccess'));
           },
         },
@@ -1192,12 +1198,40 @@ export function PartnerApplicationCard() {
 
             {(app.status === 'contract_sent' || app.status === 'candidate_agreed' || app.status === 'approved') && (
               <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
-                <Button asChild variant="outline">
-                  <a href={getPartnerContractPdfUrl()} target="_blank" rel="noopener noreferrer">
-                    <FileText className="size-4 mr-2" aria-hidden="true" />
-                    {t('pages.company.partner.downloadDraftPdf')}
-                  </a>
-                </Button>
+                {documents.length > 0 ? (
+                  <ul className="flex w-full flex-col gap-2" aria-label={t('pages.company.partner.packageList')}>
+                    {documents.map((doc) => (
+                      <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm">
+                          {doc.title}
+                          {doc.remark ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {t('pages.company.partner.documentRemark', { note: doc.remark })}
+                            </span>
+                          ) : null}
+                        </span>
+                        <Button asChild variant="outline" size="sm">
+                          <a
+                            href={getPartnerContractPdfUrl(doc.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={t('pages.company.partner.openDocument', { title: doc.title })}
+                          >
+                            <FileText className="size-4 mr-2" aria-hidden="true" />
+                            {t('pages.company.partner.openDocumentBtn')}
+                          </a>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Button asChild variant="outline">
+                    <a href={getPartnerContractPdfUrl()} target="_blank" rel="noopener noreferrer">
+                      <FileText className="size-4 mr-2" aria-hidden="true" />
+                      {t('pages.company.partner.downloadDraftPdf')}
+                    </a>
+                  </Button>
+                )}
 
                 {app.status === 'contract_sent' && !returned && (
                   <CanAct
@@ -1231,12 +1265,35 @@ export function PartnerApplicationCard() {
           title={t('pages.company.partner.returnDialogTitle')}
           description={t('pages.company.partner.returnDialogDesc')}
           confirmLabel={t('pages.company.partner.returnSubmit')}
-          confirmDisabled={returnNotes.trim() === '' && returnFile === null}
+          confirmDisabled={(returnNotes.trim() === '' && returnFile === null) || needsDocument}
           pending={returnMutation.isPending}
           error={returnMutation.error}
           onSubmit={handleReturn}
         >
           <div className="flex flex-col gap-2 pt-2">
+            {documents.length > 1 ? (
+              <>
+                <Label htmlFor="return-document">{t('pages.company.partner.returnDocumentLabel')}</Label>
+                <Select value={returnDocument || 'all'} onValueChange={(value) => setReturnDocument(value === 'all' ? '' : value)}>
+                  <SelectTrigger id="return-document" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="all">{t('pages.company.partner.returnDocumentAll')}</SelectItem>
+                    {documents.map((doc) => (
+                      <SelectItem key={doc.id} value={String(doc.id)}>
+                        {doc.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {needsDocument ? (
+                  <p className="text-xs text-destructive" role="status">
+                    {t('pages.company.partner.returnDocumentNeeded')}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
             <Label htmlFor="return-notes">{t('pages.company.partner.returnNotesLabel')}</Label>
             <Textarea id="return-notes" value={returnNotes} onChange={(e) => setReturnNotes(e.target.value)} maxLength={1000} />
             <p className="text-xs text-muted-foreground">{t('pages.company.partner.returnFileHint')}</p>
@@ -1257,7 +1314,7 @@ export function PartnerApplicationCard() {
           open={agreeDialogOpen}
           onOpenChange={setAgreeDialogOpen}
           title={t('pages.company.partner.agreeDialogTitle')}
-          description={t('pages.company.partner.agreeDialogDesc')}
+          description={documents.length > 1 ? t('pages.company.partner.agreePackageDesc') : t('pages.company.partner.agreeDialogDesc')}
           confirmLabel={t('pages.company.partner.agreeSubmit')}
           pending={agreeMutation.isPending}
           error={agreeMutation.error}

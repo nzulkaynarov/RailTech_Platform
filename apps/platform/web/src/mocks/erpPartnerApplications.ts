@@ -35,6 +35,7 @@ const NO_CONTRACT = {
   contract_valid_until: null,
   contract_last_notice_date: null,
   contract_renewal_mode: "",
+  package: [],
 } as const satisfies Partial<PartnerApplicationItem>;
 
 /** Договор по утверждённому шаблону без отступлений: согласование не нужно, можно отправлять. */
@@ -66,6 +67,49 @@ function noTemplateScenario(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Пакет базовых документов (ОСН-1): `rt-pf-mock-package = ready` — у обеих ролей есть утверждённый шаблон,
+ * `missing` — у соглашения о неразглашении шаблона нет. Без флага ролей нет: прежний путь «из шаблона».
+ */
+function packageScenario(): "ready" | "missing" | null {
+  try {
+    const value = window.localStorage.getItem("rt-pf-mock-package");
+    return value === "ready" || value === "missing" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+const PACKAGE_ROLES = [
+  {
+    base_role: "partnership",
+    role_name: "Договор о партнёрстве",
+    template_id: "11",
+    name: "Договор о партнёрстве",
+    edition: 1,
+    languages: ["ru", "uz", "en"],
+  },
+  {
+    base_role: "nda",
+    role_name: "Соглашение о неразглашении",
+    template_id: "12",
+    name: "Соглашение о неразглашении",
+    edition: 1,
+    languages: ["ru"],
+  },
+] as const;
+
+function packageOptions() {
+  const scenario = packageScenario();
+  if (!scenario) return { roles: [], ready: false };
+  const roles = PACKAGE_ROLES.map((role) =>
+    scenario === "missing" && role.base_role === "nda"
+      ? { ...role, template_id: null, name: null, edition: null, languages: [] }
+      : role,
+  );
+  return { roles, ready: scenario === "ready" };
 }
 
 /** Сценарий «единственный держатель, сам подготовил договор»: решение с подтверждением. */
@@ -322,6 +366,7 @@ export const erpPartnerApplicationsHandlers = [
       deviations_allowed: true,
       approvers: ["Анвар Юристов"],
       can_decide: legalHolder(),
+      package: packageOptions(),
     });
   }),
 
@@ -338,7 +383,43 @@ export const erpPartnerApplicationsHandlers = [
         deviation_text?: string;
         contract_number?: string;
         contract_date?: string;
+        package?: boolean;
       };
+      if (body.package) {
+        if (!packageOptions().ready) {
+          return HttpResponse.json(
+            {
+              code: "VALIDATION_FAILED",
+              message: "Проверьте заполнение полей.",
+              details: { reason: "no_approved_base_template" },
+            },
+            { status: 422 },
+          );
+        }
+        applyPrepared(item, {
+          source: "template",
+          language: body.language ?? "ru",
+          template: TEMPLATES[0],
+          deviation: "",
+          number: body.contract_number,
+          date: body.contract_date,
+        });
+        item.package = PACKAGE_ROLES.map((role, index) => ({
+          id: String(900 + index),
+          base_role: role.base_role,
+          title: role.name,
+          number: `${item.contract_number}${index === 0 ? "" : `/${String(index + 1)}`}`,
+          template_edition: role.edition,
+          has_candidate_file: false,
+          candidate_remark: "",
+          valid_from: null,
+          valid_until: null,
+          confidentiality_years: role.base_role === "nda" ? 3 : null,
+          trade_secret_indefinite: false,
+          from_archive: false,
+        }));
+        return HttpResponse.json(item);
+      }
       const template = TEMPLATES.find((t) => t.id === body.template_id);
       if (noTemplateScenario() || !template) {
         return HttpResponse.json(

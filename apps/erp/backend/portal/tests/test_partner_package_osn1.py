@@ -187,7 +187,9 @@ class TestSignedTerms:
         app, candidate = sent(world, supply)
         candidate.post(f"{PORTAL}/agree", {}, format="json")
 
-        response = post(supply, app, "approve", {"contract_number": app.contract_number, "signed_note": "Оригинал у нас"})
+        response = post(
+            supply, app, "approve", {"contract_number": app.contract_number, "signed_note": "Оригинал у нас"}
+        )
 
         assert response.status_code == 200, response.content
         partnership = app.package_documents.get(base_role="partnership")

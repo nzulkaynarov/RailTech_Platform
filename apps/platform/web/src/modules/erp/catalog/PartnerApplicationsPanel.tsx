@@ -460,12 +460,13 @@ function CompanyMatchChoice({
 function ContractCell({ row }: { row: PartnerApplicationItem }) {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
-  const open = (which: "contract" | "scan" | "candidate") => {
+  const open = (which: "contract" | "scan" | "candidate", doc?: string) => {
     void downloadFile(
-      getDownloadPartnerApplicationDocumentUrl(row.id, { which }),
-      `${which}-${row.id}`,
+      getDownloadPartnerApplicationDocumentUrl(row.id, { which, ...(doc ? { doc } : {}) }),
+      `${which}-${doc ?? row.id}`,
     ).catch(() => undefined);
   };
+  const pack = row.package;
   const approvalLine =
     row.contract_approval === "requested"
       ? t("partnerApplications.contractLine.requested", {
@@ -489,7 +490,50 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
     <div>
       {row.contract_number ? <div>№ {row.contract_number}</div> : null}
       {row.contract_date ? <span className="pf-cat-sub">{date(row.contract_date)}</span> : null}
-      {row.contract_source === "template" ? (
+      {pack.length > 0 ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.package", {
+            names: pack.map((doc) => doc.title).join(", "),
+            language: t(
+              `partnerApplications.prepareModal.languages.${row.contract_language || "ru"}`,
+            ),
+          })}
+        </span>
+      ) : null}
+      {pack
+        .filter((doc) => doc.candidate_remark)
+        .map((doc) => (
+          <span key={`remark-${doc.id}`} className="pf-cat-sub pf-cat-danger">
+            {t("partnerApplications.contractLine.documentRemark", {
+              title: doc.title,
+              note: doc.candidate_remark,
+            })}
+          </span>
+        ))}
+      {row.status === "approved"
+        ? pack.map((doc) =>
+            doc.valid_until ? (
+              <span key={`term-${doc.id}`} className="pf-cat-sub">
+                {t("partnerApplications.contractLine.documentUntil", {
+                  title: doc.title,
+                  date: date(doc.valid_until),
+                })}
+              </span>
+            ) : doc.base_role === "nda" && doc.valid_from ? (
+              <span key={`term-${doc.id}`} className="pf-cat-sub">
+                {doc.trade_secret_indefinite
+                  ? t("partnerApplications.contractLine.secretIndefinite", { title: doc.title })
+                  : doc.confidentiality_years
+                    ? t("partnerApplications.contractLine.secretYears", {
+                        title: doc.title,
+                        years: doc.confidentiality_years,
+                      })
+                    : null}
+              </span>
+            ) : null,
+          )
+        : null}
+      {row.contract_source === "template" && pack.length === 0 ? (
         <span className="pf-cat-sub">
           {t("partnerApplications.contractLine.template", {
             name: row.contract_template_name ?? "",
@@ -565,7 +609,33 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
             : ""}
         </span>
       ) : null}
-      {row.contract_source ? (
+      {pack.length > 0
+        ? pack.map((doc) => (
+            <span key={`open-${doc.id}`}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  open("contract", doc.id);
+                }}
+              >
+                {doc.title}
+              </Button>
+              {doc.has_candidate_file ? (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    open("candidate", doc.id);
+                  }}
+                >
+                  {t("partnerApplications.contractLine.openCandidateFile")}
+                </Button>
+              ) : null}
+            </span>
+          ))
+        : null}
+      {row.contract_source && pack.length === 0 ? (
         <Button
           type="link"
           size="small"
@@ -576,7 +646,7 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
           {t("partnerApplications.contractLine.openContract")}
         </Button>
       ) : null}
-      {row.has_candidate_file ? (
+      {row.has_candidate_file && pack.length === 0 ? (
         <Button
           type="link"
           size="small"

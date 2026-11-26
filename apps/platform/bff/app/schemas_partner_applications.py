@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas_company import Body, ident, text
+from app.schemas_company import Body, ident, opt_ident, text
 
 PartnerApplicationSource = Literal["public", "client_cabinet", "letter", "lead"]
 PartnerApplicationStatus = Literal[
@@ -30,6 +30,26 @@ class ContractVote(Out):
     name: str
     decision: Literal["approve", "return"]
     note: str = ""
+
+
+BaseRole = Literal["partnership", "nda", "offer"]
+
+
+class PackageDocument(Out):
+    """ОСН-1: документ пакета базовых документов кандидата; открывается по `id`."""
+
+    id: str
+    base_role: BaseRole
+    title: str
+    number: str
+    template_edition: int
+    has_candidate_file: bool
+    candidate_remark: str
+    valid_from: str | None
+    valid_until: str | None
+    confidentiality_years: int | None
+    trade_secret_indefinite: bool
+    from_archive: bool
 
 
 class PartnerApplicationItem(Out):
@@ -85,6 +105,7 @@ class PartnerApplicationItem(Out):
     contract_valid_until: str | None
     contract_last_notice_date: str | None
     contract_renewal_mode: str
+    package: list[PackageDocument]
 
 
 class PartnerApplicationListResponse(Out):
@@ -138,6 +159,9 @@ class PartnerContractPrepareRequest(Body):
     """«Подготовить договор» из шаблона библиотеки; свой файл — отдельным запросом multipart."""
 
     template_id: str | None = None
+    package: bool | None = Field(
+        default=None, description="Пакет из утверждённых базовых шаблонов (ОСН-1), без отступлений"
+    )
     language: Language | None = None
     deviation_text: str | None = Field(default=None, max_length=4000)
     contract_number: str | None = Field(default=None, max_length=64)
@@ -158,12 +182,27 @@ class PartnerContractTemplateOption(Out):
     is_default: bool
 
 
+class PackageRole(Out):
+    base_role: BaseRole
+    role_name: str
+    template_id: str | None
+    name: str | None
+    edition: int | None
+    languages: list[Language]
+
+
+class PackageOptions(Out):
+    roles: list[PackageRole]
+    ready: bool
+
+
 class PartnerContractOptions(Out):
     templates: list[PartnerContractTemplateOption]
     default_template_id: str | None
     deviations_allowed: bool
     approvers: list[str]
     can_decide: bool
+    package: PackageOptions
 
 
 class PartnerApplicationRejectRequest(Body):
@@ -267,6 +306,24 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
             str(raw["contract_last_notice_date"]) if raw.get("contract_last_notice_date") else None
         ),
         contract_renewal_mode=text(raw.get("contract_renewal_mode")),
+        package=[_package_document(d) for d in raw.get("package") or []],
+    )
+
+
+def _package_document(raw: Mapping[str, Any]) -> PackageDocument:
+    return PackageDocument(
+        id=ident(raw.get("id")),
+        base_role=_one_of(raw.get("base_role"), ("partnership", "nda", "offer")) or "partnership",
+        title=text(raw.get("title")),
+        number=text(raw.get("number")),
+        template_edition=int(raw.get("template_edition") or 1),
+        has_candidate_file=bool(raw.get("has_candidate_file")),
+        candidate_remark=text(raw.get("candidate_remark")),
+        valid_from=str(raw["valid_from"]) if raw.get("valid_from") else None,
+        valid_until=str(raw["valid_until"]) if raw.get("valid_until") else None,
+        confidentiality_years=raw.get("confidentiality_years"),
+        trade_secret_indefinite=bool(raw.get("trade_secret_indefinite")),
+        from_archive=bool(raw.get("from_archive")),
     )
 
 
@@ -297,4 +354,21 @@ def to_contract_options(raw: Mapping[str, Any]) -> PartnerContractOptions:
         deviations_allowed=bool(raw.get("deviations_allowed", True)),
         approvers=[str(name) for name in raw.get("approvers") or []],
         can_decide=bool(raw.get("can_decide")),
+        package=_package_options(raw.get("package") or {}),
     )
+
+
+def _package_options(raw: Mapping[str, Any]) -> PackageOptions:
+    roles = [
+        PackageRole(
+            base_role=_one_of(item.get("base_role"), ("partnership", "nda", "offer"))
+            or "partnership",
+            role_name=text(item.get("role_name")),
+            template_id=opt_ident(item.get("template_id")),
+            name=item.get("name") or None,
+            edition=item.get("edition"),
+            languages=[lang for lang in item.get("languages") or [] if lang in ("ru", "uz", "en")],
+        )
+        for item in raw.get("roles") or []
+    ]
+    return PackageOptions(roles=roles, ready=bool(raw.get("ready")))

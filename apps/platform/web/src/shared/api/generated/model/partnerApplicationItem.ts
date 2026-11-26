@@ -13,6 +13,7 @@ import type { PartnerApplicationKind } from "./partnerApplicationKind";
 import type { PartnerApplicationSource } from "./partnerApplicationSource";
 import type { PartnerApplicationStatus } from "./partnerApplicationStatus";
 import type { PartnerContractVote } from "./partnerContractVote";
+import type { PartnerPackageDocument } from "./partnerPackageDocument";
 
 export interface PartnerApplicationItem {
   id: CompanyItemRef;
@@ -110,4 +111,6 @@ export interface PartnerApplicationItem {
   /** @nullable */
   contract_last_notice_date: string | null;
   contract_renewal_mode: string;
+  /** Пакет базовых документов (ОСН-1); пусто — договор одним файлом */
+  package: PartnerPackageDocument[];
 }

@@ -478,3 +478,114 @@ async def test_supply_without_legal_zone_cannot_decide(web: Web) -> None:
     await web.login(["SUPPLY"])
     response = await call(web, "POST", f"{BASE}/15/contract-decision", {"decision": "approve"})
     assert response.status_code == 403
+
+
+PACKAGE_RAW = {
+    "roles": [
+        {
+            "base_role": "partnership",
+            "role_name": "Договор о партнёрстве",
+            "template_id": 4,
+            "name": "Договор о партнёрстве",
+            "edition": 1,
+            "languages": ["ru", "uz"],
+        },
+        {
+            "base_role": "nda",
+            "role_name": "Соглашение о неразглашении",
+            "template_id": None,
+            "name": None,
+            "edition": None,
+            "languages": [],
+        },
+    ],
+    "ready": False,
+}
+
+
+async def test_package_options_name_the_role_without_a_template(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).get(f"{API}/catalog/partner-applications/contract-options/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "templates": [],
+                "default_template_id": None,
+                "deviations_allowed": True,
+                "approvers": [],
+                "can_decide": False,
+                "package": PACKAGE_RAW,
+            },
+        )
+    )
+    response = await call(web, "GET", f"{BASE}/contract-options")
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/contract-options", "get")
+    package = response.json()["package"]
+    assert package["ready"] is False
+    assert [(r["base_role"], r["template_id"]) for r in package["roles"]] == [
+        ("partnership", "4"),
+        ("nda", None),
+    ]
+    assert package["roles"][1]["role_name"] == "Соглашение о неразглашении"
+
+
+async def test_prepare_package_and_card_documents(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    prepared = {
+        **APPLICATION_RAW,
+        "contract_source": "template",
+        "contract_blocker": None,
+        "package": [
+            {
+                "id": 7,
+                "base_role": "nda",
+                "title": "Соглашение о неразглашении",
+                "number": "PA-2026-0015/2",
+                "template_edition": 1,
+                "has_candidate_file": False,
+                "candidate_remark": "",
+                "valid_from": None,
+                "valid_until": None,
+                "confidentiality_years": 3,
+                "trade_secret_indefinite": False,
+                "from_archive": False,
+            }
+        ],
+    }
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/prepare-contract/")
+        .mock(return_value=httpx.Response(200, json=prepared))
+    )
+    response = await call(web, "POST", f"{BASE}/15/prepare-contract", {"package": True})
+    assert response.status_code == 200, response.text
+    check(response, "/erp/catalog/partner-applications/{id}/prepare-contract", "post")
+    assert json.loads(route.calls.last.request.content) == {"package": True}
+    assert response.json()["package"][0]["base_role"] == "nda"
+    assert response.json()["package"][0]["confidentiality_years"] == 3
+
+
+async def test_package_document_is_requested_by_id(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .get(f"{API}/catalog/partner-applications/15/document/")
+        .mock(
+            return_value=httpx.Response(
+                200, content=b"%PDF-1.4 nda", headers={"content-type": "application/pdf"}
+            )
+        )
+    )
+    response = await web.client.get(
+        f"/api/v1{BASE}/15/document", params={"which": "contract", "doc": "7"}
+    )
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 nda"
+    assert dict(route.calls.last.request.url.params) == {"which": "contract", "doc": "7"}
+    bad = await web.client.get(f"/api/v1{BASE}/15/document", params={"doc": "x"})
+    assert bad.status_code == 422
