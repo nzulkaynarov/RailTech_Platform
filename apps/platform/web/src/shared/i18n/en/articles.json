@@ -76,7 +76,7 @@
     "previewTitle": "This is how the article looks in Help",
     "previewEmpty": "The article text will appear here once you start writing.",
     "previewHeading": "No title yet",
-    "status": "Status: {{status}}",
+    "status": "Status: {{label}}",
     "save": "Save",
     "saveDraft": "Save draft",
     "saveAndPublish": "Save and publish",

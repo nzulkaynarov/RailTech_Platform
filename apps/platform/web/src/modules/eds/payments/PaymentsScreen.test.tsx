@@ -60,12 +60,12 @@ describe("Счета и оплаты: список", () => {
     expect(within(row).getByText("просрочен на 8 дн.")).toBeVisible();
   });
 
-  it("«Оплаты на подтверждение»: статус «Платёжное поручение получено» и действие «Проверить платёжное поручение»", async () => {
+  it("«Оплаты на подтверждение»: статус «Оплата на проверке» и действие «Проверить платёжное поручение»", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=proofs");
 
     const row = await screen.findByRole("row", { name: /СЧ-2026\/145/ });
-    expect(within(row).getByText("Платёжное поручение получено")).toBeVisible();
+    expect(within(row).getByText("Оплата на проверке")).toBeVisible();
     expect(
       within(row).getByRole("link", { name: "Проверить платёжное поручение: СЧ-2026/145" }),
     ).toHaveTextContent(/^Проверить$/);
@@ -270,9 +270,7 @@ describe("Платёжные поручения и запрос платёжки
     const text = within(panel).getByLabelText<HTMLTextAreaElement>("Текст сообщения");
     expect(text.value).toContain("СЧ-2026/142");
     expect(text.value).toContain("Срок оплаты — 07.11.2026");
-    expect(
-      within(panel).getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
-    ).toBeVisible();
+    expect(within(panel).getByText(/Скопируйте текст, отправьте его клиенту/)).toBeVisible();
     fireEvent.click(
       within(panel).getByRole("button", { name: "Отметить: платёжное поручение запросили" }),
     );
@@ -310,7 +308,7 @@ describe("Записки к оплате", () => {
 
     const table = await screen.findByRole("table", { name: "Заявки на оплату" });
     const row = within(table).getByRole("row", { name: /СЗ-2026\/015/ });
-    expect(within(row).getByText("Передана бухгалтеру")).toBeVisible();
+    expect(within(row).getByText("Передана на оплату")).toBeVisible();
     fireEvent.click(
       within(row).getByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }),
     );

@@ -219,7 +219,7 @@
     "unknown": "unknown employee"
   },
   "clientLink": {
-    "title": "Client link in the Cabinet",
+    "title": "Client link in the Account",
     "state": {
       "active": "The link works until {{date}}.",
       "activeNoDate": "The link works.",
@@ -251,7 +251,7 @@
     "confirmObject_act": "the act link",
     "loadFailed": "Could not load the client links.",
     "retry": "Retry",
-    "title_partner": "Partner link in the Cabinet",
+    "title_partner": "Partner link in the Account",
     "opened_partner": "The partner opened it: {{date}}.",
     "notOpened_partner": "The partner has not opened it yet.",
     "confirmText_partner": "The partner will see nothing with it any more. Sending again gives a new link.",

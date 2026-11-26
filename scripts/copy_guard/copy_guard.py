@@ -62,7 +62,11 @@ LATIN_OK = {
     "cfr", "fas", "incoterms", "vat", "telegram", "max", "min", "ok", "esc", "enter", "tab", "ctrl", "shift",
     "iso", "gost", "a4", "mb", "kb", "gb", "ip", "www", "http", "https", "jpeg", "webp", "gif", "heic", "txt",
     "rtf", "odt", "zip", "rar", "xls", "doc", "ppt", "pptx", "android", "ios",
+    "markdown",  # a file format the user picks a file of (knowledge base upload)
 }
+
+# A language is named in its own language in every locale (the language switcher): not a mixed or untranslated text.
+SELF_NAME_KEY = re.compile(r"(^|[:.])languages\.(ru|en|uz)$")
 
 
 def _load_allow() -> list[tuple[re.Pattern, str, str]]:
@@ -72,7 +76,7 @@ def _load_allow() -> list[tuple[re.Pattern, str, str]]:
     if path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip() and not line.startswith("#"):
-                key, cls, reason = (line.split("\t") + ["", ""])[:3]
+                key, cls, reason = (line.split("\t") + ["", ""])[:3]  # an optional 4th column names the app (counted by its test)
                 if not reason.strip():
                     raise ValueError(f"allow.tsv: a reason is required for {key!r}")
                 out.append((re.compile(key), cls, reason))
@@ -176,6 +180,8 @@ def check_row(row: dict, rules: list[Rule], convert_uz, ru_by_key: dict | None =
 
     def add(cls, sev, match, proposal, note=""):
         if any(rx.fullmatch(row["key"]) and c == cls for rx, c, _ in ALLOW):
+            return
+        if cls in ("mixed", "untranslated") and SELF_NAME_KEY.search(row["key"]):
             return
         if row.get("ctx") == "settings" and cls == "code":
             sev = "L"

@@ -13,12 +13,12 @@
   "status": {
     "draft": "Draft",
     "signing": "Awaiting signature",
-    "sent": "Registered",
+    "sent": "Sent",
     "quote": {
       "open": "Awaiting approval",
       "approved": "Approved",
       "returned": "Returned for rework",
-      "rejected": "Rejected"
+      "rejected": "Not approved"
     },
     "filter": {
       "draft": "Draft",
@@ -26,9 +26,9 @@
       "returned": "Returned for rework",
       "approved": "Approved",
       "rejected": "Rejected",
-      "to_accountant": "Passed to accountant",
+      "to_accountant": "Sent for payment",
       "paid": "Paid",
-      "sent": "Registered",
+      "sent": "Sent",
       "awaiting_resolution": "Awaiting resolution",
       "resolved": "Resolution made",
       "open": "Quote awaiting approval"
@@ -212,7 +212,7 @@
       },
       "dispatchMethodLabel": "Dispatch method",
       "sendImmediately": "Send to the addressee's email immediately after signing",
-      "noEmailWarning": "Addressee email is not provided — automatic sending is unavailable.",
+      "noEmailWarning": "Addressee email is not provided — the letter will not be sent by email.",
       "confirmSign": "Sign letter",
       "cancel": "Cancel",
       "signedBy": "Signed by",
@@ -287,14 +287,14 @@
     },
     "files": {
       "label": "Attachments",
-      "hint": "PDF, images and Office documents, each up to 25 MB.",
+      "hint": "PDF, images and Word and Excel files, each up to 25 MB.",
       "list": "Attached files",
       "uploading": "uploading…",
       "uploaded": "uploaded",
       "attached": "already in the document",
       "remove": "Remove file {{name}}",
       "tooLarge": "The file is larger than 25 MB.",
-      "unsupported": "PDF, images and Office documents are accepted.",
+      "unsupported": "PDF, images and Word and Excel files are accepted.",
       "failed": "Not uploaded: {{reason}}",
       "invoiceLater": "The partner's invoice will come later"
     },
@@ -359,7 +359,7 @@
         "VALIDATION_FAILED": "check the fields",
         "BACKEND_UNAVAILABLE": "the documents service is not responding, try again later",
         "PAYLOAD_TOO_LARGE": "the file is larger than 25 MB",
-        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Office documents are accepted",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Word and Excel files are accepted",
         "REQUEST_TIMEOUT": "the server did not respond in time",
         "DEFAULT": "the server returned an error, try again",
         "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Details & letterhead”",
@@ -486,7 +486,7 @@
     "pending": "Preparing the PDF…",
     "ready": "PDF ready · {{pages}} p.",
     "readyFinal": "PDF with the outgoing number ready · {{pages}} p.",
-    "failed": "Error: {{error}}",
+    "failed": "Error: {{reason}}",
     "failedNoReason": "Error: the PDF was not built",
     "retry": "Retry",
     "download": "Download PDF",

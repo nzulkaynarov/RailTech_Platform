@@ -170,7 +170,7 @@ DEFAULT_REASON: dict[QueueItemKind, tuple[str, str, str]] = {
         "the costing is assigned to you",
     ),
     "confirm_payment": (
-        "платёжка клиента ждёт подтверждения",
+        "платёжное поручение клиента ждёт подтверждения",
         "mijozning tölov topşiriqnomasi tasdiq kutmoqda",
         "the client's payment order awaits confirmation",
     ),

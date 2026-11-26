@@ -80,7 +80,7 @@
       },
       "proofs": {
         "title": "No payment orders to confirm",
-        "text": "A payment order appears here when the customer clicks “I have paid” in the cabinet or when you attach it to an invoice (it came by email or to the bot).",
+        "text": "A payment order appears here when the customer clicks “I have paid” in the account or when you attach it to an invoice (it came by email or to the bot).",
         "action": "Awaiting payment"
       },
       "overdue": {
@@ -152,12 +152,12 @@
     "claimed": "Customer stated {{amount}} dated {{date}}",
     "download": "Download payment order {{name}}",
     "state": {
-      "PENDING": "Awaiting confirmation",
+      "PENDING": "Being checked",
       "CONFIRMED": "Payment confirmed",
       "EXTRA": "Extra: the invoice is already paid"
     },
     "source": {
-      "CABINET": "Customer cabinet",
+      "CABINET": "Customer account",
       "BOT": "Telegram bot",
       "EMAIL": "Email",
       "MANUAL": "Attached by accountant"
@@ -170,7 +170,7 @@
     "form": "Customer payment order",
     "file": {
       "label": "Payment order file",
-      "hint": "PDF, image or Office document, up to 25 MB"
+      "hint": "PDF, image or Word or Excel file, up to 25 MB"
     },
     "source": {
       "label": "Where it came from"
@@ -187,7 +187,7 @@
       "not_open": "the invoice no longer awaits payment, the card is refreshed",
       "forbidden": "the action is not allowed for your role",
       "too_large": "the file is larger than 25 MB",
-      "unsupported": "PDF, images and Office documents are allowed",
+      "unsupported": "PDF, images and Word and Excel files are allowed",
       "unavailable": "the service is not responding, the file stayed in the form",
       "unknown": "something went wrong, the file stayed in the form"
     }
@@ -252,7 +252,7 @@
     "label": "Message text",
     "template": "Hello! Please send the payment order for invoice {{number}} for {{amount}}. Due date: {{due}}. Thank you!",
     "templateNoDue": "Hello! Please send the payment order for invoice {{number}} for {{amount}}. Thank you!",
-    "note": "There is no automatic sending to the customer’s bot or email yet: copy the text, send it in “Chats”, then mark the request.",
+    "note": "Copy the text, send it to the customer in “Chats”, then mark the request.",
     "copy": "Copy text",
     "copied": "Text copied",
     "copyFailed": "Could not copy — select the text by hand.",
@@ -322,7 +322,7 @@
       "missing": "Not attached"
     },
     "status": {
-      "to_pay": "Passed to accountant",
+      "to_pay": "Sent for payment",
       "paid": "Paid"
     },
     "paidOn": "paid {{date}}",
@@ -378,7 +378,7 @@
       },
       "receipt": {
         "label": "Payment order",
-        "hint": "PDF, image or Office document, up to 25 MB. Optional",
+        "hint": "PDF, image or Word or Excel file, up to 25 MB. Optional",
         "uploaded": "Uploaded: {{name}}"
       },
       "note": {

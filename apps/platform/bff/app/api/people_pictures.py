@@ -65,7 +65,7 @@ async def _multipart(request: Request) -> tuple[bytes, str]:
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Картинку нужно передать формой multipart.",
+            "Приложите картинку к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )

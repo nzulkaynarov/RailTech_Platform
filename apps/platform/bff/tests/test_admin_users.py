@@ -659,7 +659,7 @@ async def test_last_director_is_a_named_conflict(
     assert response.status_code == 409
     check(response, "/admin/users/{id}", "patch")
     assert response.json()["code"] == "LAST_DIRECTOR"
-    assert "последнего директора" in response.json()["message"]
+    assert "последнего сотрудника" in response.json()["message"]
 
 
 async def test_crm_validation_error_lists_fields(
@@ -907,7 +907,7 @@ async def test_invite_when_crm_goes_down_after_create(web: Web, crm: CrmUsers) -
     body = response.json()
     assert body["code"] == "BACKEND_UNAVAILABLE"
     assert body["source"] == "crm"
-    assert "CRM недоступна" in body["message"]
+    assert "приглашение не отправлено" in body["message"]
     assert "почт" not in body["message"].lower().replace("отправлено", "")
     assert body["details"]["employee_id"] == "101"
     assert body["details"]["invite"] == "not_sent"

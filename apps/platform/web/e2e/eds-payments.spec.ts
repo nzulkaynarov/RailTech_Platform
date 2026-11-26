@@ -77,7 +77,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(row(page, "СЧ-2026/143").getByText("Не выставлен")).toBeVisible();
 
     await pick("Оплаты на подтверждение");
-    await expect(row(page, "СЧ-2026/145").getByText("Платёжное поручение получено")).toBeVisible();
+    await expect(row(page, "СЧ-2026/145").getByText("Оплата на проверке")).toBeVisible();
     await settledScreenshot(page, "list-proofs");
     await expectNoViolations(page, "список: Оплаты на подтверждение");
 
@@ -196,9 +196,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
 
     await panel.getByRole("button", { name: "Запросить платёжное поручение" }).click();
     await expect(panel.getByLabel("Текст сообщения")).toHaveValue(/по счёту СЧ-2026\/142 на сумму/);
-    await expect(
-      panel.getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
-    ).toBeVisible();
+    await expect(panel.getByText(/Скопируйте текст, отправьте его клиенту/)).toBeVisible();
     await panel.getByRole("button", { name: "Отметить: платёжное поручение запросили" }).click();
     await expect(
       page.getByText("Запрос платёжного поручения отмечен в журнале счёта"),
@@ -219,7 +217,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     ).toBeVisible();
     // счёт переехал на вкладку «Оплаты на подтверждение»
     await openPayments(page, "?show=proofs");
-    await expect(row(page, "СЧ-2026/142").getByText("Платёжное поручение получено")).toBeVisible();
+    await expect(row(page, "СЧ-2026/142").getByText("Оплата на проверке")).toBeVisible();
   });
 
   test("записка к оплате → «Оплачено» (дата, сумма, платёжка) → в оплаченных", async ({ page }) => {
@@ -227,7 +225,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await openPayments(page, "?show=memos");
 
     const first = row(page, "СЗ-2026/015");
-    await expect(first.getByText("Передана бухгалтеру")).toBeVisible();
+    await expect(first.getByText("Передана на оплату")).toBeVisible();
     await expect(first.getByText("Приложен")).toBeVisible();
     await settledScreenshot(page, "memos-list");
     await expectNoViolations(page, "записки к оплате");

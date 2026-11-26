@@ -16,7 +16,7 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/crm/clients?kind=applications");
 
     const list = page.getByRole(width === 390 ? "list" : "table", { name: LIST });
-    await expect(list.getByText("Согласован кандидатом")).toBeVisible();
+    await expect(list.getByText("Ожидает подписания")).toBeVisible();
     await expect(list.getByText("Письмо-приглашение не доставлено")).toBeVisible();
     await expect(list.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
     // Новая заявка: договор ещё не отправлен, одобрить нельзя (решение архитектора по #427)

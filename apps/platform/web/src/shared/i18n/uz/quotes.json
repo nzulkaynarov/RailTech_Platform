@@ -161,8 +161,8 @@
         "send_failed": "yuborişda nosozlik"
       },
       "error": "Avtoyuborişni tizim töxtatdi: {{reason}}.",
-      "line": "{{channel}} — {{status}}",
-      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "line": "{{channel}} — {{label}}",
+      "lineReason": "{{channel}} — {{label}}: {{reason}}",
       "send": "Yuboriş",
       "resend": "Qayta yuboriş",
       "sendLabel": "{{action}}: {{channel}}",

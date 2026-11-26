@@ -76,7 +76,7 @@
     "previewTitle": "Maqola Yordamda şunday körinadi",
     "previewEmpty": "Yozişni boşlaganingizda maqola matni şu yerda paydo böladi.",
     "previewHeading": "Sarlavha körsatilmagan",
-    "status": "Holati: {{status}}",
+    "status": "Holati: {{label}}",
     "save": "Saqlaş",
     "saveDraft": "Qoralamani saqlaş",
     "saveAndPublish": "Saqlaş va eʼlon qiliş",

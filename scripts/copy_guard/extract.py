@@ -38,6 +38,8 @@ SETTINGS_HINT = re.compile(
     r"providers?|mail_?connect|admin-integrations|admin-bus|admin-audit|admin-mail)",
     re.I,
 )
+# Daily budget and key fields of the AI model providers in the bot settings: connection settings, brands are the point.
+MODEL_KEY = re.compile(r"^bot:(fields|hints)\.(anthropic|gemini)$")
 
 
 def row(app, surface, audience, source, key, lang, text, ctx=""):
@@ -96,7 +98,7 @@ def extract_json(root: Path) -> Iterator[dict]:
             lines = key_lines(f)
             ns = f.stem
             for k, v in flat(json.loads(f.read_text(encoding="utf-8"))):
-                ctx = "settings" if ns in {"integrations", "bus", "audit"} or SETTINGS_HINT.search(k) else ""
+                ctx = "settings" if ns in {"integrations", "bus", "audit"} or SETTINGS_HINT.search(k) or MODEL_KEY.search(f"{ns}:{k}") else ""
                 yield row("platform", "ui", "staff", f"{rel}:{lines.get(k, 1)}", f"{ns}:{k}", lang, v, ctx)
         f = root / "apps/cabinet/src/i18n/locales" / f"{lang}.json"
         rel = f.relative_to(root).as_posix()
@@ -142,7 +144,7 @@ def extract_ts(root: Path) -> Iterator[dict]:
             surface = "help" if "helpArticles" in f.name else "hardcoded-ui"
             if "rbac" in f.name:
                 surface = "roles"
-            if f.name == "settingsRegistry.ts":
+            if f.name in ("settingsRegistry.ts", "createKinds.ts"):  # keywords the user may type
                 surface = "search-terms"
             seen = set()
             for m in TS_STR.finditer(stripped):

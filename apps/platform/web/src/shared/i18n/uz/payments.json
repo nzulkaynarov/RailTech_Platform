@@ -152,7 +152,7 @@
     "claimed": "Mijoz {{date}} sanasida {{amount}} körsatgan",
     "download": "{{name}} tölov topşiriqnomasini yuklab oliş",
     "state": {
-      "PENDING": "Tasdiqlaşni kutmoqda",
+      "PENDING": "Tekşiruvda",
       "CONFIRMED": "Tölov tasdiqlangan",
       "EXTRA": "Ortiqça: hisob allaqaçon tölangan"
     },
@@ -170,7 +170,7 @@
     "form": "Mijozning tölov topşiriqnomasi",
     "file": {
       "label": "Tölov topşiriqnomasi fayli",
-      "hint": "PDF, rasm yoki Office hujjati, 25 MB gaça"
+      "hint": "PDF, rasm yoki Word, Excel fayli, 25 MB gaça"
     },
     "source": {
       "label": "Qayerdan kelgan"
@@ -187,7 +187,7 @@
       "not_open": "hisob endi tölovni kutmaydi, kartoçka yangilandi",
       "forbidden": "amal rolingiz uçun mavjud emas",
       "too_large": "fayl 25 MB dan katta",
-      "unsupported": "PDF, rasm va Office hujjatlari mumkin",
+      "unsupported": "PDF, rasm va Word, Excel fayllari mumkin",
       "unavailable": "xizmat javob bermayapti, fayl şaklda qoldi",
       "unknown": "nimadir notöğri ketdi, fayl şaklda qoldi"
     }
@@ -252,7 +252,7 @@
     "label": "Xabar matni",
     "template": "Assalomu alaykum! Iltimos, {{number}} hisob böyiça {{amount}} summadagi tölov topşiriqnomasini yuboring. Tölov muddati — {{due}}. Rahmat!",
     "templateNoDue": "Assalomu alaykum! Iltimos, {{number}} hisob böyiça {{amount}} summadagi tölov topşiriqnomasini yuboring. Rahmat!",
-    "note": "Mijozning botiga va poçtasiga avtomatik yuboriş hozirça yöq: matnni nusxalab, «Çatlar»da yuboring, söng sörovni belgilang.",
+    "note": "Matnni nusxalang, mijozga «Çatlar»da yuboring va sörovni belgilang.",
     "copy": "Matnni nusxalaş",
     "copied": "Matn nusxalandi",
     "copyFailed": "Nusxalab bölmadi — matnni qölda belgilang.",
@@ -322,7 +322,7 @@
       "missing": "Biriktirilmagan"
     },
     "status": {
-      "to_pay": "Buxgalterga topşirilgan",
+      "to_pay": "Tölovga topşirilgan",
       "paid": "Tölangan"
     },
     "paidOn": "{{date}} sanasida tölangan",
@@ -378,7 +378,7 @@
       },
       "receipt": {
         "label": "Tölov topşiriqnomasi",
-        "hint": "PDF, rasm yoki Office hujjati, 25 MB gaça. Majburiy emas",
+        "hint": "PDF, rasm yoki Word, Excel fayli, 25 MB gaça. Majburiy emas",
         "uploaded": "Yuklandi: {{name}}"
       },
       "note": {

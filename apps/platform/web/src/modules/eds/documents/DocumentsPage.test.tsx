@@ -150,7 +150,7 @@ describe("EDS · Документы: список", () => {
       "tr",
     ) as HTMLElement;
     expect(within(contract).getByText("ДОГ-2026/105")).toBeVisible();
-    expect(within(contract).getByText("Согласован клиентом")).toBeVisible();
+    expect(within(contract).getByText("Ожидает подписания")).toBeVisible();
     expect(
       within(contract).getByRole("link", {
         name: "Открыть в проекте: Поставка стрелочных переводов",
@@ -163,7 +163,7 @@ describe("EDS · Документы: список", () => {
     const act = (await screen.findByText("Монтаж крепежа, объект «Север»")).closest(
       "tr",
     ) as HTMLElement;
-    expect(within(act).getByText("Выпущен")).toBeVisible();
+    expect(within(act).getByText("Выставлен")).toBeVisible();
     expect(within(act).getByRole("link", { name: /Открыть в проекте/ })).toHaveAttribute(
       "href",
       "/eds/projects/97",

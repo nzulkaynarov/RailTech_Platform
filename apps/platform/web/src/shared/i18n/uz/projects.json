@@ -59,10 +59,10 @@
       "accepted": "Mijoz qabul qilgan"
     },
     "contract": {
-      "project": "Loyiha",
-      "client_agreed": "Mijoz bilan kelişilgan",
-      "issued_at_operator": "EHTda rasmiylaştirilgan",
-      "signed": "Imzolangan (skan)",
+      "project": "Qoralama",
+      "client_agreed": "Imzolaşni kutmoqda",
+      "issued_at_operator": "Imzolaşni kutmoqda",
+      "signed": "Imzolangan",
       "rejected": "Mijoz rad etgan",
       "cancelled": "Bekor qilingan"
     },
@@ -75,10 +75,10 @@
       "cancelled": "Bekor qilingan"
     },
     "act": {
-      "project": "Loyiha",
-      "returned": "Sabab bilan qaytarilgan",
-      "issued": "Çiqarilgan",
-      "signed": "Imzolangan (skan)",
+      "project": "Qoralama",
+      "returned": "Eʼtirozlar bilan qaytarilgan",
+      "issued": "Rasmiylaştirilgan",
+      "signed": "Imzolangan",
       "accepted": "Mijoz qabul qilgan",
       "cancelled": "Bekor qilingan"
     }
@@ -162,13 +162,13 @@
         "eta": "Kutilmoqda"
       },
       "lineStatus": {
-        "assembling": "Komplektlanmoqda",
-        "in_transit": "Yölda",
+        "assembling": "Butlanmoqda",
+        "in_transit": "Omborimizga kelmoqda",
         "ready_to_ship": "Jönatişga tayyor",
         "shipped": "Jönatilgan",
         "delivered": "Yetkazilgan",
         "accepted": "Mijoz qabul qilgan",
-        "disputed": "Mijoz eʼtiroz bildirgan"
+        "disputed": "Mijozning eʼtirozlari bor"
       },
       "proof": "Yetkazib beriş tasdiği",
       "proofFile": "Fayl"
@@ -212,7 +212,7 @@
       "client_agreed": "Şartnoma matni mijoz bilan kelişildi",
       "rejected": "Şartnomani mijoz rad etdi",
       "revised": "Şartnoma loyihasi işga qaytarildi",
-      "issued_external": "Şartnoma EHTda rasmiylaştirildi",
+      "issued_external": "Şartnoma imzolaşga qöyildi",
       "scan_attached": "Imzolangan şartnoma skani biriktirildi",
       "signed": "Şartnoma imzolandi",
       "signed_client": "Mijoz şartnomani kelişdi",
@@ -258,8 +258,8 @@
     "state": {
       "project": "Loyiha hali mijozga yuborilmagan.",
       "atClient": "Loyiha mijozda matn kelişuvida.",
-      "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani EHTda (platformadan taşqarida) rasmiylaştiring.",
-      "issued_at_operator": "Şartnoma EHTda rasmiylaştirilgan. Ikki tomon imzolagaç, skanni biriktiring.",
+      "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani imzolaşga qöying (platformadan taşqarida).",
+      "issued_at_operator": "Şartnoma imzolaşni kutmoqda. Ikki tomon imzolagaç, skanni biriktiriş.",
       "signed": "Şartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
       "rejected": "Mijoz şartnomani rad etdi. Loyihani töğrilab, qaytadan kelişuvga yuboring.",
       "cancelled": "Şartnoma bekor qilingan."
@@ -267,15 +267,15 @@
     "action": {
       "send_to_client": "Mijozga kelişuvga yuboriş",
       "client_agreed": "Belgilaş: mijoz kelişdi",
-      "mark_issued": "Belgilaş: EHTda rasmiylaştirildi",
+      "mark_issued": "Belgilaş: imzolaşga qöyildi",
       "attach_scan": "Imzolangan skanni biriktiriş",
       "reject": "Mijoz şartnomani rad etdi…",
       "revise": "Loyihaga qaytariş"
     },
     "note": {
-      "label": "EHT tizimidagi operator yoki raqam",
+      "label": "Qayerda qöyilgan yoki raqami",
       "hint": "Ixtiyoriy: jurnalga tuşadi.",
-      "placeholder": "Masalan: EHT, № 77"
+      "placeholder": "Masalan: № 77"
     },
     "reject": {
       "title": "Mijoz şartnomani rad etdi",
@@ -301,7 +301,7 @@
       "create": "Şartnoma loyihasi şakllantirildi.",
       "send_to_client": "Loyiha mijozga yuborildi.",
       "client_agreed": "Belgilandi: mijoz matnni kelişdi.",
-      "mark_issued": "Belgilandi: şartnoma EHTda rasmiylaştirildi.",
+      "mark_issued": "Belgilandi: şartnoma imzolaşga qöyildi.",
       "attach_scan": "Skan biriktirildi, şartnoma imzolandi.",
       "reject": "Rad etiş yozildi.",
       "revise": "Loyiha işga qaytarildi.",
@@ -423,7 +423,7 @@
     },
     "fields": {
       "total": "Summa",
-      "issued": "Çiqarilgan",
+      "issued": "Rasmiylaştirilgan",
       "signed": "Imzolangan",
       "accepted": "Qabul qilingan"
     },

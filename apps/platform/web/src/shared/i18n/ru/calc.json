@@ -33,12 +33,12 @@
   "state": {
     "not_started": "Не начат",
     "in_progress": "В работе",
-    "returned": "Возвращён на доработку",
-    "at_director": "Черновик КП у директора",
-    "rejected": "КП отклонено",
+    "returned": "На доработке",
+    "at_director": "КП на одобрении",
+    "rejected": "КП не одобрено",
     "approved": "КП одобрено",
     "rejected_client": "КП отклонено клиентом",
-    "rejected_director": "КП отклонено директором"
+    "rejected_director": "КП не одобрено"
   },
   "groups": {
     "stock": "Склад",
@@ -272,7 +272,7 @@
     "requestFiles": "Файлы заявки",
     "noResolution": "Резолюция не требовалась — расчёт поставлен ответственному сразу.",
     "calcHeading": "Расчёт",
-    "assignedDirect": "назначен(а): {{names}}"
+    "assignedDirect": "назначено: {{names}}"
   },
   "errors": {
     "visas_missing": "Не все строки подтверждены.",

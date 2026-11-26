@@ -81,7 +81,7 @@ describe("Настройки · Telegram и разделы бота по гру�
     // Пороги передачи лида менеджеру — поведение бота (ЕВ-2а, стр. 10): здесь, а срок ответа — на «Времени и сроках»
     const handoff = await form("Правила передачи");
     expect(await within(handoff).findAllByText("Оценка лида для передачи")).not.toHaveLength(0);
-    expect(within(handoff).queryByLabelText("Время на ответ (SLA)")).toBeNull();
+    expect(within(handoff).queryByLabelText("Время на ответ")).toBeNull();
     expect(within(handoff).queryByLabelText("Повторное напоминание через")).toBeNull();
     // Разделы других групп сюда не попали; переключатель ИИ — на странице «ИИ»
     expect(screen.queryByRole("region", { name: "Причины отказа" })).toBeNull();
@@ -91,7 +91,7 @@ describe("Настройки · Telegram и разделы бота по гру�
   // По тесту на страницу: восемь открытий подряд в одном тесте под полной нагрузкой не укладывались в 20 с.
   const BOT_PAGES: [string, string, string, string][] = [
     ["/admin/timing", "Время и сроки", "Рабочие часы", "Начало рабочего дня"],
-    ["/admin/timing", "Время и сроки", "Срок первого ответа и напоминание", "Время на ответ (SLA)"],
+    ["/admin/timing", "Время и сроки", "Срок первого ответа и напоминание", "Время на ответ"],
     ["/admin/notifications", "Уведомления", "Оповещения команды", "Дежурные"],
     [
       "/admin/notifications",
@@ -127,7 +127,7 @@ describe("Настройки · Telegram и разделы бота по гру�
   it("срок первого ответа лиду — оба поля (Telegram и сайт) на «Времени и сроках», а порогов передачи там нет (ЕВ-2а, стр. 7 и 10)", async () => {
     await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
     const telegram = await form("Срок первого ответа и напоминание");
-    expect(await within(telegram).findByLabelText("Время на ответ (SLA)")).toBeVisible();
+    expect(await within(telegram).findByLabelText("Время на ответ")).toBeVisible();
     const site = await form("Срок первого ответа на заявку с сайта");
     expect(await within(site).findByLabelText("Время на первый ответ с сайта")).toBeVisible();
     expect(screen.queryByLabelText("Оценка лида для передачи")).toBeNull();

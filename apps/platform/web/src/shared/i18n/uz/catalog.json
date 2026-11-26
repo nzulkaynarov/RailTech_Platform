@@ -417,7 +417,7 @@
     "parts": "Maʼlumotnoma",
     "rates": {
       "title": "Valyuta kurslari",
-      "hint": "Sömga kurslar: Markaziy bankdan avtomatik yoki sanaga qölda. TT uçun kompaniya sozlamalarida belgilangan muddatdan eski bölmagan oxirgi kurs olinadi.",
+      "hint": "Sömga kurslar: Markaziy bankdan yuklanadi yoki sanaga qölda kiritiladi. TT uçun kompaniya sozlamalarida belgilangan muddatdan eski bölmagan oxirgi kurs olinadi.",
       "filter": "Valyuta",
       "any": "Barça valyutalar",
       "table": "Sömga valyuta kurslari",
@@ -446,7 +446,7 @@
       "onlyActive": "Faqat amaldagilar",
       "add": "Kod qöşiş",
       "table": "TIF TN kodlari",
-      "editNamed": "{{code}} kodini özgartiriş",
+      "editNamed": "{{hs}} kodini özgartiriş",
       "active": "Amalda",
       "closed": "Yopilgan",
       "until": "{{date}} gaça",
@@ -463,7 +463,7 @@
       },
       "form": {
         "addTitle": "TIF TN kodini qöşiş",
-        "editTitle": "Kod {{code}}",
+        "editTitle": "Kod {{hs}}",
         "add": "Qöşiş",
         "code": "Kod",
         "codeHint": "2, 4, 6, 8 yoki 10 raqam. Qöşilgaç kodni özgartirib bölmaydi.",
@@ -711,9 +711,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Mijoz topşirilgandan keyin uşlab turilgan: hamkor kartoçkasida va Mijozda STIRni tekşiring va «Qayta taklif qiliş» tugmasini bosing. Boğlaniş yaratilmadi, hamkor sörovlari şu yerda saqlanadi.",
+        "held": "STIR tekşiruvi kerak: hamkor kartoçkasida va Mijozda STIRni tekşiring va «Qayta taklif qiliş» tugmasini bosing. Boğlaniş yaratilmadi, hamkor sörovlari şu yerda saqlanadi.",
         "unverified": "Boğlanişni mijoz topşirilişi STIR mos kelgani böyiça yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizça hamkor sörovlari şu yerda saqlanadi.",
-        "conflict": "Bunday rekvizitli mijoz bor, lekin u boşqa kompaniyaga boğlangan. Heç narsa özgartirilmadi. Hamkor kartoçkasida va Mijozda STIR yoki röyxatdan ötiş raqamini tekşiring, xatosini töğrilang va hamkorni qayta taklif qiling."
+        "conflict": "Bunday rekvizitli mijoz boşqa kompaniyaga boğlangan, heç narsa özgartirilmadi. Hamkor va mijoz kartoçkalarida STIRni tekşiring, xatosini töğrilang va hamkorni qayta taklif qiling."
       }
     },
     "rights": "Hamkorga nima oçiladi",
@@ -1098,9 +1098,9 @@
       "rejected": "Rad etilgan"
     },
     "status": {
-      "submitted": "Topşirilgan",
+      "submitted": "Körib çiqilmoqda",
       "contract_sent": "Şartnoma yuborilgan",
-      "candidate_agreed": "Nomzod kelişgan",
+      "candidate_agreed": "Imzolaşni kutmoqda",
       "approved": "Maʼqullangan",
       "rejected": "Rad etilgan"
     },

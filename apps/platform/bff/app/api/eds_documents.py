@@ -504,7 +504,7 @@ async def upload_file(request: Request, authed: Writer) -> EdsFile:
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Файл нужно передать формой multipart.",
+            "Приложите файл к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )

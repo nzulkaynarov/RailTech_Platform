@@ -37,7 +37,7 @@
   },
   "kinds": {
     "more": "и ещё {{count}}",
-    "unknown": "{{code}}"
+    "unknown": "{{name}}"
   },
   "basis": {
     "charter": "Устав",
@@ -92,7 +92,7 @@
     "limitAmount": "Сумма",
     "limitCurrency": "Валюта",
     "limitHint": "Пусто — без лимита",
-    "vakolat": "Ссылка на Vakolat.uz",
+    "vakolat": "Ссылка на доверенность",
     "vakolatHint": "Необязательно: запись в реестре доверенностей",
     "note": "Примечание",
     "file": "Файл основания",
@@ -124,7 +124,7 @@
       "valid_to": "Проверьте срок: доверенность — не больше 3 лет со дня выдачи.",
       "limit_amount": "Укажите сумму лимита.",
       "limit_currency": "Выберите валюту лимита.",
-      "vakolat_url": "Ссылка должна вести на vakolat.uz."
+      "vakolat_url": "Ссылка должна вести в реестр доверенностей."
     }
   },
   "revoke": {
@@ -156,7 +156,7 @@
     "basis_date": "Дата выдачи",
     "valid_from": "Действует с",
     "valid_to": "Действует до",
-    "vakolat_url": "Vakolat.uz",
+    "vakolat_url": "Доверенность",
     "note": "Примечание"
   },
   "check": {

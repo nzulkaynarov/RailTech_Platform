@@ -327,7 +327,7 @@
       "label": "Received via",
       "post": "Post",
       "paper": "Paper (handed in)",
-      "taxpayer_cabinet": "Taxpayer cabinet my.soliq",
+      "taxpayer_cabinet": "Taxpayer account",
       "courier": "Courier",
       "email": "Email",
       "unavailable": "The receipt methods did not load. Refresh the page."
@@ -368,7 +368,7 @@
     "urgent": "Urgent",
     "files": {
       "label": "Document file",
-      "hint": "A scan or file of the letter is required. PDF, images, Office documents, up to 25 MB. Do not upload passports or personal documents."
+      "hint": "A scan or file of the letter is required. PDF, images, Word and Excel files, up to 25 MB. Do not upload passports or personal documents."
     },
     "deal": {
       "label": "Link to a request or project",
@@ -719,10 +719,10 @@
     },
     "empty": {
       "title": "No new letters",
-      "text": "Shared mailbox letters appear here within 2 minutes after they arrive.",
+      "text": "Shared mailbox letters appear here a few minutes after they arrive.",
       "new": {
         "title": "No new letters",
-        "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
+        "text": "Shared mailbox letters appear here a few minutes after they arrive."
       },
       "mine": {
         "title": "Nothing in progress with you",
@@ -756,7 +756,7 @@
     "status": {
       "new": "New",
       "registered": "Registered",
-      "lead": "Sent to leads",
+      "lead": "Lead created",
       "archived": "Archived",
       "spam": "Suspicious",
       "newReply": "New · reply in thread",
@@ -799,7 +799,7 @@
     "assist": {
       "title": "Assistant suggestion",
       "button": "Suggest",
-      "intro": "The assistant suggests the letter type and an action. Email addresses, phones, TINs, PINFLs, passport, card and account numbers are hidden; attachments are not sent. You can handle the letter without it.",
+      "intro": "The assistant suggests the letter type and an action; you can handle the letter without it. Email addresses, phones, TINs, PINFLs, passport, card and account numbers are hidden; attachments are not sent.",
       "note": "The suggestion does nothing by itself — you choose the action.",
       "unavailable": "The assistant is unavailable now — handle the letter manually or try later.",
       "retry": "Try again",
@@ -810,7 +810,7 @@
       "title": "What to do",
       "what": "What will happen",
       "registerWhat": "The “Register incoming” form opens with the letter data and attachments; after registration the letter leaves the queue.",
-      "leadWhat": "A lead appears in the Inbox without a manager — a manager will take it. If a lead with this address exists, the letter is added to it as a note. The letter leaves the queue.",
+      "leadWhat": "A lead appears in the Inbox without a manager; if a lead with this address exists, the letter is added to it as a note. The letter leaves the queue.",
       "leadConfirm": "Create a lead",
       "archiveReason": "Reason",
       "archiveHint": "For example: advertising, duplicate, not for us",
@@ -931,7 +931,7 @@
     "takeDone": "The letter is with you",
     "ownHint": "Another colleague handles this letter, or it is for your information: you can open and read it.",
     "registering": "Creating the incoming number…",
-    "registeringWaiting": "Awaiting confirmation: registration was not confirmed within 10 minutes.",
+    "registeringWaiting": "Awaiting confirmation: registration has not been confirmed for 10 minutes.",
     "refresh": "Refresh",
     "busy": {
       "title": "The letter is already with {{name}} since {{time}}",
@@ -1021,7 +1021,7 @@
         "publicDomain": "This is a public mail service — the rule will catch letters from anyone. An exact address is better."
       },
       "senderCheck": {
-        "unverified": "The sender is not verified: the SPF/DKIM/DMARC check failed, the address may be forged. The rule type was not set.",
+        "unverified": "The sender is not verified: the mail check failed, the address may be forged. The rule type was not set.",
         "unknown": "The sender cannot be verified: the letter has no mark from the mail server. The rule type was not set."
       }
     },
@@ -1070,10 +1070,10 @@
         "by": "Sent by"
       },
       "status": {
-        "sent": "Delivered",
-        "queued": "Queued",
-        "failed": "Not delivered",
-        "skipped_no_smtp": "Mail not set up"
+        "sent": "Sent",
+        "queued": "Sending",
+        "failed": "Not sent",
+        "skipped_no_smtp": "Not sent: mail is not set up"
       },
       "resend": "Send again",
       "resent": "The email to {{to}} is queued",
@@ -1259,7 +1259,7 @@
       },
       "policy": {
         "title": "Data protection for AI",
-        "hint": "What is hidden in the text sent to the model: the mail assistant and “Fill from file”. Logs always hide everything. AI suggests, a person confirms.",
+        "hint": "What is hidden in the text for the assistant (mail and “Fill from file”); logs hide everything. AI suggests, a person confirms.",
         "legend": "Data protection policy",
         "business": "Business (recommended)",
         "businessText": "Passport, personal ID (PINFL), card numbers and birth dates are hidden. Company details, phones, email and names stay.",

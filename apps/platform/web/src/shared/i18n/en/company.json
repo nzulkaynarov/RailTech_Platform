@@ -91,7 +91,7 @@
       "template_missing_required_blocks": "The text is missing required document blocks.",
       "doc_prefix_taken": "This numbering prefix is already taken by another company. Choose another one.",
       "already_reviewed": "The request has already been reviewed. Refresh the list.",
-      "invalid_numbering_pattern": "The mask has no required {seq} token.",
+      "invalid_numbering_pattern": "The mask has no required {seq} part.",
       "file_too_large": "The file is larger than 2 MB.",
       "unsupported_type": "A PNG, JPEG, WebP or SVG file is required.",
       "multipart_required": "Choose a logo file.",
@@ -179,7 +179,7 @@
     "invalidField": "Check the value",
     "previewTitle": "Document sample",
     "previewKind": "Document type",
-    "previewFrame": "Sample: {{kind}}",
+    "previewFrame": "Sample: {{label}}",
     "previewHint": "The data is fictional; the number is the next one of the scheme, the counter is not used.",
     "inheritedEdit": "Edit company details",
     "languages": {
@@ -212,7 +212,7 @@
       "custom": "Custom mask"
     },
     "mask": "Number mask",
-    "maskHint": "Tokens: {prefix} {type} {YYYY} {YY} {MM} {seq}. {seq} is required.",
+    "maskHint": "Mask parts: {prefix} {type} {YYYY} {YY} {MM} {seq}. {seq} is required.",
     "maskInvalid": "The mask must contain {seq}",
     "padding": "Counter width",
     "paddingHint": "How many digits: 3 → 001",
@@ -225,8 +225,8 @@
     "start": "Start value",
     "startHint": "First number = value + 1",
     "labelsTitle": "Number labels",
-    "labelsHint": "A number is the same in every language: Latin letters A-Z and digits only.",
-    "labelInvalid": "Latin letters A-Z and digits only",
+    "labelsHint": "A number is the same in every language: Latin letters and digits only.",
+    "labelInvalid": "Latin letters and digits only",
     "save": "Save numbering",
     "saved": "Numbering saved",
     "previewTitle": "Number samples",
@@ -250,7 +250,7 @@
     "paymentTerms": "Payment terms",
     "priceVisibility": "Catalogue price",
     "visibility": {
-      "cabinet": "Show in the cabinet",
+      "cabinet": "Show in the account",
       "on_request": "On request"
     },
     "threshold": "Card completeness threshold, %",
@@ -260,7 +260,7 @@
     "invalidField": "Check the value",
     "note": "New quotes take these values; issued quotes do not change.",
     "remindOverdue": "Remind customers about overdue invoices",
-    "remindOverdueHint": "Once a day at 10:00 Tashkent time — one reminder per invoice more than three days past due: in the customer portal bell and by email to the project contact and to contacts invited to the portal. Off by default.",
+    "remindOverdueHint": "Once a day at 10:00 Tashkent time — a reminder for every invoice more than three days past due: in the bell and by email to the client. Off by default.",
     "confirmDays": "Partner price confirmation, days",
     "expiringDays": "Warn before a partner price expires, days",
     "actReminderHours": "Pause between act reminders, hours",
@@ -308,7 +308,7 @@
         "save": "Save rule"
       }
     },
-    "contract_auto_send": "A contract from an approved template goes to the Cabinet by itself after the quote is accepted",
+    "contract_auto_send": "A contract from an approved template goes to the Account by itself after the quote is accepted",
     "contract_auto_sendHint": "No visas without deviations. Off — the contract is sent by hand.",
     "contract_sign_before_send": "Our signature comes before sending to the client",
     "contract_sign_before_sendHint": "Off — the contract goes out as soon as it is assembled.",

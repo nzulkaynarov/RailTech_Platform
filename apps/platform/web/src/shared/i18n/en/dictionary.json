@@ -26,21 +26,21 @@
       "draft": "Draft",
       "revision": "Needs rework",
       "approved": "Approved",
-      "sent": "Sent",
+      "sent": "Sent to client",
       "accepted": "Accepted by client",
       "declined": "Declined by client",
       "expired": "Expired"
     },
     "contract": {
       "draft": "Draft",
-      "agreed": "Agreed by client",
-      "issued": "Issued in EDI",
+      "agreed": "Awaiting signature",
+      "issued": "Awaiting signature",
       "signed": "Signed",
       "rejected": "Rejected"
     },
     "invoice": {
       "issued": "Issued",
-      "proof_received": "Payment order received",
+      "proof_received": "Payment being checked",
       "partially_paid": "Partially paid",
       "paid": "Paid",
       "overdue": "Overdue"
@@ -48,15 +48,15 @@
     "act": {
       "draft": "Draft",
       "issued": "Issued",
-      "signed": "Accepted",
-      "returned": "Returned"
+      "signed": "Accepted by client",
+      "returned": "Returned with remarks"
     },
     "memo": {
       "pending": "Awaiting approval",
       "approved": "Approved",
       "rejected": "Rejected",
       "returned": "Returned for rework",
-      "passed_to_accountant": "Passed to accountant",
+      "passed_to_accountant": "Sent for payment",
       "paid": "Paid"
     },
     "lead": {

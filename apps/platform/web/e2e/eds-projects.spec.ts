@@ -52,7 +52,7 @@ async function openProject(page: Page, n: number): Promise<void> {
 test.describe("Проекты: бухгалтер", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
 
-  test("список → договор от проекта до «Подписан (скан)» → акт → «Выполнено»", async ({ page }) => {
+  test("список → договор от проекта до «Подписан» → акт → «Выполнено»", async ({ page }) => {
     await loginAndWait(page, "accountant@demo.example");
     await spaGoto(page, "/eds/projects");
     await expect(page.getByRole("heading", { level: 1, name: /Проекты/ })).toBeVisible();
@@ -102,8 +102,8 @@ test.describe("Проекты: бухгалтер", () => {
     await panel.getByLabel("Кто со стороны клиента").fill("Каримов А., снабженец");
     await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
     await expect(panel.getByText(/Клиент согласовал редакцию/)).toBeVisible(); // «Отмечено сотрудником» — в «Истории»
-    await panel.getByRole("button", { name: "Отметить: выставлен в ЭДО" }).click();
-    await expect(panel.getByText(/Договор выставлен в ЭДО\. Когда обе стороны/)).toBeVisible();
+    await panel.getByRole("button", { name: "Отметить: выставлен на подписание" }).click();
+    await expect(panel.getByText(/Договор ожидает подписания\. Когда обе стороны/)).toBeVisible();
     await settledScreenshot(page, "contract-issued");
     await expectNoViolations(page, "договор: выставлен в ЭДО");
 
@@ -124,7 +124,7 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(
       panel.getByText("Договор подписан обеими сторонами, скан сохранён."),
     ).toBeVisible();
-    await expect(panel.getByText("Подписан (скан)").first()).toBeVisible();
+    await expect(panel.getByText("Подписан").first()).toBeVisible();
     await settledScreenshot(page, "contract-signed");
     await expectNoViolations(page, "договор подписан");
     await expectNoInvoiceWord(page);

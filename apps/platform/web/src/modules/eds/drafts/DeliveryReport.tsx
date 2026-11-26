@@ -88,10 +88,10 @@ export function DeliveryReport({ quote }: { quote: QuoteApprovalCard }) {
     const label = line.reason
       ? t("card.delivery.lineReason", {
           channel,
-          status,
+          label: status,
           reason: t(`card.delivery.reason.${line.reason}`),
         })
-      : t("card.delivery.line", { channel, status });
+      : t("card.delivery.line", { channel, label: status });
     const action = actionKey(line);
     return {
       state: STATE[line.status],

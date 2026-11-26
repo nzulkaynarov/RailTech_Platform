@@ -121,7 +121,7 @@
       "offer_source_invalid": "Choose the price source.",
       "role_not_permitted": "Insufficient permissions.",
       "contact_exists": "The company already has a contact with this address.",
-      "contact_email_ambiguous": "This address is already used by a contact of another cabinet company. Use a different address.",
+      "contact_email_ambiguous": "This address is already used by a contact of another account company. Use a different address.",
       "email_delivery_failed": "The e-mail was not sent. Check the mail service and try again — access is unchanged.",
       "module_not_allowed": "This section cannot be enabled for a partner.",
       "contact_name_required": "Enter the contact's full name.",
@@ -417,7 +417,7 @@
     "parts": "Reference list",
     "rates": {
       "title": "Exchange rates",
-      "hint": "Rates to UZS: automatically from the central bank, or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
+      "hint": "Rates to UZS: loaded from the central bank or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
       "filter": "Currency",
       "any": "All currencies",
       "table": "Exchange rates to UZS",
@@ -446,7 +446,7 @@
       "onlyActive": "Only valid ones",
       "add": "Add code",
       "table": "HS codes",
-      "editNamed": "Edit code {{code}}",
+      "editNamed": "Edit code {{hs}}",
       "active": "Valid",
       "closed": "Closed",
       "until": "until {{date}}",
@@ -463,7 +463,7 @@
       },
       "form": {
         "addTitle": "Add HS code",
-        "editTitle": "Code {{code}}",
+        "editTitle": "Code {{hs}}",
         "add": "Add",
         "code": "Code",
         "codeHint": "2, 4, 6, 8 or 10 digits. The code cannot be changed after adding.",
@@ -631,7 +631,7 @@
       "reject": "Reject",
       "approved": "Document approved.",
       "rejected": "Document rejected.",
-      "note": "A partner sent this file from the cabinet. Clients cannot see it until you approve it."
+      "note": "A partner sent this file from the account. Clients cannot see it until you approve it."
     }
   },
   "supplierForm": {
@@ -665,7 +665,7 @@
     }
   },
   "cabinetAccess": {
-    "title": "Cabinet access",
+    "title": "Account access",
     "status": {
       "none": "Not opened",
       "invited": "Invited",
@@ -676,9 +676,9 @@
       "client": "Client",
       "partner": "Partner"
     },
-    "rolesLine": "In the cabinet: {{roles}}",
-    "closed": "Cabinet closed: the partner cannot sign in.",
-    "notOpened": "The cabinet has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
+    "rolesLine": "In the account: {{roles}}",
+    "closed": "Account closed: the partner cannot sign in.",
+    "notOpened": "The account has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
     "invitedBy": "Invited by",
     "firstLogin": "First sign-in",
     "noLogin": "has not signed in yet",
@@ -711,9 +711,9 @@
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Held after a client handoff: check the tax ID in the partner's card and on the Client, then press “Invite again”. No link was created, the partner's requests are kept here.",
+        "held": "Tax ID check needed: check the tax ID in the partner's card and on the Client, then press “Invite again”. No link was created, the partner's requests are kept here.",
         "unverified": "The link was created by a client handoff by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
-        "conflict": "A client already exists with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the partner's card and on the Client, fix the wrong one and invite the partner again."
+        "conflict": "A client with these details is already linked to another company, nothing was changed. Check the tax ID in the partner's and the client's cards, fix the wrong one and invite the partner again."
       }
     },
     "rights": "What the partner will see",
@@ -738,7 +738,7 @@
     },
     "contacts": "Company contacts",
     "contactsTable": "Partner contacts",
-    "noContacts": "No contacts yet. Add the person who will get the invitation: the cabinet is entered by e-mail only.",
+    "noContacts": "No contacts yet. Add the person who will get the invitation: the account is entered by e-mail only.",
     "contact": {
       "name": "Full name",
       "email": "E-mail",
@@ -764,7 +764,7 @@
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
     "inviteForm": {
-      "title": "Invite to the cabinet"
+      "title": "Invite to the account"
     },
     "suspend": "Suspend access",
     "readOnly": "Only staff allowed to manage partners can invite and change rights.",
@@ -781,7 +781,7 @@
       "canAct": "Can approve"
     },
     "suspendForm": {
-      "title": "Suspend cabinet access",
+      "title": "Suspend account access",
       "ok": "Suspend",
       "text": "The partner cannot sign in until you invite them again.",
       "steps": [
@@ -1098,15 +1098,15 @@
       "rejected": "Rejected"
     },
     "status": {
-      "submitted": "Submitted",
+      "submitted": "Under review",
       "contract_sent": "Contract sent",
-      "candidate_agreed": "Agreed by candidate",
+      "candidate_agreed": "Awaiting signature",
       "approved": "Approved",
       "rejected": "Rejected"
     },
     "source": {
       "public": "Public form",
-      "client_cabinet": "Client cabinet",
+      "client_cabinet": "Client account",
       "letter": "Incoming letter",
       "lead": "Lead"
     },
@@ -1134,7 +1134,7 @@
     "actions": {
       "sendContract": "Send contract",
       "resendContract": "Send contract again",
-      "approve": "Approve and open cabinet",
+      "approve": "Approve and open account",
       "approveWithoutAgreement": "Approve without agreement",
       "reject": "Reject",
       "prepare": "Prepare contract",
@@ -1147,18 +1147,18 @@
     },
     "sendContractModal": {
       "title": "Send contract: {{name}}",
-      "hint": "The contract goes to the candidate, and {{email}} gets an email with cabinet sign-in.",
+      "hint": "The contract goes to the candidate, and {{email}} gets an email with account sign-in.",
       "ok": "Send contract",
       "steps": [
         "Application status will change to “Contract sent”",
         "The candidate will receive the partner contract draft",
-        "The candidate contact will receive an email with cabinet sign-in"
+        "The candidate contact will receive an email with account sign-in"
       ],
       "noEmail": "The candidate has no e-mail: nowhere to send the sign-in."
     },
     "approveModal": {
-      "title": "Approve application and open cabinet: {{name}}",
-      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty appears among the clients.",
+      "title": "Approve application and open account: {{name}}",
+      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner account access, the contact is invited, and the counterparty appears among the clients.",
       "hintOverride": "The candidate has not agreed the contract yet. You can approve only with a reason, recorded in the log.",
       "overrideLabel": "Reason for approval without agreement",
       "overridePlaceholder": "e.g.: the contract was signed on paper",

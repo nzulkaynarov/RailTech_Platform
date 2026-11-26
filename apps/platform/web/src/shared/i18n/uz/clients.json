@@ -36,7 +36,7 @@
   "card": {
     "partner": {
       "title": "Kabinetdagi hamkor tasdiqlaşni kutmoqda",
-      "text": "Işlab çiqaruvçi yoki hamkor kabinetga taklif qilindi va uning rekvizitlari şu mijozga mos keldi. Biz ularni özimiz birlaştirmaymiz: agar bu bir kompaniya bölsa, tasdiqlang — hamkor sörovlari şu mijoz kartoçkasiga keladi; aks holda hamkor uçun yangi mijoz yaratamiz.",
+      "text": "Hamkor kabinetga taklif qilindi va uning rekvizitlari şu mijozga mos keldi. Bir kompaniya bölsa — tasdiqlang, hamkor sörovlari mijoz kartoçkasiga keladi; aks holda yangi mijoz yaratamiz.",
       "erp": "Hisobdagi kompaniya №",
       "matchedBy": {
         "inn": "STIR mos keldi",

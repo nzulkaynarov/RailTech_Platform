@@ -589,7 +589,7 @@ describe("Нумерация", () => {
     await openTab("numbering");
     await screen.findByLabelText("Маска номера");
     type("Маска номера", "{type}-");
-    expect(await screen.findByText("В маске обязателен токен {seq}")).toBeInTheDocument();
+    expect(await screen.findByText("В маске обязательна часть {seq}")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сохранить нумерацию" })).toBeDisabled();
     expect(screen.getByText(/Укажите корректную маску/)).toBeInTheDocument();
   });
@@ -622,16 +622,16 @@ describe("Нумерация", () => {
     await screen.findByLabelText("Заявка");
     const before = JSON.stringify(readCompanyMock().numbering.type_labels);
     type("Заявка", "ЗВ");
-    expect(await screen.findByText("Только латинские буквы A-Z и цифры")).toBeInTheDocument();
+    expect(await screen.findByText("Только латинские буквы и цифры")).toBeInTheDocument();
     fireEvent.click(await button("Сохранить нумерацию"));
     await waitFor(() => {
-      expect(screen.getByText("Только латинские буквы A-Z и цифры")).toBeInTheDocument();
+      expect(screen.getByText("Только латинские буквы и цифры")).toBeInTheDocument();
     });
     expect(JSON.stringify(readCompanyMock().numbering.type_labels)).toBe(before);
 
     type("Заявка", "RQ1");
     await waitFor(() => {
-      expect(screen.queryByText("Только латинские буквы A-Z и цифры")).toBeNull();
+      expect(screen.queryByText("Только латинские буквы и цифры")).toBeNull();
     });
   });
 

@@ -275,7 +275,7 @@ class ErpProjects:
         if quote is None or not card.can_create_contract:
             raise PlatformError(
                 "FORBIDDEN",
-                "Сформировать проект договора может бухгалтер или директор по принятому КП.",
+                "У вас нет права формировать договор по принятому КП.",
                 status_code=403,
                 source="erp",
                 details={"reason": "contract_create_not_allowed"},
@@ -394,7 +394,7 @@ class ErpProjects:
         if card.act_blocker == "forbidden":
             raise PlatformError(
                 "FORBIDDEN",
-                "Выпустить акт может бухгалтер или директор.",
+                "У вас нет права выпускать акты.",
                 status_code=403,
                 source="erp",
                 details={"reason": "act_issue_not_allowed"},

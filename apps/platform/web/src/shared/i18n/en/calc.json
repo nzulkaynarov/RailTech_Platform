@@ -33,12 +33,12 @@
   "state": {
     "not_started": "Not started",
     "in_progress": "In progress",
-    "returned": "Returned for rework",
-    "at_director": "Draft quote with the director",
-    "rejected": "Quote rejected",
+    "returned": "Needs rework",
+    "at_director": "Quote awaiting approval",
+    "rejected": "Quote not approved",
     "approved": "Quote approved",
     "rejected_client": "Rejected by the client",
-    "rejected_director": "Rejected by the director"
+    "rejected_director": "Quote not approved"
   },
   "groups": {
     "stock": "Stock",

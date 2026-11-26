@@ -264,7 +264,7 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
         </div>
         <SamplePdf
           request={{ kind, ...(isEmptyObject(changed) ? {} : { draft: changed }) }}
-          title={t("brand.previewFrame", { kind: t(`kinds.${kind}`) })}
+          title={t("brand.previewFrame", { label: t(`kinds.${kind}`) })}
         />
         <p className="pf-co-hint">{t("brand.previewHint")}</p>
       </div>

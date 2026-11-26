@@ -191,13 +191,15 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
                     money(raw.get("balance_due"), raw.get("currency")),
                     project,
                     tr(
-                        f"платёжка {ago(received, now)}",
+                        f"платёжное поручение {ago(received, now)}",
                         f"tölov topşiriqnomasi {ago(received, now)}",
                         f"payment order {ago(received, now)}",
                     )
                     if received
                     else tr(
-                        "платёжка получена", "tölov topşiriqnomasi olindi", "payment order received"
+                        "платёжное поручение получено",
+                        "tölov topşiriqnomasi olindi",
+                        "payment order received",
                     ),
                 ),
                 due_label="later",
@@ -315,9 +317,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
         return (
             "issue_contract",
             tr(
-                f"Выставить в ЭДО договор {contract.number} по",
-                f"{contract.number} şartnomani EHTda rasmiylaştiriş:",
-                f"Issue contract {contract.number} in EDI —",
+                f"Выставить на подписание договор {contract.number} по",
+                f"{contract.number} şartnomani imzolaşga qöyiş:",
+                f"Send contract {contract.number} for signing —",
             ),
             tr(
                 "клиент согласовал редакцию",
@@ -334,9 +336,9 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
                 f"Attach the scan of signed contract {contract.number} —",
             ),
             tr(
-                "договор выставлен в ЭДО",
-                "şartnoma EHTda rasmiylaştirilgan",
-                "the contract is issued in EDI",
+                "договор ожидает подписания",
+                "şartnoma imzolaşni kutmoqda",
+                "the contract awaits signing",
             ),
         )
     if contract.status == "rejected":

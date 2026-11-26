@@ -437,7 +437,7 @@
       "domain": {
         "eds": "hujjatlar",
         "crm": "poçta",
-        "erp": "Hisob-kitob (ERP)"
+        "erp": "Hisob-kitob"
       }
     },
     "notifications": {
@@ -597,7 +597,7 @@
       "telegram": {
         "linked": "Ulangan",
         "notLinked": "Ulanmagan",
-        "blocked": "Ulangan, lekin xabarlar yetib bormaydi: xodim botda «Start» tugmasini bosishi yoki botni blokdan çiqarişi kerak"
+        "blocked": "Ulangan, lekin xabarlar yetib bormaydi: xodim botda «Start» tugmasini bosişi yoki botni blokdan çiqarişi kerak"
       },
       "noRoles": "Rollar yöq",
       "noPosition": "körsatilmagan",
@@ -630,7 +630,7 @@
         "status": "Holat",
         "erpPending": "Kiriş hali berilmoqda.",
         "erpReason": {
-          "not_connected": "Kiriş berilmadi: bölimga ulanib bölmadi. Administrator manzil va tokenni «Ulanişlar» bölimida tekşiradi; beriş özi qayta uriniladi.",
+          "not_connected": "Kiriş berilmadi: bölimga ulanib bölmadi. Administrator manzil va kalitni «Ulanişlar» bölimida tekşiradi; beriş özi qayta uriniladi.",
           "unavailable": "Kiriş berilmadi: bölim javob bermadi. Beriş özi qayta uriniladi.",
           "queue": "Kiriş berilmadi: beriş vazifasi navbatga qöyilmadi. «Qayta uriniş» tugmasini bosing.",
           "rejected": "Kiriş berilmadi: hisob qabul qilinmadi. Xodimning poçtasi va rollarini tekşiring va «Qayta uriniş» tugmasini bosing."
@@ -1053,7 +1053,7 @@
     },
     "contract": {
       "title": "Şartnoma tanlanmagan",
-      "text": "Loyihani oçing — bu yerda şartnoma holati va amallar paydo böladi: mijozga kelişuvga yuboriş, EHTda rasmiylaştirildi, imzolangan skan."
+      "text": "Loyihani oçing — bu yerda şartnoma holati va amallar paydo böladi: mijozga kelişuvga yuboriş, imzolaşga qöyildi, imzolangan skan."
     },
     "act": {
       "title": "Dalolatnoma tanlanmagan",

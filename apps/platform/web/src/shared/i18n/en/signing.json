@@ -37,7 +37,7 @@
   },
   "kinds": {
     "more": "and {{count}} more",
-    "unknown": "{{code}}"
+    "unknown": "{{name}}"
   },
   "basis": {
     "charter": "Charter",
@@ -92,7 +92,7 @@
     "limitAmount": "Amount",
     "limitCurrency": "Currency",
     "limitHint": "Empty means no limit",
-    "vakolat": "Vakolat.uz link",
+    "vakolat": "Link to the power of attorney",
     "vakolatHint": "Optional: the entry in the register of powers of attorney",
     "note": "Note",
     "file": "Basis file",
@@ -124,7 +124,7 @@
       "valid_to": "Check the term: a power of attorney lasts at most 3 years from its issue date.",
       "limit_amount": "Enter the limit amount.",
       "limit_currency": "Choose the limit currency.",
-      "vakolat_url": "The link must point to vakolat.uz."
+      "vakolat_url": "The link must point to the power of attorney registry."
     }
   },
   "revoke": {
@@ -156,7 +156,7 @@
     "basis_date": "Issue date",
     "valid_from": "Valid from",
     "valid_to": "Valid until",
-    "vakolat_url": "Vakolat.uz",
+    "vakolat_url": "Power of attorney",
     "note": "Note"
   },
   "check": {

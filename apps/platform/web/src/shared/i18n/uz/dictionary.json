@@ -19,44 +19,44 @@
       "in_execution": "Ijroda",
       "executed": "Bajarildi",
       "noted": "Maʼlumot uçun qabul qilindi",
-      "duplicate": "Takror",
+      "duplicate": "Takroriy",
       "closed": "Javobsiz yopildi"
     },
     "quote": {
       "draft": "Qoralama",
       "revision": "Qayta işlaşda",
       "approved": "Maʼqullangan",
-      "sent": "Yuborilgan",
+      "sent": "Mijozga yuborilgan",
       "accepted": "Mijoz qabul qilgan",
       "declined": "Mijoz rad etgan",
       "expired": "Muddati tugagan"
     },
     "contract": {
-      "draft": "Loyiha",
-      "agreed": "Mijoz bilan kelişilgan",
-      "issued": "EHTda rasmiylaştirilgan",
+      "draft": "Qoralama",
+      "agreed": "Imzolaşni kutmoqda",
+      "issued": "Imzolaşni kutmoqda",
       "signed": "Imzolangan",
       "rejected": "Rad etilgan"
     },
     "invoice": {
       "issued": "Rasmiylaştirilgan",
-      "proof_received": "Tölov topşiriği olingan",
+      "proof_received": "Tölov tekşiruvda",
       "partially_paid": "Qisman tölangan",
       "paid": "Tölangan",
       "overdue": "Muddati ötgan"
     },
     "act": {
-      "draft": "Loyiha",
-      "issued": "Çiqarilgan",
-      "signed": "Qabul qilingan",
-      "returned": "Qaytarilgan"
+      "draft": "Qoralama",
+      "issued": "Rasmiylaştirilgan",
+      "signed": "Mijoz qabul qilgan",
+      "returned": "Eʼtirozlar bilan qaytarilgan"
     },
     "memo": {
       "pending": "Kelişuvda",
       "approved": "Kelişilgan",
       "rejected": "Rad etilgan",
       "returned": "Qayta işlaşga qaytarilgan",
-      "passed_to_accountant": "Buxgalterga topşirilgan",
+      "passed_to_accountant": "Tölovga topşirilgan",
       "paid": "Tölangan"
     },
     "lead": {

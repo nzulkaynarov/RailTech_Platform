@@ -19,7 +19,7 @@ BASELINE = GUARD / "baseline/cabinet.json"
 ALLOW = GUARD / "allow.tsv"
 # Ceilings only go down: each PR that fixes texts lowers the number (README, «Как работать»).
 BASELINE_CEILING = 50
-ALLOW_CEILING = 5
+ALLOW_CEILING = 3  # the two «languages.*» lines went: the tool itself treats a language named in its own language as fine
 
 
 def _load(name: str):
@@ -54,8 +54,9 @@ class CabinetCopyGuard(unittest.TestCase):
 
     def test_allow_list_is_short_explained_and_exact(self) -> None:
         lines = [x for x in ALLOW.read_text(encoding="utf-8").splitlines() if x.strip() and not x.startswith("#")]
-        self.assertLessEqual(len(lines), ALLOW_CEILING)
-        for line in lines:
+        mine = [x for x in lines if (x.split("\t") + ["", "", "", ""])[3] in ("", "cabinet")]  # 4th column = app
+        self.assertLessEqual(len(mine), ALLOW_CEILING)
+        for line in mine:
             key, cls, reason = (line.split("\t") + ["", ""])[:3]
             self.assertTrue(key and cls and reason.strip(), f"key, class and reason are required: {line!r}")
             self.assertNotIn(".*", key, f"no wildcard patterns: {line!r}")

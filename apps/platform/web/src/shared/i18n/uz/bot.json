@@ -51,7 +51,7 @@
     "ai": "SI uçun maʼlumotlar himoyasi"
   },
   "sectionHints": {
-    "web_form": "Cabinet kiriş sahifasidagi «Ariza» formasining spamga qarşi himoyasi (taşqi xizmatlarsiz): yaşirin maydon, imzolangan forma tokeni va IP böyiça limit. Saytdan kelgan lid «Kiruvçilar»ga «Masʼulsiz» sifatida tuşadi.",
+    "web_form": "Kabinetga kiriş sahifasidagi «Ariza» formasini spamdan himoya: yaşirin maydon, imzolangan forma va manzil böyiça limit. Saytdan kelgan lid «Kiruvçilar»ga «Masʼulsiz» sifatida tuşadi.",
     "business_hours": "SLA, eslatmalar va botning iş vaqtidan taşqari matni iş soatlariga boğliq.",
     "texts": "Bot mijozlarga nima yozadi. Har bir matn uç tilda.",
     "stop_words": "Stop-sözli xabar darhol menejerga uzatiladi. «söz*» — istalgan tugallanma.",
@@ -508,7 +508,7 @@
       },
       "sla_promise": {
         "label": "Javob muddati vaʼdasi",
-        "when": "«Menejerga uzatiş»ga {sla} sifatida qöyiladi. {minutes} — «Uzatişlar» bölimidagi SLA."
+        "when": "«Menejerga uzatiş»ga {sla} sifatida qöyiladi. {minutes} — «Uzatişlar» bölimidagi javob muddati."
       },
       "erp_quote_sent": {
         "label": "TT mijozga yuborildi",
@@ -516,7 +516,7 @@
       },
       "erp_quote_acceptance_code": {
         "label": "TTni tasdiqlaş kodi",
-        "when": "Mijoz kabinetda TTni qabul qiliş uçun «Kod oliş» ni bosdi: bot kodni kontaktga Telegramda yuboradi. {deal} — bitim, {code} — kod, {minutes} — amal qiliş daqiqalari. Kod heç qayerda saqlanmaydi."
+        "when": "Mijoz TKni qabul qiliş uçun kabinetda «Kod oliş» ni bosdi: bot kodni Telegramda yuboradi. {deal} — ariza, {code} — kod, {minutes} — amal qiliş daqiqalari; kod heç qayerda saqlanmaydi."
       },
       "erp_invoice_issued": {
         "label": "Hisob çiqarildi",
@@ -595,7 +595,7 @@
     "no_progress_turns": "Uzatişdan oldin siljişsiz xabarlar",
     "kb_gap_streak": "Uzatişdan oldin ketma-ket «topilmadi» javoblari",
     "qualifier_min_confidence": "Kvalifikator qançalik işonçli bölişi kerak (0–1)",
-    "sla_minutes": "Javob vaqti (SLA)",
+    "sla_minutes": "Javob vaqti",
     "reminder_minutes": "Takroriy eslatma",
     "disabled_triggers": "Öçirilgan uzatiş sabablari",
     "human_request_terms": "«Odamni çaqiring» sözlari",
@@ -654,7 +654,7 @@
     "channel_id": "Minus işorali son, masalan -100…; bot kanal administratori bölişi kerak.",
     "duty_user_ids": "Muddati ötgan uzatişlar haqidagi eslatmalarda @eslatma oladilar.",
     "manager_dm_throttle_minutes": "Lid ketma-ket bir neçta xabar yozadi — menejer şu vaqt içida Telegramda bitta bildirişnoma oladi.",
-    "holidays": "Bu kunlarda SLA hisoblanmaydi, bot iş vaqtidan taşqari matn bilan javob beradi.",
+    "holidays": "Bu kunlarda javob muddati hisoblanmaydi, bot iş vaqtidan taşqari matn bilan javob beradi.",
     "daily_usd": "AQSH dollarida. Yuqorisi — suhbat zaxira modelga ötadi.",
     "erp_daily_usd": "Sutkasiga AQSH dollarida, 0 — limitsiz. Oşib ketsa «Xarajatlar»da körinadi.",
     "anthropic": "Sutkasiga USD (Toşkent vaqti bilan), 0 — limitsiz. Yuqorisi — suhbat zaxira modelda.",

@@ -240,7 +240,7 @@ describe("Почта · Отправленные (план 2.8, MAIL-1)", () => 
     renderAt("/eds/mail?tab=sent");
     const table = await screen.findByRole("table", { name: "Отправленные письма" });
     expect(within(table).getAllByRole("row")).toHaveLength(4);
-    expect(within(table).getByText("Не доставлено")).toBeInTheDocument();
+    expect(within(table).getByText("Не отправлено")).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по отправленным" }), {
       target: { value: "требование" },

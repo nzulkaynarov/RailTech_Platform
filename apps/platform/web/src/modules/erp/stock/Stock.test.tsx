@@ -208,7 +208,7 @@ describe("Склад · заказы партнёрам", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Принять товар" })).not.toBeInTheDocument();
     });
-    expect(screen.getAllByText("Получен").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Принят на склад").length).toBeGreaterThan(0);
   });
 
   it("новый заказ: черновик → отправлен (письмо в журнале) → подтверждён; недопустимые кнопки не показываются", async () => {

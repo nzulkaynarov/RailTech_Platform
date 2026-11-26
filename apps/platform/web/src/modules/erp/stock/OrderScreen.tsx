@@ -59,7 +59,7 @@ function OfferNote({
   const { t } = useTranslation("stock");
   const { date } = useFormat();
   const parts = [
-    offer.incoterms ? t("order.offer.incoterms", { code: offer.incoterms }) : null,
+    offer.incoterms ? t("order.offer.incoterms", { terms: offer.incoterms }) : null,
     offer.valid_until
       ? t(offer.expired ? "order.offer.expired" : "order.offer.validUntil", {
           date: date(offer.valid_until),

@@ -158,7 +158,7 @@
       {
         "title": "Şartnoma",
         "who": "buxgalter",
-        "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida EHTda rasmiylaştiriladi va imzolanadi; skaner qölda biriktiriladi."
+        "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida imzolaşga qöyiladi va imzolanadi; skaner qölda biriktiriladi."
       },
       {
         "title": "Tölov",
@@ -214,7 +214,7 @@
       },
       {
         "term": "Şartnoma (CT-2026/104)",
-        "text": "Qabul qilingan TTdan şartnoma loyihasi; EHTda imzolanadi, skaner biriktiriladi."
+        "text": "Qabul qilingan TTdan şartnoma loyihasi; imzolanadi, skaner biriktiriladi."
       },
       {
         "term": "Hisob (INV-2026-142)",
@@ -276,10 +276,10 @@
     "builtAt": "Yiğilgan: {{date}}",
     "services": "Xizmatlar",
     "service": {
-      "bff": "Platforma (BFF)",
-      "crm": "CRM",
-      "erp": "ERP",
-      "eds": "Hujjatlar (EDS)"
+      "bff": "Platforma",
+      "crm": "Mijozlar",
+      "erp": "Hisob-kitob",
+      "eds": "Hujjatlar"
     },
     "status": {
       "ok": "Işlayapti",
@@ -352,8 +352,8 @@
     "body": "Nima böldi",
     "bodyPlaceholder": "Masalan: xarid topşiriqlarini köriş uçun «Hisob-kitob» bölimiga kiriş kerak",
     "bodyHint": "4000 belgigaça.",
-    "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
-    "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
+    "auto": "Xabarga qöşamiz: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
+    "autoNoPage": "Xabarga qöşamiz: rol {{role}}, Platforma versiyasi.",
     "submit": "Yuboriş",
     "cancel": "Bekor qiliş",
     "sending": "Yuborilmoqda…",

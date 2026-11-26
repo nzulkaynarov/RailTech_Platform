@@ -33,12 +33,12 @@
   "state": {
     "not_started": "Boşlanmagan",
     "in_progress": "Jarayonda",
-    "returned": "Qayta işlaşga qaytarilgan",
-    "at_director": "TK qoralamasi direktorda",
-    "rejected": "TK rad etilgan",
+    "returned": "Qayta işlaşda",
+    "at_director": "TK maʼqullaşda",
+    "rejected": "TK maʼqullanmagan",
     "approved": "TK maʼqullangan",
     "rejected_client": "Mijoz rad etdi",
-    "rejected_director": "Direktor rad etdi"
+    "rejected_director": "TK maʼqullanmagan"
   },
   "groups": {
     "stock": "Ombor",
@@ -270,7 +270,7 @@
     "memoAction": "Xizmat xati yoziş",
     "open": "Hisob-kitobni oçiş",
     "requestFiles": "Ariza fayllari",
-    "noResolution": "Rezolyusiya kerak boʼlmadi — hisob-kitob darhol masʼul xodimga topshirildi.",
+    "noResolution": "Rezolyusiya kerak bölmadi — hisob-kitob darhol masʼul xodimga topşirildi.",
     "calcHeading": "Hisob-kitob",
     "assignedDirect": "tayinlangan: {{names}}"
   },

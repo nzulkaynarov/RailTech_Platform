@@ -161,8 +161,8 @@
         "send_failed": "сбой отправки"
       },
       "error": "Автоотправку остановила система: {{reason}}.",
-      "line": "{{channel}} — {{status}}",
-      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "line": "{{channel}} — {{label}}",
+      "lineReason": "{{channel}} — {{label}}: {{reason}}",
       "send": "Отправить",
       "resend": "Отправить повторно",
       "sendLabel": "{{action}}: {{channel}}",

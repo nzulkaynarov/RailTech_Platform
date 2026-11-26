@@ -37,7 +37,7 @@
   },
   "kinds": {
     "more": "yana {{count}} ta",
-    "unknown": "{{code}}"
+    "unknown": "{{name}}"
   },
   "basis": {
     "charter": "Nizom",
@@ -106,7 +106,7 @@
     "saved": "Saqlandi",
     "savedFileFailed": "Vakolat saqlandi, lekin fayl biriktirilmadi. Uni qayta tanlang.",
     "revoke": "Bekor qiliş",
-    "vakolat": "Vakolat.uz havolasi",
+    "vakolat": "Işonçnomaga havola",
     "vakolatHint": "Majburiy emas: işonçnomalar reyestridagi yozuv"
   },
   "errors": {
@@ -124,7 +124,7 @@
       "valid_to": "Muddatni tekşiring: işonçnoma berilgan kundan 3 yildan oşmasin.",
       "limit_amount": "Limit summasini kiriting.",
       "limit_currency": "Limit valyutasini tanlang.",
-      "vakolat_url": "Havola vakolat.uz ga olib borişi kerak."
+      "vakolat_url": "Havola işonçnomalar reyestriga olib borişi kerak."
     }
   },
   "revoke": {
@@ -156,7 +156,7 @@
     "basis_date": "Berilgan sana",
     "valid_from": "Amal qiladi (dan)",
     "valid_to": "Amal qiladi (gaça)",
-    "vakolat_url": "Vakolat.uz",
+    "vakolat_url": "Işonçnoma",
     "note": "Izoh"
   },
   "check": {

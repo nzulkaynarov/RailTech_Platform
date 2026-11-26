@@ -60,9 +60,9 @@
     },
     "contract": {
       "project": "Draft",
-      "client_agreed": "Agreed by client",
-      "issued_at_operator": "Issued in EDI",
-      "signed": "Signed (scan)",
+      "client_agreed": "Awaiting signature",
+      "issued_at_operator": "Awaiting signature",
+      "signed": "Signed",
       "rejected": "Rejected by client",
       "cancelled": "Cancelled"
     },
@@ -76,11 +76,11 @@
     },
     "act": {
       "project": "Draft",
-      "returned": "Returned with a reason",
+      "returned": "Returned with remarks",
       "issued": "Issued",
-      "signed": "Signed (scan)",
+      "signed": "Signed",
       "accepted": "Accepted by client",
-      "cancelled": "Voided"
+      "cancelled": "Cancelled"
     }
   },
   "problem": {
@@ -163,12 +163,12 @@
       },
       "lineStatus": {
         "assembling": "Being assembled",
-        "in_transit": "In transit",
+        "in_transit": "On the way to our warehouse",
         "ready_to_ship": "Ready to ship",
         "shipped": "Shipped",
         "delivered": "Delivered",
         "accepted": "Accepted by client",
-        "disputed": "Disputed by client"
+        "disputed": "Client has remarks"
       },
       "proof": "Proof of delivery",
       "proofFile": "File"
@@ -212,7 +212,7 @@
       "client_agreed": "Contract wording agreed by the client",
       "rejected": "Contract rejected by the client",
       "revised": "Contract draft returned to work",
-      "issued_external": "Contract issued in EDI",
+      "issued_external": "Contract sent for signing",
       "scan_attached": "Scan of the signed contract attached",
       "signed": "Contract signed",
       "signed_client": "Client agreed to the contract",
@@ -258,8 +258,8 @@
     "state": {
       "project": "The draft has not been sent to the client yet.",
       "atClient": "The draft is with the client for wording agreement.",
-      "client_agreed": "The client agreed the wording. Next, issue the contract in EDI (outside the Platform).",
-      "issued_at_operator": "The contract is issued in EDI. When both sides have signed, attach the scan.",
+      "client_agreed": "The client agreed the wording. Next, send the contract for signing (outside the Platform).",
+      "issued_at_operator": "The contract awaits signing. When both sides have signed, attach the scan.",
       "signed": "The contract is signed by both sides, the scan is stored.",
       "rejected": "The client rejected the contract. Fix the draft and send it for agreement again.",
       "cancelled": "The contract is cancelled."
@@ -267,15 +267,15 @@
     "action": {
       "send_to_client": "Send to client for agreement",
       "client_agreed": "Mark: agreed by client",
-      "mark_issued": "Mark: issued in EDI",
+      "mark_issued": "Mark: sent for signing",
       "attach_scan": "Attach signed scan",
       "reject": "Client rejected the contract…",
       "revise": "Return to draft"
     },
     "note": {
-      "label": "Operator or number in the EDI system",
+      "label": "Where it was sent, or a number",
       "hint": "Optional: goes to the log.",
-      "placeholder": "For example: EDI, No. 77"
+      "placeholder": "For example: No. 77"
     },
     "reject": {
       "title": "The client rejected the contract",
@@ -301,7 +301,7 @@
       "create": "Contract draft created.",
       "send_to_client": "Draft sent to the client.",
       "client_agreed": "Marked: the client agreed the wording.",
-      "mark_issued": "Marked: contract issued in EDI.",
+      "mark_issued": "Marked: contract sent for signing.",
       "attach_scan": "Scan attached, contract signed.",
       "reject": "Rejection recorded.",
       "revise": "Draft returned to work.",
@@ -326,7 +326,7 @@
       "steps": {
         "assembled": "Assembled",
         "our_signature": "Our signature",
-        "in_cabinet": "In the client Cabinet",
+        "in_cabinet": "In the client Account",
         "signed_both": "Signed by both"
       },
       "state": {
@@ -431,7 +431,7 @@
       "project": "The act is a draft.",
       "issued": "The act is with the client for acceptance. When they sign, attach the scan.",
       "signed": "The act is signed, the scan is stored.",
-      "accepted": "The client accepted the act in the cabinet. No scan.",
+      "accepted": "The client accepted the act in the account. No scan.",
       "returned": "The client returned the act with a reason. Fix it and issue it again.",
       "cancelled": "The act is voided."
     },
