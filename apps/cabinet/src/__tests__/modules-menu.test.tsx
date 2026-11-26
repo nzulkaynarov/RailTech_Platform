@@ -327,7 +327,7 @@ describe('меню из /me.modules', () => {
       signedIn('actor', 'demo', CANDIDATE);
       setMockPartnerApplication(CONTRACT_SENT);
       const { container } = renderApp('/');
-      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Принять редакцию' })).toBeInTheDocument();
       expect((await axe(container)).violations).toEqual([]);
     });
 
@@ -335,7 +335,7 @@ describe('меню из /me.modules', () => {
       signedIn('actor', 'demo', { ...CANDIDATE, modules: ['messages', 'profile', 'letters'] });
       setMockPartnerApplication(CONTRACT_SENT);
       const { router } = renderApp('/');
-      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Принять редакцию' })).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/');
     });
 
@@ -343,7 +343,7 @@ describe('меню из /me.modules', () => {
       signedIn('actor', 'demo', CANDIDATE);
       setMockPartnerApplication(CONTRACT_SENT);
       const { router } = renderApp('/company');
-      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Принять редакцию' })).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/');
     });
 

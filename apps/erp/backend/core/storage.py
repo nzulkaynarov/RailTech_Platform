@@ -227,6 +227,12 @@ def contract_signed_path(instance, filename):
     return f"deals/{instance.deal_id}/contracts/signed/{name}"
 
 
+def contract_remark_path(instance, filename):
+    """deals/{deal_id}/contracts/remarks/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.contract.deal_id}/contracts/remarks/{name}"
+
+
 def invoice_pdf_path(instance, filename):
     """deals/{deal_id}/invoices/{uuid}.pdf"""
     name = _uuid_filename(instance, filename)
@@ -311,6 +317,12 @@ def partner_application_scan_path(instance, filename):
     """partner_applications/{pk}/scans/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)
     return f"partner_applications/{instance.pk or 'new'}/scans/{name}"
+
+
+def partner_package_document_path(instance, filename):
+    """partner_applications/{application_id}/package/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"partner_applications/{instance.application_id}/package/{name}"
 
 
 def company_document_path(instance, filename):

@@ -197,13 +197,16 @@ async def test_partner_answer_without_full_clients_does_not_reach_crm(
     assert crm.calls == []
 
 
-async def test_partner_without_email_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
-    """Phone-only candidates cannot be invited to the contract: the e-mail is required."""
+async def test_partner_without_email_reaches_crm(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """A phone or Telegram is enough for the hand-over (PK-1): the e-mail is optional."""
+    crm.answer("POST", PARTNER, 201, {"lead_id": 2041, "application_id": 7002, "created": True})
     await web.login(["MANAGER"])
-    bad = {k: v for k, v in PARTNER_FORM.items() if k != "email"}
-    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=bad)
-    assert response.status_code == 422
-    assert crm.calls == []
+    form = {k: v for k, v in PARTNER_FORM.items() if k != "email"}
+    response = await web.send("POST", "/api/v1/crm/leads/L-2041/partner", json=form)
+    assert response.status_code == 201
+    assert len(crm.calls) == 1
 
 
 async def test_partner_invalid_email_of_crm_is_a_field_error(web: Web, crm: CrmLeadsFake) -> None:

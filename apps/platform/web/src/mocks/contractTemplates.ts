@@ -26,6 +26,7 @@ const seed = (): ContractTemplate[] => [
     is_active: true,
     locked: true,
     languages: ["ru"],
+    base_role: null,
     updated_at: "2026-11-20T10:00:00+05:00",
   },
   {
@@ -41,6 +42,7 @@ const seed = (): ContractTemplate[] => [
     is_active: true,
     locked: true,
     languages: ["ru"],
+    base_role: "partnership",
     updated_at: "2026-11-18T10:00:00+05:00",
   },
   {
@@ -56,6 +58,7 @@ const seed = (): ContractTemplate[] => [
     is_active: false,
     locked: true,
     languages: ["ru"],
+    base_role: null,
     updated_at: "2026-11-22T10:00:00+05:00",
   },
   {
@@ -71,6 +74,7 @@ const seed = (): ContractTemplate[] => [
     is_active: false,
     locked: false,
     languages: ["ru"],
+    base_role: null,
     updated_at: "2026-11-21T10:00:00+05:00",
   },
 ];
@@ -149,10 +153,21 @@ export const contractTemplatesHandlers = [
       is_active: false,
       locked: false,
       languages: ["ru"],
+      base_role: body.base_role ?? null,
       updated_at: new Date().toISOString(),
     };
     templates = [...templates, row];
     return HttpResponse.json(row, { status: 201 });
+  }),
+  http.patch("*/api/v1/document-templates/contracts/:id/base-role", async ({ params, request }) => {
+    if (!readSession()) return unauthorized();
+    const body = (await request.json()) as { base_role: ContractTemplate["base_role"] };
+    return change(String(params["id"]), (row) => {
+      if (row.locked) return null;
+      const next: ContractTemplate = { ...row, base_role: body.base_role };
+      templates = templates.map((r) => (r.id === row.id ? next : r));
+      return next;
+    });
   }),
   http.post("*/api/v1/document-templates/contracts/:id/new-edition", ({ params }) => {
     const source = templates.find((r) => r.id === params["id"]);

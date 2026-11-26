@@ -12,23 +12,23 @@ async function language(page: Page, lang: 'ru' | 'uz') {
   await page.addInitScript((value) => window.localStorage.setItem('cabinet.language', value), lang);
 }
 
-test('договор: факты и «Согласовать договор»', async ({ page }) => {
+test('договор: факты и «Принять редакцию»', async ({ page }) => {
   await language(page, 'ru');
   await page.goto('/d/contract-token-0123456789');
   await expect(page.getByRole('heading', { level: 1, name: 'Договор CT-0042' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Согласовать договор' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Принять редакцию' })).toBeEnabled();
   await snap(page, 'contract-guest');
 });
 
 test('договор: диалог кода и подпись', async ({ page }) => {
   await language(page, 'ru');
   await page.goto('/d/contract-token-0123456789');
-  await page.getByRole('button', { name: 'Согласовать договор' }).click();
+  await page.getByRole('button', { name: 'Принять редакцию' }).click();
   const dialog = page.getByRole('dialog', { name: 'Подтвердите, что это вы' });
   await expect(dialog.getByText(/Отправили код на p\*\*\*@vostok-trans\.uz/)).toBeVisible();
   await snap(page, 'contract-code-dialog');
   await dialog.getByLabel('Код из письма').fill('123456');
-  await dialog.getByRole('button', { name: 'Согласовать договор' }).click();
+  await dialog.getByRole('button', { name: 'Принять редакцию' }).click();
   await expect(page.getByText('Договор согласован. Он будет выставлен на подписание — сообщим.')).toBeVisible();
   await snap(page, 'contract-signed');
 });

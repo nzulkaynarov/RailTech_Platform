@@ -12,6 +12,8 @@ import type { PartnerApplicationItemLanguage } from "./partnerApplicationItemLan
 import type { PartnerApplicationKind } from "./partnerApplicationKind";
 import type { PartnerApplicationSource } from "./partnerApplicationSource";
 import type { PartnerApplicationStatus } from "./partnerApplicationStatus";
+import type { PartnerContractVote } from "./partnerContractVote";
+import type { PartnerPackageDocument } from "./partnerPackageDocument";
 
 export interface PartnerApplicationItem {
   id: CompanyItemRef;
@@ -89,4 +91,28 @@ export interface PartnerApplicationItem {
   has_signed_scan: boolean;
   /** @nullable */
   signed_scan_at: string | null;
+  /** ПК-1: голоса ответственных за договор по порядку; согласован, когда согласны все, на разногласии решает директор */
+  contract_votes: PartnerContractVote[];
+  /** Кто ещё не высказался; при разногласии — директор, который решает */
+  contract_waiting_for: string[];
+  /** Есть возражение: решает директор */
+  contract_disagreement: boolean;
+  /** Кандидат приложил свою редакцию (`which=candidate`) */
+  has_candidate_file: boolean;
+  /** Заметка вместо скана при отметке «подписан» */
+  signed_note: string;
+  /** @nullable */
+  contract_valid_from: string | null;
+  /**
+   * Срок договора, посчитанный в момент отметки «подписан» по правилу компании (ДС-1)
+   * @nullable
+   */
+  contract_valid_until: string | null;
+  /** @nullable */
+  contract_last_notice_date: string | null;
+  contract_renewal_mode: string;
+  /** Пакет базовых документов (ОСН-1); пусто — договор одним файлом */
+  package: PartnerPackageDocument[];
+  /** Внесено из архива (ОСН-1): подписано на бумаге раньше, в Кабинет ничего не уходило */
+  from_archive: boolean;
 }

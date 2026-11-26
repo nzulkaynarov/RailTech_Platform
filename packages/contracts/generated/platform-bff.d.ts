@@ -1388,6 +1388,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/document-templates/contracts/{id}/base-role": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Пометка «Базовый документ»
+     * @description Договор о партнёрстве, соглашение о неразглашении или оферта (ОСН-1): ERP `PATCH crm/document-templates/{id}/`. Пометка — часть текста: ставится и снимается в черновике, у закреплённого шаблона — 422 `template_locked`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     */
+    patch: operations["setContractTemplateBaseRole"];
+    trace?: never;
+  };
   "/document-templates/contracts/{id}/submit": {
     parameters: {
       query?: never;
@@ -1842,7 +1862,7 @@ export interface paths {
     };
     /**
      * EDS · Проект: файл документа (PDF или скан)
-     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта), `docx` — наша редакция договора в Word для правок, `remark` — редакция контрагента, приложенная к замечаниям (ДП-1, только договор); скан и вложения всегда скачиваются (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
      */
     get: operations["downloadEdsProjectFile"];
     put?: never;
@@ -9359,6 +9379,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/partner-applications/{id}/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
+     * @description ERP `POST catalog/partner-applications/{id}/invite/` — право `supply.manage`. ПК-1. Договор можно отправить и без почты кандидата; когда адрес появился — он в `email` (или уже записан в заявке), и приглашение уходит письмом. Нет адреса — 422 `candidate_email_required`.
+     */
+    post: operations["invitePartnerCandidate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/signed-scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: скан подписанного договора
+     * @description ERP `POST catalog/partner-applications/{id}/signed-scan/` (multipart) — право `supply.manage`. ПК-1. Скан не обязателен, отметка «подписан» принимает скан ИЛИ заметку (`signed_note` в `approvePartnerApplication`). PDF или изображение; содержимое сверяется с расширением.
+     */
+    post: operations["uploadPartnerSignedScan"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/from-archive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: «Уже подписано на бумаге»
+     * @description ОСН-1: партнёр подписал бумажный пакет раньше — заявка сразу одобряется с реальными датами и сканами документов пакета; в Кабинет и по почте ничего не уходит, пометка `from_archive`. ERP `POST catalog/partner-applications/{id}/from-archive/` — право `supply.manage`. Только `multipart/form-data`; тело уходит в ERP как есть. Раздел `erp.stock` — полный.
+     */
+    post: operations["recordPartnerPackageFromArchive"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/partner-applications/{id}/document": {
     parameters: {
       query?: never;
@@ -9368,7 +9448,7 @@ export interface paths {
     };
     /**
      * Расчёт · Заявка в партнёры: договор или скан подписанного
-     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат. Вложением, с `nosniff`; файл в памяти BFF не копится.
      */
     get: operations["downloadPartnerApplicationDocument"];
     put?: never;
@@ -12268,14 +12348,62 @@ export interface components {
         | "revise"
         | "mark_issued"
         | "attach_scan"
+        | "mark_signed"
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
       /** @description ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
       term?: components["schemas"]["ProjectContractTerm"] | null;
+      /** @description ДП-1: замечания контрагента на согласовании — комментарий, файл, что изменилось, ответы ответственных, что можно этому сотруднику; null — замечаний нет. Считает ERP */
+      remark?: components["schemas"]["ProjectContractRemark"] | null;
       /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
       send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description ДП-1: замечания контрагента к редакции договора. Разбор DOCX («что изменилось») и права считает ERP. */
+    ProjectContractRemark: {
+      id: number;
+      edition: number;
+      /** Format: date-time */
+      received_at: string;
+      author_name: string;
+      comment: string;
+      file_name: string;
+      has_file: boolean;
+      summary: {
+        changed: string[];
+        added: string[];
+        removed: string[];
+        total: number;
+        /** @description Сколько пунктов не поместилось в списки выше (предел 30 на вид) */
+        more?: number;
+        /** @description Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет */
+        comparable: boolean;
+      };
+      items: {
+        point: string;
+        /** @enum {string} */
+        kind: "changed" | "added" | "removed";
+        ours: string;
+        theirs: string;
+        segments: {
+          /** @enum {string} */
+          op: "equal" | "del" | "ins";
+          text: string;
+        }[];
+      }[];
+      votes: {
+        user: components["schemas"]["ProjectPerson"];
+        agree: boolean;
+        comment: string;
+        /** Format: date-time */
+        at: string;
+      }[];
+      awaiting: components["schemas"]["ProjectPerson"][];
+      deciders: components["schemas"]["ProjectPerson"][];
+      /** @description Есть «Не согласен» и все ответили: решение за директором */
+      dispute: boolean;
+      actions: ("vote" | "decide")[];
     };
     /** @description Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится */
     ProjectContractTerm: {
@@ -12472,7 +12600,7 @@ export interface components {
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /**
-       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись; `mark_signed` (ДП-1) — «Подписан» заметкой без скана, `note` обязательна; `remark_vote`, `remark_decide` (ДП-1) — ответ «Согласен»/«Не согласен» и решение директора по замечаниям контрагента: `approve` обязательно, слова — в `text`
        * @enum {string}
        */
       action:
@@ -12487,7 +12615,10 @@ export interface components {
         | "decline_renewal"
         | "restore_renewal"
         | "renew"
-        | "send_new_edition";
+        | "send_new_edition"
+        | "mark_signed"
+        | "remark_vote"
+        | "remark_decide";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
@@ -13993,6 +14124,8 @@ export interface components {
       kind?: components["schemas"]["DocumentKind"];
       template_kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
+      /** @description Шаблон своей компании, открытый в редакторе (ПК-1): название и подписи сторон образца договора берутся у него */
+      template_id?: number;
       /** @description Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
       draft?: components["schemas"]["BrandProfileUpdate"];
       /**
@@ -14155,6 +14288,8 @@ export interface components {
        * @enum {string}
        */
       contract_expired_action?: "block" | "warn";
+      /** @description ОСН-1: какие базовые документы получает кандидат в партнёры; по умолчанию договор о партнёрстве и соглашение о неразглашении */
+      partner_base_roles?: ("partnership" | "nda" | "offer")[];
     };
     /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
     QuoteDefaultsUpdate: {
@@ -14242,6 +14377,8 @@ export interface components {
        * @enum {string}
        */
       contract_expired_action?: "block" | "warn";
+      /** @description ОСН-1: какие базовые документы получает кандидат в партнёры; по умолчанию договор о партнёрстве и соглашение о неразглашении */
+      partner_base_roles?: ("partnership" | "nda" | "offer")[];
     };
     /** @description Шаблон договора с утверждением (ДОК-10) */
     ContractTemplate: {
@@ -14265,6 +14402,11 @@ export interface components {
       locked: boolean;
       /** @description Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет) */
       languages: ("ru" | "uz" | "en")[];
+      /**
+       * @description Базовый документ компании (ОСН-1): договор о партнёрстве, соглашение о неразглашении, оферта; null — обычный шаблон
+       * @enum {string|null}
+       */
+      base_role: "partnership" | "nda" | "offer" | null;
       updated_at: string;
     };
     ContractTemplateList: {
@@ -14276,6 +14418,15 @@ export interface components {
       counterparty: "client" | "partner";
       /** @enum {string} */
       subject: "supply" | "services";
+      /** @enum {string|null} */
+      base_role?: "partnership" | "nda" | "offer" | null;
+    };
+    ContractTemplateRoleIn: {
+      /**
+       * @description null снимает пометку
+       * @enum {string|null}
+       */
+      base_role: "partnership" | "nda" | "offer" | null;
     };
     /** @description Что предлагается в сделке: только утверждённые шаблоны вида контрагента; `default_id` — шаблон по умолчанию из настроек */
     OfferedContractTemplates: {
@@ -18461,7 +18612,7 @@ export interface components {
         comment?: string | null;
       } | null;
     };
-    /** @description Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
+    /** @description Почта не обязательна (ПК-1) — хватает телефона или Telegram лида, приглашение в Кабинет уйдёт, когда почта появится; если указана — формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
     PartnerHandoffIn: {
       company_name: string;
       /**
@@ -18474,6 +18625,7 @@ export interface components {
       /** @description Что предлагает кандидат (из запроса лида) */
       offer: string;
       contact_name: string;
+      /** @default  */
       email: string;
       /** @default  */
       phone: string;
@@ -19534,10 +19686,61 @@ export interface components {
       has_signed_scan: boolean;
       /** Format: date-time */
       signed_scan_at: string | null;
+      /** @description ПК-1: голоса ответственных за договор по порядку; согласован, когда согласны все, на разногласии решает директор */
+      contract_votes: components["schemas"]["PartnerContractVote"][];
+      /** @description Кто ещё не высказался; при разногласии — директор, который решает */
+      contract_waiting_for: string[];
+      /** @description Есть возражение: решает директор */
+      contract_disagreement: boolean;
+      /** @description Кандидат приложил свою редакцию (`which=candidate`) */
+      has_candidate_file: boolean;
+      /** @description Заметка вместо скана при отметке «подписан» */
+      signed_note: string;
+      /** Format: date */
+      contract_valid_from: string | null;
+      /**
+       * Format: date
+       * @description Срок договора, посчитанный в момент отметки «подписан» по правилу компании (ДС-1)
+       */
+      contract_valid_until: string | null;
+      /** Format: date */
+      contract_last_notice_date: string | null;
+      contract_renewal_mode: string;
+      /** @description Пакет базовых документов (ОСН-1); пусто — договор одним файлом */
+      package: components["schemas"]["PartnerPackageDocument"][];
+      /** @description Внесено из архива (ОСН-1): подписано на бумаге раньше, в Кабинет ничего не уходило */
+      from_archive: boolean;
+    };
+    PartnerPackageDocument: {
+      id: string;
+      /** @enum {string} */
+      base_role: "partnership" | "nda" | "offer";
+      title: string;
+      number: string;
+      template_edition: number;
+      /** @description Есть что открыть: файл документа или скан подписанного */
+      has_file: boolean;
+      has_candidate_file: boolean;
+      /** @description Что кандидат вернул по этому документу */
+      candidate_remark: string;
+      /** Format: date */
+      valid_from: string | null;
+      /**
+       * Format: date
+       * @description Срок, посчитанный в момент отметки «подписан»; у соглашения о неразглашении пусто
+       */
+      valid_until: string | null;
+      /** @description Соглашение о неразглашении: тайна после окончания, лет */
+      confidentiality_years: number | null;
+      trade_secret_indefinite: boolean;
+      /** @description Внесён из архива: без отправки в Кабинет */
+      from_archive: boolean;
     };
     PartnerContractPrepareRequest: {
       /** @description Шаблон библиотеки; пусто — умолчание из настроек компании */
       template_id?: string | null;
+      /** @description Пакет из утверждённых базовых шаблонов (ОСН-1): без отступлений и своего файла; нет утверждённого шаблона роли — 422 с `details.reason = no_approved_base_template` */
+      package?: boolean | null;
       /**
        * @description Язык договора; пусто — язык кандидата
        * @enum {string}
@@ -19562,6 +19765,47 @@ export interface components {
       /** Format: date */
       contract_date?: string;
     };
+    PartnerFromArchiveUpload: {
+      /**
+       * Format: date
+       * @description Когда пакет подписан на бумаге; не позже сегодняшнего дня
+       */
+      signed_on: string;
+      /** @description Прежний номер договора; пусто — присвоится новый */
+      contract_number?: string;
+      /** @description Где оригинал, как подписали */
+      note?: string;
+      company_id?: number;
+      create_new_company?: boolean;
+      /** Format: date */
+      signed_on_partnership?: string;
+      /** Format: date */
+      signed_on_nda?: string;
+      /** Format: date */
+      signed_on_offer?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_partnership?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_nda?: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение до 20 МБ
+       */
+      scan_offer?: string;
+    };
+    PartnerSignedScanUpload: {
+      /**
+       * Format: binary
+       * @description До 20 МБ: PDF или изображение
+       */
+      file: string;
+    };
     PartnerContractDecisionRequest: {
       /** @enum {string} */
       decision: "approve" | "return";
@@ -19571,6 +19815,7 @@ export interface components {
       note?: string | null;
     };
     PartnerContractOptions: {
+      package: components["schemas"]["PartnerPackageOptions"];
       templates: components["schemas"]["PartnerContractTemplateOption"][];
       default_template_id: string | null;
       /** @description Правило компании: свой файл и отступления допустимы */
@@ -19578,6 +19823,29 @@ export interface components {
       /** @description Держатели зоны «Право» по имени */
       approvers: string[];
       can_decide: boolean;
+    };
+    /** @description Пакет базовых документов (ОСН-1): роли из настройки компании и утверждённый шаблон каждой */
+    PartnerPackageOptions: {
+      roles: components["schemas"]["PartnerPackageRole"][];
+      /** @description У каждой роли есть утверждённый шаблон: пакет можно подготовить */
+      ready: boolean;
+    };
+    PartnerPackageRole: {
+      /** @enum {string} */
+      base_role: "partnership" | "nda" | "offer";
+      /** @description Название роли словами для фразы «Нет утверждённого шаблона: …» */
+      role_name: string;
+      /** @description null — нет утверждённого шаблона */
+      template_id: string | null;
+      name: string | null;
+      edition: number | null;
+      languages: ("ru" | "uz" | "en")[];
+    };
+    PartnerContractVote: {
+      name: string;
+      /** @enum {string} */
+      decision: "approve" | "return";
+      note?: string;
     };
     PartnerContractTemplateOption: {
       id: string;
@@ -19611,6 +19879,12 @@ export interface components {
       kind?: components["schemas"]["PartnerApplicationKind"];
       /** @description Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1) */
       override_reason?: string;
+      /** @description ПК-1: «Отметить: подписан» — скан (`uploadPartnerSignedScan`) ИЛИ эта заметка; без обоих — 422 `signed_proof_required` */
+      signed_note?: string;
+    };
+    PartnerApplicationInviteRequest: {
+      /** @description Адрес кандидата; пусто — взять уже записанный в заявке */
+      email?: string;
     };
     /** @enum {string} */
     BankChangeStatus: "pending" | "approved" | "rejected";
@@ -22770,6 +23044,41 @@ export interface operations {
       422: components["responses"]["ValidationFailed"];
     };
   };
+  setContractTemplateBaseRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContractTemplateRoleIn"];
+      };
+    };
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContractTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
   submitContractTemplate: {
     parameters: {
       query?: never;
@@ -23523,7 +23832,7 @@ export interface operations {
   downloadEdsProjectFile: {
     parameters: {
       query?: {
-        variant?: "pdf" | "scan";
+        variant?: "pdf" | "scan" | "docx" | "remark";
       };
       header?: never;
       path: {
@@ -37161,10 +37470,126 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  invitePartnerCandidate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationInviteRequest"];
+      };
+    };
+    responses: {
+      /** @description Приглашение отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadPartnerSignedScan: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PartnerSignedScanUpload"];
+      };
+    };
+    responses: {
+      /** @description Скан прикреплён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  recordPartnerPackageFromArchive: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PartnerFromArchiveUpload"];
+      };
+    };
+    responses: {
+      /** @description Заявка одобрена, пакет внесён из архива */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   downloadPartnerApplicationDocument: {
     parameters: {
       query?: {
-        which?: "contract" | "scan";
+        which?: "contract" | "scan" | "candidate";
+        /** @description Документ пакета базовых документов (ОСН-1): id из `package` заявки */
+        doc?: string;
       };
       header?: never;
       path: {

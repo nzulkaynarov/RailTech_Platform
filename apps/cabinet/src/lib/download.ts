@@ -2,6 +2,7 @@ import {
   getCatalogItemDocumentFile,
   getDocLinkPdf,
   getDocumentFile,
+  getContractDocx,
   getLetterFile,
   getPartnerProductDocumentFile,
   type DocumentFile,
@@ -65,6 +66,12 @@ async function pollAndSave(load: () => Promise<DocumentFile>, fallbackName: stri
 /** Скачивание документа карточки каталога: файл готов сразу (CAT-CARD-2), опроса нет. */
 export async function downloadCatalogDocument(itemId: number, documentId: number, fallbackName: string): Promise<void> {
   const file = await getCatalogItemDocumentFile(itemId, documentId);
+  saveBlob(file.blob, file.fileName ?? fallbackName);
+}
+
+/** Скачивание нашей редакции договора в DOCX для правок (ДП-1): отдаётся сразу. */
+export async function downloadContractDocx(id: number, fallbackName: string): Promise<void> {
+  const file = await getContractDocx(id);
   saveBlob(file.blob, file.fileName ?? fallbackName);
 }
 

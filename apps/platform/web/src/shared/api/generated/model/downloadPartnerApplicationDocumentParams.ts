@@ -6,4 +6,9 @@ import type { DownloadPartnerApplicationDocumentWhich } from "./downloadPartnerA
 
 export type DownloadPartnerApplicationDocumentParams = {
   which?: DownloadPartnerApplicationDocumentWhich;
+  /**
+   * Документ пакета базовых документов (ОСН-1): id из `package` заявки
+   * @pattern ^[0-9]+$
+   */
+  doc?: string;
 };

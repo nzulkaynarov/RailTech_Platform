@@ -239,13 +239,17 @@ def _sample_deal(buyer, now) -> SimpleNamespace:
     return SimpleNamespace(company=buyer, company_id=1, contact=None, number="", created_at=now)
 
 
-def _contract(company, buyer, rows, totals, now) -> SimpleNamespace:
+def _contract(company, buyer, rows, totals, now, *, with_quote: bool = True) -> SimpleNamespace:
     deal = _sample_deal(buyer, now)
-    quote = SimpleNamespace(
-        number=peek(company, "KP"),
-        vat_rate=_VAT_RATE,
-        effective_delivery_lead_time_days=21,
-        delivery_basis=SimpleNamespace(code="DAP", name="Ташкент"),
+    quote = (
+        SimpleNamespace(
+            number=peek(company, "KP"),
+            vat_rate=_VAT_RATE,
+            effective_delivery_lead_time_days=21,
+            delivery_basis=SimpleNamespace(code="DAP", name="Ташкент"),
+        )
+        if with_quote
+        else None
     )
     return SimpleNamespace(
         number=peek(company, "CT"),
@@ -256,7 +260,8 @@ def _contract(company, buyer, rows, totals, now) -> SimpleNamespace:
         total_amount=totals["total"],
         deal=deal,
         quote=quote,
-        quote_id=1,
+        quote_id=1 if with_quote else None,
+        template=None,
         wording_selections=None,
         verification_code="",
         signatory_name="",
@@ -314,16 +319,19 @@ def _pdf_quote(company, brand, row, now) -> bytes:
     )
 
 
-def _pdf_contract(company, brand, body_html, now) -> bytes:
+def _pdf_contract(company, brand, body_html, now, template=None) -> bytes:
     from core.seeds.documents import CONTRACT_BODY
 
     from ..documents import rt_documents
 
     rows = _lines()
     totals = _totals(rows)
-    contract = _contract(company, _buyer(), rows, totals, now)
+    from .contract_frame import frame_of
+
+    # Рамка (название, подписи сторон, «Основание») — у самого шаблона: не-поставка не показывает «КП №».
+    contract = _contract(company, _buyer(), rows, totals, now, with_quote=frame_of(template).supply)
     body = body_html if body_html is not None else template_body(company, "CONTRACT", CONTRACT_BODY)
-    return rt_documents.contract_pdf(contract, rows, totals, brand, draft=False, body_html=body)
+    return rt_documents.contract_pdf(contract, rows, totals, brand, draft=False, body_html=body, template=template)
 
 
 def _pdf_invoice(company, brand, body_html, now) -> bytes:
@@ -413,6 +421,7 @@ def render_sample(
     body_html: str | None = None,
     overrides: dict | None = None,
     language: str | None = None,
+    template=None,
 ) -> SampleResult:
     """The PDF of a sample document of `kind` (see SAMPLE_KINDS). `body_html` — the unsaved text of the template editor;
     `overrides` — the unsaved draft of the blank form; `language` — the language the document is printed in."""
@@ -436,7 +445,7 @@ def render_sample(
         if kind == "KP":
             pdf = _pdf_quote(company, brand, row, now)
         elif kind == "CT":
-            pdf = _pdf_contract(company, brand, body_html, now)
+            pdf = _pdf_contract(company, brand, body_html, now, template)
         elif kind == "INV":
             pdf = _pdf_invoice(company, brand, body_html, now)
         elif kind == "ACT":
@@ -508,10 +517,18 @@ def sample_pdf(company_id: int, user_id: int, sample_id: str) -> bytes | None:
 
 def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> None:
     """The worker's side: render and store the PDF (or the error code) for the screen to read."""
+    from documents.models import DocumentTemplate
+
     from accounts.models import Company, CustomUser
 
     company = Company.objects.get(pk=company_id)
     user = CustomUser.objects.get(pk=user_id)
+    template_id = request.get("template_id")
+    template = (
+        DocumentTemplate.objects.filter(pk=template_id).filter(company_id=company_id).first()
+        if isinstance(template_id, int)
+        else None
+    )
     try:
         result = render_sample(
             company,
@@ -520,6 +537,7 @@ def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> 
             body_html=request.get("body_html"),
             overrides=request.get("draft"),
             language=request.get("language"),
+            template=template,
         )
     except SampleError as exc:
         cache.set(

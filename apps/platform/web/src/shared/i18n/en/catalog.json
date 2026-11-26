@@ -160,10 +160,13 @@
       "contract_return_note_required": "Write a remark: what to fix.",
       "contract_decision_invalid": "Choose Approve or Return.",
       "candidate_email_required": "The candidate has no e-mail: nowhere to send the sign-in.",
-      "signed_scan_required": "The signed scan has not been received. Give a reason to confirm without it.",
+      "signed_proof_required": "Attach the signed scan or write a note.",
       "contract_date_invalid": "The contract date is invalid.",
       "self_approval_not_allowed": "Another holder of the Legal zone decides. The name is in the application row.",
-      "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders."
+      "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders.",
+      "no_approved_base_template": "A base document has no approved template. Approve it in contract templates.",
+      "no_package_roles": "No documents for partners are chosen in the company settings.",
+      "package_no_deviation": "The base document package goes without deviations and without your own file."
     }
   },
   "items": {
@@ -1134,12 +1137,15 @@
     "actions": {
       "sendContract": "Send contract",
       "resendContract": "Send contract again",
-      "approve": "Approve and open cabinet",
-      "approveWithoutAgreement": "Approve without agreement",
+      "approve": "Mark as signed",
+      "invite": "Invite to the Cabinet",
+      "more": "More",
+      "approveWithoutAgreement": "Mark as signed without agreement",
       "reject": "Reject",
       "prepare": "Prepare contract",
       "prepareAgain": "Prepare again",
-      "decide": "Decide on contract"
+      "decide": "Decide on contract",
+      "fromArchive": "Already signed on paper"
     },
     "empty": {
       "title": "No partner applications",
@@ -1154,15 +1160,21 @@
         "The candidate will receive the partner contract draft",
         "The candidate contact will receive an email with cabinet sign-in"
       ],
-      "noEmail": "The candidate has no e-mail: nowhere to send the sign-in."
+      "noEmail": "The candidate has no e-mail: the contract will be sent, and the Cabinet invitation can follow when an address appears."
     },
     "approveModal": {
-      "title": "Approve application and open cabinet: {{name}}",
-      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty appears among the clients.",
+      "title": "Contract signed: {{name}}",
+      "hint": "Attach the scan of the signed contract or leave a note — the scan is optional. The contract term is calculated now, the company gets the partner cabinet and the contact an invitation.",
+      "needFields": "Enter the contract number, the counterparty signature (scan or note) and the company choice to enable the button.",
+      "needReason": "The button becomes available once you give a reason.",
+      "scanLabel": "Signed scan",
+      "scanHint": "PDF or image, up to 20 MB",
+      "noteLabel": "Note instead of a scan",
+      "notePlaceholder": "e.g.: signed on our side, the original is in the contracts folder",
       "hintOverride": "The candidate has not agreed the contract yet. You can approve only with a reason, recorded in the log.",
       "overrideLabel": "Reason for approval without agreement",
       "overridePlaceholder": "e.g.: the contract was signed on paper",
-      "ok": "Confirm contract and open access",
+      "ok": "Mark as signed",
       "linkToExisting": "Link to existing organization: {{name}}",
       "createNew": "Create a new partner organization",
       "steps": [
@@ -1170,8 +1182,13 @@
         "Contract number and date will be recorded in partner profile",
         "Contact person will receive invitation code",
         "Counterparty will be added to the clients"
-      ],
-      "hintNoScan": "The signed scan has not been received. You can confirm only with a reason, which goes to the journal."
+      ]
+    },
+    "inviteModal": {
+      "title": "Invitation to the Cabinet: {{name}}",
+      "hint": "The contract is already with the candidate in the application. Enter the e-mail — the invitation with the Cabinet sign-in goes there.",
+      "email": "Candidate e-mail",
+      "ok": "Send the invitation"
     },
     "rejectModal": {
       "title": "Reject application: {{name}}",
@@ -1192,10 +1209,23 @@
       "ready": "Ready to send",
       "candidateReturned": "Candidate returned: {{note}}",
       "waitingCandidate": "Waiting for the candidate",
-      "waitingScan": "Waiting for the signed scan",
+      "awaitingSignature": "Awaiting signature",
+      "votedApprove": "Agreed: {{who}}",
+      "waitingFor": "Waiting for: {{who}}",
+      "disagreement": "There is an objection, {{who}} decides",
+      "noEmail": "No e-mail: the Cabinet invitation comes later",
+      "validUntil": "Valid until {{date}}",
+      "signedNote": "note: {{note}}",
+      "openCandidateFile": "Candidate's edition",
       "scanReady": "Scan received {{date}}",
       "openContract": "Contract",
-      "openScan": "Scan"
+      "openScan": "Scan",
+      "package": "Package: {{names}}, {{language}}",
+      "documentRemark": "{{title}}: {{note}}",
+      "documentUntil": "{{title}}: until {{date}}",
+      "secretYears": "{{title}}: secrecy for {{years}} more years after the end",
+      "secretIndefinite": "{{title}}: secrecy without a time limit",
+      "fromArchive": "Entered from the archive"
     },
     "prepareModal": {
       "title": "Contract for the candidate: {{name}}",
@@ -1220,7 +1250,12 @@
       "deviation": "How it differs from the template",
       "deviationHint": "Optional. A deviation goes to the Legal zone holder and becomes part of the contract once approved.",
       "needsApproval": "To be decided by: {{who}}. You can send it after approval.",
-      "readyToSend": "No approval needed: approved template without deviations."
+      "readyToSend": "No approval needed: approved template without deviations.",
+      "package": "Package",
+      "packageHint": "The company’s base documents: the same terms for everyone, the candidate accepts the edition.",
+      "packageItem": "{{name}} · ed. {{edition}}",
+      "packageMissing": "No approved template: {{role}}.",
+      "packageReady": "No deviations: the package is ready to send."
     },
     "decisionModal": {
       "title": "Decision on the contract: {{name}}",
@@ -1234,7 +1269,20 @@
         "approve": "Approve contract",
         "return": "Return for revision"
       },
-      "selfConfirm": "There are no other holders — the decision will be recorded as self-made"
+      "selfConfirm": "There are no other holders — the decision will be recorded as self-made",
+      "hintRemarks": "The candidate returned the contract with remarks and their own edition. Everyone responsible agrees.",
+      "hintDirector": "There is an objection: the director decides."
+    },
+    "archiveModal": {
+      "title": "Already signed on paper: {{name}}",
+      "ok": "Record",
+      "hint": "The partner signed the documents earlier. The application becomes approved at once; nothing is sent to the Cabinet or by e-mail.",
+      "signedOn": "Signed on",
+      "signedOnHint": "The real date from the paper: the term counts from it.",
+      "numberPlaceholder": "The old number; empty — a new one is assigned",
+      "ownDate": "Own date (if different)",
+      "scan": "Scan",
+      "scanHint": "Optional: PDF or image up to 20 MB"
     }
   },
   "backToItems": "Back to items"

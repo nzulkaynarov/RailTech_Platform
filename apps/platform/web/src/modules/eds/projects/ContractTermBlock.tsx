@@ -129,7 +129,6 @@ export function ContractTermBlock({
       ) : null}
       {may("decline_renewal") ? (
         <Button
-          danger
           loading={pending === "decline_renewal"}
           disabled={busy}
           onClick={() => {

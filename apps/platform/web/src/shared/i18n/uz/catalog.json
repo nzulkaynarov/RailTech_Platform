@@ -160,10 +160,13 @@
       "contract_return_note_required": "Izoh yozing: nimani tuzatiş kerak.",
       "contract_decision_invalid": "«Kelişiş» yoki «Qaytariş»ni tanlang.",
       "candidate_email_required": "Nomzodda e-mail yöq: kiriş xatini yuboriş imkoni yöq.",
-      "signed_scan_required": "Imzolangan skan olinmagan. Usiz tasdiqlaş uçun sabab körsating.",
+      "signed_proof_required": "Imzolangan skanni biriktiring yoki izoh yozing.",
       "contract_date_invalid": "Şartnoma sanasi notöğri.",
       "self_approval_not_allowed": "Qarorni «Huquq» zonasining boşqa egasi qiladi. Uning nomi ariza qatorida.",
-      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang."
+      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang.",
+      "no_approved_base_template": "Asosiy hujjatning tasdiqlangan şabloni yöq. Uni şartnoma şablonlarida tasdiqlang.",
+      "no_package_roles": "Kompaniya sozlamalarida hamkorlar uçun hujjatlar tanlanmagan.",
+      "package_no_deviation": "Asosiy hujjatlar paketi çetga çiqişsiz va öz faylisiz beriladi."
     }
   },
   "items": {
@@ -1134,12 +1137,15 @@
     "actions": {
       "sendContract": "Şartnoma yuboriş",
       "resendContract": "Şartnomani qayta yuboriş",
-      "approve": "Maʼqullaş va kabinetni oçiş",
-      "approveWithoutAgreement": "Kelişuvsiz tasdiqlaş",
+      "approve": "Belgilaş: imzolangan",
+      "invite": "Kabinetga taklif qilış",
+      "more": "Yana",
+      "approveWithoutAgreement": "Belgilaş: imzolangan, kelişuvsiz",
       "reject": "Rad etiş",
       "prepare": "Şartnomani tayyorlaş",
       "prepareAgain": "Qayta tayyorlaş",
-      "decide": "Şartnoma böyiça qaror"
+      "decide": "Şartnoma böyiça qaror",
+      "fromArchive": "Qogʻozda allaqaçon imzolangan"
     },
     "empty": {
       "title": "Hamkorlik arizalari yöq",
@@ -1154,15 +1160,21 @@
         "Nomzod hamkorlik şartnomasi loyihasini oladi",
         "Nomzod kabinetga kiriş xatini oladi"
       ],
-      "noEmail": "Nomzodda e-mail yöq: kiriş xatini yuboriş imkoni yöq."
+      "noEmail": "Nomzodda e-mail yöq: şartnoma yuboriladi, kabinetga taklifnomani e-mail paydo bölgandan söng yuboriş mumkin."
     },
     "approveModal": {
-      "title": "Arizani maʼqullaş va kabinetni oçiş: {{name}}",
-      "hint": "Hamkorlik şartnomasi imzolanganini tasdiqlaş. Tasdiqlangandan söng kompaniya kabinetga kiriş huquqiga ega böladi, aloqaçi taklifnoma oladi va mijozlar qatorida paydo böladi.",
+      "title": "Şartnoma imzolandi: {{name}}",
+      "hint": "Imzolangan şartnoma skanini biriktiring yoki izoh qoldiring — skan majburiy emas. Şartnoma muddati hozir hisoblanadi, kompaniya hamkor kabinetini, aloqaçi esa taklifnomani oladi.",
+      "needFields": "Şartnoma raqami, imzo (skan yoki izoh) va kompaniya tanlovini kiriting — tugma faollaşadi.",
+      "needReason": "Tugma sabab körsatganingizdan söng faol böladi.",
+      "scanLabel": "Imzolangan skan",
+      "scanHint": "PDF yoki rasm, 20 MB gaça",
+      "noteLabel": "Skan örniga izoh",
+      "notePlaceholder": "Masalan: bizda imzolandi, asl nusxa şartnomalar papkasida",
       "hintOverride": "Nomzod hali şartnomani kelişmagan. Faqat sabab körsatib tasdiqlaş mumkin — u jurnalga yoziladi.",
       "overrideLabel": "Kelişuvsiz tasdiqlaş sababi",
       "overridePlaceholder": "Masalan, şartnoma qoğozda imzolangan",
-      "ok": "Şartnomani tasdiqlaş va kirişni oçiş",
+      "ok": "Belgilaş: imzolangan",
       "linkToExisting": "Topilgan taşkilotga boğlaş: {{name}}",
       "createNew": "Yangi hamkor taşkilotini yaratiş",
       "steps": [
@@ -1170,8 +1182,13 @@
         "Şartnoma raqami va sanasi hamkor kartasida qayd etiladi",
         "Aloqaçi şaxs kiriş kodi bilan taklifnoma oladi",
         "Kontragent mijozlar qatorida paydo böladi"
-      ],
-      "hintNoScan": "Imzolangan skan olinmagan. Tasdiqlaş uçun sabab körsating — u jurnalga yoziladi."
+      ]
+    },
+    "inviteModal": {
+      "title": "Kabinetga taklif: {{name}}",
+      "hint": "Şartnoma nomzodda arizada allaqaçon bor. E-mail körsating — kabinetga kiriş bilan taklifnoma şunga yuboriladi.",
+      "email": "Nomzod e-mailı",
+      "ok": "Taklifnomani yuboriş"
     },
     "rejectModal": {
       "title": "Arizani rad etiş: {{name}}",
@@ -1192,10 +1209,23 @@
       "ready": "Yuborişga tayyor",
       "candidateReturned": "Nomzod qaytardi: {{note}}",
       "waitingCandidate": "Nomzod javobi kutilmoqda",
-      "waitingScan": "Imzolangan skan kutilmoqda",
+      "awaitingSignature": "Imzolaşni kutmoqda",
+      "votedApprove": "Rozi bölganlar: {{who}}",
+      "waitingFor": "Kutilmoqda: {{who}}",
+      "disagreement": "Eʼtiroz bor, qaror: {{who}}",
+      "noEmail": "E-mail yöq: kabinetga taklifnoma keyinroq",
+      "validUntil": "Amal qiladi: {{date}} gaça",
+      "signedNote": "izoh: {{note}}",
+      "openCandidateFile": "Nomzod tahriri",
       "scanReady": "Skan olindi: {{date}}",
       "openContract": "Şartnoma",
-      "openScan": "Skan"
+      "openScan": "Skan",
+      "package": "Paket: {{names}}, {{language}}",
+      "documentRemark": "{{title}}: {{note}}",
+      "documentUntil": "{{title}}: {{date}} gaça",
+      "secretYears": "{{title}}: tugaşdan keyin yana {{years}} yil sir saqlanadi",
+      "secretIndefinite": "{{title}}: sir muddatsiz",
+      "fromArchive": "Arxivdan kiritilgan"
     },
     "prepareModal": {
       "title": "Nomzod uçun şartnoma: {{name}}",
@@ -1220,7 +1250,12 @@
         "ru": "Русский",
         "en": "English",
         "uz": "Özbekça"
-      }
+      },
+      "package": "Paket",
+      "packageHint": "Kompaniyaning asosiy hujjatlari: şartlar hamma uçun bir xil, nomzod tahrirni qabul qiladi.",
+      "packageItem": "{{name}} · {{edition}}-tahrir",
+      "packageMissing": "Tasdiqlangan şablon yöq: {{role}}.",
+      "packageReady": "Çetga çiqiş yöq: paket yuborişga tayyor."
     },
     "decisionModal": {
       "title": "Şartnoma böyiça qaror: {{name}}",
@@ -1234,7 +1269,20 @@
         "approve": "Şartnomani kelişiş",
         "return": "Qayta işlaşga qaytariş"
       },
-      "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi"
+      "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi",
+      "hintRemarks": "Nomzod şartnomani izohlar va öz tahriri bilan qaytardi. Barça masʼullar kelişadi.",
+      "hintDirector": "Eʼtiroz bor: direktor qaror qiladi."
+    },
+    "archiveModal": {
+      "title": "Qogʻozda allaqaçon imzolangan: {{name}}",
+      "ok": "Kiritiş",
+      "hint": "Hamkor hujjatlarni avval imzolagan. Ariza darhol tasdiqlanadi, kabinetga va poçtaga heç narsa yuborilmaydi.",
+      "signedOn": "Imzolangan sana",
+      "signedOnHint": "Qogʻozdagi haqiqiy sana: muddat şundan hisoblanadi.",
+      "numberPlaceholder": "Eski raqam; böş bölsa — yangisi beriladi",
+      "ownDate": "Öz sanasi (boşqa bölsa)",
+      "scan": "Skan",
+      "scanHint": "Ixtiyoriy: PDF yoki 20 MB gaça rasm"
     }
   },
   "backToItems": "Pozitsiyalarga"

@@ -38,7 +38,10 @@ mk $s/basebackups_005/base_$hex/tar_partitions/part_1.tar.zst "$d" "data-$hex-$(
 mk $s/basebackups_005/base_$hex/metadata.json "$d" "{}"
 mk $s/basebackups_005/base_${hex}_backup_stop_sentinel.json "$d" "{\"x\":1}"
 mk $s/wal_005/$hex.zst "$d" "wal-$hex"; mk $s/wal_005/000000010000000000000007.zst "$d" "wal-7"
-mkdir -p /t/cfg /t/status /t/dav
+mkdir -p /t/cfg /t/status /t/dav /t/files /t/key
+mkdir -p /t/files/eds-private/sub /t/key; echo "doc-secret-1" > /t/files/eds-private/договор-секрет.pdf; echo "doc-secret-2" > /t/files/eds-private/sub/скан.png
+printf "%s\n%s\n" 1111111111111111111111111111111111111111111111111111111111111111 2222222222222222222222222222222222222222222222222222222222222222 > /t/key/files-crypt.key
+sha256sum /t/key/files-crypt.key | cut -c1-64 > /t/key/saved
 '
 cfg() { # cfg <provider> <login> <папка> [пароль] — объекты offsite-config, как их кладёт CRM
   in_box 'rm -f /t/cfg/*'
@@ -51,7 +54,7 @@ run() {
   local dav_pass="$1"; shift
   docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
     -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
-    -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json -e OFFSITE_YANDEX_URL=http://127.0.0.1:8080 -e DAV_USER="$LOGIN" -e DAV_PASS="$dav_pass" \
+    -e OFFSITE_FILE_BUCKETS=eds-private -e OFFSITE_FILES_SRC=/t/files/ -e OFFSITE_FILES_KEY_DIR=/t/key -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json -e OFFSITE_YANDEX_URL=http://127.0.0.1:8080 -e DAV_USER="$LOGIN" -e DAV_PASS="$dav_pass" \
     ${extra[@]+"${extra[@]}"} --entrypoint sh "$image" -c '
       rclone serve webdav /t/dav --addr 127.0.0.1:8080 --user "$DAV_USER" --pass "$DAV_PASS" > /tmp/serve.log 2>&1 &
       i=0; until grep -q "Serving" /tmp/serve.log 2>/dev/null || [ $i -ge 50 ]; do i=$((i + 1)); sleep 0.1; done
@@ -86,6 +89,9 @@ run "$APP_PASSWORD" --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; status || true;
   && -e "$w/dav/$FOLDER/pg17/basebackups_005/base_000000010000000000000006_backup_stop_sentinel.json" \
   && -e "$w/dav/$FOLDER/pg17/wal_005/000000010000000000000007.zst" ]] || { find "$w/dav"; fail "состав копии на «Диске»"; }
 [[ "$(field speed_bps)" =~ ^[1-9][0-9]*$ ]] || { status; fail "в status.json нет средней скорости (speed_bps)"; }
+# Файлы по WebDAV: зашифрованы (ни имён, ни содержимого на «Диске»), итог ok.
+[[ "$(field files.result)" == ok && "$(field files.files)" == 2 ]] || { status; fail "файлы по WebDAV: итог ok и 2 файла"; }
+! find "$w/dav/$FOLDER/files" | grep -qE "договор|скан|eds-private" && ! grep -rq "doc-secret" "$w/dav/$FOLDER/files" || fail "файлы на «Яндекс Диске» не зашифрованы"
 finished="$(grep '"offsite_sync_finished"' "$tmp/out" || true)"
 [[ -n "$finished" ]] || { cat "$tmp/out"; fail "нет события offsite_sync_finished"; }
 jq -e '.provider == "yandex" and .copied_files == 5 and .copied_bytes > 20000 and .avg_bytes_per_s > 0 and (.avg_speed | test("(КБ|МБ)/с$"))' \

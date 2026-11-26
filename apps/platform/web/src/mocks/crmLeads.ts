@@ -527,8 +527,8 @@ export const crmLeadsHandlers = [
         reason: "erp_unavailable",
       });
     }
-    // Почта обязательна и проверяется как в ERP (Django): без неё и с чужим форматом заявка не уходит
-    if (!/^[^@\s]+@[^@\s]+\.[a-z0-9-]{2,}$/i.test(body.email)) {
+    // Почта не обязательна (ПК-1); если указана, проверяется как в ERP (Django): с чужим форматом заявка не уходит
+    if (body.email && !/^[^@\s]+@[^@\s]+\.[a-z0-9-]{2,}$/i.test(body.email)) {
       return rejected(422, "invalid_email", "Проверьте адрес почты.", ["email"]);
     }
     const application =
