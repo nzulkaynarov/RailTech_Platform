@@ -19,6 +19,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -35,6 +36,8 @@ from crm.serializers import (
     DocumentTemplateWriteSerializer,
     GeneratedDocumentSerializer,
 )
+
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 _TERM_KEYS = (
     "base_role",
@@ -162,6 +165,8 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "destroy": "settings.edit",
         "copy": "settings.edit",
         "preview": "settings.edit",
+        # ШАБЛ-1: загрузка текста из Word — право на настройки или на договоры; скачивание — любому читающему
+        "word": ("settings.edit", "contract.manage"),
         # ДОК-10: редакции и утверждение шаблонов договоров; утверждает держатель зоны «Право».
         "create_contract": "contract.manage",
         "new_edition": "contract.manage",
@@ -561,6 +566,89 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "required_blocks": {kind: list(codes) for kind, codes in REQUIRED_TEMPLATE_BLOCKS.items()},
             }
         )
+
+    # ── ШАБЛ-1: Word ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+    @extend_schema(
+        summary="Template text as Word (GET) / check or accept an uploaded Word file (POST)",
+        description="GET `?language=ru|uz|en`: DOCX шаблона «как читают люди» (подстановки — подписанными полями), имя "
+        "«<Название>, ред. <N> — проект.docx»; доступно всегда, и для утверждённого шаблона. POST (multipart `file`, "
+        "`?language=`, `?mode=check|apply`): `check` ничего не пишет и отвечает, что изменилось; `apply` (с `base` из "
+        "проверки) сохраняет текст этого языка и пишет в журнал. Закреплённый шаблон договора не меняется "
+        "(400 TEMPLATE_LOCKED), только новая редакция.",
+        tags=["CRM"],
+        responses={
+            (200, DOCX_MIME): OpenApiResponse(description="DOCX"),
+            400: _TEMPLATE_REFUSAL,
+            409: OpenApiResponse(description="WORD_BASE_CHANGED"),
+        },
+    )
+    @action(
+        detail=True, methods=["get", "post"], url_path="word", parser_classes=[MultiPartParser, FormParser, JSONParser]
+    )
+    def word(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from crm.services import template_word as word_service
+        from crm.services.documents.brand import document_brand_context
+
+        language = request.query_params.get("language") or "ru"
+        if language not in word_service.LANGUAGES:
+            return Response({"detail": "WORD_LANGUAGE_INVALID"}, status=400)
+        template = self.get_object()
+        if request.method == "GET":
+            from urllib.parse import quote
+
+            from django.http import HttpResponse
+
+            from accounts.models import Company
+
+            company_id = crm_services.resolve_owner_company_id(request.user)
+            brand = document_brand_context(Company.objects.filter(pk=company_id).first()) if company_id else {}
+            data = word_service.template_docx(template, language, brand=brand)
+            name = word_service.download_name(template, language)
+            response = HttpResponse(data, content_type=DOCX_MIME)
+            response["Content-Disposition"] = (
+                f"attachment; filename=\"template-{template.pk}.docx\"; filename*=UTF-8''{quote(name)}"
+            )
+            response["X-Content-Type-Options"] = "nosniff"
+            return response
+        self._owner_company_for_word(template)
+        self._assert_owned(template)
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"detail": "WORD_FILE_REQUIRED"}, status=400)
+        content = upload.read(word_service.MAX_WORD_BYTES + 1)
+        mode = request.query_params.get("mode") or "check"
+        try:
+            if mode == "apply":
+                updated = word_service.apply(
+                    template,
+                    request.user,
+                    language,
+                    content,
+                    upload.name,
+                    request.query_params.get("base") or "",
+                    sha=request.query_params.get("file_sha") or "",
+                )
+                return Response(self.get_serializer(updated).data)
+            return Response(word_service.check(template, language, content, upload.name))
+        except word_service.WordError as exc:
+            return Response(
+                {"detail": exc.code}, status=409 if exc.code in ("WORD_BASE_CHANGED", "WORD_FILE_CHANGED") else 400
+            )
+        except DjangoValidationError as exc:
+            return _template_error(exc)
+
+    def _owner_company_for_word(self, template):
+        """Загрузка: контрактный шаблон — право на договоры, остальные — на настройки (гейт вьюхи пускает любое из двух)."""
+        from accounts.services.permissions import member_has_permission
+
+        user = self.request.user
+        company_id = crm_services.resolve_owner_company_id(user)
+        need = "contract.manage" if template.kind.code == "CONTRACT" else "settings.edit"
+        if not (getattr(user, "is_superuser", False) or (company_id and member_has_permission(user, company_id, need))):
+            raise PermissionDenied("ROLE_NOT_PERMITTED")
 
 
 class GeneratedDocumentViewSet(

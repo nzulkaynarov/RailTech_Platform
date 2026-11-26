@@ -410,6 +410,12 @@ def unfilled_variables(contract, body_html: str) -> list:
         code = match.group(1).strip()
         if code not in problems:
             problems.append(code)
+    # ШАБЛ-1: обрывки полей (`{{counterparty.name}`) напечатались бы клиенту фигурными скобками — договор останавливается здесь
+    from .template_word import broken_fields
+
+    for token in broken_fields(rendered):
+        if token not in problems:
+            problems.append(token)
     return problems
 
 

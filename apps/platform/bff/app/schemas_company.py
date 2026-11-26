@@ -334,7 +334,15 @@ class DocumentSampleIn(Body):
     kind: DocumentKind | None = None
     template_kind: TemplateKind | None = None
     body_html: str | None = None
-    template_id: int | None = None
+    template_id: int | None = Field(
+        default=None,
+        description=(
+            "Сохранённый шаблон: вместо `body_html` — его текст на языке `language` "
+            "(пусто — русский), "
+            "вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — "
+            "название и подписи сторон образца договора"
+        ),
+    )
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None
 
@@ -831,6 +839,19 @@ class DocumentTemplate(BaseModel):
     kind: TemplateKind
     kind_name: str
     body_html: str
+    body_html_uz: str = Field(
+        description="Текст на узбекском; пусто — в документе печатается русский"
+    )
+    body_html_en: str = Field(
+        description="Текст на английском; пусто — в документе печатается русский"
+    )
+    edition: int
+    unknown_placeholders: list[str] = Field(
+        description="Неизвестные поля текстов (коды и обрывки): заметка, ничего не блокирует"
+    )
+    is_locked: bool = Field(
+        description="Закреплённый шаблон договора: правки только новой редакцией"
+    )
     is_sample: bool
     is_owned: bool
     is_active: bool
@@ -901,6 +922,11 @@ def to_document_template(raw: Mapping[str, Any]) -> DocumentTemplate:
         kind=TEMPLATE_KIND_FROM_ERP.get(text(raw.get("kind_code") or raw.get("kind")), "custom"),
         kind_name=text(raw.get("kind_name")),
         body_html=text(raw.get("body_html")),
+        body_html_uz=text(raw.get("body_html_uz")),
+        body_html_en=text(raw.get("body_html_en")),
+        edition=raw.get("edition") if isinstance(raw.get("edition"), int) else 1,
+        is_locked=flag(raw.get("is_locked")),
+        unknown_placeholders=[str(c) for c in raw.get("unknown_placeholders") or []],
         is_sample=flag(raw.get("is_sample")),
         is_owned=flag(raw.get("is_owned")),
         is_active=flag(raw.get("is_active", True)),

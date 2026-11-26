@@ -1368,6 +1368,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/document-templates/{id}/word": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблон: скачать Word
+     * @description ШАБЛ-1. Текст шаблона на языке `language` как его читают люди: заголовки, абзацы, списки, таблицы, бланк компании в колонтитуле; подстановки — подписанными полями вида `[Название контрагента {{counterparty.name}}]` (код в фигурных скобках — главное), блоки документа — отдельной серой строкой. Язык без текста отдаёт русский (основа для перевода). Имя файла — `<Название>, ред. <N> — проект.docx` (язык, кроме русского, — в названии), в `Content-Disposition` (`filename*`). Доступно всегда, в том числе утверждённому шаблону. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — чтение.
+     */
+    get: operations["downloadTemplateWord"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/{id}/word/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)
+     * @description ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки), `word_other_template` и `word_other_language` (в файле метка другого шаблона или другого языка). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Предупреждения (неизвестные поля, что не сохранится) ничего не блокируют. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     */
+    post: operations["checkTemplateWord"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/document-templates/{id}/word/apply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Шаблон: принять изменения из Word
+     * @description ШАБЛ-1. Тот же файл, что в `checkTemplateWord`, и `base` из его ответа. ERP разбирает файл заново, сохраняет текст этого языка и пишет в журнал, кто и что загрузил (файл, число изменённых, добавленных, удалённых пунктов). Текст успели поменять после проверки — 409 `CONFLICT` (`details.reason = word_base_changed`); закреплённый шаблон договора — 409 (`template_locked`: сначала новая редакция); у активного шаблона счёта или акта без обязательных блоков — 422 `template_missing_required_blocks`. Чужой шаблон и образец платформы не принимают загрузку (403). Ответ — шаблон. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+     */
+    post: operations["applyTemplateWord"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/document-templates/contracts/{id}/new-edition": {
     parameters: {
       query?: never;
@@ -1419,7 +1479,7 @@ export interface paths {
     put?: never;
     /**
      * На утверждение
-     * @description Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+     * @description Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестные поля не блокируют — ответ несёт их список в `unknown_placeholders` (заметка «исправить»), а договор с таким полем останавливается при оформлении понятной причиной.
      */
     post: operations["submitContractTemplate"];
     delete?: never;
@@ -14124,7 +14184,7 @@ export interface components {
       kind?: components["schemas"]["DocumentKind"];
       template_kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
-      /** @description Шаблон своей компании, открытый в редакторе (ПК-1): название и подписи сторон образца договора берутся у него */
+      /** @description Сохранённый шаблон: вместо `body_html` — его текст на языке `language` (пусто — русский), вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — название и подписи сторон образца договора */
       template_id?: number;
       /** @description Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
       draft?: components["schemas"]["BrandProfileUpdate"];
@@ -14402,6 +14462,8 @@ export interface components {
       locked: boolean;
       /** @description Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет) */
       languages: ("ru" | "uz" | "en")[];
+      /** @description Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует */
+      unknown_placeholders: string[];
       /**
        * @description Базовый документ компании (ОСН-1): договор о партнёрстве, соглашение о неразглашении, оферта; null — обычный шаблон
        * @enum {string|null}
@@ -14572,6 +14634,74 @@ export interface components {
       | "act"
       | "receipt"
       | "delivery_note";
+    TemplateWordUpload: {
+      /**
+       * Format: binary
+       * @description Файл Word (`.docx`) до 5 МБ — скачанный шаблон с правками
+       */
+      file: string;
+    };
+    WordSegment: {
+      /** @enum {string} */
+      op: "equal" | "del" | "ins";
+      text: string;
+    };
+    WordChange: {
+      /** @description Номер пункта в начале абзаца; пусто, если номера нет */
+      point: string;
+      /** @enum {string} */
+      kind: "changed" | "added" | "removed";
+      /** @description Было (текущий текст шаблона) */
+      ours: string;
+      /** @description Станет (загруженный файл) */
+      theirs: string;
+      /** @description Слова с подсветкой для изменённого пункта; для добавленного и удалённого пусто */
+      segments: components["schemas"]["WordSegment"][];
+    };
+    WordChangeSummary: {
+      /** @description Номера изменённых пунктов */
+      changed: string[];
+      added: string[];
+      removed: string[];
+      /** @description Всего изменений, включая пункты без номера */
+      total: number;
+      /** @description Сколько номеров не поместилось в списки */
+      more: number;
+    };
+    WordMissingBlock: {
+      code: string;
+      label: string;
+    };
+    WordCount: {
+      kind: string;
+      count: number;
+    };
+    /** @description Что изменится, если принять загруженный Word. Ничего не сохранено. */
+    TemplateWordCheck: {
+      /** @description Изменений нет: текст и оформление те же и ничего не отброшено */
+      unchanged: boolean;
+      /** @description Текст тот же, изменилось только оформление */
+      formatting_only: boolean;
+      /** @description Принять можно: есть изменения, шаблон не закреплён, обязательные блоки на месте */
+      can_apply: boolean;
+      /** @description Закреплённый шаблон договора: правки только новой редакцией */
+      locked: boolean;
+      /** @description Отпечаток текущего текста; отдаётся обратно в «Принять» */
+      base: string;
+      /** @description В файле нет метки нашей выгрузки (скачан не отсюда): сравнивать внимательно */
+      from_elsewhere: boolean;
+      /** @description Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409 */
+      file_sha: string;
+      /** @description Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights` */
+      dropped: components["schemas"]["WordCount"][];
+      /** @description Что есть в ТЕКУЩЕМ тексте и не сохранится после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; панель только перечисляет, «Принять» не задерживается; прежний текст остаётся в записи журнала */
+      lost_markup: components["schemas"]["WordCount"][];
+      /** @description Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение */
+      unknown_placeholders: string[];
+      missing_blocks: components["schemas"]["WordMissingBlock"][];
+      summary: components["schemas"]["WordChangeSummary"];
+      items: components["schemas"]["WordChange"][];
+    };
     DocumentTemplate: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
@@ -14579,6 +14709,16 @@ export interface components {
       /** @description Вид документа словами */
       kind_name: string;
       body_html: string;
+      /** @description Текст на узбекском; пусто — в документе печатается русский */
+      body_html_uz: string;
+      /** @description Текст на английском; пусто — в документе печатается русский */
+      body_html_en: string;
+      /** @description Номер редакции (у шаблонов договоров растёт, у прочих — 1); в имени скачанного файла */
+      edition: number;
+      /** @description Закреплённый шаблон договора (утверждён или на утверждении) — правки только новой редакцией */
+      is_locked: boolean;
+      /** @description Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует */
+      unknown_placeholders: string[];
       /** @description Образец платформы: правится только копия (`/copy`) */
       is_sample: boolean;
       /** @description Шаблон своей компании */
@@ -23013,6 +23153,129 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  downloadTemplateWord: {
+    parameters: {
+      query: {
+        language: "ru" | "uz" | "en";
+      };
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description DOCX */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  checkTemplateWord: {
+    parameters: {
+      query: {
+        language: "ru" | "uz" | "en";
+      };
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["TemplateWordUpload"];
+      };
+    };
+    responses: {
+      /** @description Что изменится, если принять файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateWordCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description 413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`) */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  applyTemplateWord: {
+    parameters: {
+      query: {
+        language: "ru" | "uz" | "en";
+        /** @description Отпечаток текста из `checkTemplateWord` */
+        base: string;
+        /** @description Отпечаток файла из `checkTemplateWord`: другой файл — 409 */
+        file_sha: string;
+      };
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["TemplateWordUpload"];
+      };
+    };
+    responses: {
+      /** @description Текст сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ContractTemplateConflict"];
+      /** @description 413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`) */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
     };
   };
   newContractTemplateEdition: {

@@ -27,6 +27,7 @@ def erp_row(**over: Any) -> dict[str, Any]:
         "is_active": True,
         "is_locked": True,
         "languages": ["ru"],
+        "unknown_placeholders": [],
         "updated_at": "2026-11-20T10:00:00+05:00",
     }
     return {**base, **over}
