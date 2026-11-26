@@ -33,8 +33,14 @@ DOCX = word.DOCX_MIME
 
 
 def make(
-    pw, *, status=TemplateApproval.DRAFT, body=BODY, kind="CONTRACT", name="Договор с клиентом", **extra
-):  # noqa: F811
+    pw,  # noqa: F811
+    *,
+    status=TemplateApproval.DRAFT,
+    body=BODY,
+    kind="CONTRACT",
+    name="Договор с клиентом",
+    **extra,
+):
     return DocumentTemplate.objects.create(
         company=pw.own,
         name=name,

@@ -337,7 +337,7 @@ class DocumentSampleIn(Body):
     template_id: str | None = Field(
         default=None,
         pattern=r"^[0-9]+$",
-        description="Сохранённый шаблон вместо `body_html`: текст на языке `language` (пусто — русский)",
+        description="Сохранённый шаблон вместо `body_html`: текст на языке `language`",
     )
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None
