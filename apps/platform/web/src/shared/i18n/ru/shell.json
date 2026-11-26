@@ -5,7 +5,8 @@
   "rail": {
     "label": "Модули",
     "logo": "{{initials}} — {{name}}",
-    "tasks": "{{name}}, задач: {{count}}"
+    "tasks": "{{name}}, задач: {{count}}",
+    "needs": "{{name}}: требуют действия — {{count}}"
   },
   "menu": {
     "nav": "Разделы модуля",
@@ -47,37 +48,51 @@
     "now": "сейчас",
     "minutes": "{{count}} мин",
     "hours": "{{count}} ч",
-    "kindChip": {
-      "lead": "L",
-      "client": "К",
-      "request": "Зая",
-      "project": "Про",
-      "letter": "Вхо",
-      "quote": "КП",
-      "contract": "Дог",
-      "invoice": "Сч",
-      "act": "Акт",
-      "memo": "Зап",
-      "chat": "Ч",
-      "ticket": "Т",
-      "integration": "!",
-      "supplier_order": "Зак",
-      "partner_application": "Парт",
-      "product": "Тов"
-    },
-    "tabChip": {
-      "all": "•",
-      "decisions": "Р",
-      "clients": "К",
-      "system": "!"
-    },
     "scope": {
       "unread": "Непрочитанные",
       "unreadCount": "Непрочитанные ({{count}})",
-      "all": "Все"
+      "all": "Все",
+      "needsAction": "Требуют действия",
+      "needsActionCount": "Требуют действия ({{count}})"
     },
     "category": "Тип уведомлений",
-    "allTypes": "Все типы"
+    "allTypes": "Все типы",
+    "kindName": {
+      "lead": "Лид",
+      "client": "Клиент",
+      "request": "Заявка",
+      "project": "Проект",
+      "letter": "Письмо",
+      "quote": "КП",
+      "contract": "Договор",
+      "invoice": "Счёт",
+      "act": "Акт",
+      "memo": "Записка",
+      "chat": "Чат",
+      "ticket": "Обращение",
+      "integration": "Сбой",
+      "supplier_order": "Заказ",
+      "partner_application": "Партнёр",
+      "product": "Товар"
+    },
+    "tabName": {
+      "all": "Все",
+      "decisions": "Решение",
+      "clients": "Клиенты",
+      "system": "Система"
+    },
+    "events_one": "{{count}} событие",
+    "events_few": "{{count}} события",
+    "events_many": "{{count}} событий",
+    "events_other": "{{count}} событий",
+    "expand": "Показать события",
+    "collapse": "Скрыть события",
+    "toast": {
+      "open": "Открыть",
+      "read": "Прочитано",
+      "more": "Ещё {{count}} новых",
+      "moreAction": "Все уведомления"
+    }
   },
   "panel": {
     "label": "Боковое окно",

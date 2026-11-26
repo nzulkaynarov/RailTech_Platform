@@ -18,6 +18,7 @@ import { HelpDrawer } from "../../features/help/HelpDrawer";
 import { WhatsNewNotice } from "../../features/help/WhatsNewNotice";
 import { useWhatsNew } from "../../features/help/whatsNew";
 import { Onboarding } from "../../features/onboarding/Onboarding";
+import { NotificationArrivals } from "../../features/notifications/NotificationArrivals";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import {
   useNotifications,
@@ -284,6 +285,25 @@ export function AppShell() {
     })),
   ];
 
+  // Одно правило для всех модулей (УВЕД-1): число на значке — сумма счётчиков «требует действия» из пунктов модуля (тех же,
+  // что бейджи подменю и очередь), каждый счётчик считается один раз; нет таких — значка нет.
+  const needsBadge = (code: (typeof MODULES)[number]["code"]) => {
+    const refs = new Set(itemsOf(code).flatMap(({ item }) => refsOf(item)));
+    let count = 0;
+    for (const ref of refs) {
+      const [module = "", key = ""] = ref.split(".");
+      const counter = counters.data?.items.find((c) => c.module === module && c.section === key);
+      if (counter?.attention && counter.count > 0) count += counter.count;
+    }
+    if (count <= 0) return {};
+    return {
+      badge: {
+        count,
+        label: t("rail.needs", { name: t(`modules:${code}.name`), count }),
+      },
+    };
+  };
+
   const railItems: RailModule[] = railModules.map((module) => {
     const sections =
       module.code === SETTINGS_MODULE
@@ -309,14 +329,7 @@ export function AppShell() {
       to: sections[0]?.path ?? `/${module.code}`,
       active: (nav !== undefined || matchedVisible === true) && module.code === activeModule.code,
       sections,
-      ...(module.code === "dashboard" && taskCount > 0
-        ? {
-            badge: {
-              count: taskCount,
-              label: t("rail.tasks", { name: t(`modules:${module.code}.name`), count: taskCount }),
-            },
-          }
-        : {}),
+      ...needsBadge(module.code),
     };
   });
 
@@ -478,6 +491,15 @@ export function AppShell() {
 
   return (
     <Layout style={{ height: "100dvh", overflow: "hidden" }} hasSider>
+      {hasQueue ? (
+        <NotificationArrivals
+          personId={me.id}
+          centerOpen={bellOpen}
+          onOpenCenter={() => {
+            setBellOpen(true);
+          }}
+        />
+      ) : null}
       <a href="#main-content" className="pf-skip-link">
         {t("skip")}
       </a>

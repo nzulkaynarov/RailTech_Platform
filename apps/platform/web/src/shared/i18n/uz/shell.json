@@ -5,7 +5,8 @@
   "rail": {
     "label": "Modullar",
     "logo": "{{initials}} — {{name}}",
-    "tasks": "{{name}}, vazifalar: {{count}}"
+    "tasks": "{{name}}, vazifalar: {{count}}",
+    "needs": "{{name}}: amal talab qiladi — {{count}}"
   },
   "menu": {
     "nav": "Modul bölimlari",
@@ -47,37 +48,51 @@
     "now": "hozir",
     "minutes": "{{count}} daq",
     "hours": "{{count}} soat",
-    "kindChip": {
-      "lead": "L",
-      "client": "M",
-      "request": "Ari",
-      "project": "Loy",
-      "letter": "Kir",
-      "quote": "TT",
-      "contract": "Şr",
-      "invoice": "His",
-      "act": "Dal",
-      "memo": "Xiz",
-      "chat": "C",
-      "ticket": "T",
-      "integration": "!",
-      "supplier_order": "Buy",
-      "partner_application": "Hmk",
-      "product": "Mah"
-    },
-    "tabChip": {
-      "all": "•",
-      "decisions": "Q",
-      "clients": "M",
-      "system": "!"
-    },
     "scope": {
       "unread": "Öqilmagan",
       "unreadCount": "Öqilmagan ({{count}})",
-      "all": "Hammasi"
+      "all": "Hammasi",
+      "needsAction": "Amal talab qiladi",
+      "needsActionCount": "Amal talab qiladi ({{count}})"
     },
     "category": "Bildirişnoma turi",
-    "allTypes": "Barça turlar"
+    "allTypes": "Barça turlar",
+    "kindName": {
+      "lead": "Lid",
+      "client": "Mijoz",
+      "request": "Ariza",
+      "project": "Loyiha",
+      "letter": "Xat",
+      "quote": "Tijorat taklifi",
+      "contract": "Şartnoma",
+      "invoice": "Hisob",
+      "act": "Dalolatnoma",
+      "memo": "Xizmat xati",
+      "chat": "Çat",
+      "ticket": "Murojaat",
+      "integration": "Nosozlik",
+      "supplier_order": "Buyurtma",
+      "partner_application": "Hamkor",
+      "product": "Mahsulot"
+    },
+    "tabName": {
+      "all": "Hammasi",
+      "decisions": "Qaror",
+      "clients": "Mijozlar",
+      "system": "Tizim"
+    },
+    "events_one": "{{count}} voqea",
+    "events_other": "{{count}} voqea",
+    "expand": "Voqealarni körsatiş",
+    "collapse": "Voqealarni yaşiriş",
+    "toast": {
+      "open": "Açiş",
+      "read": "Oqildi",
+      "more": "Yana {{count}} ta yangi",
+      "moreAction": "Barça xabarnomalar"
+    },
+    "events_few": "{{count}} voqea",
+    "events_many": "{{count}} voqea"
   },
   "panel": {
     "label": "Yon oyna",

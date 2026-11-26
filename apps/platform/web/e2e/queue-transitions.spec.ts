@@ -299,7 +299,7 @@ test.describe("Колокольчик: объект с экраном откры
       await loginAndWait(page, "director@demo.example");
       await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
       const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-      // шторка открывается на «Непрочитанные»; прочитанные — во «Все»
+      // шторка открывается на «Все» (непрочитанные выше); клик по «Все» — на случай другого выбора
       await center.locator(".ant-segmented-item-label", { hasText: /^Все$/ }).click();
       await center.getByRole("link", { name: title }).click();
       await expectOpened(page, key);

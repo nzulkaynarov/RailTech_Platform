@@ -104,3 +104,47 @@ a.pf-feed-row:focus-visible {
 .pf-notes-unread-ghost {
   visibility: hidden;
 }
+
+/* Вид объекта словом, а не буквами: «Проект», «КП», «Лид» (УВЕД-1) */
+.pf-kind {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  align-self: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 56px;
+  max-width: 96px;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-note-count {
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+}
+.pf-note-toggle {
+  display: block;
+  margin: -4px 16px 6px 84px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--rt-color-primary-default);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pf-note-toggle:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 1px;
+}
+.pf-notes--nested {
+  padding: 0 0 4px 56px;
+}

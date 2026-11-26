@@ -2541,6 +2541,7 @@ export const getListNotificationsResponseMock = (
     ]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     read: faker.datatype.boolean(),
+    needs_action: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   next_cursor: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),

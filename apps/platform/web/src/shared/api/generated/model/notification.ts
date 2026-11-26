@@ -15,4 +15,6 @@ export interface Notification {
   object?: ObjectRef;
   created_at: string;
   read: boolean;
+  /** Требует действия сотрудника (решение, ответ); иначе — к сведению. От этого зависит всплывающее уведомление: требующее действия остаётся на экране, пока его не закроют (УВЕД-1). */
+  needs_action?: boolean;
 }
