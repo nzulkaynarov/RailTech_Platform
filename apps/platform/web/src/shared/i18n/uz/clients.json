@@ -166,10 +166,11 @@
         "active": "Mijoz"
       },
       "partner": {
-        "application": "Hamkor{{kind}} — ulaniş arizasi körib çiqilmoqda",
-        "invited": "Hamkor{{kind}} — taklif qilingan",
-        "active": "Hamkor{{kind}} — faol",
-        "suspended": "Hamkor{{kind}} — töxtatilgan"
+        "label": "Hamkor",
+        "application": "ulaniş arizasi körib çiqilmoqda",
+        "invited": "taklif qilingan",
+        "active": "faol",
+        "suspended": "töxtatilgan"
       }
     },
     "partnerKind": {
@@ -181,17 +182,17 @@
     "notClient": {
       "action": "Mijoz emas",
       "hint": "Kompaniya xato bilan mijoz qilib kiritilgan",
-      "title": "Mijoz roli olib tashlansinmi?",
+      "title": "Mijoz roli olib taşlansinmi?",
       "text": "Kompaniya «Mijozlar»dan çiqadi, kontaktlar qoladi.",
       "close": "Xato bilan kiritilgan deb yopiladi: {{list}}.",
       "kept": "Qoladi (mijozga TT allaqaçon yuborilgan): {{list}}.",
       "history": "Haqiqiy tarix: yuborilgan TT — {{quotes}}, şartnomalar — {{contracts}}, hisoblar — {{invoices}}, loyihalar — {{projects}}.",
-      "ask": "Kompaniya haqiqiy mijozga öxşaydi. Rolni baribir olib tashlaymizmi?",
-      "confirm": "Baribir olib tashlaş",
+      "ask": "Kompaniya haqiqiy mijozga öxşaydi. Rolni baribir olib taşlaymizmi?",
+      "confirm": "Baribir olib taşlaş",
       "cancel": "Bekor qiliş",
-      "done": "Mijoz roli olib tashlandi. Yopilgan arizalar: {{count}}.",
-      "failed": "Rolni olib tashlab bölmadi. Qayta urinib köring.",
-      "apply": "Rolni olib tashlaş"
+      "done": "Mijoz roli olib taşlandi. Yopilgan arizalar: {{count}}.",
+      "failed": "Rolni olib taşlab bölmadi. Qayta urinib köring.",
+      "apply": "Rolni olib taşlaş"
     },
     "people": {
       "title": "Odamlar",

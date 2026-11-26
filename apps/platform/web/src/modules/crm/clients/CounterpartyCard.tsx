@@ -201,7 +201,7 @@ function Loaded({
     if (role === "client") return t("counterparty.roleState.client.active");
     if (role === "partner" && state) {
       const kind = state.kind ? `, ${t(`counterparty.partnerKind.${state.kind}`)}` : "";
-      return t(`counterparty.roleState.partner.${state.state}`, { kind });
+      return `${t("counterparty.roleState.partner.label")}${kind} — ${t(`counterparty.roleState.partner.${state.state}`)}`;
     }
     return t(`counterparty.roles.${role}`);
   };

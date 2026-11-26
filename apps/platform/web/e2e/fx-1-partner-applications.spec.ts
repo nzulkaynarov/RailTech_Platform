@@ -35,11 +35,13 @@ for (const width of WIDTHS) {
     ).toBeVisible();
     await expect(send.getByText("Такой ИНН уже занят", { exact: false })).toBeVisible();
     const sendOk = send.getByRole("button", { name: "Отправить договор" });
-    await expect(sendOk).toBeDisabled();
+    // КОНТР-1б: при совпадении по ИНН «Привязать к найденной» выбрано заранее — кнопка не стоит серой без причины
+    await expect(
+      send.getByRole("radio", { name: /Привязать к найденной организации/ }),
+    ).toBeChecked();
+    await expect(sendOk).toBeEnabled();
     await expectNoViolations(page, "заявки партнёров · совпадение ИНН");
     await settledScreenshot(page, "fx-1-match");
-    await send.getByRole("radio", { name: /Привязать к найденной организации/ }).check();
-    await expect(sendOk).toBeEnabled();
     await sendOk.click();
     await expect(send).toBeHidden();
 

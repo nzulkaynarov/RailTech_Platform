@@ -166,10 +166,11 @@
         "active": "Client"
       },
       "partner": {
-        "application": "Partner{{kind}} — connection request under review",
-        "invited": "Partner{{kind}} — invited",
-        "active": "Partner{{kind}} — active",
-        "suspended": "Partner{{kind}} — suspended"
+        "label": "Partner",
+        "application": "connection request under review",
+        "invited": "invited",
+        "active": "partnership in effect",
+        "suspended": "suspended"
       }
     },
     "partnerKind": {
