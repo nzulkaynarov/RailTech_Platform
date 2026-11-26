@@ -35,6 +35,8 @@ const NO_CONTRACT = {
   contract_valid_until: null,
   contract_last_notice_date: null,
   contract_renewal_mode: "",
+  package: [],
+  from_archive: false,
 } as const satisfies Partial<PartnerApplicationItem>;
 
 /** Договор по утверждённому шаблону без отступлений: согласование не нужно, можно отправлять. */
@@ -66,6 +68,49 @@ function noTemplateScenario(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Пакет базовых документов (ОСН-1): `rt-pf-mock-package = ready` — у обеих ролей есть утверждённый шаблон,
+ * `missing` — у соглашения о неразглашении шаблона нет. Без флага ролей нет: прежний путь «из шаблона».
+ */
+function packageScenario(): "ready" | "missing" | null {
+  try {
+    const value = window.localStorage.getItem("rt-pf-mock-package");
+    return value === "ready" || value === "missing" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+const PACKAGE_ROLES = [
+  {
+    base_role: "partnership",
+    role_name: "Договор о партнёрстве",
+    template_id: "11",
+    name: "Договор о партнёрстве",
+    edition: 1,
+    languages: ["ru", "uz", "en"],
+  },
+  {
+    base_role: "nda",
+    role_name: "Соглашение о неразглашении",
+    template_id: "12",
+    name: "Соглашение о неразглашении",
+    edition: 1,
+    languages: ["ru"],
+  },
+] as const;
+
+function packageOptions() {
+  const scenario = packageScenario();
+  if (!scenario) return { roles: [], ready: false };
+  const roles = PACKAGE_ROLES.map((role) =>
+    scenario === "missing" && role.base_role === "nda"
+      ? { ...role, template_id: null, name: null, edition: null, languages: [] }
+      : role,
+  );
+  return { roles, ready: scenario === "ready" };
 }
 
 /** Сценарий «единственный держатель, сам подготовил договор»: решение с подтверждением. */
@@ -322,6 +367,7 @@ export const erpPartnerApplicationsHandlers = [
       deviations_allowed: true,
       approvers: ["Анвар Юристов"],
       can_decide: legalHolder(),
+      package: packageOptions(),
     });
   }),
 
@@ -338,7 +384,44 @@ export const erpPartnerApplicationsHandlers = [
         deviation_text?: string;
         contract_number?: string;
         contract_date?: string;
+        package?: boolean;
       };
+      if (body.package) {
+        if (!packageOptions().ready) {
+          return HttpResponse.json(
+            {
+              code: "VALIDATION_FAILED",
+              message: "Проверьте заполнение полей.",
+              details: { reason: "no_approved_base_template" },
+            },
+            { status: 422 },
+          );
+        }
+        applyPrepared(item, {
+          source: "template",
+          language: body.language ?? "ru",
+          template: TEMPLATES[0],
+          deviation: "",
+          number: body.contract_number,
+          date: body.contract_date,
+        });
+        item.package = PACKAGE_ROLES.map((role, index) => ({
+          id: String(900 + index),
+          base_role: role.base_role,
+          title: role.name,
+          number: `${item.contract_number}${index === 0 ? "" : `/${String(index + 1)}`}`,
+          template_edition: role.edition,
+          has_file: true,
+          has_candidate_file: false,
+          candidate_remark: "",
+          valid_from: null,
+          valid_until: null,
+          confidentiality_years: role.base_role === "nda" ? 3 : null,
+          trade_secret_indefinite: false,
+          from_archive: false,
+        }));
+        return HttpResponse.json(item);
+      }
       const template = TEMPLATES.find((t) => t.id === body.template_id);
       if (noTemplateScenario() || !template) {
         return HttpResponse.json(
@@ -384,6 +467,43 @@ export const erpPartnerApplicationsHandlers = [
       return HttpResponse.json(item);
     },
   ),
+
+  // ОСН-1: «Уже подписано на бумаге» — сразу одобрена, реальные даты, без Кабинета
+  http.post("*/erp/catalog/partner-applications/:id/from-archive", async ({ params, request }) => {
+    const session = readSession();
+    if (!session) return new HttpResponse(null, { status: 401 });
+    const item = items.find((i) => i.id === params["id"]);
+    if (!item) return new HttpResponse(null, { status: 404 });
+    const form = await request.formData();
+    const field = (name: string): string | undefined => {
+      const value = form.get(name);
+      return typeof value === "string" && value !== "" ? value : undefined;
+    };
+    const signedOn = field("signed_on") ?? "";
+    item.status = "approved";
+    item.from_archive = true;
+    item.contract_number = field("contract_number") ?? `ПД-2026/${item.id}`;
+    item.contract_date = signedOn;
+    item.contract_valid_from = signedOn;
+    item.contract_valid_until = `${signedOn.slice(0, 4)}-12-31`;
+    item.contract_blocker = null;
+    item.package = packageOptions().roles.map((role, index) => ({
+      id: String(950 + index),
+      base_role: role.base_role,
+      title: role.name ?? role.role_name,
+      number: `${item.contract_number}${index === 0 ? "" : `/${String(index + 1)}`}`,
+      template_edition: role.edition ?? 1,
+      has_file: false,
+      has_candidate_file: false,
+      candidate_remark: "",
+      valid_from: field(`signed_on_${role.base_role}`) ?? signedOn,
+      valid_until: role.base_role === "nda" ? null : `${signedOn.slice(0, 4)}-12-31`,
+      confidentiality_years: role.base_role === "nda" ? 3 : null,
+      trade_secret_indefinite: false,
+      from_archive: true,
+    }));
+    return HttpResponse.json(item);
+  }),
 
   http.post(
     "*/erp/catalog/partner-applications/:id/contract-decision",

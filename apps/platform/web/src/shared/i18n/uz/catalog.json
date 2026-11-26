@@ -163,7 +163,10 @@
       "signed_proof_required": "Imzolangan skanni biriktiring yoki izoh yozing.",
       "contract_date_invalid": "Şartnoma sanasi notöğri.",
       "self_approval_not_allowed": "Qarorni «Huquq» zonasining boşqa egasi qiladi. Uning nomi ariza qatorida.",
-      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang."
+      "self_decision_confirmation_required": "Özboşimça qarorni tasdiqlang: boşqa egalar yöqligini belgilang.",
+      "no_approved_base_template": "Asosiy hujjatning tasdiqlangan şabloni yöq. Uni şartnoma şablonlarida tasdiqlang.",
+      "no_package_roles": "Kompaniya sozlamalarida hamkorlar uçun hujjatlar tanlanmagan.",
+      "package_no_deviation": "Asosiy hujjatlar paketi çetga çiqişsiz va öz faylisiz beriladi."
     }
   },
   "items": {
@@ -1141,7 +1144,8 @@
       "reject": "Rad etiş",
       "prepare": "Şartnomani tayyorlaş",
       "prepareAgain": "Qayta tayyorlaş",
-      "decide": "Şartnoma böyiça qaror"
+      "decide": "Şartnoma böyiça qaror",
+      "fromArchive": "Qoğozda allaqaçon imzolangan"
     },
     "empty": {
       "title": "Hamkorlik arizalari yöq",
@@ -1215,7 +1219,13 @@
       "openCandidateFile": "Nomzod tahriri",
       "scanReady": "Skan olindi: {{date}}",
       "openContract": "Şartnoma",
-      "openScan": "Skan"
+      "openScan": "Skan",
+      "package": "Paket: {{names}}, {{language}}",
+      "documentRemark": "{{title}}: {{note}}",
+      "documentUntil": "{{title}}: {{date}} gaça",
+      "secretYears": "{{title}}: tugaşdan keyin yana {{years}} yil sir saqlanadi",
+      "secretIndefinite": "{{title}}: sir muddatsiz",
+      "fromArchive": "Arxivdan kiritilgan"
     },
     "prepareModal": {
       "title": "Nomzod uçun şartnoma: {{name}}",
@@ -1240,7 +1250,12 @@
         "ru": "Русский",
         "en": "English",
         "uz": "Özbekça"
-      }
+      },
+      "package": "Paket",
+      "packageHint": "Kompaniyaning asosiy hujjatlari: şartlar hamma uçun bir xil, nomzod tahrirni qabul qiladi.",
+      "packageItem": "{{name}} · {{edition}}-tahrir",
+      "packageMissing": "Tasdiqlangan şablon yöq: {{role}}.",
+      "packageReady": "Çetga çiqiş yöq: paket yuborişga tayyor."
     },
     "decisionModal": {
       "title": "Şartnoma böyiça qaror: {{name}}",
@@ -1257,6 +1272,17 @@
       "selfConfirm": "Boşqa egalar yöq — qaror özboşimça deb yoziladi",
       "hintRemarks": "Nomzod şartnomani izohlar va öz tahriri bilan qaytardi. Barça masʼullar kelişadi.",
       "hintDirector": "Eʼtiroz bor: tasdiqlovçi qaror qiladi."
+    },
+    "archiveModal": {
+      "title": "Qoğozda allaqaçon imzolangan: {{name}}",
+      "ok": "Kiritiş",
+      "hint": "Hamkor hujjatlarni avval imzolagan. Ariza tasdiqlanadi, kabinetga va poçtaga heç narsa yuborilmaydi.",
+      "signedOn": "Imzolangan sana",
+      "signedOnHint": "Qoğozdagi haqiqiy sana: muddat şundan hisoblanadi.",
+      "numberPlaceholder": "Eski raqam; böş bölsa — yangisi beriladi",
+      "ownDate": "Öz sanasi (boşqa bölsa)",
+      "scan": "Skan",
+      "scanHint": "Ixtiyoriy: PDF yoki 20 MB gaça rasm"
     }
   },
   "backToItems": "Pozitsiyalarga"

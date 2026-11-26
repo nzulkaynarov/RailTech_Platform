@@ -145,6 +145,40 @@ export function setMockTelegram(patch: Partial<fixtures.TelegramMock>): void {
   Object.assign(dbs.demo.telegram, patch);
 }
 
+function readPackageSwitch(): boolean {
+  try {
+    return window.localStorage.getItem('rt-mock-partner-package') === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Заявка кандидата с отправленным пакетом из двух базовых документов (витрина ОСН-1). */
+function packageApplication(): Schemas['PartnerApplication'] {
+  return {
+    id: 700,
+    status: 'contract_sent',
+    kind: 'supplier',
+    categories_description: 'Комплектующие и сервисные работы',
+    company_name: 'ООО Демо',
+    inn: '123456789',
+    contact_name: 'Иван',
+    email: 'ivan@example.uz',
+    phone: null,
+    contract_number: 'PA-2026-0007',
+    contract_date: '2026-11-26',
+    rejected_reason: null,
+    created_at: '2026-11-25T12:00:00Z',
+    updated_at: '2026-11-26T12:00:00Z',
+    has_contract_pdf: true,
+    contract_file_kind: 'pdf',
+    documents: [
+      { id: 11, base_role: 'partnership', title: 'Договор о партнёрстве', number: 'PA-2026-0007', file_kind: 'pdf', remark: '' },
+      { id: 12, base_role: 'nda', title: 'Соглашение о неразглашении', number: 'PA-2026-0007/2', file_kind: 'pdf', remark: '' },
+    ],
+  };
+}
+
 /** Для тестов: заявка на партнерство для компании. */
 export function setMockPartnerApplication(app: Schemas['PartnerApplication'] | null): void {
   dbs.demo.partnerApplication = app;
@@ -1571,6 +1605,8 @@ export const handlers = [
     `${API}/company/partner-application`,
     withSession(({ db, session }) => {
       const alreadyPartner = session.access?.roles.includes('partner') ?? false;
+      // Dev-витрина шага «пакет документов» (ОСН-1): `localStorage['rt-mock-partner-package'] = '1'` до первой загрузки
+      if (!db.partnerApplication && readPackageSwitch()) db.partnerApplication = packageApplication();
       const app = db.partnerApplication;
       return json({
         already_partner: alreadyPartner,
@@ -1618,10 +1654,21 @@ export const handlers = [
           return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
         }
         const isForm = (request.headers.get('content-type') ?? '').includes('multipart/form-data');
-        const body = isForm
-          ? { notes: String((await request.formData()).get('notes') ?? '') }
-          : (((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string });
+        let body: { notes?: string; document?: number | string };
+        if (isForm) {
+          const form = await request.formData();
+          body = { notes: String(form.get('notes') ?? ''), document: String(form.get('document') ?? '') || undefined };
+        } else {
+          body = ((await readJson<{ notes?: string; document?: number }>(request).catch(() => ({}))) || {}) as {
+            notes?: string;
+            document?: number;
+          };
+        }
         if (!body.notes?.trim() && !isForm) return error(400, 'RETURN_NOTE_REQUIRED');
+        const documents = db.partnerApplication.documents ?? [];
+        if (isForm && documents.length > 1 && !body.document) return error(400, 'RETURN_DOCUMENT_REQUIRED');
+        const named = documents.find((doc) => String(doc.id) === String(body.document));
+        if (named) named.remark = body.notes ?? '';
         db.partnerApplication.candidate_notes = body.notes ?? '';
         db.partnerApplication.candidate_returned_at = new Date().toISOString();
         return json(db.partnerApplication);

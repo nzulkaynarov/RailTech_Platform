@@ -163,7 +163,10 @@
       "signed_proof_required": "Attach the signed scan or write a note.",
       "contract_date_invalid": "The contract date is invalid.",
       "self_approval_not_allowed": "Another holder of the Legal zone decides. The name is in the application row.",
-      "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders."
+      "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders.",
+      "no_approved_base_template": "A base document has no approved template. Approve it in contract templates.",
+      "no_package_roles": "No documents for partners are chosen in the company settings.",
+      "package_no_deviation": "The base document package goes without deviations and without your own file."
     }
   },
   "items": {
@@ -1141,7 +1144,8 @@
       "reject": "Reject",
       "prepare": "Prepare contract",
       "prepareAgain": "Prepare again",
-      "decide": "Decide on contract"
+      "decide": "Decide on contract",
+      "fromArchive": "Already signed on paper"
     },
     "empty": {
       "title": "No partner applications",
@@ -1215,7 +1219,13 @@
       "openCandidateFile": "Candidate's edition",
       "scanReady": "Scan received {{date}}",
       "openContract": "Contract",
-      "openScan": "Scan"
+      "openScan": "Scan",
+      "package": "Package: {{names}}, {{language}}",
+      "documentRemark": "{{title}}: {{note}}",
+      "documentUntil": "{{title}}: until {{date}}",
+      "secretYears": "{{title}}: secrecy for {{years}} more years after the end",
+      "secretIndefinite": "{{title}}: secrecy without a time limit",
+      "fromArchive": "Entered from the archive"
     },
     "prepareModal": {
       "title": "Contract for the candidate: {{name}}",
@@ -1240,7 +1250,12 @@
       "deviation": "How it differs from the template",
       "deviationHint": "Optional. A deviation goes to the Legal zone holder and becomes part of the contract once approved.",
       "needsApproval": "To be decided by: {{who}}. You can send it after approval.",
-      "readyToSend": "No approval needed: approved template without deviations."
+      "readyToSend": "No approval needed: approved template without deviations.",
+      "package": "Package",
+      "packageHint": "The company’s base documents: the same terms for everyone, the candidate accepts the edition.",
+      "packageItem": "{{name}} · ed. {{edition}}",
+      "packageMissing": "No approved template: {{role}}.",
+      "packageReady": "No deviations: the package is ready to send."
     },
     "decisionModal": {
       "title": "Decision on the contract: {{name}}",
@@ -1257,6 +1272,17 @@
       "selfConfirm": "There are no other holders — the decision will be recorded as self-made",
       "hintRemarks": "The candidate returned the contract with remarks and their own edition. Everyone responsible agrees.",
       "hintDirector": "There is an objection: the approver decides."
+    },
+    "archiveModal": {
+      "title": "Already signed on paper: {{name}}",
+      "ok": "Record",
+      "hint": "The partner signed the documents earlier. The application becomes approved; nothing is sent to the account or by e-mail.",
+      "signedOn": "Signed on",
+      "signedOnHint": "The real date from the paper: the term counts from it.",
+      "numberPlaceholder": "The old number; empty — a new one is assigned",
+      "ownDate": "Own date (if different)",
+      "scan": "Scan",
+      "scanHint": "Optional: PDF or image up to 20 MB"
     }
   },
   "backToItems": "Back to items"

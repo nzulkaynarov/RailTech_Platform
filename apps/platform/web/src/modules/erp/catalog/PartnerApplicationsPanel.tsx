@@ -11,11 +11,14 @@ import type {
   PartnerApplicationItem,
   PartnerApplicationKind,
   PartnerApplicationStatus,
+  PartnerFromArchiveUpload,
 } from "../../../shared/api/generated/model";
 import {
   getDownloadPartnerApplicationDocumentUrl,
   getListPartnerApplicationsQueryKey,
   useApprovePartnerApplication,
+  useGetPartnerContractOptions,
+  useRecordPartnerPackageFromArchive,
   useInvitePartnerCandidate,
   useListPartnerApplications,
   useRejectPartnerApplication,
@@ -74,6 +77,7 @@ export function PartnerApplicationsPanel() {
   const [decisionRow, setDecisionRow] = useState<PartnerApplicationItem | null>(null);
   const [sendContractRow, setSendContractRow] = useState<PartnerApplicationItem | null>(null);
   const [approveRow, setApproveRow] = useState<PartnerApplicationItem | null>(null);
+  const [archiveRow, setArchiveRow] = useState<PartnerApplicationItem | null>(null);
   const [inviteRow, setInviteRow] = useState<PartnerApplicationItem | null>(null);
   const [rejectRow, setRejectRow] = useState<PartnerApplicationItem | null>(null);
 
@@ -244,6 +248,15 @@ export function PartnerApplicationsPanel() {
             },
           });
         }
+        if (canManage && row.status === "submitted") {
+          actions.push({
+            key: "archive",
+            label: t("partnerApplications.actions.fromArchive"),
+            run: () => {
+              setArchiveRow(row);
+            },
+          });
+        }
         if (canManage) {
           actions.push({
             key: "reject",
@@ -374,6 +387,19 @@ export function PartnerApplicationsPanel() {
         />
       ) : null}
 
+      {archiveRow ? (
+        <FromArchiveModal
+          item={archiveRow}
+          onDone={() => {
+            invalidate();
+            setArchiveRow(null);
+          }}
+          onClose={() => {
+            setArchiveRow(null);
+          }}
+        />
+      ) : null}
+
       {inviteRow ? (
         <InviteModal
           item={inviteRow}
@@ -463,12 +489,13 @@ function CompanyMatchChoice({
 function ContractCell({ row }: { row: PartnerApplicationItem }) {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
-  const open = (which: "contract" | "scan" | "candidate") => {
+  const open = (which: "contract" | "scan" | "candidate", doc?: string) => {
     void downloadFile(
-      getDownloadPartnerApplicationDocumentUrl(row.id, { which }),
-      `${which}-${row.id}`,
+      getDownloadPartnerApplicationDocumentUrl(row.id, { which, ...(doc ? { doc } : {}) }),
+      `${which}-${doc ?? row.id}`,
     ).catch(() => undefined);
   };
+  const pack = row.package;
   const approvalLine =
     row.contract_approval === "requested"
       ? t("partnerApplications.contractLine.requested", {
@@ -492,7 +519,53 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
     <div>
       {row.contract_number ? <div>№ {row.contract_number}</div> : null}
       {row.contract_date ? <span className="pf-cat-sub">{date(row.contract_date)}</span> : null}
-      {row.contract_source === "template" ? (
+      {row.from_archive ? (
+        <span className="pf-cat-sub">{t("partnerApplications.contractLine.fromArchive")}</span>
+      ) : null}
+      {pack.length > 0 ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.package", {
+            names: pack.map((doc) => doc.title).join(", "),
+            language: t(
+              `partnerApplications.prepareModal.languages.${row.contract_language || "ru"}`,
+            ),
+          })}
+        </span>
+      ) : null}
+      {pack
+        .filter((doc) => doc.candidate_remark)
+        .map((doc) => (
+          <span key={`remark-${doc.id}`} className="pf-cat-sub pf-cat-danger">
+            {t("partnerApplications.contractLine.documentRemark", {
+              title: doc.title,
+              note: doc.candidate_remark,
+            })}
+          </span>
+        ))}
+      {row.status === "approved"
+        ? pack.map((doc) =>
+            doc.valid_until ? (
+              <span key={`term-${doc.id}`} className="pf-cat-sub">
+                {t("partnerApplications.contractLine.documentUntil", {
+                  title: doc.title,
+                  date: date(doc.valid_until),
+                })}
+              </span>
+            ) : doc.base_role === "nda" && doc.valid_from ? (
+              <span key={`term-${doc.id}`} className="pf-cat-sub">
+                {doc.trade_secret_indefinite
+                  ? t("partnerApplications.contractLine.secretIndefinite", { title: doc.title })
+                  : doc.confidentiality_years
+                    ? t("partnerApplications.contractLine.secretYears", {
+                        title: doc.title,
+                        years: doc.confidentiality_years,
+                      })
+                    : null}
+              </span>
+            ) : null,
+          )
+        : null}
+      {row.contract_source === "template" && pack.length === 0 ? (
         <span className="pf-cat-sub">
           {t("partnerApplications.contractLine.template", {
             name: row.contract_template_name ?? "",
@@ -568,7 +641,35 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
             : ""}
         </span>
       ) : null}
-      {row.contract_source ? (
+      {pack.length > 0
+        ? pack.map((doc) => (
+            <span key={`open-${doc.id}`}>
+              {doc.has_file ? (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    open("contract", doc.id);
+                  }}
+                >
+                  {doc.title}
+                </Button>
+              ) : null}
+              {doc.has_candidate_file ? (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    open("candidate", doc.id);
+                  }}
+                >
+                  {t("partnerApplications.contractLine.openCandidateFile")}
+                </Button>
+              ) : null}
+            </span>
+          ))
+        : null}
+      {row.contract_source && pack.length === 0 ? (
         <Button
           type="link"
           size="small"
@@ -579,7 +680,7 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
           {t("partnerApplications.contractLine.openContract")}
         </Button>
       ) : null}
-      {row.has_candidate_file ? (
+      {row.has_candidate_file && pack.length === 0 ? (
         <Button
           type="link"
           size="small"
@@ -652,6 +753,138 @@ function SendContractModal({
           message={t("partnerApplications.sendContractModal.noEmail")}
         />
       ) : null}
+    </FormPanel>
+  );
+}
+
+/**
+ * «Уже подписано на бумаге» (ОСН-1): партнёр подписал пакет раньше. Заявка сразу одобряется с настоящей датой подписи и
+ * сканами по документам; в Кабинет и по почте ничего не уходит. Неполные данные допустимы: сканов может не быть.
+ */
+function FromArchiveModal({
+  item,
+  onDone,
+  onClose,
+}: {
+  item: PartnerApplicationItem;
+  onDone: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("catalog");
+  const ids = { date: useId(), number: useId(), note: useId() };
+  const options = useGetPartnerContractOptions();
+  const roles = options.data?.package.roles ?? [];
+  const [signedOn, setSignedOn] = useState("");
+  const [number, setNumber] = useState(item.contract_number || "");
+  const [note, setNote] = useState("");
+  const [roleDates, setRoleDates] = useState<Record<string, string>>({});
+  const [scans, setScans] = useState<Record<string, File | null>>({});
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const needsChoice = Boolean(item.company_match_pending);
+  const today = new Date().toISOString().slice(0, 10);
+  const dateOk =
+    signedOn !== "" && signedOn <= today && Object.values(roleDates).every((own) => own <= today);
+
+  const record = useRecordPartnerPackageFromArchive({ mutation: { onSuccess: onDone } });
+
+  const { company_id: chosenCompany, ...decision } = companyDecision(item, companyChoice);
+
+  const send = () => {
+    const data: PartnerFromArchiveUpload = {
+      signed_on: signedOn,
+      ...(number.trim() ? { contract_number: number.trim() } : {}),
+      ...(note.trim() ? { note: note.trim() } : {}),
+      ...decision,
+      ...(chosenCompany ? { company_id: Number(chosenCompany) } : {}),
+    };
+    for (const role of roles) {
+      const own = roleDates[role.base_role];
+      const scan = scans[role.base_role];
+      if (own) data[`signed_on_${role.base_role}`] = own;
+      if (scan) data[`scan_${role.base_role}`] = scan;
+    }
+    record.mutate({ id: item.id, data });
+  };
+
+  return (
+    <FormPanel
+      title={t("partnerApplications.archiveModal.title", { name: item.company_name })}
+      okLabel={t("partnerApplications.archiveModal.ok")}
+      loading={record.isPending}
+      error={record.error}
+      disabled={!dateOk || (needsChoice && !companyChoice)}
+      onOk={send}
+      onCancel={onClose}
+    >
+      <p>{t("partnerApplications.archiveModal.hint")}</p>
+      {needsChoice ? (
+        <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
+      ) : null}
+      <FormField
+        id={ids.date}
+        label={t("partnerApplications.archiveModal.signedOn")}
+        hint={t("partnerApplications.archiveModal.signedOnHint")}
+      >
+        <DateField id={ids.date} value={signedOn} max={today} onChange={setSignedOn} />
+      </FormField>
+      <FormField id={ids.number} label={t("partnerApplications.contractNumber")}>
+        <Input
+          id={ids.number}
+          value={number}
+          maxLength={64}
+          placeholder={t("partnerApplications.archiveModal.numberPlaceholder")}
+          onChange={(e) => {
+            setNumber(e.target.value);
+          }}
+        />
+      </FormField>
+      {roles.map((role) => {
+        const dateId = `${ids.date}-${role.base_role}`;
+        const scanId = `${ids.date}-scan-${role.base_role}`;
+        return (
+          <fieldset key={role.base_role} className="pf-cat-fieldset">
+            <legend>{role.role_name}</legend>
+            <FormField id={dateId} label={t("partnerApplications.archiveModal.ownDate")}>
+              <DateField
+                id={dateId}
+                value={roleDates[role.base_role] ?? ""}
+                max={today}
+                onChange={(value) => {
+                  setRoleDates((prev) => ({ ...prev, [role.base_role]: value }));
+                }}
+              />
+            </FormField>
+            <FormField
+              id={scanId}
+              label={t("partnerApplications.archiveModal.scan")}
+              hint={t("partnerApplications.archiveModal.scanHint")}
+            >
+              <FileField
+                id={scanId}
+                value={scans[role.base_role] ? [scans[role.base_role] as File] : []}
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                maxSize={20 * 1024 * 1024}
+                aria-describedby={`${scanId}-hint`}
+                onChange={(files) => {
+                  setScans((prev) => ({ ...prev, [role.base_role]: files[0] ?? null }));
+                }}
+              />
+            </FormField>
+          </fieldset>
+        );
+      })}
+      <FormField id={ids.note} label={t("partnerApplications.approveModal.noteLabel")}>
+        <Input.TextArea
+          id={ids.note}
+          rows={2}
+          value={note}
+          maxLength={1000}
+          placeholder={t("partnerApplications.approveModal.notePlaceholder")}
+          onChange={(e) => {
+            setNote(e.target.value);
+          }}
+        />
+      </FormField>
     </FormPanel>
   );
 }

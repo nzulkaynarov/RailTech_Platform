@@ -1,14 +1,7 @@
 /* Настройки (SET-IA): индекс `/admin` и страницы групп. Макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0,
    радиус 8, без теней, градиентов и цветных полосок; второстепенный текст var(--rt-color-text-secondary) (контраст ≥ 4.5:1 на белом и на var(--rt-color-surface-layout)).
    Индекс — как у Shopify и Stripe: название группы слева, карточки справа; на узком экране группа над карточками. */
-.pf-set-home,
-.pf-set-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-.pf-set-home {
+.pf-set-home > .pf-frame-in {
   gap: 24px;
 }
 .pf-set-search {
@@ -232,10 +225,6 @@
   background: var(--rt-color-primary-bg);
   color: var(--rt-color-primary-text);
   font-weight: 500;
-}
-/* Страница-форма: поля не шире 768 px; таблицы и журналы занимают всю ширину рамки */
-.pf-set-narrow > :not(.pf-set-wide) {
-  max-width: 768px;
 }
 .pf-set-save-dock {
   margin-top: 16px;

@@ -225,6 +225,30 @@ async def upload_contract_file(
 
 
 @router.post(
+    "/erp/catalog/partner-applications/{id}/from-archive",
+    response_model=PartnerApplicationItem,
+    operation_id="recordPartnerPackageFromArchive",
+)
+async def record_from_archive(
+    id: ApplicationId, request: Request, authed: Writer
+) -> PartnerApplicationItem:
+    """«Уже подписано на бумаге» (ОСН-1): дата и сканы пакета, multipart уходит в ERP как есть."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Приложите дату и сканы к запросу.",
+            status_code=422,
+            details={"fields": ["signed_on"], "reason": "multipart_required"},
+        )
+    body = await _read_limited(request)
+    response = await _erp(authed).request(
+        "POST", _path(id, "from-archive/"), content=body, content_type=content_type
+    )
+    return to_partner_application(response.json())
+
+
+@router.post(
     "/erp/catalog/partner-applications/{id}/contract-decision",
     response_model=PartnerApplicationItem,
     operation_id="decidePartnerContract",
@@ -247,13 +271,14 @@ async def download_document(
     id: ApplicationId,
     authed: Reader,
     which: Annotated[str, Query(pattern=r"^(contract|scan|candidate)$")] = "contract",
+    doc: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
 ) -> Response:
-    """Договор, который видит кандидат, или скан подписанного — вложением."""
+    """Договор кандидата или скан подписанного — вложением; `doc` — документ пакета (ОСН-1)."""
     response = await authed.call(
         "erp",
         "GET",
         f"/api/v1/{_path(id, 'document/')}",
-        params={"which": which},
+        params={"which": which, **({"doc": doc} if doc else {})},
         stream=True,
     )
     if response.status_code != 200:

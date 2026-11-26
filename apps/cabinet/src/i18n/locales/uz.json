@@ -1022,7 +1022,15 @@
         "scanUpload": "Skanni yuklaş",
         "scanReplace": "Skanni almaştiriş",
         "scanInput": "Imzolangan şartnoma skani",
-        "scanSuccess": "Skan olindi."
+        "scanSuccess": "Skan olindi.",
+        "packageList": "Qabul qilinadigan hujjatlar",
+        "openDocument": "Oçiş: {{title}}",
+        "openDocumentBtn": "Oçiş",
+        "documentRemark": "Sizning izohingiz: {{note}}",
+        "returnDocumentLabel": "Qaysi hujjatga",
+        "returnDocumentAll": "Barça hujjatlarga",
+        "returnDocumentNeeded": "Tahriringiz qaysi hujjatga tegişli ekanini tanlang.",
+        "agreePackageDesc": "Tasdiqlaş bilan siz barça hujjatlar tahririni qabul qilasiz."
       },
       "bankChange": {
         "title": "Bank rekvizitlarini özgartiriş sörovi",

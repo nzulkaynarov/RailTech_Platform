@@ -36,9 +36,9 @@ function Solo({ children }: { children: React.ReactNode }) {
 export function NumberingPage() {
   return (
     <SettingsPage sectionKey="numbering">
-      <Solo>
+      <SoloSection.Provider value={true}>
         <NumberingTab />
-      </Solo>
+      </SoloSection.Provider>
     </SettingsPage>
   );
 }

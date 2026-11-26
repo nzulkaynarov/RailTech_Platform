@@ -1,5 +1,6 @@
 """Схемы запросов и ответов доступа поставщика в кабинет (имена компонентов — `DeskSupplierAccess*`)."""
 
+from documents.models.documents import BaseRole
 from parties.do_not_work import DoNotWorkFacts
 from rest_framework import serializers
 
@@ -148,6 +149,24 @@ class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
 # --- Заявки на партнёрство (PART-ONBOARD-2) ---
 
 
+class DeskPackageDocument(serializers.Serializer):
+    """ОСН-1: документ пакета базовых документов кандидата — по фактам заявки."""
+
+    id = serializers.IntegerField()
+    base_role = serializers.ChoiceField(choices=BaseRole.choices)
+    title = serializers.CharField()
+    number = serializers.CharField(allow_blank=True)
+    template_edition = serializers.IntegerField()
+    has_file = serializers.BooleanField(help_text="Есть что открыть: файл документа или скан подписанного.")
+    has_candidate_file = serializers.BooleanField()
+    candidate_remark = serializers.CharField(allow_blank=True)
+    valid_from = serializers.DateField(allow_null=True)
+    valid_until = serializers.DateField(allow_null=True)
+    confidentiality_years = serializers.IntegerField(allow_null=True, help_text="NDA: тайна после окончания, лет.")
+    trade_secret_indefinite = serializers.BooleanField()
+    from_archive = serializers.BooleanField()
+
+
 class DeskPartnerContractFacts(serializers.Serializer):
     """ПД-1: договорная часть карточки заявки — всё выведено из фактов заявки."""
 
@@ -197,6 +216,9 @@ class DeskPartnerContractFacts(serializers.Serializer):
     contract_valid_until = serializers.DateField(allow_null=True, help_text="Срок договора, посчитанный при отметке.")
     contract_last_notice_date = serializers.DateField(allow_null=True)
     contract_renewal_mode = serializers.CharField(allow_blank=True)
+    package = DeskPackageDocument(
+        many=True, help_text="Пакет базовых документов (ОСН-1); пусто — договор одним файлом."
+    )
 
 
 class DeskPartnerApplicationListItem(DeskPartnerContractFacts):
@@ -329,6 +351,28 @@ class DeskPartnerScanIn(serializers.Serializer):
     file = serializers.FileField(help_text="Скан подписанного договора: PDF или изображение до 20 МБ")
 
 
+class DeskPartnerFromArchiveIn(serializers.Serializer):
+    """«Уже подписано на бумаге» (ОСН-1): реальная дата подписи и сканы по документам пакета; всё, кроме даты, необязательно."""
+
+    signed_on = serializers.DateField(help_text="Когда пакет подписан на бумаге; не позже сегодняшнего дня.")
+    contract_number = serializers.CharField(
+        required=False, allow_blank=True, max_length=64, help_text="Прежний номер договора; пусто — присвоится новый."
+    )
+    note = serializers.CharField(
+        required=False, allow_blank=True, max_length=1000, help_text="Где оригинал, как подписали."
+    )
+    company_id = serializers.IntegerField(required=False, allow_null=True)
+    create_new_company = serializers.BooleanField(required=False, default=False)
+    signed_on_partnership = serializers.DateField(required=False, allow_null=True)
+    signed_on_nda = serializers.DateField(required=False, allow_null=True)
+    signed_on_offer = serializers.DateField(required=False, allow_null=True)
+    scan_partnership = serializers.FileField(
+        required=False, help_text="Скан договора о партнёрстве: PDF или изображение."
+    )
+    scan_nda = serializers.FileField(required=False, help_text="Скан соглашения о неразглашении: PDF или изображение.")
+    scan_offer = serializers.FileField(required=False, help_text="Скан оферты: PDF или изображение.")
+
+
 class DeskPartnerInviteIn(serializers.Serializer):
     """«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора."""
 
@@ -343,6 +387,20 @@ class DeskPartnerTemplateOption(serializers.Serializer):
     is_default = serializers.BooleanField()
 
 
+class DeskPackageRole(serializers.Serializer):
+    base_role = serializers.ChoiceField(choices=BaseRole.choices)
+    role_name = serializers.CharField()
+    template_id = serializers.IntegerField(allow_null=True, help_text="Нет утверждённого шаблона роли — null.")
+    name = serializers.CharField(allow_null=True)
+    edition = serializers.IntegerField(allow_null=True)
+    languages = serializers.ListField(child=serializers.ChoiceField(choices=["ru", "en", "uz"]))
+
+
+class DeskPackageOptions(serializers.Serializer):
+    roles = DeskPackageRole(many=True, help_text="Роли, которые компания выдаёт кандидатам (настройка компании).")
+    ready = serializers.BooleanField(help_text="У каждой роли есть утверждённый шаблон: пакет можно подготовить.")
+
+
 class DeskPartnerContractOptions(serializers.Serializer):
     """Что выбрать при «Подготовить договор»: утверждённые партнёрские шаблоны библиотеки и правила компании."""
 
@@ -351,12 +409,16 @@ class DeskPartnerContractOptions(serializers.Serializer):
     deviations_allowed = serializers.BooleanField()
     approvers = serializers.ListField(child=serializers.CharField(), help_text="Держатели зоны «Право» по имени.")
     can_decide = serializers.BooleanField()
+    package = DeskPackageOptions()
 
 
 class DeskPartnerContractPrepareIn(serializers.Serializer):
     """Договор из шаблона (`template_id` или умолчание настроек) либо свой файл (`file`: PDF или DOCX, multipart)."""
 
     template_id = serializers.IntegerField(required=False, allow_null=True)
+    package = serializers.BooleanField(
+        required=False, default=False, help_text="ОСН-1: пакет из утверждённых базовых шаблонов (без отступлений)."
+    )
     language = serializers.ChoiceField(choices=["ru", "en", "uz"], required=False)
     deviation_text = serializers.CharField(required=False, allow_blank=True, max_length=4000)
     contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)

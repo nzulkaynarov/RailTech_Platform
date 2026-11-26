@@ -10,6 +10,11 @@ export interface PartnerContractPrepareRequest {
    * @nullable
    */
   template_id?: string | null;
+  /**
+   * Пакет из утверждённых базовых шаблонов (ОСН-1): без отступлений и своего файла; нет утверждённого шаблона роли — 422 с `details.reason = no_approved_base_template`
+   * @nullable
+   */
+  package?: boolean | null;
   /** Язык договора; пусто — язык кандидата */
   language?: PartnerContractPrepareRequestLanguage;
   /**

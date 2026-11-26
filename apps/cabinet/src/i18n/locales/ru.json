@@ -1043,7 +1043,15 @@
         "scanUpload": "Загрузить скан",
         "scanReplace": "Заменить скан",
         "scanInput": "Скан подписанного договора",
-        "scanSuccess": "Скан получен."
+        "scanSuccess": "Скан получен.",
+        "packageList": "Документы для принятия",
+        "openDocument": "Открыть: {{title}}",
+        "openDocumentBtn": "Открыть",
+        "documentRemark": "Ваше замечание: {{note}}",
+        "returnDocumentLabel": "К какому документу",
+        "returnDocumentAll": "Ко всем документам",
+        "returnDocumentNeeded": "Выберите документ, к которому относится ваша редакция.",
+        "agreePackageDesc": "Подтверждая, вы принимаете редакцию всех документов."
       },
       "bankChange": {
         "title": "Запрос на смену банковских реквизитов",
