@@ -162,7 +162,7 @@ def _word_too_large() -> PlatformError:
 
 
 async def _word_body(request: Request) -> tuple[bytes, str]:
-    """Тело загрузки целиком до предела; форма с файлом не разбирается (тип, архив и текст — ERP)."""
+    """Тело загрузки целиком до предела; форма не разбирается (тип, архив и текст — ERP)."""
     content_type = request.headers.get("content-type", "")
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
