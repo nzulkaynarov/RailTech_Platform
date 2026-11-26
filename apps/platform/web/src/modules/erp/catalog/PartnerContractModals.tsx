@@ -322,7 +322,11 @@ export function ContractDecisionModal({
             : t("partnerApplications.decisionModal.hintDeviation")}
       </p>
       {item.contract_disagreement ? (
-        <Alert type="warning" showIcon message={t("partnerApplications.decisionModal.hintDirector")} />
+        <Alert
+          type="warning"
+          showIcon
+          message={t("partnerApplications.decisionModal.hintDirector")}
+        />
       ) : null}
       {item.has_candidate_file ? (
         <Button
@@ -337,7 +341,9 @@ export function ContractDecisionModal({
           {t("partnerApplications.contractLine.openCandidateFile")}
         </Button>
       ) : null}
-      {item.candidate_notes ? <blockquote className="pf-hint">{item.candidate_notes}</blockquote> : null}
+      {item.candidate_notes ? (
+        <blockquote className="pf-hint">{item.candidate_notes}</blockquote>
+      ) : null}
       <Button
         type="link"
         onClick={() => {

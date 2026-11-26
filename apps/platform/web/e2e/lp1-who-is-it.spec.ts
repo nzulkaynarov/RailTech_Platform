@@ -83,7 +83,9 @@ for (const width of WIDTHS) {
       await expect(page.getByRole("form", { name: "Создать заявку" })).toBeVisible();
     });
 
-    test("лид только с телефоном: без почты уходит, неверная почта — ошибка у поля", async ({ page }) => {
+    test("лид только с телефоном: без почты уходит, неверная почта — ошибка у поля", async ({
+      page,
+    }) => {
       await open(page, width, "L-2077");
       await page.getByRole("radio", { name: "Партнёр" }).check();
       const form = page.getByRole("form", { name: "Партнёр" });
