@@ -63,6 +63,8 @@ for (const width of WIDTHS) {
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin/sales");
       await expect(page.getByRole("heading", { level: 2, name: "Договоры" })).toBeVisible();
+      // ПК-1: подпись и отправка — под «Дополнительно», на виду срок, продление и шаблоны
+      await page.getByRole("button", { name: "Дополнительно" }).click();
       await expect(
         page.getByRole("switch", { name: "Наша подпись — до отправки клиенту" }),
       ).toBeChecked();

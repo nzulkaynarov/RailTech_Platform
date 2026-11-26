@@ -260,6 +260,9 @@ class RemarkSummarySerializer(serializers.Serializer):
     added = serializers.ListField(child=serializers.CharField())
     removed = serializers.ListField(child=serializers.CharField())
     total = serializers.IntegerField()
+    more = serializers.IntegerField(
+        required=False, help_text="Сколько пунктов не поместилось в списки выше (предел 30 на вид)"
+    )
     comparable = serializers.BooleanField(
         help_text="Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет"
     )

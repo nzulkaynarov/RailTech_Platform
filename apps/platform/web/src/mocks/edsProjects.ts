@@ -253,8 +253,6 @@ function remarkAnswer(
     writeProject(next);
     return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }
-  const dispute = (c.remark_awaiting ?? []).length === 0 && remark.votes.some((v) => !v.agree);
-  if (!dispute) return conflict("remark_no_dispute", "Разногласия нет: решать нечего.");
   if (body.approve === false && !body.text?.trim()) {
     return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
       fields: ["text"],

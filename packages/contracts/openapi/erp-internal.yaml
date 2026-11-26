@@ -41545,6 +41545,9 @@ components:
             type: string
         total:
           type: integer
+        more:
+          type: integer
+          description: Сколько пунктов не поместилось в списки выше (предел 30 на вид)
         comparable:
           type: boolean
           description: Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет

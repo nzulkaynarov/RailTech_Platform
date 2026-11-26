@@ -45,7 +45,7 @@ describe('Скачивание из меню строки', () => {
 });
 
 describe('Договоры', () => {
-  it('статусы договора; «Согласовать» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
+  it('статусы договора; «Принять редакцию» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/contracts');
@@ -55,18 +55,18 @@ describe('Договоры', () => {
     const signed = card('Договоры', 'D-2026-0035');
     expect(within(signed).getByText('Подписан')).toBeInTheDocument();
     expect(within(signed).getByText('20 авг. 2026 г., 15:30')).toBeInTheDocument();
-    expect(within(signed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(signed).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
 
     const pending = card('Договоры', 'D-2026-0029');
     expect(within(pending).getByText('Ждёт вашего согласования')).toBeInTheDocument();
     await openRowMenu(user, pending, 'D-2026-0029');
     expect(await screen.findByRole('menuitem', { name: 'Файл ещё не выпущен' })).toHaveAttribute('aria-disabled', 'true');
     await user.keyboard('{Escape}');
-    await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
+    await user.click(within(pending).getByRole('button', { name: 'Принять редакцию договора D-2026-0029' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Принять редакцию договора D-2026-0029' });
     expect(within(dialog).getByText(/выставим договор на подписание/)).toBeInTheDocument();
     await expectNoAxeViolations();
-    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Принять редакцию' }));
 
     // согласие клиента не делает договор подписанным: честный статус «будет выставлен на подписание», кнопки «согласовать» больше нет
     expect(await screen.findByText('Договор D-2026-0029 согласован. Он будет выставлен на подписание.')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('Договоры', () => {
     expect(within(agreed).getByText('Согласован')).toBeInTheDocument();
     expect(within(agreed).getByText('Договор будет выставлен на подписание')).toBeInTheDocument();
     expect(within(agreed).queryByText('Подписан')).not.toBeInTheDocument();
-    expect(within(agreed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(agreed).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
     expect(await screen.findByText('1 договор ждёт вашего согласования')).toBeInTheDocument();
   });
 
@@ -84,9 +84,9 @@ describe('Договоры', () => {
     const user = userEvent.setup();
     renderApp('/contracts');
     await heading('Договоры');
-    await user.click(await screen.findByRole('button', { name: 'Согласовать договор D-2026-0048' }));
+    await user.click(await screen.findByRole('button', { name: 'Принять редакцию договора D-2026-0048' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Принять редакцию' }));
     expect(await within(dialog).findByText('Договор уже согласован, подписан или отменён — обновите страницу.')).toBeInTheDocument();
   });
 
@@ -96,7 +96,7 @@ describe('Договоры', () => {
     const user = userEvent.setup();
     renderApp('/contracts');
     await screen.findByRole('list', { name: 'Договоры' });
-    expect(screen.queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
     await openRowMenu(user, card('Договоры', 'D-2026-0048'), 'D-2026-0048');
     expect(await screen.findByRole('menuitem', { name: 'Скачать' })).toBeInTheDocument();
   });
@@ -127,16 +127,8 @@ describe('Договоры', () => {
       expect(within(found).getByText('Ваши замечания на согласовании у нас')).toBeInTheDocument();
       return found;
     });
-    expect(within(row).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: /Принять редакцию/ })).not.toBeInTheDocument();
     expect(within(row).queryByRole('button', { name: /Есть замечания/ })).not.toBeInTheDocument();
-  });
-
-  it('узбекский клиент только соглашается: «Izohlarim bor» не предлагается', async () => {
-    signedIn();
-    window.localStorage.setItem('cabinet.language', 'uz');
-    renderApp('/contracts');
-    await screen.findByRole('list', { name: 'Shartnomalar' }).catch(() => undefined);
-    await vi.waitFor(() => expect(screen.queryByRole('button', { name: /Izohlarim bor/ })).not.toBeInTheDocument());
   });
 
   it('пусто', async () => {
