@@ -9,6 +9,7 @@ import importlib.util
 import io
 import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -68,13 +69,11 @@ class CabinetCopyGuard(unittest.TestCase):
 
     def test_unknown_app_in_allow_file_is_an_error(self) -> None:
         guard = _load("copy_guard")
-        tmp = Path(__file__).with_name("_allow_unknown_app.tsv")
-        tmp.write_text("x\tcode\treason\tnobody\n", encoding="utf-8")
-        try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp = Path(tmp_dir) / "allow.tsv"
+            tmp.write_text("x\tcode\treason\tnobody\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 guard._load_allow(tmp)
-        finally:
-            tmp.unlink()
 
     def test_rules_catch_what_the_cabinet_was_cleaned_of(self) -> None:
         guard = _load("copy_guard")
