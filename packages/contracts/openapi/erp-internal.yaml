@@ -32216,6 +32216,10 @@ components:
             шаблонов.'
         body_html:
           type: string
+        template_id:
+          type: integer
+          description: 'Шаблон своей компании, который открыт в редакторе: название и подписи сторон образца договора берутся
+            у него (ПК-1).'
         draft:
           type: object
           additionalProperties: {}

@@ -22,11 +22,21 @@ import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { FormModal, ListTable, QueryGate, TabHeader } from "../common";
 
 /** Текст отказа словами: подкод ERP (`details.reason`), иначе общий. */
-function refusal(t: (key: string, options?: { defaultValue: string }) => string, error: unknown) {
+function refusal(
+  t: (key: string, options?: { defaultValue: string; codes?: string }) => string,
+  error: unknown,
+) {
   if (error instanceof ApiError) {
     const reason = error.details["reason"];
     if (typeof reason === "string") {
-      const text = t(`contractTemplates.errors.${reason}`, { defaultValue: "" });
+      const unknown = error.details["unknown_placeholders"];
+      const codes = Array.isArray(unknown)
+        ? unknown
+            .filter((c): c is string => typeof c === "string")
+            .map((c) => `{{${c}}}`)
+            .join(", ")
+        : "";
+      const text = t(`contractTemplates.errors.${reason}`, { defaultValue: "", codes });
       if (text) return text;
     }
   }

@@ -269,7 +269,12 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     def _contract_action(self, request, fn, *args, status=200):
         template, err = fn(*args)
         if err:
-            return Response({"detail": err}, status=403 if err.endswith("FORBIDDEN") else 400)
+            body: dict = {"detail": err}
+            if err == "TEMPLATE_UNKNOWN_PLACEHOLDERS":
+                from crm.services import contract_templates as svc
+
+                body["unknown_placeholders"] = svc.unknown_placeholders(args[0])
+            return Response(body, status=403 if err.endswith("FORBIDDEN") else 400)
         return Response(self.get_serializer(template).data, status=status)
 
     @extend_schema(

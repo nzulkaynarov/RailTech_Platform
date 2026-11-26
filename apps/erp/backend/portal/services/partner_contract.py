@@ -253,7 +253,7 @@ def render_partner_contract_pdf(
     words = _WORDS[language]
     context: dict[str, Any] = {
         "body_html": body,
-        "doc_title": words["title"],
+        "doc_title": (template.name or "").strip() or words["title"],
         "doc_number_line": words["number"].format(number=number),
         "doc_date_line": words["from"].format(date=date.strftime("%d.%m.%Y")),
         "html_lang": language,

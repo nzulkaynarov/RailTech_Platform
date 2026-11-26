@@ -318,6 +318,8 @@ async def request_document_sample(body: DocumentSampleIn, authed: Reader) -> Doc
         payload["template_kind"] = TEMPLATE_KIND_TO_ERP[body.template_kind]
     if body.body_html is not None:
         payload["body_html"] = body.body_html
+    if body.template_id is not None:
+        payload["template_id"] = body.template_id
     if body.draft is not None:
         payload["draft"] = body.draft.sent()
     if body.language is not None:

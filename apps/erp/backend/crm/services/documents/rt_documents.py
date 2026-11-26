@@ -185,7 +185,9 @@ def _party(title: str, name: str, lines: list[str]) -> list[dict[str, Any]]:
     return [_para(_text(title, bold=True)), _para(_text(name or "—", bold=True)), *[_para(line) for line in lines]]
 
 
-def _parties(seller, profile, buyer, buyer_title: str | None = None) -> dict[str, Any]:
+def _parties(
+    seller, profile, buyer, buyer_title: str | None = None, seller_title: str | None = None
+) -> dict[str, Any]:
     """Две колонки без линий: «Поставщик» и «Плательщик» (у акта — «Покупатель») — как в прежних счёте и акте."""
     seller_name = (getattr(profile, "legal_name", "") or getattr(seller, "name", "") or "").strip()
     seller_inn = (getattr(profile, "inn", "") or getattr(seller, "inn", "") or "").strip()
@@ -206,7 +208,7 @@ def _parties(seller, profile, buyer, buyer_title: str | None = None) -> dict[str
             {
                 "type": "tableRow",
                 "content": [
-                    {"type": "tableCell", "content": _party(_("Поставщик"), seller_name, seller_lines)},
+                    {"type": "tableCell", "content": _party(seller_title or _("Поставщик"), seller_name, seller_lines)},
                     {
                         "type": "tableCell",
                         "content": _party(buyer_title or _("Плательщик"), getattr(buyer, "name", ""), buyer_lines),
@@ -697,12 +699,15 @@ def _pep(signer, signed_at) -> list[dict[str, Any]]:
     ]
 
 
-def _contract_tail(contract, seller, profile, article_no: str) -> list[dict[str, Any]]:
+def _contract_tail(contract, seller, profile, article_no: str, frame=None) -> list[dict[str, Any]]:
     """Блок `{{doc.requisites_and_signatures}}`: статья «Реквизиты и подписи Сторон», реквизиты обеих сторон, подписи
     (официальная — с кодом проверки, ПЭП — с идентификацией) и оговорка о ПЭП."""
+    from .contract_frame import supply_frame
+
+    frame = frame or supply_frame()
     company = contract.deal.company
-    seller_name = (getattr(profile, "legal_name", "") or getattr(seller, "name", "") or _("Поставщик")).strip()
-    seller_sign = [_para(_text(_("От Поставщика:"), bold=True)), _para(_SIGN_LINE)]
+    seller_name = (getattr(profile, "legal_name", "") or getattr(seller, "name", "") or frame.first_party).strip()
+    seller_sign = [_para(_text(frame.first_sign, bold=True)), _para(_SIGN_LINE)]
     if contract.verification_code:
         position = contract.signatory_position + (
             f" · {contract.signatory_basis_text}" if contract.signatory_basis_text else ""
@@ -718,7 +723,7 @@ def _contract_tail(contract, seller, profile, article_no: str) -> list[dict[str,
     else:
         seller_sign.append(_para(_("Подпись / дата")))
     seller_sign.append(_para(_("М.П.")))
-    buyer_sign = [_para(_text(_("От Покупателя:"), bold=True)), _para(_SIGN_LINE)]
+    buyer_sign = [_para(_text(frame.second_sign, bold=True)), _para(_SIGN_LINE)]
     if contract.client_signer_id:
         buyer_sign += _pep(contract.client_signer, contract.client_signed_at)
     else:
@@ -731,8 +736,8 @@ def _contract_tail(contract, seller, profile, article_no: str) -> list[dict[str,
             "content": [_text(_("%(no)s. Реквизиты и подписи Сторон") % {"no": article_no})],
         },
         _two_columns(
-            _requisites(_("Поставщик"), seller_name, seller, profile),
-            _requisites(_("Покупатель"), getattr(company, "name", "") or _("Покупатель"), company),
+            _requisites(frame.first_party, seller_name, seller, profile),
+            _requisites(frame.second_party, getattr(company, "name", "") or frame.second_party, company),
         ),
         _two_columns(seller_sign, buyer_sign),
     ]
@@ -750,7 +755,7 @@ def _contract_tail(contract, seller, profile, article_no: str) -> list[dict[str,
 
 
 def contract_pdf(
-    contract, items, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, body_html: str
+    contract, items, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, body_html: str, template=None
 ) -> bytes:
     """Договор поставки на rt_docs: стороны в шапке, статьи по шаблону компании, замороженной редакции или образцу;
     блоки — спецификация (Приложение № 1), итоги, формулировки приёмки и ответственности, особые условия, примечание,
@@ -763,7 +768,10 @@ def contract_pdf(
     from crm.document_wording import resolve_wording_selected
     from crm.services.document_blocks import _contract_delivery_terms, _draft_scalars, format_document_date
 
+    from .contract_frame import frame_of
+
     lang = "ru"
+    frame = frame_of(template if template is not None else getattr(contract, "template", None))
     seller, profile = brand.get("seller"), brand.get("seller_profile")
     ccy = totals.get("ccy") or "UZS"
     quote = contract.quote if contract.quote_id else None
@@ -817,7 +825,7 @@ def contract_pdf(
             if (contract.notes or "").strip()
             else [_para()]
         ),
-        "doc.requisites_and_signatures": _contract_tail(contract, seller, profile, "11" if extra_terms else "10"),
+        "doc.requisites_and_signatures": _contract_tail(contract, seller, profile, "11" if extra_terms else "10", frame),
     }
     vat_rate = getattr(quote, "vat_rate", None) if quote is not None else None
     scalars = _draft_scalars(
@@ -842,16 +850,16 @@ def contract_pdf(
         draft,
     )
     body = _template_body(body_html, scalars=scalars, blocks=blocks, lang=lang)
-    body["doc"]["content"] = [_parties(seller, profile, contract.deal.company, _("Покупатель"))] + body["doc"][
-        "content"
-    ]
+    body["doc"]["content"] = [
+        _parties(seller, profile, contract.deal.company, frame.second_party, frame.first_party)
+    ] + body["doc"]["content"]
     code = "" if draft else (contract.verification_code or "")
     cabinet = (getattr(django_settings, "CABINET_URL", "") or "").rstrip("/")
     result = render_pdf(
         body,
         letterhead=letterhead_of(seller, profile),
         layout=Layout.COMMERCIAL,
-        meta=_contract_meta(contract, quote, draft=draft, grid=grid, code=code, cabinet=cabinet),
+        meta=_contract_meta(contract, quote, draft=draft, grid=grid, code=code, cabinet=cabinet, frame=frame),
         blocks=blocks,
         draft=draft,
         highlight_missing=False,
@@ -859,7 +867,7 @@ def contract_pdf(
     return result.pdf
 
 
-def _contract_meta(contract, quote, *, draft: bool, grid: bool, code: str, cabinet: str):
+def _contract_meta(contract, quote, *, draft: bool, grid: bool, code: str, cabinet: str, frame):
     """Договор: в сетке — вид и инфоблок (номер, дата, место, основание, проект) без окна конверта; стороны — в теле."""
     from rt_docs import DocumentMeta, InfoRow
 
@@ -869,19 +877,19 @@ def _contract_meta(contract, quote, *, draft: bool, grid: bool, code: str, cabin
     }
     if not grid:
         return DocumentMeta(
-            title=_("Договор поставки"), number=contract.number, date=_local_date(contract.created_at), **verification
+            title=frame.title, number=contract.number, date=_local_date(contract.created_at), **verification
         )
     info = [
         InfoRow(_("Договор №"), contract.number or "—", code=True, role="number"),
         InfoRow(_("Дата"), _date_text(contract.created_at), role="date"),
         InfoRow(_("Место"), _("г. Ташкент")),
     ]
-    if quote is not None and quote.number:
+    if frame.supply and quote is not None and quote.number:
         info.append(InfoRow(_("Основание"), _("КП № %(number)s") % {"number": quote.number}))
     if getattr(contract.deal, "number", ""):
         info.append(InfoRow(_("Проект"), contract.deal.number, code=True))
     return DocumentMeta(
-        kind_label=_("Договор поставки"),
+        kind_label=frame.title,
         number=contract.number,
         date=_local_date(contract.created_at),
         info=tuple(info),

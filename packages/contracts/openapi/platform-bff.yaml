@@ -24469,6 +24469,9 @@ components:
           $ref: '#/components/schemas/DocumentTemplateKind'
         body_html:
           type: string
+        template_id:
+          type: integer
+          description: 'Шаблон своей компании, открытый в редакторе (ПК-1): название и подписи сторон образца договора берутся у него'
         draft:
           $ref: '#/components/schemas/BrandProfileUpdate'
           description: Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя

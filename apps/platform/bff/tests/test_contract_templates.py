@@ -131,3 +131,22 @@ async def test_approve_is_not_for_roles_without_the_zone(web: Web, be: Backends,
     assert (await web.login([role])).status_code == 200
     response = await web.send("POST", "/api/v1/document-templates/contracts/12/approve")
     assert response.status_code == 403
+
+
+async def test_submit_with_unknown_placeholders_names_them(web: Web, be: Backends) -> None:
+    """ПК-1: ERP не берёт на утверждение текст с неизвестными подстановками; коды идут на экран."""
+    be.router.post(f"{ERP}/12/submit/").mock(
+        return_value=httpx.Response(
+            400,
+            json={
+                "detail": "TEMPLATE_UNKNOWN_PLACEHOLDERS",
+                "unknown_placeholders": ["foo.bar", 7],
+            },
+        )
+    )
+    assert (await web.login(["DIRECTOR", "ADMIN"])).status_code == 200
+    response = await web.send("POST", "/api/v1/document-templates/contracts/12/submit")
+    assert response.status_code == 409
+    details = response.json()["details"]
+    assert details["reason"] == "template_unknown_placeholders"
+    assert details["unknown_placeholders"] == ["foo.bar"]
