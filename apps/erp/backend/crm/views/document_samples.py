@@ -84,6 +84,11 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
                     "из редактора шаблонов.",
                 ),
                 "body_html": drf_serializers.CharField(required=False, allow_blank=True),
+                "template_id": drf_serializers.IntegerField(
+                    required=False,
+                    help_text="Шаблон своей компании, который открыт в редакторе: название и подписи сторон образца "
+                    "договора берутся у него (ПК-1).",
+                ),
                 "draft": drf_serializers.DictField(required=False, help_text="Несохранённые поля бланка"),
                 "language": drf_serializers.CharField(
                     required=False, help_text="ru, en, uz: язык печати; по умолчанию — язык платформы"
@@ -129,6 +134,7 @@ class DocumentSampleViewSet(RoleGatedViewMixin, viewsets.ViewSet):
                 {
                     "kind": kind,
                     "body_html": body_html,
+                    "template_id": data.get("template_id") if isinstance(data.get("template_id"), int) else None,
                     "draft": draft,
                     "language": language,
                 },

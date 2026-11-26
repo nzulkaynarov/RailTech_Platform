@@ -152,3 +152,19 @@ async def test_reader_asks_for_a_sample_without_the_section_no_one_does(
         "POST", "/api/v1/admin/company/document-samples", json={"kind": "quote"}
     )
     assert denied.status_code == 403
+
+
+async def test_template_sample_passes_the_open_template(web: Web, erp: respx.MockRouter) -> None:
+    """ПК-1: рамка образца договора (название, стороны) берётся у открытого шаблона."""
+    await web.login(["DIRECTOR"])
+    route = erp.post(f"{SAMPLES}/").mock(
+        return_value=httpx.Response(202, json={"id": ID, "status": "pending"})
+    )
+
+    await web.send(
+        "POST",
+        "/api/v1/admin/company/document-samples",
+        json={"template_kind": "contract", "body_html": "<p>Текст</p>", "template_id": 13},
+    )
+
+    assert json.loads(route.calls.last.request.content)["template_id"] == 13

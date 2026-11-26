@@ -14084,6 +14084,8 @@ export interface components {
       kind?: components["schemas"]["DocumentKind"];
       template_kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
+      /** @description Шаблон своей компании, открытый в редакторе (ПК-1): название и подписи сторон образца договора берутся у него */
+      template_id?: number;
       /** @description Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
       draft?: components["schemas"]["BrandProfileUpdate"];
       /**

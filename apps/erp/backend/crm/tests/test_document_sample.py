@@ -359,3 +359,39 @@ def test_endpoints_refuse_bad_requests_and_anonymous(seller, api_cache):
     assert api.post("/api/v1/crm/document-samples/", {"kind": ["INV"]}, format="json").status_code == 400
     assert api.get("/api/v1/crm/document-samples/" + "0" * 32 + "/").status_code == 404
     assert APIClient().post("/api/v1/crm/document-samples/", {"kind": "INV"}, format="json").status_code == 401
+
+
+def _partnership_template(company):
+    return DocumentTemplate.objects.create(
+        company=company,
+        name="Договор о партнёрстве",
+        kind=DocumentTemplateKind.objects.get(code="CONTRACT"),
+        body_html="<p>1. Стороны сотрудничают.</p>{{doc.requisites_and_signatures}}",
+        counterparty_kind="partner",
+        subject="",
+    )
+
+
+def test_sample_of_a_base_document_has_its_own_title_and_sides_without_supply_words(seller, engine):
+    """ПК-1: образец «Договора о партнёрстве» не называется «Договором поставки» и не ссылается на КП."""
+    company, user = seller
+    template = _partnership_template(company)
+    sample.render_sample(company, user, kind="CT", body_html=template.body_html, template=template)
+    call = engine[0]
+    assert call.meta.title == "Договор о партнёрстве" or call.meta.kind_label == "Договор о партнёрстве"
+    assert all(row.label != "Основание" for row in (call.meta.info or ()))
+    text = repr(call.body)
+    assert "Поставщик" not in text and "Покупател" not in text
+    assert "Компания" in text and "Партнёр" in text
+
+
+def test_sample_of_a_supply_template_keeps_supply_frame_and_quote(seller, engine):
+    company, user = seller
+    template = _partnership_template(company)
+    template.subject = "supply"
+    template.counterparty_kind = "client"
+    template.name = "Договор поставки"
+    sample.render_sample(company, user, kind="CT", template=template)
+    call = engine[0]
+    assert "Поставщик" in repr(call.body)
+    assert any(row.label == "Основание" for row in (call.meta.info or ()))
