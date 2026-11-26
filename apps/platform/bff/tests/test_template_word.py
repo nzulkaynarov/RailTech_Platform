@@ -290,7 +290,7 @@ async def test_sample_from_a_stored_template_takes_the_text_of_its_language(
         response = await web.send(
             "POST",
             "/api/v1/admin/company/document-samples",
-            json={"template_id": "12", "language": language},
+            json={"template_id": 12, "language": language},
         )
         assert response.status_code == 202, response.text
         assert json.loads(route.calls.last.request.content) == {

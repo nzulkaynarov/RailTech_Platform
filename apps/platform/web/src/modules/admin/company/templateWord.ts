@@ -41,7 +41,7 @@ export async function downloadTemplatePdf(
   template: { id: string; name: string; edition: number },
   language: DocumentTemplateLanguage,
 ): Promise<void> {
-  const queued = await requestDocumentSample({ template_id: template.id, language });
+  const queued = await requestDocumentSample({ template_id: Number(template.id), language });
   const started = Date.now();
   for (;;) {
     const state = await getDocumentSample(queued.id);

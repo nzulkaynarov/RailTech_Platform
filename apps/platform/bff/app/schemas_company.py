@@ -334,10 +334,14 @@ class DocumentSampleIn(Body):
     kind: DocumentKind | None = None
     template_kind: TemplateKind | None = None
     body_html: str | None = None
-    template_id: str | None = Field(
+    template_id: int | None = Field(
         default=None,
-        pattern=r"^[0-9]+$",
-        description="Сохранённый шаблон вместо `body_html`: текст на языке `language`",
+        description=(
+            "Сохранённый шаблон: вместо `body_html` — его текст на языке `language` "
+            "(пусто — русский), "
+            "вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — "
+            "название и подписи сторон образца договора"
+        ),
     )
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None

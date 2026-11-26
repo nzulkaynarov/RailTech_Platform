@@ -24660,7 +24660,7 @@ components:
         body_html:
           type: string
         template_id:
-          $ref: '#/components/schemas/CompanyItemRef'
+          type: integer
           description: 'Сохранённый шаблон: вместо `body_html` — его текст на языке `language` (пусто — русский), вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — название и подписи сторон образца договора'
         draft:
           $ref: '#/components/schemas/BrandProfileUpdate'

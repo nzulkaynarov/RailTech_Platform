@@ -164,7 +164,7 @@ async def test_template_sample_passes_the_open_template(web: Web, erp: respx.Moc
     await web.send(
         "POST",
         "/api/v1/admin/company/document-samples",
-        json={"template_kind": "contract", "body_html": "<p>Текст</p>", "template_id": "13"},
+        json={"template_kind": "contract", "body_html": "<p>Текст</p>", "template_id": 13},
     )
 
     assert json.loads(route.calls.last.request.content)["template_id"] == 13

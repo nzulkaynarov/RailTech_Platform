@@ -475,7 +475,7 @@ function DocumentEditor({
             request={{
               template_kind: kind,
               body_html: text,
-              ...(row && !row.is_sample ? { template_id: row.id } : {}),
+              ...(row && !row.is_sample ? { template_id: Number(row.id) } : {}),
             }}
             title={t("templates.documents.previewFrame")}
             onWarnings={setUnknown}

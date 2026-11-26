@@ -10400,7 +10400,14 @@ export interface components {
      * @enum {string}
      */
     IntegrationCardKey:
-      "erp" | "telegram" | "mail" | "services" | "models" | "spend" | "storage" | "system";
+      | "erp"
+      | "telegram"
+      | "mail"
+      | "services"
+      | "models"
+      | "spend"
+      | "storage"
+      | "system";
     /**
      * @description Статус пятью уровнями — уровни реестра внешних сервисов CRM (ADR-0024 CRM): `ok` работает, `warn` внимание, `fail` сбой, `unknown` нет данных, `off` не подключён или не применимо. Интерфейс всегда показывает слово, не только цвет.
      * @enum {string}
@@ -11219,7 +11226,14 @@ export interface components {
      * @enum {string}
      */
     StepCode:
-      "REQUEST" | "RESOLUTION" | "CALCULATION" | "QUOTE" | "CONTRACT" | "PAYMENT" | "DONE" | "LOST";
+      | "REQUEST"
+      | "RESOLUTION"
+      | "CALCULATION"
+      | "QUOTE"
+      | "CONTRACT"
+      | "PAYMENT"
+      | "DONE"
+      | "LOST";
     /** @enum {string} */
     ObjectKind:
       | "lead"
@@ -12219,7 +12233,12 @@ export interface components {
       number: string;
       /** @enum {string} */
       status:
-        "project" | "client_agreed" | "issued_at_operator" | "signed" | "rejected" | "cancelled";
+        | "project"
+        | "client_agreed"
+        | "issued_at_operator"
+        | "signed"
+        | "rejected"
+        | "cancelled";
       /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
       sent_to_client: boolean;
       /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
@@ -12357,7 +12376,12 @@ export interface components {
       number: string;
       /** @enum {string} */
       status:
-        "project" | "client_agreed" | "issued_at_operator" | "signed" | "rejected" | "cancelled";
+        | "project"
+        | "client_agreed"
+        | "issued_at_operator"
+        | "signed"
+        | "rejected"
+        | "cancelled";
       sent_to_client: boolean;
       /** @description Х-1: пока проект не ушёл клиенту — код причины, по которой его нельзя отправить (визы не собраны); null — ничего не мешает. Считает ERP */
       send_blocker_code?: components["schemas"]["ProjectContractSendBlockerCode"] | null;
@@ -13331,7 +13355,13 @@ export interface components {
      * @enum {string}
      */
     QuoteDeliveryStatus:
-      "sent" | "pending" | "failed" | "skipped" | "not_selected" | "published" | "unknown";
+      | "sent"
+      | "pending"
+      | "failed"
+      | "skipped"
+      | "not_selected"
+      | "published"
+      | "unknown";
     QuoteDeliveryLine: {
       channel: components["schemas"]["QuoteSendChannel"];
       status: components["schemas"]["QuoteDeliveryStatus"];
@@ -13535,7 +13565,13 @@ export interface components {
      * @enum {string}
      */
     PaymentDisplayStatus:
-      "draft" | "issued" | "proof_received" | "partially_paid" | "paid" | "overdue" | "cancelled";
+      | "draft"
+      | "issued"
+      | "proof_received"
+      | "partially_paid"
+      | "paid"
+      | "overdue"
+      | "cancelled";
     PaymentMoney: {
       /** @description Деньги строкой с двумя знаками; может быть `0.00` */
       amount: string;
@@ -14149,7 +14185,7 @@ export interface components {
       template_kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       /** @description Сохранённый шаблон: вместо `body_html` — его текст на языке `language` (пусто — русский), вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — название и подписи сторон образца договора */
-      template_id?: components["schemas"]["CompanyItemRef"];
+      template_id?: number;
       /** @description Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя */
       draft?: components["schemas"]["BrandProfileUpdate"];
       /**
@@ -14590,7 +14626,14 @@ export interface components {
      * @enum {string}
      */
     DocumentTemplateKind:
-      "letter" | "report" | "custom" | "contract" | "invoice" | "act" | "receipt" | "delivery_note";
+      | "letter"
+      | "report"
+      | "custom"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note";
     TemplateWordUpload: {
       /**
        * Format: binary
@@ -17383,7 +17426,12 @@ export interface components {
        * @enum {string|null}
        */
       blocker:
-        "not_started" | "not_in_calculation" | "not_draft" | "no_lines" | "visas_missing" | null;
+        | "not_started"
+        | "not_in_calculation"
+        | "not_draft"
+        | "no_lines"
+        | "visas_missing"
+        | null;
       /** @description Строк без визы */
       missing: number;
     };
@@ -18500,7 +18548,12 @@ export interface components {
        * @enum {string}
        */
       state:
-        "waiting_code" | "code_expired" | "connected" | "needs_admin" | "disconnected" | "removed";
+        | "waiting_code"
+        | "code_expired"
+        | "connected"
+        | "needs_admin"
+        | "disconnected"
+        | "removed";
       client_id: number | null;
       client_name: string | null;
       /** @description Номер якорного лида беседы группы `L-NNNN` (лента — `getCrmThread`); null, пока не привязана */
@@ -19135,7 +19188,13 @@ export interface components {
     CatalogOfferSource: "price_list" | "rfq_reply" | "manual";
     /** @enum {string} */
     CatalogProposalField:
-      "name" | "description" | "category" | "hs_code" | "uom" | "domain_type" | "gost_drawing";
+      | "name"
+      | "description"
+      | "category"
+      | "hs_code"
+      | "uom"
+      | "domain_type"
+      | "gost_drawing";
     /** @description Изменение карточки из прайса поставщика, ждёт решения сотрудника */
     CatalogProposal: {
       id: components["schemas"]["CompanyItemRef"];
@@ -19679,7 +19738,11 @@ export interface components {
     PartnerApplicationSource: "public" | "client_cabinet" | "letter" | "lead";
     /** @enum {string} */
     PartnerApplicationStatus:
-      "submitted" | "contract_sent" | "candidate_agreed" | "approved" | "rejected";
+      | "submitted"
+      | "contract_sent"
+      | "candidate_agreed"
+      | "approved"
+      | "rejected";
     /** @enum {string} */
     PartnerApplicationKind: "" | "manufacturer" | "supplier" | "principal" | "other";
     PartnerApplicationItem: {
@@ -19742,7 +19805,10 @@ export interface components {
        * @enum {string|null}
        */
       contract_blocker:
-        "CONTRACT_NOT_PREPARED" | "CONTRACT_APPROVAL_PENDING" | "CONTRACT_APPROVAL_RETURNED" | null;
+        | "CONTRACT_NOT_PREPARED"
+        | "CONTRACT_APPROVAL_PENDING"
+        | "CONTRACT_APPROVAL_RETURNED"
+        | null;
       /** @description Кто решает, пока согласование ждёт решения */
       contract_approvers: string[];
       /** @description Зритель вправе решить: держатель «Права»; подготовивший — только если нет другого держателя */
