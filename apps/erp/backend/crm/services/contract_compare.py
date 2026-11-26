@@ -34,8 +34,7 @@ SUMMARY_POINTS = 30
 MAX_PAIR_CELLS = 10_000
 #: Подсветка слов — не более чем для стольких изменённых пунктов.
 MAX_SEGMENTED = 100
-#: Бюджет попарного сравнения: сумма len(a)*len(b) по парам абзацев и предел времени на весь разбор.
-MAX_PAIR_COST = 3_000_000
+#: Предел времени на весь разбор: враждебный файл упирается в него, обычные правки укладываются в сотые доли секунды.
 MAX_COMPARE_SECONDS = 3.0
 #: Архив DOCX/XLSX (zip): сколько частей, сколько всего после распаковки и во сколько раз одна часть может сжиматься.
 MAX_ARCHIVE_MEMBERS = 2000
@@ -262,8 +261,6 @@ def _pair(old: list[str], new: list[str], deadline: float) -> dict[int, int]:
                 pairs[k] = m
                 taken.add(m)
         return pairs
-    if sum(len(t) for t in old) * sum(len(t) for t in new) > MAX_PAIR_COST:
-        raise TooBig("pairwise comparison over budget")
     for k, text in enumerate(new):
         point = _point(text)
         best, best_ratio = None, 0.0

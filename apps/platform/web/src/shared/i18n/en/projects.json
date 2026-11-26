@@ -468,7 +468,7 @@
         "accept": "Accept the counterparty's edition",
         "counter": "Reply with our edition",
         "counterLabel": "What we reply to the counterparty",
-        "counterHint": "The counterparty will see the reply in the Cabinet.",
+        "counterHint": "The counterparty will see the reply in their account.",
         "send": "Send the reply",
         "nobody": "No one holds the deciding vote: grant an employee the right to sign contracts in the employee card (\"Employees\") — they will close the remarks.",
         "nobodyLink": "Employees"

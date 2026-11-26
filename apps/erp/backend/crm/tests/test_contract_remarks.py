@@ -306,6 +306,14 @@ def test_long_paragraphs_are_not_compared_pairwise_for_minutes():
     assert time.monotonic() - started < 5
 
 
+def test_many_adjacent_edits_in_a_normal_contract_are_still_compared():
+    ours = [f"{i}.1. Пункт {i}: " + "условие договора поставки " * 12 for i in range(1, 101)]
+    theirs = [t.replace("условие", "изменённое условие", 1) if 40 <= i < 50 else t for i, t in enumerate(ours)]
+    result = contract_compare.compare(ours, theirs)
+    assert [i["point"] for i in result["items"] if i["kind"] == "changed"] == [f"{n}.1" for n in range(41, 51)]
+    assert result["summary"]["total"] == 10
+
+
 def test_huge_document_is_not_compared_and_stays_fast(world):
     import time
 
