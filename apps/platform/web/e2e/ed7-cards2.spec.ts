@@ -87,9 +87,7 @@ for (const width of WIDTHS) {
       await expectNoViolations(page, `письмо, «Сведения» ${String(width)}`);
 
       await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
-      const form = page
-        .locator(".pf-dec-center")
-        .getByRole("form", { name: "Резолюция директора" });
+      const form = page.locator(".pf-dec-center").getByRole("form", { name: "Резолюция" });
       await form.scrollIntoViewIfNeeded();
       await expect(form).toBeVisible();
       await settledScreenshot(page, "letter-decision-center");

@@ -27,6 +27,7 @@ import { BankDetailsNotice } from "./BankDetailsNotice";
 import { useStateLabels } from "./labels";
 import { INVOICE_SORT_KEYS, INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 /** Куда ведёт кнопка пустого состояния вкладки (SPEC-v3 §7: пустое состояние — словами и с действием). */
 const NEXT: Record<InvoiceTab, InvoiceTab | null> = {
@@ -261,69 +262,71 @@ export function PaymentList() {
   };
 
   return (
-    <div className="pf-dec-page">
-      <PageHeader title={title} />
-      {tab === "memos" ? (
-        <Segmented
-          aria-label={t("payments:memo.scope.label")}
-          value={memoStatus}
-          options={[
-            {
-              value: "to_pay",
-              label: memosToPay
-                ? `${t("payments:memo.scope.to_pay")} · ${String(memosToPay)}`
-                : t("payments:memo.scope.to_pay"),
-            },
-            { value: "paid", label: t("payments:memo.scope.paid") },
-          ]}
-          onChange={(value) => {
-            go({ kind: value === "paid" ? "paid" : null, memo: null, sheet: null });
-          }}
-        />
-      ) : (
-        <FilterBar tools>
+    <PageFrame layout="registry">
+      <div className="pf-dec-page">
+        <PageHeader title={title} />
+        {tab === "memos" ? (
           <Segmented
-            aria-label={t("payments:list.tabsLabel")}
-            value={tab}
-            options={INVOICE_TABS.map((value) => ({
-              value,
-              label: statusLabel(value),
-            }))}
+            aria-label={t("payments:memo.scope.label")}
+            value={memoStatus}
+            options={[
+              {
+                value: "to_pay",
+                label: memosToPay
+                  ? `${t("payments:memo.scope.to_pay")} · ${String(memosToPay)}`
+                  : t("payments:memo.scope.to_pay"),
+              },
+              { value: "paid", label: t("payments:memo.scope.paid") },
+            ]}
             onChange={(value) => {
-              go({ show: value, payment: null, memo: null, sheet: null, panel: null, tab: null });
+              go({ kind: value === "paid" ? "paid" : null, memo: null, sheet: null });
             }}
           />
-          <FilterField id="pf-pay-search" label={t("payments:list.search.label")} grow>
-            <Input
-              id="pf-pay-search"
-              value={draft}
-              allowClear
-              placeholder={t("payments:list.search.placeholder")}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                if (event.target.value === "" && query !== "") go({ q: null });
-              }}
-              onPressEnter={() => {
-                const text = draft.trim();
-                go({ q: text === "" ? null : text, payment: null });
+        ) : (
+          <FilterBar tools>
+            <Segmented
+              aria-label={t("payments:list.tabsLabel")}
+              value={tab}
+              options={INVOICE_TABS.map((value) => ({
+                value,
+                label: statusLabel(value),
+              }))}
+              onChange={(value) => {
+                go({ show: value, payment: null, memo: null, sheet: null, panel: null, tab: null });
               }}
             />
-          </FilterField>
-        </FilterBar>
-      )}
-      {tab === "to_issue" && first?.bank_details_ready === false ? <BankDetailsNotice /> : null}
-      <Card styles={{ body: { padding: 0 } }}>
-        <DataBlock
-          busy={memosTab ? memos.isPlaceholderData : board.isPlaceholderData}
-          resetKey={shownKey}
-        >
-          {body}
-        </DataBlock>
-      </Card>
-      {tab !== "memos" && selectedPayment && /^\d+$/.test(selectedPayment) ? (
-        <PaymentSlot invoiceId={Number(selectedPayment)} brief />
-      ) : null}
-      {tab === "memos" && selectedMemo ? <MemoSlot memoId={selectedMemo} brief /> : null}
-    </div>
+            <FilterField id="pf-pay-search" label={t("payments:list.search.label")} grow>
+              <Input
+                id="pf-pay-search"
+                value={draft}
+                allowClear
+                placeholder={t("payments:list.search.placeholder")}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  if (event.target.value === "" && query !== "") go({ q: null });
+                }}
+                onPressEnter={() => {
+                  const text = draft.trim();
+                  go({ q: text === "" ? null : text, payment: null });
+                }}
+              />
+            </FilterField>
+          </FilterBar>
+        )}
+        {tab === "to_issue" && first?.bank_details_ready === false ? <BankDetailsNotice /> : null}
+        <Card styles={{ body: { padding: 0 } }}>
+          <DataBlock
+            busy={memosTab ? memos.isPlaceholderData : board.isPlaceholderData}
+            resetKey={shownKey}
+          >
+            {body}
+          </DataBlock>
+        </Card>
+        {tab !== "memos" && selectedPayment && /^\d+$/.test(selectedPayment) ? (
+          <PaymentSlot invoiceId={Number(selectedPayment)} brief />
+        ) : null}
+        {tab === "memos" && selectedMemo ? <MemoSlot memoId={selectedMemo} brief /> : null}
+      </div>
+    </PageFrame>
   );
 }

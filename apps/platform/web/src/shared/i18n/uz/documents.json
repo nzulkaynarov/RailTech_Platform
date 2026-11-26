@@ -13,12 +13,12 @@
   "status": {
     "draft": "Qoralama",
     "signing": "Imzoda",
-    "sent": "Röyxatdan ötgan",
+    "sent": "Yuborilgan",
     "quote": {
-      "open": "Tasdiqlaşda",
-      "approved": "Tasdiqlangan",
+      "open": "Maʼqullaşda",
+      "approved": "Maʼqullangan",
       "returned": "Qayta işlaşda",
-      "rejected": "Rad etilgan"
+      "rejected": "Maʼqullanmagan"
     },
     "filter": {
       "draft": "Qoralama",
@@ -26,9 +26,9 @@
       "returned": "Qayta işlaşga qaytarilgan",
       "approved": "Kelişilgan",
       "rejected": "Rad etilgan",
-      "to_accountant": "Buxgalterga topşirilgan",
+      "to_accountant": "Tölovga topşirilgan",
       "paid": "Tölangan",
-      "sent": "Röyxatdan ötgan",
+      "sent": "Yuborilgan",
       "awaiting_resolution": "Rezolyutsiya kutilmoqda",
       "resolved": "Rezolyutsiya qöyilgan",
       "open": "Tasdiqlaşdagi TT"
@@ -127,7 +127,7 @@
       "version": "Tahrir",
       "watchers": "Nusxa"
     },
-    "toDirector": "Direktor",
+    "toDirector": "Kelişuv",
     "text": "Matn",
     "bodyTable": "Xat matnidagi jadval",
     "files": "Ilovalar",
@@ -145,8 +145,8 @@
       "pending": "{{label}} — yönalişda keyingi",
       "skipped": "{{label}} — ötkazib yuborilgan"
     },
-    "routePreview": "Yönaliş yuborilgandan söng oçiladi: siz → direktor{{accountant}}.",
-    "routePreviewAccountant": " → buxgalter",
+    "routePreview": "Yönaliş yuborilgandan söng oçiladi: siz → kelişuv{{accountant}}.",
+    "routePreviewAccountant": " → tölov",
     "decisions": "Qarorlar",
     "decision": {
       "approve": "Kelişilgan",
@@ -176,7 +176,7 @@
       "attention": "Kimga",
       "email": "Manzil e-poçtasi",
       "signatory": "Imzolovçi",
-      "signatoryDefault": "blank böyiça (direktor)",
+      "signatoryDefault": "blank böyiça",
       "mailings": "Yuboriş jurnali",
       "noMailings": "Manzilga hali yuborilmagan.",
       "mailing": {
@@ -212,7 +212,7 @@
       },
       "dispatchMethodLabel": "Yuboriş usuli",
       "sendImmediately": "Imzolangandan söng manzil poçtasiga darhol yuboriş",
-      "noEmailWarning": "Manzil e-poçtasi körsatilmagan — avtomatik yuboriş imkonsiz.",
+      "noEmailWarning": "Manzil e-poçtasi körsatilmagan — xat poçta orqali yuborilmaydi.",
       "confirmSign": "Xatni imzolaş",
       "cancel": "Bekor qiliş",
       "signedBy": "Imzoladi",
@@ -251,7 +251,7 @@
     }
   },
   "form": {
-    "subtitle": "Hujjat direktorga kelişiş uçun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettiriş mumkin.",
+    "subtitle": "Hujjat kelişuvga yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettiriş mumkin.",
     "subtitleContinue": "{{number}} qoralamasi: özgarişlar saqlanadi, istalgan payt yuboriş mumkin.",
     "subtitleReturned": "{{number}} qayta işlaşga qaytarilgan: tuzatib, qayta yuboring.",
     "formLabel": "Yangi hujjat",
@@ -266,7 +266,7 @@
     },
     "to": {
       "label": "Kimga",
-      "director": "Direktor"
+      "director": "Kelişuvga"
     },
     "recipient": {
       "label": "Manzil (taşkilot)",
@@ -287,14 +287,14 @@
     },
     "files": {
       "label": "Ilovalar",
-      "hint": "PDF, rasmlar va Office hujjatlari, har biri 25 MBgaça.",
+      "hint": "PDF, rasmlar va Word, Excel va PowerPoint fayllari, har biri 25 MBgaça.",
       "list": "Biriktirilgan fayllar",
       "uploading": "yuklanmoqda…",
       "uploaded": "yuklandi",
       "attached": "hujjatda allaqaçon bor",
       "remove": "{{name}} faylini olib taşlaş",
       "tooLarge": "Fayl 25 MBdan katta.",
-      "unsupported": "PDF, rasmlar va Office hujjatlari qabul qilinadi.",
+      "unsupported": "PDF, rasmlar va Word, Excel va PowerPoint fayllari qabul qilinadi.",
       "failed": "Yuklanmadi: {{reason}}",
       "invoiceLater": "Hamkorning hisobi keyinroq keladi"
     },
@@ -308,8 +308,8 @@
     },
     "route": {
       "label": "Kelişiş yönalişi",
-      "plain": "Siz → Direktor",
-      "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
+      "plain": "Siz → kelişuv",
+      "withAmount": "Siz → kelişuv → tölov (summa bor)",
       "letterHandover": "Siz → imzolovçi: imzolaydi, xat raqam oladi va adresatga ketadi",
       "approvers": "Kelişuvçilar",
       "approversHint": "Marşrut bosqiçlaridan oldin, tanlangan tartibda kelişadi.",
@@ -359,7 +359,7 @@
         "VALIDATION_FAILED": "maydonlarni tekşiring",
         "BACKEND_UNAVAILABLE": "hujjatlar xizmati javob bermayapti, birozdan söng qayta urining",
         "PAYLOAD_TOO_LARGE": "fayl 25 MBdan katta",
-        "UNSUPPORTED_MEDIA_TYPE": "PDF, rasmlar va Office hujjatlari qabul qilinadi",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, rasmlar va Word, Excel va PowerPoint fayllari qabul qilinadi",
         "REQUEST_TIMEOUT": "server öz vaqtida javob bermadi",
         "DEFAULT": "server xato qaytardi, qayta urining",
         "letterhead_missing": "kompaniya blanki berilmagan — administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi",
@@ -486,7 +486,7 @@
     "pending": "PDF tayyorlanmoqda…",
     "ready": "PDF tayyor · {{pages}} bet",
     "readyFinal": "Çiquvçi raqamli PDF tayyor · {{pages}} bet",
-    "failed": "Xato: {{error}}",
+    "failed": "Xato: {{reason}}",
     "failedNoReason": "Xato: PDF qurilmadi",
     "retry": "Qayta uriniş",
     "download": "PDF ni yuklab oliş",

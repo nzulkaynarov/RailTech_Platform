@@ -28,15 +28,7 @@ const WIDTH_EXCEPTIONS: Record<string, number> = {
 };
 
 /** Страницы, ещё стоящие вне каркаса (см. «Оставшиеся» в PR КАРКАС-1). */
-const OUTSIDE_FRAME: readonly string[] = [
-  "src/modules/admin/articles/ArticlesPage.tsx",
-  "src/modules/admin/audit/AuditPage.tsx",
-  "src/modules/admin/integrations/IntegrationsPage.tsx",
-  "src/modules/admin/org/OrgPage.tsx",
-  "src/modules/admin/roles/RolesPage.tsx",
-  "src/modules/admin/setup/SetupWizardPage.tsx",
-  "src/modules/admin/tickets/TicketsPage.tsx",
-];
+const OUTSIDE_FRAME: readonly string[] = [];
 
 function wideRules(css: string): number {
   const flat = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, "");
@@ -63,5 +55,30 @@ describe("page frame (КАРКАС-1)", () => {
         outside.push(rel(full));
     }
     expect(outside.sort()).toEqual([...OUTSIDE_FRAME].sort());
+  });
+
+  it("every object screen renders in the object layout, except the shrinking list", () => {
+    const OBJECT_SCREENS = [
+      "eds/inbox/LetterView",
+      "eds/approvals/MemoView",
+      "eds/drafts/QuoteView",
+      "eds/projects/ProjectView",
+      "eds/payments/PaymentView",
+      "eds/payments/MemoView",
+      "erp/stock/OrderScreen",
+      "erp/stock/OrderCreatePage",
+      "eds/new/NewDocumentPage",
+      "eds/register/RegisterLetterPage",
+      "eds/contracttpl/ContractTemplatesPage",
+      "crm/kb/KbPage",
+    ];
+    const OBJECT_EXCEPTIONS: string[] = [];
+    const outside = OBJECT_SCREENS.filter(
+      (name) =>
+        !readFileSync(join(WEB_ROOT, "src/modules", `${name}.tsx`), "utf8").includes(
+          '<PageFrame layout="object">',
+        ),
+    );
+    expect(outside).toEqual(OBJECT_EXCEPTIONS);
   });
 });

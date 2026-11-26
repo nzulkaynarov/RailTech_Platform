@@ -20,7 +20,7 @@ function patchLetter(number: string, patch: Partial<LetterCard>): void {
 async function directorForm(path = TAX) {
   signIn("director@demo.example");
   renderAt(path);
-  return screen.findByRole("form", { name: "Резолюция директора" }, { timeout: 3000 });
+  return screen.findByRole("form", { name: "Резолюция" }, { timeout: 3000 });
 }
 
 describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.2a п. 2)", () => {

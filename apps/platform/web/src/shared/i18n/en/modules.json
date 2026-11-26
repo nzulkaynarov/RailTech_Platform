@@ -205,7 +205,7 @@
             "auto_skipped": "Central bank rate not applied: a manual rate is in force"
           },
           "portal_legal": {
-            "published": "A new edition of a Cabinet document was published"
+            "published": "A new edition of an Account document was published"
           }
         }
       }
@@ -437,7 +437,7 @@
       "domain": {
         "eds": "documents",
         "crm": "mail",
-        "erp": "Calculation (ERP)"
+        "erp": "Calculation"
       }
     },
     "notifications": {
@@ -549,7 +549,7 @@
       "stepSaved": "Step “{{step}}” is done.",
       "bannerHidden": "The setup banner is hidden until tomorrow.",
       "bannerReturn": "Bring the banner back",
-      "cabinetTitle": "Client cabinet address",
+      "cabinetTitle": "Client account address",
       "bankTitle": "Invoicing details",
       "bankDone": "Tax ID, legal address and bank account are set: invoices can be issued.",
       "bankTodo": "Without the tax ID, legal address and bank account an invoice cannot be issued. Enter them in “Settings · Details and letterhead”.",
@@ -630,7 +630,7 @@
         "status": "Status",
         "erpPending": "Access is still being granted.",
         "erpReason": {
-          "not_connected": "Access not granted: the section cannot be reached with the saved connection. An administrator checks the address and token in Connections; granting will retry on its own.",
+          "not_connected": "Access not granted: the section cannot be reached with the saved connection. An administrator checks the address and key in Connections; granting will retry on its own.",
           "unavailable": "Access not granted: the section did not respond. Granting will retry on its own.",
           "queue": "Access not granted: the granting task was not queued. Press Retry.",
           "rejected": "Access not granted: the account was not accepted. Check the employee's email and roles, then press Retry."
@@ -708,7 +708,7 @@
         "button": "Disable employee",
         "title": "Disable the employee?",
         "sessions": "Sign-in everywhere will close.",
-        "terms": "Open sessions end within 15 minutes.",
+        "terms": "Open sessions end in up to 15 minutes.",
         "kept": "Roles and position are kept: the employee can be enabled again.",
         "confirm": "Disable",
         "cancel": "Cancel",
@@ -719,7 +719,7 @@
       },
       "errors": {
         "LAST_ADMIN": "You cannot remove the administrator role or disable the last administrator. Appoint another administrator first.",
-        "LAST_DIRECTOR": "You cannot remove the director role or disable the last director. Appoint another director first.",
+        "LAST_DIRECTOR": "You cannot remove the Director role from the last employee who has it, or disable them. Give the Director role to another employee first.",
         "ROLES_REQUIRED": "At least one role is required. To close the employee's access, disable them.",
         "EMAIL_EXISTS": "An employee with this email already exists.",
         "ACTIVE_LEADS": "The employee has leads in progress. Pick a colleague to hand them over to and try again.",
@@ -1053,7 +1053,7 @@
     },
     "contract": {
       "title": "No contract selected",
-      "text": "Open a project to see the contract status and actions here: send to client, issued in EDI, signed scan."
+      "text": "Open a project to see the contract status and actions here: send to client, sent for signing, signed scan."
     },
     "act": {
       "title": "No act selected",

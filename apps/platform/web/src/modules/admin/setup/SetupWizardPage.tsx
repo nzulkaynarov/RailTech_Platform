@@ -30,6 +30,7 @@ import { CompanyStep } from "./CompanyStep";
 import { ConnectionsStep } from "./ConnectionsStep";
 import { ErpStep } from "./ErpStep";
 import { StepPanel } from "./StepPanel";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../../../features/first-run/first-run.css";
 
@@ -321,7 +322,7 @@ function SetupWizard() {
   };
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader
         title={title}
         subtitle={
@@ -367,6 +368,6 @@ function SetupWizard() {
           />
         </PanelPortal>
       ) : null}
-    </>
+    </PageFrame>
   );
 }

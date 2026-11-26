@@ -23,7 +23,7 @@ describe("Входящие письма на телефоне", () => {
     const dialog = await sheet();
     expect(router.state.location.search).toContain("sheet=resolution");
     expect(router.state.location.search).not.toContain("panel=open");
-    expect(await within(dialog).findByRole("form", { name: "Резолюция директора" })).toBeVisible();
+    expect(await within(dialog).findByRole("form", { name: "Резолюция" })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Утвердить резолюцию" })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Вернуть менеджеру" })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Отклонить" })).toBeVisible();
@@ -37,7 +37,7 @@ describe("Входящие письма на телефоне", () => {
     const { router } = renderAt("/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution");
 
     const center = await decisionEl();
-    expect(await within(center).findByRole("form", { name: "Резолюция директора" })).toBeVisible();
+    expect(await within(center).findByRole("form", { name: "Резолюция" })).toBeVisible();
     await waitFor(() => {
       expect(router.state.location.search).toBe("");
     });
@@ -53,6 +53,6 @@ describe("Входящие письма на телефоне", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-104/26" }),
     ).toBeVisible();
-    expect(screen.queryByRole("form", { name: "Резолюция директора" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "Резолюция" })).toBeNull();
   });
 });

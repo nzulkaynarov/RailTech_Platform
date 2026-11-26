@@ -20,7 +20,6 @@ import { History, type HistoryItem } from "../../../shared/ui/History";
 import { routeStepState } from "../../../shared/ui/routeStepState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
-import { StatusTag } from "../../../shared/ui/StatusTag";
 import { reasonText } from "./errors";
 import { LetterSection } from "./LetterSection";
 import { DocumentStatusTag } from "./status";
@@ -235,8 +234,8 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
             kind={doc.kind}
             status={doc.status}
             awaitingSignature={doc.awaiting_signature}
+            undelivered={mailFailed}
           />
-          {mailFailed ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
         </div>
       </div>
       <UndeliveredBanner doc={doc} />

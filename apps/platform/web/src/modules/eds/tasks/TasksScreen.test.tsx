@@ -137,7 +137,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     renderAt("/eds/tasks/%D0%92%D0%A5-108%2F26");
     expect(
       await screen.findByText(
-        "Письмо срочное: срок не продлевается, директор может только отклонить запрос.",
+        "Письмо срочное: срок не продлевается, запрос можно только отклонить.",
       ),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Запросить перенос" })).toBeVisible();
@@ -157,10 +157,8 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       target: { value: "Ждём выписку банка" },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Запросить перенос" }));
-    expect(await screen.findByText("Запрос переноса отправлен директору")).toBeVisible();
-    expect(
-      await screen.findByText("Запрос переноса на 17.01.2030 ждёт решения директора."),
-    ).toBeVisible();
+    expect(await screen.findByText("Запрос переноса отправлен на решение")).toBeVisible();
+    expect(await screen.findByText("Запрос переноса на 17.01.2030 ждёт решения.")).toBeVisible();
     expect(findLetter("ВХ-108/26")?.instructions?.[0]?.extensions[0]).toMatchObject({
       status: "pending",
       new_due: "2030-01-17",

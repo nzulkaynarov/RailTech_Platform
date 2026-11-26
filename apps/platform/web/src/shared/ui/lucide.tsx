@@ -8,6 +8,9 @@ import {
   Bold,
   Check,
   ChevronDown,
+  ChevronUp,
+  Download,
+  Search,
   CircleAlert,
   Copy,
   Ellipsis,
@@ -105,3 +108,7 @@ export const BankIcon = make(Landmark);
 export const PackageIcon = make(Package);
 export const WrenchIcon = make(Wrench);
 export const CloseIcon = make(X);
+
+export const ChevronUpIcon = make(ChevronUp);
+export const DownloadIcon = make(Download);
+export const SearchIcon = make(Search);

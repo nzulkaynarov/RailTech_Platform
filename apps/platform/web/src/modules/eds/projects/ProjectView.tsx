@@ -24,11 +24,12 @@ import { fileUrl, projectRef } from "./api";
 import { FileLinks } from "./FileLinks";
 import { DeliveryActions } from "./DeliveryMarks";
 import { useStateLabels } from "./labels";
-import { ActStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
+import { ActStatusTag, ContractStatusTag, ProjectStatusTag, QuoteAcceptedTag } from "./status";
 import { ActIssueButton, ActPanel } from "./ActPanel";
 import { ContractCreateButton, ContractPanel } from "./ContractPanel";
 import { DocumentClientLink } from "./DocumentClientLink";
 import { ProjectFactsTab, ProjectHistoryTab } from "./Slots";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../decision/decision.css";
 import "./projects.css";
@@ -145,13 +146,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
           <DocRow
             number={contract.number}
             type={t("card.documents.contractType")}
-            status={
-              <ProjectStatusTag kind="contract" status={contract.status}>
-                {contract.status === "project" && contract.sent_to_client
-                  ? `${t("status.contract.project")} · ${t("contract.toClientYes")}`
-                  : undefined}
-              </ProjectStatusTag>
-            }
+            status={<ContractStatusTag contract={contract} />}
           />
           <li className="pf-doc pf-doc--detail">
             <ContractPanel card={card} objectId={objectId} />
@@ -304,35 +299,39 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
       <p className="pf-hint">{t("card.doneRule")}</p>
     );
   return (
-    <div className="pf-dec-page pf-overlay-aware">
-      <PageHeader
-        title={t("card.title", { number: card.number })}
-        subtitle={card.title}
-        extra={
-          <div className="pf-dec-row">
-            {problems.length > 0 ? (
-              // Один статус в шапке (СЦ-8): проблема важнее слова для клиента; где проект по пути — показывает шкала.
-              <StatusTag tone="red">{problems.map((p) => t(`problem.${p}`)).join(" · ")}</StatusTag>
-            ) : (
-              <StatusTag kind="stage" status={card.step}>
-                {t(`clientStatus.${card.client_status}`)}
-              </StatusTag>
-            )}
-            {writer ? null : <StatusTag tone="default">{t("card.readOnly")}</StatusTag>}
-          </div>
-        }
-      />
-      <DoNotWorkStrip mark={card.do_not_work} />
-      <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
-        <RequestSteps stage={card.step} number={card.request_number} />
-      </section>
-      {note}
-      {writer ? null : <p className="pf-hint">{t("card.readOnlyHint")}</p>}
-      <Documents card={card} objectId={objectId} />
-      <Execution card={card} objectId={objectId} />
-      <ProjectFactsTab card={card} />
-      <ProjectHistoryTab card={card} />
-    </div>
+    <PageFrame layout="object">
+      <div className="pf-dec-page pf-overlay-aware">
+        <PageHeader
+          title={t("card.title", { number: card.number })}
+          subtitle={card.title}
+          extra={
+            <div className="pf-dec-row">
+              {problems.length > 0 ? (
+                // Один статус в шапке (СЦ-8): проблема важнее слова для клиента; где проект по пути — показывает шкала.
+                <StatusTag tone="red">
+                  {problems.map((p) => t(`problem.${p}`)).join(" · ")}
+                </StatusTag>
+              ) : (
+                <StatusTag kind="stage" status={card.step}>
+                  {t(`clientStatus.${card.client_status}`)}
+                </StatusTag>
+              )}
+              {writer ? null : <StatusTag tone="default">{t("card.readOnly")}</StatusTag>}
+            </div>
+          }
+        />
+        <DoNotWorkStrip mark={card.do_not_work} />
+        <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
+          <RequestSteps stage={card.step} number={card.request_number} />
+        </section>
+        {note}
+        {writer ? null : <p className="pf-hint">{t("card.readOnlyHint")}</p>}
+        <Documents card={card} objectId={objectId} />
+        <Execution card={card} objectId={objectId} />
+        <ProjectFactsTab card={card} />
+        <ProjectHistoryTab card={card} />
+      </div>
+    </PageFrame>
   );
 }
 

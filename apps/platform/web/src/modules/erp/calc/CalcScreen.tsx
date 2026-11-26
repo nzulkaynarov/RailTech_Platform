@@ -34,6 +34,7 @@ import { ClientRejection } from "./Rejection";
 import { CloseRequestButton, ClosedNote } from "./CloseRequest";
 import { TaskSlot } from "./TaskPanel";
 import { TermsCard, TermsForm } from "./Terms";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "./calc.css";
 
@@ -313,154 +314,156 @@ function Content({ sheet }: { sheet: CalcSheet }) {
     .join(" · ");
 
   return (
-    <div className="pf-calc">
-      <PageHeader
-        title={t("sheet.title", { number: sheet.number })}
-        subtitle={subtitle}
-        extra={
-          <div className="pf-calc-row">
-            {sheet.step === "LOST" ? null : (
-              <StatusTag kind="quote" status={state}>
-                {t(`state.${stateLabel(sheet)}`)}
-              </StatusTag>
-            )}
-            {editable && sheet.rights.stock === true ? (
-              <Button
-                onClick={() => {
-                  openForm("price");
-                }}
-              >
-                {t("sheet.requestPrice")}
-              </Button>
-            ) : null}
-            {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
-            {mobile ? (
-              <Button
-                onClick={() => {
-                  setParams(
-                    (prev) => {
-                      const next = new URLSearchParams(prev);
-                      next.set("panel", "open");
-                      next.set("tab", "task");
-                      return next;
-                    },
-                    { replace: true },
-                  );
-                }}
-              >
-                {t("sheet.openTask")}
-              </Button>
-            ) : null}
-          </div>
-        }
-      />
-      <section className="pf-card pf-calc-steps" aria-label={t("sheet.steps")}>
-        <RequestSteps stage={sheet.step} number={sheet.number} />
-      </section>
-      <ClosedNote close={sheet.close} />
-      <Banner sheet={sheet} />
-      {sheet.quote === null ? (
-        <NotStarted sheet={sheet} />
-      ) : (
-        <Card
-          size="small"
-          title={<h2 className="pf-calc-title">{t("lines.title")}</h2>}
+    <PageFrame layout="registry">
+      <div className="pf-calc">
+        <PageHeader
+          title={t("sheet.title", { number: sheet.number })}
+          subtitle={subtitle}
           extra={
-            editable && canLines ? (
-              <div className="pf-calc-row">
+            <div className="pf-calc-row">
+              {sheet.step === "LOST" ? null : (
+                <StatusTag kind="quote" status={state}>
+                  {t(`state.${stateLabel(sheet)}`)}
+                </StatusTag>
+              )}
+              {editable && sheet.rights.stock === true ? (
                 <Button
                   onClick={() => {
-                    openForm("add");
+                    openForm("price");
                   }}
                 >
-                  {t("add.button")}
+                  {t("sheet.requestPrice")}
                 </Button>
-                {sheet.rights.build ? (
-                  <Button
-                    onClick={() => {
-                      setDialog("parse");
-                    }}
-                  >
-                    {t("parse.button")}
-                  </Button>
-                ) : null}
-                {sheet.rights.build ? (
-                  <Button
-                    onClick={() => {
-                      setDialog("previous");
-                    }}
-                  >
-                    {t("previous.button")}
-                  </Button>
-                ) : null}
-              </div>
-            ) : null
+              ) : null}
+              {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
+              {mobile ? (
+                <Button
+                  onClick={() => {
+                    setParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.set("panel", "open");
+                        next.set("tab", "task");
+                        return next;
+                      },
+                      { replace: true },
+                    );
+                  }}
+                >
+                  {t("sheet.openTask")}
+                </Button>
+              ) : null}
+            </div>
           }
-          styles={{ body: { padding: 0 } }}
-        >
-          <LinesTable sheet={sheet} />
-          <Ready sheet={sheet} />
-        </Card>
-      )}
-      {sheet.quote !== null ? (
-        <TermsCard
-          sheet={sheet}
-          editable={editable}
-          onEdit={() => {
-            openForm("terms");
-          }}
         />
-      ) : null}
-      {sheet.quote !== null ? <PriceRequests sheet={sheet} /> : null}
-      {dialog === "price" ? (
-        <Sheet
-          tab="task"
-          label={t("stock:priceRequest.title", { number: sheet.number })}
-          onClose={closeForm}
-        >
-          <PriceRequestForm sheet={sheet} onClose={closeForm} />
-        </Sheet>
-      ) : null}
-      {dialog === "add" ? (
-        <Sheet tab="task" label={t("add.title")} onClose={closeForm}>
-          <AddLineForm sheet={sheet} onClose={closeForm} />
-        </Sheet>
-      ) : null}
-      {dialog === "terms" ? (
-        <Sheet tab="task" label={t("terms.title")} onClose={closeForm}>
-          <TermsForm sheet={sheet} onClose={closeForm} />
-        </Sheet>
-      ) : null}
-      {dialog === "parse" ? (
-        <ParseModal
-          sheet={sheet}
-          onClose={() => {
-            setDialog(null);
-            if (params.has("parse")) {
-              setParams(
-                (prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.delete("parse");
-                  return next;
-                },
-                { replace: true },
-              );
+        <section className="pf-card pf-calc-steps" aria-label={t("sheet.steps")}>
+          <RequestSteps stage={sheet.step} number={sheet.number} />
+        </section>
+        <ClosedNote close={sheet.close} />
+        <Banner sheet={sheet} />
+        {sheet.quote === null ? (
+          <NotStarted sheet={sheet} />
+        ) : (
+          <Card
+            size="small"
+            title={<h2 className="pf-calc-title">{t("lines.title")}</h2>}
+            extra={
+              editable && canLines ? (
+                <div className="pf-calc-row">
+                  <Button
+                    onClick={() => {
+                      openForm("add");
+                    }}
+                  >
+                    {t("add.button")}
+                  </Button>
+                  {sheet.rights.build ? (
+                    <Button
+                      onClick={() => {
+                        setDialog("parse");
+                      }}
+                    >
+                      {t("parse.button")}
+                    </Button>
+                  ) : null}
+                  {sheet.rights.build ? (
+                    <Button
+                      onClick={() => {
+                        setDialog("previous");
+                      }}
+                    >
+                      {t("previous.button")}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null
             }
-          }}
-        />
-      ) : null}
-      {dialog === "previous" ? (
-        <PreviousModal
-          sheet={sheet}
-          onClose={() => {
-            setDialog(null);
-          }}
-        />
-      ) : null}
-      {dialog === "add" || dialog === "price" || dialog === "terms" ? null : (
-        <TaskSlot number={sheet.number} />
-      )}
-    </div>
+            styles={{ body: { padding: 0 } }}
+          >
+            <LinesTable sheet={sheet} />
+            <Ready sheet={sheet} />
+          </Card>
+        )}
+        {sheet.quote !== null ? (
+          <TermsCard
+            sheet={sheet}
+            editable={editable}
+            onEdit={() => {
+              openForm("terms");
+            }}
+          />
+        ) : null}
+        {sheet.quote !== null ? <PriceRequests sheet={sheet} /> : null}
+        {dialog === "price" ? (
+          <Sheet
+            tab="task"
+            label={t("stock:priceRequest.title", { number: sheet.number })}
+            onClose={closeForm}
+          >
+            <PriceRequestForm sheet={sheet} onClose={closeForm} />
+          </Sheet>
+        ) : null}
+        {dialog === "add" ? (
+          <Sheet tab="task" label={t("add.title")} onClose={closeForm}>
+            <AddLineForm sheet={sheet} onClose={closeForm} />
+          </Sheet>
+        ) : null}
+        {dialog === "terms" ? (
+          <Sheet tab="task" label={t("terms.title")} onClose={closeForm}>
+            <TermsForm sheet={sheet} onClose={closeForm} />
+          </Sheet>
+        ) : null}
+        {dialog === "parse" ? (
+          <ParseModal
+            sheet={sheet}
+            onClose={() => {
+              setDialog(null);
+              if (params.has("parse")) {
+                setParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete("parse");
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }
+            }}
+          />
+        ) : null}
+        {dialog === "previous" ? (
+          <PreviousModal
+            sheet={sheet}
+            onClose={() => {
+              setDialog(null);
+            }}
+          />
+        ) : null}
+        {dialog === "add" || dialog === "price" || dialog === "terms" ? null : (
+          <TaskSlot number={sheet.number} />
+        )}
+      </div>
+    </PageFrame>
   );
 }
 

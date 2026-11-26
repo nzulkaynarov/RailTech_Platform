@@ -75,7 +75,7 @@
     "doneLinked": "Telegram привязан",
     "modalTitle": "Привязка Telegram",
     "step1": "Отсканируйте код телефоном или откройте ссылку в Telegram.",
-    "step2": "В Telegram нажмите «Запустить» (Start): бот подтвердит привязку.",
+    "step2": "В Telegram нажмите «Запустить»: бот подтвердит привязку.",
     "open": "Открыть в Telegram",
     "qrLabel": "QR-код для привязки Telegram",
     "waiting": "Ждём подтверждения от бота…",

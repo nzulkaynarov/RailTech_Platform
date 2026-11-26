@@ -12,6 +12,7 @@ import { BrigadesPanel } from "./BrigadesPanel";
 import { ItemsPanel } from "./ItemsPanel";
 import { PriceImportPanel } from "./PriceImportPanel";
 import { RefsPanel } from "./RefsPanel";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../../admin/company/company.css";
 import "./catalog.css";
@@ -35,13 +36,15 @@ export function CatalogScreen() {
     requested === "requests" ? "refs" : (PARTS.find((p) => p === requested) ?? "items");
   if (requested === "import") {
     return (
-      <div className="pf-cat">
-        <PageHeader
-          title={t("catalog:tabs.import")}
-          extra={<LinkButton to="/erp/catalog">{t("catalog:backToItems")}</LinkButton>}
-        />
-        <PriceImportPanel />
-      </div>
+      <PageFrame layout="registry">
+        <div className="pf-cat">
+          <PageHeader
+            title={t("catalog:tabs.import")}
+            extra={<LinkButton to="/erp/catalog">{t("catalog:backToItems")}</LinkButton>}
+          />
+          <PriceImportPanel />
+        </div>
+      </PageFrame>
     );
   }
   const panels: Record<Part, React.ReactNode> = {

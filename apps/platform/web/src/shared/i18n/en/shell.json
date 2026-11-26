@@ -269,7 +269,7 @@
       "group": "Actions",
       "tag": "Action",
       "inviteEmployee": "Invite an employee",
-      "create": "Create · {{kind}}"
+      "create": "Create · {{label}}"
     },
     "navGroup": "Sections",
     "sectionTag": "Section",

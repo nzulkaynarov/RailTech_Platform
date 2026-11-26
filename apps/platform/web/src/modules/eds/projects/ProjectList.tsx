@@ -23,12 +23,13 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { PersonRefCell } from "../../PersonRefCell";
 import { PAGE_SIZE, type Scope, projectPath, scopeOf } from "./api";
 import { useStateLabels } from "./labels";
-import { ActStatusTag, ProjectStatusTag } from "./status";
+import { ActStatusTag, ContractStatusTag, ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 /** Порядок щелчком по шапке (Х-15): ключи те же, что принимает BFF `sort` (белый список там и в ERP) */
 const PROJECT_SORT_KEYS = ["number", "client", "step", "due_date", "responsible"] as const;
@@ -71,7 +72,7 @@ function Documents({ row }: { row: ProjectRow }) {
         {contract ? (
           <li>
             <span className="pf-hint">{t("card.documents.contract")}</span>
-            <ProjectStatusTag kind="contract" status={contract.status} />
+            <ContractStatusTag contract={contract} />
           </li>
         ) : null}
         {invoice ? (
@@ -390,59 +391,61 @@ export function ProjectList() {
   }
 
   return (
-    <div className="pf-dec-page">
-      <PageHeader title={title} />
-      <FilterBar label={t("list.filters")} tools>
-        <Segmented
-          aria-label={t("list.scope.label")}
-          value={scope}
-          options={[
-            { value: "all", label: t("list.scope.all") },
-            { value: "mine", label: t("list.scope.mine") },
-          ]}
-          onChange={(value) => {
-            change({ scope: (value as Scope) === "all" ? null : value });
-          }}
-        />
-        <Checkbox
-          checked={problems}
-          onChange={(event) => {
-            change({ problems: event.target.checked ? "1" : null });
-          }}
-        >
-          {t("list.problems")}
-        </Checkbox>
-        <FilterField id={`${ids}-step`} label={t("list.step.label")}>
-          <Select
-            id={`${ids}-step`}
-            value={step ?? ""}
+    <PageFrame layout="registry">
+      <div className="pf-dec-page">
+        <PageHeader title={title} />
+        <FilterBar label={t("list.filters")} tools>
+          <Segmented
+            aria-label={t("list.scope.label")}
+            value={scope}
             options={[
-              { value: "", label: t("list.step.all") },
-              ...STEPS.map((s) => ({ value: s, label: t(`dictionary:stage.${s}`) })),
+              { value: "all", label: t("list.scope.all") },
+              { value: "mine", label: t("list.scope.mine") },
             ]}
             onChange={(value) => {
-              change({ step: value });
+              change({ scope: (value as Scope) === "all" ? null : value });
             }}
           />
-        </FilterField>
-        <FilterField id={`${ids}-q`} label={t("list.search.label")} grow>
-          <Input.Search
-            id={`${ids}-q`}
-            key={q}
-            defaultValue={q}
-            allowClear
-            placeholder={t("list.search.placeholder")}
-            onSearch={(value) => {
-              change({ q: value.trim() || null });
+          <Checkbox
+            checked={problems}
+            onChange={(event) => {
+              change({ problems: event.target.checked ? "1" : null });
             }}
-          />
-        </FilterField>
-      </FilterBar>
-      <Card styles={{ body: { padding: 0 } }}>
-        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
-          {body}
-        </DataBlock>
-      </Card>
-    </div>
+          >
+            {t("list.problems")}
+          </Checkbox>
+          <FilterField id={`${ids}-step`} label={t("list.step.label")}>
+            <Select
+              id={`${ids}-step`}
+              value={step ?? ""}
+              options={[
+                { value: "", label: t("list.step.all") },
+                ...STEPS.map((s) => ({ value: s, label: t(`dictionary:stage.${s}`) })),
+              ]}
+              onChange={(value) => {
+                change({ step: value });
+              }}
+            />
+          </FilterField>
+          <FilterField id={`${ids}-q`} label={t("list.search.label")} grow>
+            <Input.Search
+              id={`${ids}-q`}
+              key={q}
+              defaultValue={q}
+              allowClear
+              placeholder={t("list.search.placeholder")}
+              onSearch={(value) => {
+                change({ q: value.trim() || null });
+              }}
+            />
+          </FilterField>
+        </FilterBar>
+        <Card styles={{ body: { padding: 0 } }}>
+          <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+            {body}
+          </DataBlock>
+        </Card>
+      </div>
+    </PageFrame>
   );
 }

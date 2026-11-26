@@ -161,8 +161,8 @@
         "send_failed": "yuborişda nosozlik"
       },
       "error": "Avtoyuborişni tizim töxtatdi: {{reason}}.",
-      "line": "{{channel}} — {{status}}",
-      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "line": "{{channel}} — {{label}}",
+      "lineReason": "{{channel}} — {{label}}: {{reason}}",
       "send": "Yuboriş",
       "resend": "Qayta yuboriş",
       "sendLabel": "{{action}}: {{channel}}",
@@ -224,7 +224,7 @@
       "due": "Hisob-kitob muddati"
     },
     "openReadOnly": {
-      "title": "TT direktor qarorini kutmoqda",
+      "title": "TT qarorni kutmoqda",
       "text": "Faqat köriş."
     },
     "decided": {
@@ -247,7 +247,7 @@
     "draft": "Izoh qoralamadan tiklandi.",
     "checklist": {
       "legend": "Tasdiqlaş çek-listi",
-      "visa_goods": "Taʼminotçi vizasi",
+      "visa_goods": "«Tovarlar va ombor» vizasi",
       "visa_services": "Boş muhandis vizasi",
       "margin": "Marja rezolyutsiya çegarasidan past emas",
       "due": "Mijoz muddati saqlangan",
@@ -255,7 +255,7 @@
       "lateNote": "TT hisob-kitob muddatidan ({{due}}) keyin tayyor böldi. Tasdiqlaş mumkin: jurnalda «keçikiş bilan tasdiqlangan» belgisi paydo böladi."
     },
     "blockedItem": {
-      "visa_goods": "taʼminotçi vizasi yöq",
+      "visa_goods": "«Tovarlar va ombor» vizasi yöq",
       "visa_services": "boş muhandis vizasi yöq",
       "margin": "marja rezolyutsiya çegarasidan past",
       "due": "hisob-kitob muddati"
@@ -311,7 +311,7 @@
       "return": "Saqlanmadi: {{reason}}"
     },
     "reasons": {
-      "route_closed": "TTni boşqa direktor hal qilgan yoki yangi versiya bilan almaştirilgan, karta yangilandi",
+      "route_closed": "TT allaqaçon hal qilingan yoki yangi versiya bilan almaştirilgan, kartoçka yangilandi",
       "checklist_not_green": "çek-list bajarilmagan ({{items}}), karta yangilandi",
       "checklist_not_green_plain": "çek-list bajarilmagan, karta yangilandi",
       "not_your_step": "hozir sizning bosqiçingiz emas",

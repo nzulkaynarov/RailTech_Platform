@@ -531,7 +531,7 @@ async def test_resend_invite_crm_down_and_rights(
 
     assert down.status_code == 503
     check(down, "/admin/users/{id}/invite", "post")
-    assert "Письмо не отправлено" in down.json()["message"]
+    assert "Приглашение не отправлено" in down.json()["message"]
     web.client.cookies.clear()
     await web.login(["DIRECTOR"])
     assert (await web.send("POST", "/api/v1/admin/users/12/invite")).status_code == 403
