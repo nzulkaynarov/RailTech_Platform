@@ -517,9 +517,9 @@ def sample_pdf(company_id: int, user_id: int, sample_id: str) -> bytes | None:
 
 def run_sample(sample_id: str, company_id: int, user_id: int, request: dict) -> None:
     """The worker's side: render and store the PDF (or the error code) for the screen to read."""
-    from accounts.models import Company, CustomUser
-
     from documents.models import DocumentTemplate
+
+    from accounts.models import Company, CustomUser
 
     company = Company.objects.get(pk=company_id)
     user = CustomUser.objects.get(pk=user_id)
