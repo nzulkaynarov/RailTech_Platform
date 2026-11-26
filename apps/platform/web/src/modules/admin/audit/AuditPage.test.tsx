@@ -48,9 +48,9 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     expect(within(table).queryByText("Вход")).toBeNull();
     expect(screen.getByText("Записей: 13")).toBeVisible();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "История" })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
   });
 

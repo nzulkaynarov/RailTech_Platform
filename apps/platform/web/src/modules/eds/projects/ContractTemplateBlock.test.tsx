@@ -35,9 +35,7 @@ describe("Проект: договор по утверждённому шабл�
     expect(within(panel).queryByRole("button", { name: "На согласование клиенту" })).toBeNull();
 
     fireEvent.click(within(panel).getByRole("button", { name: "Подписать от компании" }));
-    expect(
-      await within(panel).findByText("Проект у клиента на согласовании редакции."),
-    ).toBeVisible();
+    expect(await within(panel).findByText(/Договор у контрагента\./)).toBeVisible();
     expect(within(panel).getByText("В Кабинете клиента").closest("li")).toHaveTextContent("готово");
   });
 
@@ -68,7 +66,7 @@ describe("Проект: договор по утверждённому шабл�
     // подпись есть, а клиенту всё равно не уходит
     fireEvent.click(within(panel).getByRole("button", { name: "Подписать от компании" }));
     await screen.findByText("Договор подписан от компании.");
-    expect(within(panel).queryByText("Проект у клиента на согласовании редакции.")).toBeNull();
+    expect(within(panel).queryByText(/Договор у контрагента\./)).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Одобрить отступление" })).toBeNull();
   });
 

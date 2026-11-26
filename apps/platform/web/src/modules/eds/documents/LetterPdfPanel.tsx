@@ -1,10 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Skeleton } from "antd";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { downloadFile } from "../../../shared/api/download";
-import { ApiError } from "../../../shared/api/errors";
 import type { EdsDocumentPdf } from "../../../shared/api/generated/model";
 import {
   getDownloadEdsDocumentPdfQueryKey,
@@ -13,43 +12,13 @@ import {
   requestEdsDocumentPdf,
   useGetEdsDocumentPdf,
 } from "../../../shared/api/generated/platform-bff";
+import { useRenderedPdf } from "../../../shared/ui/DocumentViewer/useRenderedPdf";
 import { reasonText } from "./errors";
 
 const PdfViewer = lazy(() => import("../../../shared/ui/PdfViewer"));
 
 /** Опрос состояния PDF, пока воркер EDS его строит (B-094: рендер только в фоне). */
 const POLL_MS = 1500;
-
-function usePdfBytes(id: string | null, pdf: EdsDocumentPdf | undefined) {
-  const client = useQueryClient();
-  const ready = pdf?.status === "ready";
-  const queryKey = getDownloadEdsDocumentPdfQueryKey(id ?? "");
-  const version = `${pdf?.requested_at ?? ""}:${String(pdf?.final ?? false)}`;
-  const seen = useRef(version);
-  useEffect(() => {
-    // Новый PDF (правки, регистрация) загружается заново, когда готов; пока он строится, на экране остаются прежние
-    // страницы с пометкой «Обновляется» (пункт «Ш»: страницы от сервера без мигания).
-    if (ready && seen.current !== version) {
-      seen.current = version;
-      void client.invalidateQueries({ queryKey });
-    }
-  }, [client, queryKey, ready, version]);
-  return useQuery({
-    enabled: Boolean(id) && ready,
-    queryKey,
-    staleTime: Infinity,
-    gcTime: 0,
-    queryFn: async (): Promise<ArrayBuffer> => {
-      const response = await fetch(getDownloadEdsDocumentPdfUrl(id ?? ""), {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        throw new ApiError(response.status, "HTTP_ERROR", `HTTP ${String(response.status)}`);
-      }
-      return response.arrayBuffer();
-    },
-  });
-}
 
 export interface LetterPdfPanelProps {
   /** Сохранённый документ; `null` — форма ещё не сохранялась (тогда `prepare` создаст черновик) */
@@ -103,7 +72,15 @@ export function LetterPdfPanel({
     },
   });
   const pdf = status.data;
-  const bytes = usePdfBytes(current, pdf);
+  const bytes = useRenderedPdf({
+    id: current,
+    ready: pdf?.status === "ready",
+    queryKey: getDownloadEdsDocumentPdfQueryKey(current ?? ""),
+    url: getDownloadEdsDocumentPdfUrl(current ?? ""),
+    // Новый PDF (правки, регистрация) загружается заново, когда готов; пока он строится, на экране прежние страницы.
+    refreshKey: `${pdf?.requested_at ?? ""}:${String(pdf?.final ?? false)}`,
+    gcTime: 0,
+  });
   const name = t("preview.name", { subject: subject || "—" });
 
   const busy = useRef(false);
@@ -243,7 +220,16 @@ export function LetterPdfPanel({
           />
         ) : bytes.data ? (
           <Suspense fallback={<Skeleton active paragraph={{ rows: 6 }} title={false} />}>
-            <PdfViewer data={bytes.data} name={name} />
+            <PdfViewer
+              data={bytes.data}
+              name={name}
+              panelDownload={false}
+              onDownload={() => {
+                void downloadFile(getDownloadEdsDocumentPdfUrl(current ?? ""), `${name}.pdf`).catch(
+                  () => undefined,
+                );
+              }}
+            />
           </Suspense>
         ) : (
           <Skeleton active paragraph={{ rows: 6 }} title={false} />

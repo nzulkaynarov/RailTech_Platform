@@ -115,7 +115,13 @@ class PartnerApplicationInSerializer(serializers.Serializer):
     )
     categories_description = serializers.CharField(max_length=4000)
     contact_name = serializers.CharField(max_length=255)
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(
+        max_length=254,
+        allow_blank=True,
+        required=False,
+        default="",
+        help_text="ПК-1: необязательна — хватает телефона или Telegram лида; приглашение в Кабинет уйдёт, когда почта появится.",
+    )
     phone = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False, default="ru")
 

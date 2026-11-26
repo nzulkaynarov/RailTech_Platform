@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App, Button, Drawer, Input, Select, Skeleton } from "antd";
-import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
+import { Suspense, lazy, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
@@ -412,9 +412,12 @@ function DocDrawer({
             ]}
           />
           <div className="pf-cat-actions">
-            <Button type="primary" onClick={download}>
-              {t("docs.download")}
-            </Button>
+            {/* у файла с просмотром «Скачать» — на панели просмотра (имя файла то же); здесь — когда просмотра нет */}
+            {!doc.previewable || bytes.isError ? (
+              <Button type="primary" onClick={download}>
+                {t("docs.download")}
+              </Button>
+            ) : null}
             {doc.review_state === "pending" && canEdit(me, "erp.stock") ? (
               <>
                 <Button
@@ -455,15 +458,16 @@ function DocDrawer({
             <p className="pf-cat-note">{t("docs.noPreview")}</p>
           ) : (
             <QueryState query={bytes} labels={queryLabels(t)} level={3} compact>
-              {(file) =>
-                doc.content_type === "application/pdf" ? (
-                  <Suspense fallback={<Skeleton active paragraph={{ rows: 6 }} title={false} />}>
-                    <PdfViewer data={file.data} name={doc.title} />
-                  </Suspense>
-                ) : (
-                  <ImagePreview data={file.data} type={doc.content_type} name={doc.title} />
-                )
-              }
+              {(file) => (
+                <Suspense fallback={<Skeleton active paragraph={{ rows: 6 }} title={false} />}>
+                  <PdfViewer
+                    data={file.data}
+                    name={doc.title}
+                    type={doc.content_type}
+                    onDownload={download}
+                  />
+                </Suspense>
+              )}
             </QueryState>
           )}
           {confirming ? (
@@ -486,19 +490,6 @@ function DocDrawer({
       )}
     </Drawer>
   );
-}
-
-function ImagePreview({ data, type, name }: { data: ArrayBuffer; type: string; name: string }) {
-  const img = useRef<HTMLImageElement>(null);
-  useEffect(() => {
-    const objectUrl = URL.createObjectURL(new Blob([data], { type }));
-    const element = img.current;
-    if (element) element.src = objectUrl;
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
-  }, [data, type]);
-  return <img ref={img} className="pf-doc-viewer-image" alt={name} />;
 }
 
 function UploadForm({

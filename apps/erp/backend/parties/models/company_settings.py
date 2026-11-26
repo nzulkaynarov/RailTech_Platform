@@ -13,6 +13,11 @@ from catalog.constants import (
 from core.contract_term import ContractExpiredAction, ContractTermRule
 
 
+def default_partner_base_roles() -> list:
+    """ОСН-1: по умолчанию кандидат в партнёры получает договор о партнёрстве и соглашение о неразглашении."""
+    return ["partnership", "nda"]
+
+
 class CompanySettings(models.Model):
     """Per-company КП defaults + the document-numbering scheme.
 
@@ -218,6 +223,12 @@ class CompanySettings(models.Model):
         help_text=_(
             "Подмножество `partner`, `supply`, `services`. По умолчанию пусто: срок договора по сделке новое КП не закрывает."
         ),
+    )
+    partner_base_roles = models.JSONField(
+        default=default_partner_base_roles,
+        blank=True,
+        verbose_name=_("Базовые документы для партнёров"),
+        help_text=_("Роли базовых документов (`partnership`, `nda`, `offer`), которые получает кандидат в партнёры."),
     )
     contract_expired_action = models.CharField(
         max_length=8,

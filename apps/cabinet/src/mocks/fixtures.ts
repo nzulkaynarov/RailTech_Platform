@@ -507,6 +507,7 @@ export const contracts: Schemas["Contract"][] = [
     signed_by_client_at: null,
     signed_by_company_at: null,
     document_id: 905,
+    can_download_docx: true,
   },
   {
     id: 403,

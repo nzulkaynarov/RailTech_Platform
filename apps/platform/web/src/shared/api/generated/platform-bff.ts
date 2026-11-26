@@ -129,6 +129,7 @@ import type {
   ContractTemplateConflictResponse,
   ContractTemplateIn,
   ContractTemplateList,
+  ContractTemplateRoleIn,
   ConversationCard,
   ConversationThread,
   CounterpartyCard,
@@ -394,6 +395,7 @@ import type {
   OffsiteCheck,
   PartnerApplicationApproveRequest,
   PartnerApplicationCreateRequest,
+  PartnerApplicationInviteRequest,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
@@ -402,9 +404,11 @@ import type {
   PartnerContractFileUpload,
   PartnerContractOptions,
   PartnerContractPrepareRequest,
+  PartnerFromArchiveUpload,
   PartnerHandoffIn,
   PartnerHandoffView,
   PartnerRequestDecision,
+  PartnerSignedScanUpload,
   PasswordConfirm,
   PaymentBoard,
   PaymentCard,
@@ -9714,6 +9718,139 @@ export const useNewContractTemplateEdition = <
   return useMutation(getNewContractTemplateEditionMutationOptions(options), queryClient);
 };
 
+export const getSetContractTemplateBaseRoleUrl = (id: string) => {
+  return `/api/v1/document-templates/contracts/${id}/base-role`;
+};
+
+/**
+ * Договор о партнёрстве, соглашение о неразглашении или оферта (ОСН-1): ERP `PATCH crm/document-templates/{id}/`. Пометка — часть текста: ставится и снимается в черновике, у закреплённого шаблона — 422 `template_locked`. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+ * @summary Пометка «Базовый документ»
+ */
+export const setContractTemplateBaseRole = async (
+  id: string,
+  contractTemplateRoleIn: ContractTemplateRoleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ContractTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ContractTemplate>(getSetContractTemplateBaseRoleUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contractTemplateRoleIn),
+  });
+};
+
+export const getSetContractTemplateBaseRoleMutationKey = () =>
+  ["setContractTemplateBaseRole"] as const;
+
+export const getSetContractTemplateBaseRoleMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+    TError,
+    SetContractTemplateBaseRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+  TError,
+  SetContractTemplateBaseRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetContractTemplateBaseRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+    SetContractTemplateBaseRoleMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setContractTemplateBaseRole(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetContractTemplateBaseRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>
+>;
+export type SetContractTemplateBaseRoleMutationBody = ContractTemplateRoleIn;
+export type SetContractTemplateBaseRoleMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | ValidationFailedResponse
+>;
+export type SetContractTemplateBaseRoleMutationVariables = {
+  id: string;
+  data: ContractTemplateRoleIn;
+};
+
+/**
+ * @summary Пометка «Базовый документ»
+ */
+export const useSetContractTemplateBaseRole = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+      TError,
+      SetContractTemplateBaseRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setContractTemplateBaseRole>>,
+  TError,
+  SetContractTemplateBaseRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetContractTemplateBaseRoleMutationOptions(options), queryClient);
+};
+
 export const getSubmitContractTemplateUrl = (id: string) => {
   return `/api/v1/document-templates/contracts/${id}/submit`;
 };
@@ -12838,7 +12975,7 @@ export const getDownloadEdsProjectFileUrl = (
 };
 
 /**
- * Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+ * Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта), `docx` — наша редакция договора в Word для правок, `remark` — редакция контрагента, приложенная к замечаниям (ДП-1, только договор); скан и вложения всегда скачиваются (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
  * @summary EDS · Проект: файл документа (PDF или скан)
  */
 export const downloadEdsProjectFile = async (
@@ -67491,6 +67628,402 @@ export const useDecidePartnerContract = <
   return useMutation(getDecidePartnerContractMutationOptions(options), queryClient);
 };
 
+export const getInvitePartnerCandidateUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/invite`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/invite/` — право `supply.manage`. ПК-1. Договор можно отправить и без почты кандидата; когда адрес появился — он в `email` (или уже записан в заявке), и приглашение уходит письмом. Нет адреса — 422 `candidate_email_required`.
+ * @summary Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
+ */
+export const invitePartnerCandidate = async (
+  id: CompanyItemRef,
+  partnerApplicationInviteRequest?: PartnerApplicationInviteRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getInvitePartnerCandidateUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationInviteRequest),
+  });
+};
+
+export const getInvitePartnerCandidateMutationKey = () => ["invitePartnerCandidate"] as const;
+
+export const getInvitePartnerCandidateMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof invitePartnerCandidate>>,
+    TError,
+    InvitePartnerCandidateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>,
+  TError,
+  InvitePartnerCandidateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getInvitePartnerCandidateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof invitePartnerCandidate>>,
+    InvitePartnerCandidateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return invitePartnerCandidate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InvitePartnerCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>
+>;
+export type InvitePartnerCandidateMutationBody = PartnerApplicationInviteRequest | undefined;
+export type InvitePartnerCandidateMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type InvitePartnerCandidateMutationVariables = {
+  id: CompanyItemRef;
+  data?: PartnerApplicationInviteRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
+ */
+export const useInvitePartnerCandidate = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof invitePartnerCandidate>>,
+      TError,
+      InvitePartnerCandidateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof invitePartnerCandidate>>,
+  TError,
+  InvitePartnerCandidateMutationVariables,
+  TContext
+> => {
+  return useMutation(getInvitePartnerCandidateMutationOptions(options), queryClient);
+};
+
+export const getUploadPartnerSignedScanUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/signed-scan`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/signed-scan/` (multipart) — право `supply.manage`. ПК-1. Скан не обязателен, отметка «подписан» принимает скан ИЛИ заметку (`signed_note` в `approvePartnerApplication`). PDF или изображение; содержимое сверяется с расширением.
+ * @summary Расчёт · Заявка в партнёры: скан подписанного договора
+ */
+export const uploadPartnerSignedScan = async (
+  id: CompanyItemRef,
+  partnerSignedScanUpload: PartnerSignedScanUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const formData = new FormData();
+  formData.append(`file`, partnerSignedScanUpload.file);
+
+  return http<PartnerApplicationItem>(getUploadPartnerSignedScanUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadPartnerSignedScanMutationKey = () => ["uploadPartnerSignedScan"] as const;
+
+export const getUploadPartnerSignedScanMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+    TError,
+    UploadPartnerSignedScanMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+  TError,
+  UploadPartnerSignedScanMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadPartnerSignedScanMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+    UploadPartnerSignedScanMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadPartnerSignedScan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPartnerSignedScanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>
+>;
+export type UploadPartnerSignedScanMutationBody = PartnerSignedScanUpload;
+export type UploadPartnerSignedScanMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | BackendUnavailableResponse
+>;
+export type UploadPartnerSignedScanMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerSignedScanUpload;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: скан подписанного договора
+ */
+export const useUploadPartnerSignedScan = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+      TError,
+      UploadPartnerSignedScanMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPartnerSignedScan>>,
+  TError,
+  UploadPartnerSignedScanMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadPartnerSignedScanMutationOptions(options), queryClient);
+};
+
+export const getRecordPartnerPackageFromArchiveUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/from-archive`;
+};
+
+/**
+ * ОСН-1: партнёр подписал бумажный пакет раньше — заявка сразу одобряется с реальными датами и сканами документов пакета; в Кабинет и по почте ничего не уходит, пометка `from_archive`. ERP `POST catalog/partner-applications/{id}/from-archive/` — право `supply.manage`. Только `multipart/form-data`; тело уходит в ERP как есть. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Заявка в партнёры: «Уже подписано на бумаге»
+ */
+export const recordPartnerPackageFromArchive = async (
+  id: CompanyItemRef,
+  partnerFromArchiveUpload: PartnerFromArchiveUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const formData = new FormData();
+  formData.append(`signed_on`, partnerFromArchiveUpload.signed_on);
+  if (partnerFromArchiveUpload.contract_number !== undefined) {
+    formData.append(`contract_number`, partnerFromArchiveUpload.contract_number);
+  }
+  if (partnerFromArchiveUpload.note !== undefined) {
+    formData.append(`note`, partnerFromArchiveUpload.note);
+  }
+  if (partnerFromArchiveUpload.company_id !== undefined) {
+    formData.append(`company_id`, partnerFromArchiveUpload.company_id.toString());
+  }
+  if (partnerFromArchiveUpload.create_new_company !== undefined) {
+    formData.append(`create_new_company`, partnerFromArchiveUpload.create_new_company.toString());
+  }
+  if (partnerFromArchiveUpload.signed_on_partnership !== undefined) {
+    formData.append(`signed_on_partnership`, partnerFromArchiveUpload.signed_on_partnership);
+  }
+  if (partnerFromArchiveUpload.signed_on_nda !== undefined) {
+    formData.append(`signed_on_nda`, partnerFromArchiveUpload.signed_on_nda);
+  }
+  if (partnerFromArchiveUpload.signed_on_offer !== undefined) {
+    formData.append(`signed_on_offer`, partnerFromArchiveUpload.signed_on_offer);
+  }
+  if (partnerFromArchiveUpload.scan_partnership !== undefined) {
+    formData.append(`scan_partnership`, partnerFromArchiveUpload.scan_partnership);
+  }
+  if (partnerFromArchiveUpload.scan_nda !== undefined) {
+    formData.append(`scan_nda`, partnerFromArchiveUpload.scan_nda);
+  }
+  if (partnerFromArchiveUpload.scan_offer !== undefined) {
+    formData.append(`scan_offer`, partnerFromArchiveUpload.scan_offer);
+  }
+
+  return http<PartnerApplicationItem>(getRecordPartnerPackageFromArchiveUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getRecordPartnerPackageFromArchiveMutationKey = () =>
+  ["recordPartnerPackageFromArchive"] as const;
+
+export const getRecordPartnerPackageFromArchiveMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>,
+    TError,
+    RecordPartnerPackageFromArchiveMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>,
+  TError,
+  RecordPartnerPackageFromArchiveMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordPartnerPackageFromArchiveMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>,
+    RecordPartnerPackageFromArchiveMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return recordPartnerPackageFromArchive(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordPartnerPackageFromArchiveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>
+>;
+export type RecordPartnerPackageFromArchiveMutationBody = PartnerFromArchiveUpload;
+export type RecordPartnerPackageFromArchiveMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RecordPartnerPackageFromArchiveMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerFromArchiveUpload;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: «Уже подписано на бумаге»
+ */
+export const useRecordPartnerPackageFromArchive = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>,
+      TError,
+      RecordPartnerPackageFromArchiveMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recordPartnerPackageFromArchive>>,
+  TError,
+  RecordPartnerPackageFromArchiveMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordPartnerPackageFromArchiveMutationOptions(options), queryClient);
+};
+
 export const getDownloadPartnerApplicationDocumentUrl = (
   id: CompanyItemRef,
   params?: DownloadPartnerApplicationDocumentParams,
@@ -67511,7 +68044,7 @@ export const getDownloadPartnerApplicationDocumentUrl = (
 };
 
 /**
- * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+ * Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат. Вложением, с `nosniff`; файл в памяти BFF не копится.
  * @summary Расчёт · Заявка в партнёры: договор или скан подписанного
  */
 export const downloadPartnerApplicationDocument = async (

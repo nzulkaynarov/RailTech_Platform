@@ -65,9 +65,9 @@ export function PartnerHandoff({
   if (!values.company.trim()) errors.company = "company";
   if (!values.contact.trim()) errors.contact = "contact";
   if (!values.offer.trim()) errors.offer = "offer";
-  // Почта обязательна: по ней партнёру приходит договор; CRM проверяет формат так же, как ERP.
-  if (!values.email.trim()) errors.email = "email";
-  else if (!EMAIL.test(values.email.trim())) errors.email = "invalid_email";
+  // Почта не обязательна (ПК-1): путь не останавливается; приглашение в Кабинет уйдёт, когда она появится. Если указана —
+  // формат проверяет CRM так же, как ERP.
+  if (values.email.trim() && !EMAIL.test(values.email.trim())) errors.email = "invalid_email";
   if (rejectedEmail === values.email.trim() && values.email.trim()) errors.email = "invalid_email";
   const shown = (field: Field) => (tried && errors[field] ? errors[field] : undefined);
   const text = (field: Field) => {

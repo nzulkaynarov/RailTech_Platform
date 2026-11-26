@@ -8,6 +8,7 @@ from .document_profile import CompanyDocumentProfile
 from .lookups import CompanyType
 from .partner_applications import (
     PartnerApplication,
+    PartnerApplicationDocument,
     PartnerApplicationSource,
     PartnerApplicationStatus,
     PartnerContractApproval,
@@ -25,6 +26,7 @@ __all__ = [
     "CompanyType",
     "Contact",
     "PartnerApplication",
+    "PartnerApplicationDocument",
     "PartnerApplicationSource",
     "PartnerApplicationStatus",
     "PartnerContractApproval",

@@ -21,7 +21,7 @@ import "../docflow/docflow.css";
 const DOC_PREFIX = "doc:";
 
 /**
- * Процессы · Справочники (SET-IA; ресёрч «Настройки» §4.3): все списки компании на одном экране, слева — по разделам.
+ * Процессы · Справочники (SET-IA; ресёрч «Настройки» §4.3): все списки компании на одном экране, выбор по разделам — над списком.
  * Продажи — причины отказа и валюта сделок (раздел `deals` настроек бота); Документы — справочники писем (каталог BFF);
  * «Типы входящих писем» и правила отправителей — настройки канала, они на странице «Почта» (ЕВ-2а);
  * Расчёт — страны, валюты, единицы, базисы поставки, категории каталога и статьи расхода (нужен `company.settings`).
@@ -137,17 +137,16 @@ export function DictionariesPage() {
           })}
         />
       ) : null}
-      <div className="pf-bot-layout">
+      <div className="pf-bot-content">
         <SettingsNav
           label={t("modules:admin.dictionaries.nav")}
           groups={groups}
           current={current}
-          hrefOf={hrefOf}
           onSelect={(key) => {
             void navigate({ search: hrefOf(key) });
           }}
         />
-        <div className="pf-bot-content">{body}</div>
+        {body}
       </div>
     </SettingsPage>
   );

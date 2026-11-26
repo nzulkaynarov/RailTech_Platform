@@ -809,9 +809,49 @@ export interface paths {
         put?: never;
         /**
          * Подписать договор со стороны клиента
-         * @description Согласие клиента с редакцией договора (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись: в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client) не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей `signed_by_client*` сохранены ради совместимости.
+         * @description Согласие клиента с редакцией договора («Принять редакцию»; пока замечания клиента на согласовании у компании — 409 `REMARK_OPEN`) (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись: в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client) не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей `signed_by_client*` сохранены ради совместимости.
          */
         post: operations["signContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{id}/remarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить замечания к редакции договора
+         * @description «Есть замечания» (ДП-1): один ответ — комментарий и, при желании, своя редакция договора (DOCX или XLSX) из `POST /uploads`; файл — вложение и точка правды. Сотрудники получают разбор «что изменилось» (DOCX сравнивается с нашей редакцией), отвечают «Согласен» / «Не согласен», при разногласии решает директор. Принята редакция — договор «Согласован клиентом» (`signed_by_client`); иначе приходит наш ответ (`remark.state = answered`). Только для договора `sent` и только контакту с правом действовать. Замечания уже на согласовании — 409 `REMARK_OPEN`, договор не у клиента — 409 `CONTRACT_REMARK_NOT_ALLOWED`, пустой комментарий — 422 `COMMENT_REQUIRED`, чужая загрузка — 422 `UPLOAD_NOT_FOUND`, не DOCX/XLSX или подделанная сигнатура — 422 `VALIDATION_ERROR`.
+         */
+        post: operations["submitContractRemarks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{id}/docx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Скачать редакцию договора в DOCX для правок
+         * @description Наша редакция договора абзацами в Word (ДП-1): скачать, поправить и приложить к замечаниям — система покажет, что изменилось. Только пока договор у клиента на согласовании (`can_download_docx`); иначе 404.
+         */
+        get: operations["getContractDocx"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1770,6 +1810,7 @@ export interface paths {
          * @description Отдаёт файл договора, который сотрудник отправил кандидату (ПД-1): PDF по утверждённому шаблону либо свой файл
          *     компании (PDF или DOCX; тип — в `Content-Type`, вид — `PartnerApplication.contract_file_kind`). Открыт любой
          *     сессии (FX-1). До отправки файла для кандидата нет — 404. Документ не собирается на лету: встроенного образца нет.
+         *     Пакет базовых документов (ОСН-1): `doc` — id из `PartnerApplication.documents`; без него — основной договор.
          */
         get: operations["getCompanyPartnerContractPdf"];
         put?: never;
@@ -1811,10 +1852,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Вернуть партнёрский договор с замечанием
-         * @description Кандидат не согласен с договором и возвращает его с замечанием (ПД-1). Статус остаётся `contract_sent`,
-         *     `candidate_returned_at` заполняется, замечание — в `candidate_notes`; сотрудник готовит новую версию.
-         *     Открыт любой сессии (FX-1), требует права действовать `can_act`. Замечание обязательно (`RETURN_NOTE_REQUIRED`).
+         * «Есть замечания» к партнёрскому договору (одно окно, комментарий и своя редакция)
+         * @description Кандидат не принимает редакцию и пишет замечания (ПД-1, ПК-1): комментарий и, по желанию, свою редакцию договора
+         *     (DOCX или PDF). Файл — вложение и точка правды: он становится файлом договора на согласовании у ответственных,
+         *     новая редакция уходит кандидату после их согласия. Статус остаётся `contract_sent`, `candidate_returned_at`
+         *     заполняется, замечание — в `candidate_notes`; ответственным приходит уведомление. Тело — JSON `{notes}` либо
+         *     `multipart/form-data` (`notes`, `file`); multipart допущен и здесь (как `/uploads`). Нужен комментарий или файл
+         *     (`RETURN_NOTE_REQUIRED`); файл неподходящего вида — `CONTRACT_FILE_INVALID`. Открыт любой сессии (FX-1), требует
+         *     права действовать `can_act`.
          */
         post: operations["returnCompanyPartnerContract"];
         delete?: never;
@@ -2043,6 +2088,8 @@ export interface components {
              * @enum {string|null}
              */
             contract_file_kind?: "pdf" | "docx" | null;
+            /** @description Пакет базовых документов (ОСН-1), один шаг для кандидата, каждый документ открывается отдельно; пусто — договор одним файлом */
+            documents?: components["schemas"]["PartnerPackageDocument"][];
             /**
              * Format: date-time
              * @description Когда кандидат вернул договор с замечанием; сбрасывается при повторной отправке
@@ -2058,6 +2105,17 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        PartnerPackageDocument: {
+            id: number;
+            /** @enum {string} */
+            base_role: "partnership" | "nda" | "offer";
+            title: string;
+            number: string;
+            /** @enum {string} */
+            file_kind: "pdf" | "docx";
+            /** @description Что кандидат вернул по этому документу */
+            remark: string;
         };
         PartnerApplicationPublicCreate: {
             /** @description Название организации */
@@ -2831,11 +2889,11 @@ export interface components {
          *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
          *     с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
          *     безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
-         *     `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
+         *     `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`), `contract_remark_answered` — компания ответила на замечания клиента (ДП-1; `number`, `text`), `contract_awaiting_signature` — редакция принята, договор будет выставлен на подписание (`number`).
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login" | "contract_renewed" | "contract_renewal_declined";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login" | "contract_renewed" | "contract_renewal_declined" | "contract_remark_answered" | "contract_awaiting_signature";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}
@@ -3209,6 +3267,34 @@ export interface components {
             document_id?: number | null;
             /** @description Срок подписанного договора (ДС-1); `null` — договор ещё не подписан или подписан до введения срока */
             term?: components["schemas"]["ContractTerm"] | null;
+            /** @description Замечания клиента к редакции (ДП-1): на согласовании у компании или наш ответ; `null` — замечаний нет (или они приняты и договор согласован) */
+            remark?: components["schemas"]["ContractRemark"] | null;
+            /** @description Редакцию можно скачать в DOCX для правок (`GET /contracts/{id}/docx`) */
+            can_download_docx?: boolean;
+        };
+        ContractRemarksIn: {
+            /** @description Что изменить */
+            comment: string;
+            /**
+             * Format: uuid
+             * @description Своя редакция (DOCX или XLSX), загруженная через `POST /uploads`
+             */
+            upload_id?: string;
+        };
+        ContractRemark: {
+            /**
+             * @description `review` — замечания на согласовании у компании; `answered` — компания ответила своей редакцией
+             * @enum {string}
+             */
+            state: "review" | "answered";
+            comment: string;
+            /** @description Ответ компании (при `answered`) */
+            response?: string | null;
+            file_name?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            answered_at?: string | null;
         };
         /**
          * @description Срок договора считается при подписании из правила компании и шаблона. `state`: `open` — без срока, `renews` —
@@ -5484,6 +5570,80 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    submitContractRemarks: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractRemarksIn"];
+            };
+        };
+        responses: {
+            /** @description Замечания приняты, договор остаётся на согласовании */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Замечания уже на согласовании или договор не у клиента */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getContractDocx: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description DOCX */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     declineContractRenewal: {
         parameters: {
             query?: never;
@@ -7293,7 +7453,10 @@ export interface operations {
     };
     getCompanyPartnerContractPdf: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Документ пакета базовых документов (`PartnerApplication.documents[].id`) */
+                doc?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7368,6 +7531,19 @@ export interface operations {
                 "application/json": {
                     /** @description Замечание кандидата к договору */
                     notes: string;
+                    /** @description Документ пакета, к которому относится замечание (`PartnerApplication.documents[].id`) */
+                    document?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Комментарий; обязателен, если файла нет */
+                    notes?: string;
+                    /** @description Документ пакета (ОСН-1); обязателен вместе с `file`, если в пакете несколько документов */
+                    document?: number;
+                    /**
+                     * Format: binary
+                     * @description Своя редакция договора (DOCX или PDF) — вложение и точка правды
+                     */
+                    file?: string;
                 };
             };
         };
@@ -7381,7 +7557,7 @@ export interface operations {
                     "application/json": components["schemas"]["PartnerApplication"];
                 };
             };
-            /** @description Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет замечания (`RETURN_NOTE_REQUIRED`) */
+            /** @description Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет ни замечания, ни файла (`RETURN_NOTE_REQUIRED`), или файл не подходит (`CONTRACT_FILE_INVALID`) */
             400: {
                 headers: {
                     [name: string]: unknown;

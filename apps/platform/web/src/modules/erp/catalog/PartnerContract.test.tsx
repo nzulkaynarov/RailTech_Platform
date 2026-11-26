@@ -8,6 +8,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { clickRowAction } from "./rowActionTest";
 
 setupCatalogTests();
 
@@ -130,12 +131,13 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     expect(within(modal).getByRole("button", { name: "Подготовить договор" })).toBeDisabled();
   });
 
-  it("одобрение без скана подписанного — только с причиной", async () => {
+  it("отметка «подписан» без согласия — с причиной, а скан или заметка — на выбор", async () => {
     await openApplications("supply@demo.example");
     const row = rowOf("ООО «Восток Снаб»");
-    fireEvent.click(within(row).getByRole("button", { name: "Одобрить без согласия" }));
-    const modal = await findModal(/Одобрение заявки/);
+    await clickRowAction(row, "Отметить: подписан без согласия");
+    const modal = await findModal(/Договор подписан/);
     expect(within(modal).getByLabelText(/Причина одобрения без согласия/)).toBeVisible();
+    expect(within(modal).getByLabelText("Заметка вместо скана")).toBeVisible();
   });
 
   it("держатель «Право» без раздела снабжения видит заявки и решает, но не готовит договор", async () => {
@@ -159,5 +161,74 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     expect(ok).toBeDisabled();
     fireEvent.click(within(modal).getByLabelText(/Других держателей нет/));
     expect(ok).not.toBeDisabled();
+  });
+
+  it("пакет базовых документов: роль без шаблона названа фразой со ссылкой, кнопка не действует (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "missing");
+    await openApplications("supply@demo.example");
+    fireEvent.click(
+      within(rowOf("Nanjing Jichuang Co.")).getByRole("button", { name: "Подготовить договор" }),
+    );
+    const modal = await findModal(/Договор для кандидата: Nanjing Jichuang Co\./);
+
+    expect(
+      await within(modal).findByText(/Нет утверждённого шаблона: Соглашение о неразглашении\./),
+    ).toBeVisible();
+    expect(within(modal).getByRole("link", { name: "Шаблоны договоров" })).toHaveAttribute(
+      "href",
+      "/eds/contract-templates",
+    );
+    expect(within(modal).getByRole("button", { name: "Подготовить договор" })).toBeDisabled();
+  });
+
+  it("пакет базовых документов: готовится одним действием, документы видны в строке заявки (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "ready");
+    await openApplications("supply@demo.example");
+    fireEvent.click(
+      within(rowOf("Nanjing Jichuang Co.")).getByRole("button", { name: "Подготовить договор" }),
+    );
+    const modal = await findModal(/Договор для кандидата: Nanjing Jichuang Co\./);
+
+    expect(await within(modal).findByText(/Договор о партнёрстве · ред. 1/)).toBeVisible();
+    expect(within(modal).getByText(/Соглашение о неразглашении · ред. 1/)).toBeVisible();
+    expect(within(modal).getByText(/пакет готов к отправке/)).toBeVisible();
+    // отступлений в пакете нет: поля отступления на экране нет
+    expect(within(modal).queryByLabelText(/Чем отличается от шаблона/)).toBeNull();
+    fireEvent.click(within(modal).getByRole("button", { name: "Подготовить договор" }));
+    await modalClosed(/Договор для кандидата/);
+
+    const row = rowOf("Nanjing Jichuang Co.");
+    expect(
+      await within(row).findByText(/Пакет: Договор о партнёрстве, Соглашение о неразглашении/),
+    ).toBeVisible();
+    expect(within(row).getByRole("button", { name: "Соглашение о неразглашении" })).toBeVisible();
+    expect(within(row).getByRole("button", { name: "Отправить договор" })).toBeVisible();
+  });
+
+  it("«Уже подписано на бумаге»: пакет вносится подписанным, дата обязательна и не из будущего (ОСН-1)", async () => {
+    window.localStorage.setItem("rt-pf-mock-package", "ready");
+    await openApplications("supply@demo.example");
+    await clickRowAction(rowOf("Nanjing Jichuang Co."), "Уже подписано на бумаге");
+    const modal = await findModal(/Уже подписано на бумаге: Nanjing Jichuang Co\./);
+
+    expect(await within(modal).findByText("Соглашение о неразглашении")).toBeVisible();
+    const submit = within(modal).getByRole("button", { name: "Внести" });
+    expect(submit).toBeDisabled();
+    const input = within(modal).getByLabelText("Когда подписано");
+    fireEvent.mouseDown(input);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "14.03.2025" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    fireEvent.click(submit);
+    await modalClosed(/Уже подписано на бумаге/);
+
+    const row = rowOf("Nanjing Jichuang Co.");
+    expect(await within(row).findByText("Внесено из архива")).toBeVisible();
+    expect(within(row).getByText(/Договор о партнёрстве: до/)).toBeVisible();
+    expect(within(row).getByText(/Соглашение о неразглашении: тайна ещё 3 л\./)).toBeVisible();
+    expect(within(row).queryByRole("button", { name: "Отправить договор" })).toBeNull();
   });
 });

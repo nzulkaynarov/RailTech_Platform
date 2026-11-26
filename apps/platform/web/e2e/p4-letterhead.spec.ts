@@ -121,7 +121,8 @@ async function pdfReady(page: Page): Promise<void> {
   });
   // страница нарисована pdf.js в canvas
   await expect(region.getByRole("img", { name: /страница 1 из 1/ })).toBeVisible();
-  await region.getByRole("img", { name: /страница 1 из 1/ }).scrollIntoViewIfNeeded();
+  // pdf.js заменяет холст при подгонке по ширине — прокручиваем устойчивый контейнер страниц
+  await region.getByTestId("pdf-pages").scrollIntoViewIfNeeded();
 }
 
 /** Журнал отправки в кадре: итог «Отправлено» и адрес. */

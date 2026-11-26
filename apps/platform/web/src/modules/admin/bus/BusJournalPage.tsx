@@ -24,6 +24,7 @@ import { InboxView } from "./InboxView";
 import { BusSourcesNote } from "./parts";
 import { SubscribersView } from "./SubscribersView";
 
+import { PageFrame } from "../../../shared/ui/PageFrame";
 import "./bus.css";
 
 const PATH = "/admin/bus";
@@ -130,7 +131,7 @@ export function BusJournalPage() {
   );
 
   return (
-    <div className="pf-bus">
+    <PageFrame layout="registry" className="pf-bus">
       <PageHeader title={title} />
       <JournalFilter current="systems" />
       <BusSourcesNote
@@ -195,6 +196,6 @@ export function BusJournalPage() {
           )}
         </PanelPortal>
       ) : null}
-    </div>
+    </PageFrame>
   );
 }

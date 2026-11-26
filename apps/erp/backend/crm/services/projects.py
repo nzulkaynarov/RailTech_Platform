@@ -491,6 +491,7 @@ def _awaits_send(contract) -> bool:
 def _contract_card(contract, user, journal: list) -> Optional[dict]:
     if contract is None:
         return None
+    _allowed = contract_flow.allowed_actions(contract, user)
     return {
         **_contract_ref(contract),
         "total": _money(contract.total_amount, contract.currency.code if contract.currency_id else None),
@@ -499,12 +500,67 @@ def _contract_card(contract, user, journal: list) -> Optional[dict]:
         "signed_at": contract.manager_signed_at if contract.status_code == ContractStatusCode.SIGNED else None,
         "has_pdf": bool(contract.pdf_file),
         "has_scan": bool(contract.signed_file),
-        "actions": contract_flow.allowed_actions(contract, user),
+        "actions": [a for a in _allowed if a != "mark_signed"],
+        "signing_actions": [a for a in _allowed if a == "mark_signed"],
         "template": _contract_template_card(contract, user),
         "term": contract_term.term_card(contract, user),
+        "remark": _remark_card(contract, user),
         # Х-1: пока проект не ушёл клиенту — что мешает его отправить (визы словами); `null` — ничего.
         "send_blocker": contract_flow.send_blocker(contract) if _awaits_send(contract) else None,
         "history": _history_for(journal, "contract", contract.number),
+    }
+
+
+def _remark_card(contract, user) -> Optional[dict]:
+    """ДП-1: замечания контрагента, ждущие ответа (`None` — их нет); действия — по правам и ответам этого сотрудника."""
+    from . import contract_remarks as remarks
+
+    remark = remarks.open_remark(contract) if contract.status_code == ContractStatusCode.PENDING_CLIENT else None
+    if remark is None:
+        return None
+    tally = remarks.tally(remark)
+    waiting = remarks.awaiting(remark, contract)
+    reviewer_ids = {u.pk for u in remarks.reviewers(contract)}
+    deciders = remarks.deciders(contract)
+    dispute = bool(tally["disagree"]) and not waiting
+    actions = []
+    if user is not None and contract_flow.is_staff(user) and user.pk in reviewer_ids:
+        actions.append("vote")
+    # Решающий голос закрывает замечания в любой момент: кто-то может так и не ответить (ДП-1)
+    if user is not None and contract_flow.is_staff(user) and contract_flow.may(user, remarks.DECIDE_PERMISSION):
+        actions.append("decide")
+    summary = {
+        "changed": [],
+        "added": [],
+        "removed": [],
+        "total": 0,
+        "more": 0,
+        "comparable": False,
+        **(remark.summary or {}),
+    }
+    return {
+        "id": remark.id,
+        "edition": remark.edition,
+        "received_at": remark.created_at,
+        "author_name": remark.author_name,
+        "comment": remark.comment,
+        "file_name": remark.file_name,
+        "has_file": bool(remark.file),
+        "summary": summary,
+        "items": remark.items or [],
+        "votes": [
+            {
+                "user": {"id": v.user_id, "name": v.user.get_full_name() or v.user.get_username()},
+                "agree": v.agree,
+                "comment": v.comment,
+                "at": v.created_at,
+            }
+            for v in tally["votes"]
+        ],
+        "awaiting": [{"id": u.pk, "name": u.get_full_name() or u.get_username()} for u in waiting],
+        "deciders": [{"id": u.pk, "name": u.get_full_name() or u.get_username()} for u in deciders],
+        "dispute": dispute,
+        "actions": actions,
     }
 
 

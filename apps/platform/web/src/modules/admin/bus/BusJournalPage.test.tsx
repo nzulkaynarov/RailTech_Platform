@@ -208,9 +208,9 @@ describe("Admin · Журнал интеграций: права", () => {
     signIn("admin@demo.example");
     renderAt("/admin/bus");
     const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "История" })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
   });
 });
