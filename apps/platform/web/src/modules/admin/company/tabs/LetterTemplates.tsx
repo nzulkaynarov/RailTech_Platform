@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Checkbox, Input, Segmented, Select, Spin } from "antd";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,7 @@ import {
   toBody,
 } from "../../../../shared/ui/BodyEditor/bodyModel";
 import type { DataColumn } from "../../../../shared/ui/DataTable/DataTable";
+import { useRenderedPdf } from "../../../../shared/ui/DocumentViewer/useRenderedPdf";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { useEditParam } from "../../settings/useEditParam";
 import { ConfirmModal, EditorPage, ListTable } from "../common";
@@ -345,19 +346,11 @@ function TemplatePdf({ body, kind }: { body: Body; kind: EdsTemplateIn["kind"] }
     },
   });
   const ready = status.data?.status === "ready";
-  const bytes = useQuery({
-    enabled: Boolean(hash) && ready,
+  const bytes = useRenderedPdf({
+    id: hash,
+    ready,
     queryKey: getDownloadEdsTemplatePreviewQueryKey(hash ?? ""),
-    staleTime: Infinity,
-    queryFn: async (): Promise<ArrayBuffer> => {
-      const response = await fetch(getDownloadEdsTemplatePreviewUrl(hash ?? ""), {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        throw new ApiError(response.status, "HTTP_ERROR", `HTTP ${String(response.status)}`);
-      }
-      return response.arrayBuffer();
-    },
+    url: getDownloadEdsTemplatePreviewUrl(hash ?? ""),
   });
   if (failed) return <Alert type="warning" showIcon message={failed} />;
   if (status.data?.status === "failed") {
