@@ -271,7 +271,8 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const close = () => {
     if (objectId !== undefined) {
       const next = new URLSearchParams(params);
-      for (const key of ["client", "partner", "create", "template", "panel", "tab"]) next.delete(key);
+      for (const key of ["client", "partner", "create", "template", "panel", "tab"])
+        next.delete(key);
       const text = next.toString();
       void navigate(`/crm/clients${text ? `?${text}` : ""}`, { replace: true });
       return;

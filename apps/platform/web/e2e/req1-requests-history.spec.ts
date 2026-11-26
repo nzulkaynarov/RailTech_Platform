@@ -110,3 +110,16 @@ for (const width of WIDTHS) {
     );
   });
 }
+
+test("без права на клиентов «По образцу» не предлагается", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loginAndWait(page, "supply@demo.example");
+  await spaGoto(page, "/erp/requests?list=closed");
+  await expect(page.getByText("Всего: 3", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Создать заявку по образцу/ })).toHaveCount(0);
+  await spaGoto(page, `/erp/calc/${encodeURIComponent(CLOSED)}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${CLOSED}` }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Создать по образцу" })).toHaveCount(0);
+});

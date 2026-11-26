@@ -22,7 +22,14 @@ import { Sheet } from "../../../shared/ui/Sheet";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { AddLineForm } from "./AddLineForm";
-import { calcRef, copyPath, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
+import {
+  calcRef,
+  copyPath,
+  readyHintKey,
+  useApplySheet,
+  useErrorText,
+  useStateLabels,
+} from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
@@ -341,11 +348,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 </Button>
               ) : null}
               {canCopy ? (
-              <LinkButton to={copyPath(sheet.number, sheet.request.crm_client_id, mobile)}>
-                {t("sheet.copy")}
-              </LinkButton>
-            ) : null}
-            {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
+                <LinkButton to={copyPath(sheet.number, sheet.request.crm_client_id, mobile)}>
+                  {t("sheet.copy")}
+                </LinkButton>
+              ) : null}
+              {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
               {mobile ? (
                 <Button
                   onClick={() => {
