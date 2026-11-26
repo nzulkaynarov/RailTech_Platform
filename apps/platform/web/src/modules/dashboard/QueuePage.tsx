@@ -55,17 +55,15 @@ function mergeSources(...all: (Sources | undefined)[]): Sources | undefined {
 /**
  * Главная · Мои задачи (SPEC-v3 §7.1, макет «v3 · 1. Dashboard»): заголовок с ролью, датой и числом решений,
  * счётчики-карточки (набор задаёт роль), «Что сделать сейчас». Данные — BFF, опрос 30 с и при фокусе; очередь и карточки
- * считаются по активной роли, если она выбрана (Q-PLT-12-1).
+ * считаются по всему, что делегировано сотруднику.
  */
 export function QueuePage() {
   const { me } = useAuth();
   const { t, i18n } = useTranslation(["modules", "shell"]);
   const format = useFormat();
-  const role = me.active_role ?? undefined;
-  const params = role ? { role } : undefined;
   const poll = usePollQuery();
-  const queue = useGetQueue(params, { query: poll });
-  const cards = useGetQueueCards(params, { query: poll });
+  const queue = useGetQueue(undefined, { query: poll });
+  const cards = useGetQueueCards(undefined, { query: poll });
   // Сколько счётчиков было в прошлый раз: до ответа — столько же карточек-скелетонов той же высоты (UX-1c, S10).
   const cardsCount = useCardsCount(me.id, cards.data?.cards.length);
   // Замещение (СЦ-9): «Вы замещаете {имя} до {дата}» и фильтр «За {имя}»; профиль не открылся — без плашки, очередь та же

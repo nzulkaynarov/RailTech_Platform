@@ -82,7 +82,6 @@ function adminIds(): string[] {
   return DEMO_USERS.filter((u) => {
     const roles = sessionRoles({
       userId: u.id,
-      activeRole: null,
       language: "ru",
       mustChangePassword: false,
     });
@@ -301,9 +300,7 @@ export const ticketsHandlers = [
       );
     }
     const now = new Date().toISOString();
-    const roleName =
-      user.roles.find((r) => r.id === user.active_role)?.name ??
-      user.roles.map((r) => r.name).join(", ");
+    const roleName = user.roles.map((r) => r.name).join(", ");
     const ticket: StoredTicket = {
       seq: state.nextTicket++,
       subject: input.subject,

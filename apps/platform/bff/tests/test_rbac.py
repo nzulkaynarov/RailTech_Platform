@@ -152,26 +152,6 @@ def test_unknown_resource_is_an_error() -> None:
         require("payroll")
 
 
-# --- активная роль — вид -------------------------------------------------------------------------
-
-
-def test_active_role_is_the_view_and_does_not_change_rights() -> None:
-    """Активная роль сужает вид (модули, разделы, поля, очередь), права — по объединению."""
-    owned = roles("SUPPLY", MIXED)
-
-    view = rbac.View.of(rbac.view_roles(owned, 40))
-    union_access = rbac.merge(owned)
-
-    assert view.access == {"crm.leads": "full", "eds.payments": "full"}
-    assert rbac.modules_for(view.access) == ["crm", "eds"]
-    assert view.fields == ("totals_only",)
-    assert "calc_task" not in view.kinds
-    assert "answer_lead" in view.kinds
-    assert rbac.allows(union_access, "erp.calc", "full")  # право снабженца осталось
-    assert rbac.View.of(rbac.view_roles(owned, None)).access == union_access
-    assert rbac.view_roles(owned, 999) == owned  # чужая роль не даёт вид
-
-
 def test_queue_item_belongs_to_the_first_view_role_that_gives_the_kind() -> None:
     view = rbac.View.of(roles("SUPPLY", MIXED, "MANAGER"))
 

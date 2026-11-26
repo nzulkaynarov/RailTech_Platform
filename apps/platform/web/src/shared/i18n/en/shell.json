@@ -91,8 +91,6 @@
   "avatar": {
     "open": "{{initials}} {{role}}: profile and settings, {{name}}",
     "profile": "Profile",
-    "activeRole": "Active role",
-    "allRoles": "All roles",
     "language": "Language",
     "changePassword": "Change password",
     "logout": "Sign out",
@@ -216,9 +214,7 @@
     "title": "This section is not available for your role",
     "text": "The section is outside the rights of your roles. If you need it for work, write to the administrator.",
     "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
-    "write": "Write to the administrator",
-    "titleActiveRole": "This section is not available for the selected role",
-    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator."
+    "write": "Write to the administrator"
   },
   "notFound": {
     "heading": "Page not found",

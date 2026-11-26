@@ -100,13 +100,13 @@ const forbidden = () => failure(403, "FORBIDDEN", "Раздел или дейс�
 
 function allowed(resource: "admin", level: "read" | "full"): boolean {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   return Boolean(me && allows(me.resources, resource, level));
 }
 
 function canReadRules(): boolean {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   return Boolean(
     me &&
     (allows(me.resources, "crm.leads.triage", "read") || allows(me.resources, "admin", "read")),

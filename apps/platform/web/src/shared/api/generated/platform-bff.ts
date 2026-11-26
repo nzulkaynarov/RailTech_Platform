@@ -2644,7 +2644,7 @@ export const getUpdateMeUrl = () => {
 };
 
 /**
- * @summary Язык интерфейса и активная роль
+ * @summary Язык интерфейса
  */
 export const updateMe = async (
   meUpdate: MeUpdate,
@@ -2723,7 +2723,7 @@ export type UpdateMeMutationError = ErrorType<
 export type UpdateMeMutationVariables = { data: MeUpdate };
 
 /**
- * @summary Язык интерфейса и активная роль
+ * @summary Язык интерфейса
  */
 export const useUpdateMe = <
   TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | ValidationFailedResponse>,
@@ -8163,7 +8163,7 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
 };
 
 /**
- * Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+ * Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли).
  * Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
  * его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
  * действие.

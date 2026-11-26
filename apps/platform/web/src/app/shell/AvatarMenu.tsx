@@ -14,10 +14,10 @@ import "../../shared/ui/shell.css";
 import { roleCaption } from "./roleCaption";
 
 /**
- * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), помощь (W15-H7), активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
+ * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), помощь (W15-H7), язык ru/uz/en, смена пароля, выход.
  * Внизу — версия Платформы «Платформа 2026.10.28 · 1a2b3c4» (W-REL): пункт ведёт в «Помощь → О системе»; версия
  * запрашивается при первом открытии меню.
- * Роль и язык сохраняются в `PATCH /me`; ответ — новый `Me` с пересчитанными модулями и разделами.
+ * Язык сохраняется в `PATCH /me`; ответ — новый `Me` с пересчитанными модулями и разделами.
  */
 export function AvatarMenu({
   me,
@@ -58,7 +58,6 @@ export function AvatarMenu({
   });
 
   const caption = roleCaption(me, t);
-  const selectedRole = me.active_role ?? "all";
   /** Выбранный пункт помечен для скринридера словом, а не только подсветкой. */
   const choice = (key: string, label: string, selected: boolean) => ({
     key,
@@ -71,23 +70,6 @@ export function AvatarMenu({
       label
     ),
   });
-  const roleItems: NonNullable<MenuProps["items"]> =
-    me.roles.length > 1
-      ? [
-          {
-            type: "group",
-            key: "roles",
-            label: t("avatar.activeRole"),
-            children: [
-              choice("role:all", t("avatar.allRoles"), selectedRole === "all"),
-              ...me.roles.map((role) =>
-                choice(`role:${role.id}`, role.name, selectedRole === role.id),
-              ),
-            ],
-          },
-        ]
-      : [];
-
   const items: MenuProps["items"] = [
     {
       type: "group",
@@ -109,7 +91,6 @@ export function AvatarMenu({
         { key: "password", label: t("avatar.changePassword") },
       ],
     },
-    ...roleItems,
     {
       type: "group",
       key: "language",
@@ -145,10 +126,7 @@ export function AvatarMenu({
     else if (key === "password") void navigate("/change-password");
     else if (key === "about") void navigate("/help/about");
     else if (key === "logout") logout.mutate();
-    else if (key.startsWith("role:")) {
-      const value = key.slice(5);
-      update.mutate({ data: { active_role: value === "all" ? null : value } });
-    } else if (key.startsWith("lang:")) {
+    else if (key.startsWith("lang:")) {
       update.mutate({ data: { language: key.slice(5) as Language } });
     }
   };
@@ -164,7 +142,7 @@ export function AvatarMenu({
         items,
         onClick,
         selectable: true,
-        selectedKeys: [`role:${selectedRole}`, `lang:${me.language}`],
+        selectedKeys: [`lang:${me.language}`],
         style: { minWidth: 220 },
       }}
     >

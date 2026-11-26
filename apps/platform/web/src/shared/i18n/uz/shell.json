@@ -91,8 +91,6 @@
   "avatar": {
     "open": "{{initials}} {{role}}: profil va sozlamalar, {{name}}",
     "profile": "Profil",
-    "activeRole": "Faol rol",
-    "allRoles": "Barça rollar",
     "language": "Til",
     "changePassword": "Parolni almaştiriş",
     "logout": "Çiqiş",
@@ -216,9 +214,7 @@
     "title": "Bu bölim sizning rolingiz uçun mavjud emas",
     "text": "Bölim sizning rollaringiz huquqlariga kirmaydi. Iş uçun kerak bölsa, administratorga yozing.",
     "textRoles": "Bölim quyidagi rollarga oçiq: {{roles}}. Iş uçun kerak bölsa, administratorga yozing.",
-    "write": "Administratorga yoziş",
-    "titleActiveRole": "Bölim tanlangan rol uçun mavjud emas",
-    "textActiveRole": "Barça bölimlaringizga kirişni qaytariş uçun profil menyusida (avatar) «Barça rollar»ni tanlang. Iş uçun kerak bölsa, administratorga yozing."
+    "write": "Administratorga yoziş"
   },
   "notFound": {
     "heading": "Sahifa topilmadi",

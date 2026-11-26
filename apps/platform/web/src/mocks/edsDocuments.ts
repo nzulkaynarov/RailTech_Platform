@@ -105,7 +105,7 @@ function resources(): Record<string, Level> | null {
   const session = readSession();
   if (!session) return null;
   // Права операций — по объединению ролей, а не по активной роли («вид»), как в BFF.
-  return buildMe({ ...session, activeRole: null })?.resources ?? null;
+  return buildMe(session)?.resources ?? null;
 }
 
 function allows(held: Record<string, Level>, rules: readonly Rule[]): boolean {

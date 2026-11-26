@@ -54,7 +54,7 @@ function held(): { levels: Held; margin: boolean; crmId: number | undefined } | 
   const session = readSession();
   if (!session) return null;
   // Права операций — по объединению ролей, а не по активной роли («вид»), как в BFF.
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   if (!me) return null;
   return {
     levels: me.resources,

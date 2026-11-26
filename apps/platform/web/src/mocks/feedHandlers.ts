@@ -88,12 +88,12 @@ function expired() {
   );
 }
 
-/** Роли «вида»: явный `role` (id), иначе активная роль сессии, иначе все роли сотрудника (контракт BFF 0.3.0). */
+/** Роли «вида»: явный `role` (id) — фильтр, иначе все роли сотрудника. */
 function viewRoles(explicit: string | null): { all: MockRole[]; view: MockRole[] } | undefined {
   const session = readSession();
   const roles = session ? sessionRoles(session) : undefined;
   if (!session || !roles) return undefined;
-  const chosen = roles.all.find((r) => r.id === (explicit ?? session.activeRole));
+  const chosen = roles.all.find((r) => r.id === explicit);
   return { all: roles.all, view: chosen ? [chosen] : roles.all };
 }
 

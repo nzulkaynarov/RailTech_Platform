@@ -7,7 +7,6 @@ import type { MeAccess } from "./meAccess";
 import type { MeResources } from "./meResources";
 import type { ModuleCode } from "./moduleCode";
 import type { RestrictedField } from "./restrictedField";
-import type { RoleId } from "./roleId";
 import type { RoleRef } from "./roleRef";
 import type { WhatsNewDate } from "./whatsNewDate";
 
@@ -28,11 +27,9 @@ export interface Me {
    * @minItems 1
    */
   roles: RoleRef[];
-  /** Id роли, выбранной в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет их по объединению ролей. */
-  active_role?: RoleId | null;
-  /** Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей */
+  /** Модули рейла в порядке показа — по объединению всего, что делегировано сотруднику */
   modules: ModuleCode[];
-  /** Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей) — для активной роли, если задана, иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла. */
+  /** Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей сотрудника). Видимость пункта меню — по секции `menu` того же файла. */
   resources: MeResources;
   /** Поля с ограничением, которые сотруднику видны */
   restricted_fields?: RestrictedField[];

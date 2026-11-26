@@ -89,7 +89,7 @@ interface Caller {
 /** Раздел `company.settings` как у BFF: нет сессии — 401, нет раздела — 403, запись — только `full`. */
 function guard(need: "read" | "full"): Response | Caller {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : undefined;
+  const me = session ? buildMe(session) : undefined;
   if (!me) return fail(401, "SESSION_EXPIRED", "Сессия истекла");
   const level = me.resources["company.settings"];
   if (!level || (need === "full" && level !== "full")) {

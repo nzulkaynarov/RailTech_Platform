@@ -97,10 +97,8 @@ class TicketPage(BaseModel):
 
 
 def author_role_of(data: SessionData) -> str | None:
-    """Роль автора на момент обращения: выбранная («вид»), иначе все роли через запятую."""
-    chosen = [r.name for r in data.roles if r.id == data.active_role]
-    names = chosen or [r.name for r in data.roles]
-    return ", ".join(names) or None
+    """Роли автора на момент обращения через запятую."""
+    return ", ".join(r.name for r in data.roles) or None
 
 
 def to_row(row: dict[str, Any]) -> TicketRow:

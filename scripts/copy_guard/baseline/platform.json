@@ -520,7 +520,6 @@
  "L|platform|apps/platform/web/src/shared/i18n/ru/request.json|request:routing.fallback.no_crm_mapping|ru|promise|сразу",
  "L|platform|apps/platform/web/src/shared/i18n/ru/request.json|request:routing.letter|ru|retelling|затем",
  "L|platform|apps/platform/web/src/shared/i18n/ru/shell.json|shell:changePassword.leadForced|ru|jobtitle|администратор",
- "L|platform|apps/platform/web/src/shared/i18n/ru/shell.json|shell:forbidden.textActiveRole|ru|jobtitle|администратору",
  "L|platform|apps/platform/web/src/shared/i18n/ru/shell.json|shell:forbidden.textRoles|ru|jobtitle|администратору",
  "L|platform|apps/platform/web/src/shared/i18n/ru/shell.json|shell:forbidden.text|ru|jobtitle|администратору",
  "L|platform|apps/platform/web/src/shared/i18n/ru/shell.json|shell:forbidden.write|ru|jobtitle|администратору",

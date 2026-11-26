@@ -1,12 +1,17 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.127.0
+  version: 0.128.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.128.0 (СОТР-2) — ломающее по oasdiff (до 1.0 допустимо): активной роли («вида») больше нет.** Удалены `Me.active_role` и
+    `MeUpdate.active_role`: сотрудник всегда работает со всем, что ему делегировано (`modules`, `resources`, `restricted_fields`,
+    очередь и карточки — по объединению ролей). `PATCH /me` меняет только `language`. Параметр `role` очереди и карточек остаётся
+    фильтром.
 
     **0.125.0 (ЛП-1) — ломающее по oasdiff (до 1.0 допустимо): новое значение `PartnerApplicationSource.lead`** (заявка
     партнёра заведена из карточки лида; очередь «Заявки партнёров» показывает источник «Лид»). Остальное в ЛП-1 аддитивно:
@@ -1043,7 +1048,7 @@ paths:
     patch:
       tags: [me]
       operationId: updateMe
-      summary: Язык интерфейса и активная роль
+      summary: Язык интерфейса
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -2412,7 +2417,7 @@ paths:
       operationId: getQueue
       summary: «Моя очередь» — что сделать сейчас
       description: |
-        Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+        Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли).
         Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
         его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
         действие.
@@ -20540,24 +20545,15 @@ components:
           description: Роли сотрудника (названия — данные CRM)
           items:
             $ref: '#/components/schemas/RoleRef'
-        active_role:
-          description: >-
-            Id роли, выбранной в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь»
-            и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет
-            их по объединению ролей.
-          oneOf:
-            - $ref: '#/components/schemas/RoleId'
-            - type: 'null'
         modules:
           type: array
-          description: Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей
+          description: Модули рейла в порядке показа — по объединению всего, что делегировано сотруднику
           items:
             $ref: '#/components/schemas/ModuleCode'
         resources:
           type: object
           description: >-
-            Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей) — для активной роли, если задана,
-            иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла.
+            Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей сотрудника). Видимость пункта меню — по секции `menu` того же файла.
           additionalProperties:
             $ref: '#/components/schemas/AccessLevel'
         restricted_fields:
@@ -21434,10 +21430,6 @@ components:
       properties:
         language:
           $ref: '#/components/schemas/Language'
-        active_role:
-          oneOf:
-            - $ref: '#/components/schemas/RoleId'
-            - type: 'null'
 
     InvalidationTopic:
       type: string

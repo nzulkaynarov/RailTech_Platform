@@ -51,7 +51,7 @@ export function resetPictures(): void {
 
 function level(resource: "crm.clients" | "erp.stock"): string | undefined {
   const session = readSession();
-  return session ? buildMe({ ...session, activeRole: null })?.resources[resource] : undefined;
+  return session ? buildMe(session)?.resources[resource] : undefined;
 }
 
 /** Как в BFF: смотрит тот, кто видит карточку; правит тот, у кого полный `crm.clients` или `erp.stock`. */

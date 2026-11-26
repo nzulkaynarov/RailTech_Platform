@@ -55,7 +55,7 @@ const ALLOWED_EXTENSIONS = /\.(pdf|png|jpe?g|gif|webp|tiff?|docx?|xlsx?|pptx?)$/
 function guard(resource: Resource, need: Level) {
   const session = readSession();
   if (!session) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-  const level = buildMe({ ...session, activeRole: null })?.resources[resource];
+  const level = buildMe(session)?.resources[resource];
   if (level === "full" || (need === "read" && level === "read")) return null;
   return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
     resource,

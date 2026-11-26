@@ -1,8 +1,8 @@
-"""«Вид» для агрегатов: явный `role` (id), иначе активная роль, иначе все роли (Q-PLT-12-1)."""
+"""«Вид» для агрегатов: явный `role` (id) — фильтр, иначе все роли сотрудника."""
 
 from app.deps import Authed
 from app.errors import PlatformError
-from app.rbac import View, view_roles
+from app.rbac import View
 
 
 def roles_of_view(authed: Authed, role: str | None) -> View:
@@ -16,4 +16,4 @@ def roles_of_view(authed: Authed, role: str | None) -> View:
                 details={"reason": "role_not_assigned", "role": role},
             )
         return View.of(chosen)
-    return View.of(view_roles(authed.roles, authed.data.active_role))
+    return View.of(authed.roles)

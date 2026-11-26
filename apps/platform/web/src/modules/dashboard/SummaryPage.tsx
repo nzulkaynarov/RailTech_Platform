@@ -3,7 +3,6 @@ import { Alert, Button, Card } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { useAuth } from "../../app/auth/useAuth";
 import { usePollQuery } from "../../shared/api/polling";
 import { useGetQueue, useGetQueueCards } from "../../shared/api/generated/platform-bff";
 import type { DueLabel, QueueItem } from "../../shared/api/generated/model";
@@ -26,12 +25,9 @@ function countByDue(items: readonly QueueItem[]) {
 /** Главная · Сводка: счётчики и сроки из очереди; блоков без данных нет (ЕВ-3а). */
 export function SummaryPage() {
   const { t } = useTranslation(["modules"]);
-  const { me } = useAuth();
-  const role = me.active_role ?? undefined;
-  const params = role ? { role } : undefined;
   const poll = usePollQuery();
-  const queue = useGetQueue(params, { query: poll });
-  const cards = useGetQueueCards(params, { query: poll });
+  const queue = useGetQueue(undefined, { query: poll });
+  const cards = useGetQueueCards(undefined, { query: poll });
   const title = t("modules:dashboard.sections.summary");
   useDocumentTitle(title);
 

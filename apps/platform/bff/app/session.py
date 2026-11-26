@@ -92,8 +92,6 @@ class SessionData(BaseModel):
     profile_checked_at: float
     # Настройки сотрудника в рамках сессии (у BFF нет своей базы).
     language: Language = "ru"
-    # Id активной роли («вид», Q-PLT-12-1); None — все роли.
-    active_role: int | None = None
     crm: BackendTokens
     erp_state: ErpState
     erp: BackendTokens | None = None
