@@ -206,18 +206,11 @@ function contractStep(row: ProjectRow): [Kind, string, string] | null {
       "проект не отправлен",
     ];
   }
-  if (c.status === "client_agreed") {
-    return [
-      "issue_contract",
-      `Выставить в ЭДО договор ${c.number} по`,
-      "клиент согласовал редакцию",
-    ];
-  }
-  if (c.status === "issued_at_operator") {
+  if (c.status === "client_agreed" || c.status === "issued_at_operator") {
     return [
       "attach_scan",
-      `Прикрепить скан подписанного договора ${c.number} по`,
-      "договор выставлен в ЭДО",
+      `Отметить подписанным договор ${c.number} по`,
+      "договор ожидает подписания",
     ];
   }
   if (c.status === "rejected") {

@@ -1064,12 +1064,53 @@ export const handlers = [
         if (!contract) return error(404, 'NOT_FOUND');
         if (contract.status !== 'sent' && contract.status !== 'signed_by_company') return error(409, 'CONTRACT_FINALIZED');
         // D2-5: согласие клиента не подписывает договор: «Подписан» ставит скан у сотрудника, клиенту — «Вы согласовали, ждём подписания».
+        if (contract.remark?.state === 'review') return error(409, 'REMARK_OPEN');
         contract.status = 'signed_by_client';
         contract.signed_by_client_at = new Date().toISOString();
+        contract.remark = null;
+        contract.can_download_docx = false;
         return json(contract);
       },
       { action: true },
     ),
+  ),
+  // ДП-1: «Есть замечания» — один ответ (комментарий и, при желании, своя редакция); сотрудники отвечают в Платформе.
+  http.post<IdParams>(
+    `${API}/contracts/:id/remarks`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const contract = byId(db.contracts, params.id);
+        if (!contract) return error(404, 'NOT_FOUND');
+        if (contract.status !== 'sent') return error(409, 'CONTRACT_REMARK_NOT_ALLOWED');
+        if (contract.remark?.state === 'review') return error(409, 'REMARK_OPEN');
+        const body = (await request.json()) as { comment?: string; upload_id?: string };
+        if (!body.comment?.trim()) return error(422, 'COMMENT_REQUIRED');
+        const now = new Date().toISOString();
+        contract.remark = {
+          state: 'review',
+          comment: body.comment.trim(),
+          response: null,
+          file_name: body.upload_id ? (db.uploads.get(body.upload_id) ?? null) : null,
+          created_at: now,
+          answered_at: null,
+        };
+        return json(contract, 201);
+      },
+      { action: true },
+    ),
+  ),
+  http.get<IdParams>(
+    `${API}/contracts/:id/docx`,
+    withSession<IdParams>(({ db, params }) => {
+      const contract = byId(db.contracts, params.id);
+      if (!contract?.can_download_docx) return error(404, 'NOT_FOUND');
+      return new HttpResponse(new Blob(['docx']), {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'Content-Disposition': `attachment; filename="${contract.number}.docx"`,
+        },
+      });
+    }),
   ),
   http.post<IdParams>(
     `${API}/contracts/:id/decline-renewal`,

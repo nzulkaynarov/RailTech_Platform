@@ -311,32 +311,19 @@ def _contract_step(row: RawRow) -> tuple[QueueItemKind, str, str] | None:
             ),
             tr("проект не отправлен", "loyiha yuborilmagan", "the draft has not been sent"),
         )
-    if contract.status == "client_agreed":
-        return (
-            "issue_contract",
-            tr(
-                f"Выставить в ЭДО договор {contract.number} по",
-                f"{contract.number} şartnomani EHTda rasmiylaştiriş:",
-                f"Issue contract {contract.number} in EDI —",
-            ),
-            tr(
-                "клиент согласовал редакцию",
-                "mijoz tahririni kelişdi",
-                "the client agreed to the wording",
-            ),
-        )
-    if contract.status == "issued_at_operator":
+    if contract.status in ("client_agreed", "issued_at_operator"):
+        # ДП-1: согласован — «Ожидает подписания»; сотрудник отмечает подпись сканом или заметкой
         return (
             "attach_scan",
             tr(
-                f"Прикрепить скан подписанного договора {contract.number} по",
-                f"{contract.number} imzolangan şartnoma skanini biriktiriş:",
-                f"Attach the scan of signed contract {contract.number} —",
+                f"Отметить подписанным договор {contract.number} по",
+                f"{contract.number} şartnomani imzolangan deb belgilaş:",
+                f"Mark contract {contract.number} as signed —",
             ),
             tr(
-                "договор выставлен в ЭДО",
-                "şartnoma EHTda rasmiylaştirilgan",
-                "the contract is issued in EDI",
+                "договор ожидает подписания",
+                "şartnoma imzolaş kütmoqda",
+                "the contract awaits signing",
             ),
         )
     if contract.status == "rejected":

@@ -101,6 +101,44 @@ describe('Договоры', () => {
     expect(await screen.findByRole('menuitem', { name: 'Скачать' })).toBeInTheDocument();
   });
 
+  it('«Есть замечания» (ДП-1): одно окно, свою редакцию можно приложить; пока замечания на согласовании — принять редакцию нельзя', async () => {
+    signedIn();
+    window.localStorage.setItem('cabinet.language', 'ru');
+    const user = userEvent.setup({ applyAccept: false });
+    const sent = captureBody('/contracts/402/remarks');
+    renderApp('/contracts');
+    await heading('Договоры');
+    await user.click(await screen.findByRole('button', { name: 'Есть замечания к договору D-2026-0048' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Замечания к договору D-2026-0048' });
+    // без слов не уходит
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить замечания' }));
+    expect(await within(dialog).findByText('Напишите, что изменить.')).toBeInTheDocument();
+    expect(sent.current).toBeUndefined();
+    // не Word и не Excel — отказ на месте
+    await user.upload(within(dialog).getByLabelText('Ваша редакция (необязательно)'), new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+    expect(await within(dialog).findByText('Нужен файл Word (.docx) или Excel (.xlsx).')).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Что изменить'), 'Предоплата 30 %');
+    await user.upload(within(dialog).getByLabelText('Ваша редакция (необязательно)'), new File(['x'], 'our.docx'));
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить замечания' }));
+    await vi.waitFor(() => expect(sent.current).toMatchObject({ comment: 'Предоплата 30 %' }));
+    expect((sent.current as { upload_id?: string }).upload_id).toBeTruthy();
+    const row = await vi.waitFor(() => {
+      const found = card('Договоры', 'D-2026-0048');
+      expect(within(found).getByText('Ваши замечания на согласовании у нас')).toBeInTheDocument();
+      return found;
+    });
+    expect(within(row).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: /Есть замечания/ })).not.toBeInTheDocument();
+  });
+
+  it('узбекский клиент только соглашается: «Izohlarim bor» не предлагается', async () => {
+    signedIn();
+    window.localStorage.setItem('cabinet.language', 'uz');
+    renderApp('/contracts');
+    await screen.findByRole('list', { name: 'Shartnomalar' }).catch(() => undefined);
+    await vi.waitFor(() => expect(screen.queryByRole('button', { name: /Izohlarim bor/ })).not.toBeInTheDocument());
+  });
+
   it('пусто', async () => {
     signedIn('actor', 'empty');
     renderApp('/contracts');

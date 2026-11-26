@@ -657,6 +657,25 @@
         "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
         "restore": "Uzaytirişni qaytariş",
         "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."
+      },
+      "remarks": {
+        "open": "Izohlarim bor",
+        "openNamed": "{{number}} şartnomasi böyiça izohlar",
+        "title": "{{number}} şartnomasiga izohlar",
+        "text": "Nimani özgartiriş kerakligini yozing.",
+        "comment": "Nimani özgartiriş kerak",
+        "file": "Sizning tahriringiz (ixtiyoriy)",
+        "fileHint": "Word yoki Excel, 10 MB gaçha.",
+        "confirm": "Izohlarni yuboriş",
+        "sent": "{{number}} şartnomasi böyiça izohlar yuborildi.",
+        "review": "Izohlaringiz bizda körilyapti",
+        "answered": "Bizning javob: {{text}}",
+        "docx": "Tahrir uçun yuklab oliş (DOCX)",
+        "problem": {
+          "commentMissing": "Nimani özgartiriş kerakligini yozing.",
+          "tooLarge": "Fayl 10 MB dan katta.",
+          "badType": "Word (.docx) yoki Excel (.xlsx) fayli kerak."
+        }
       }
     },
     "invoices": {
@@ -1468,7 +1487,10 @@
     "GENERATING": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining.",
     "SCAN_NOT_EXPECTED": "Hozir skan kutilmayapti.",
     "SCAN_INVALID": "Fayl mos kelmadi: 20 MB gaça PDF yoki rasm kerak.",
-    "RETURN_NOTE_REQUIRED": "Izoh yozing."
+    "RETURN_NOTE_REQUIRED": "Izoh yozing.",
+    "REMARK_OPEN": "Izohlaringiz hali körilmoqda — javobni kütib turing.",
+    "CONTRACT_REMARK_NOT_ALLOWED": "Bu şartnoma böyiça izoh yuborib bölmaydi.",
+    "COMMENT_REQUIRED": "Nimani özgartiriş kerakligini yozing."
   },
   "widgets": {
     "actionRequired": {

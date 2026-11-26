@@ -341,6 +341,7 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractRef,
+  ProjectContractRemark,
   ProjectContractSendBlocker,
   ProjectContractTemplate,
   ProjectContractTerm,
@@ -4282,6 +4283,74 @@ export const getGetEdsProjectResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -4351,6 +4420,7 @@ export const getGetEdsProjectResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getGetEdsProjectResponseProjectContractTemplateMock() },
@@ -4358,6 +4428,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getGetEdsProjectResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -4816,6 +4890,74 @@ export const getCreateEdsProjectContractResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsProjectContractResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -4888,6 +5030,7 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectContractTemplateMock() },
@@ -4895,6 +5038,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getCreateEdsProjectContractResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -5383,6 +5530,74 @@ export const getActEdsProjectContractResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectContractResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -5455,6 +5670,7 @@ export const getActEdsProjectContractResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectContractTemplateMock() },
@@ -5462,6 +5678,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getActEdsProjectContractResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -5947,6 +6167,74 @@ export const getScanEdsProjectContractResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectContractResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectContractResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -6019,6 +6307,7 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectContractTemplateMock() },
@@ -6026,6 +6315,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getScanEdsProjectContractResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -6511,6 +6804,74 @@ export const getRequestEdsProjectSigningResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsProjectSigningResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsProjectSigningResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -6583,6 +6944,7 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectContractTemplateMock() },
@@ -6590,6 +6952,10 @@ export const getRequestEdsProjectSigningResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getRequestEdsProjectSigningResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getRequestEdsProjectSigningResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -7101,6 +7467,74 @@ export const getActEdsProjectActResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectActResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -7170,6 +7604,7 @@ export const getActEdsProjectActResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getActEdsProjectActResponseProjectContractTemplateMock() },
@@ -7177,6 +7612,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getActEdsProjectActResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -7650,6 +8089,74 @@ export const getScanEdsProjectActResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectActResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectActResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -7722,6 +8229,7 @@ export const getScanEdsProjectActResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectContractTemplateMock() },
@@ -7729,6 +8237,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getScanEdsProjectActResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([
@@ -8205,6 +8717,74 @@ export const getMarkEdsProjectDeliveryResponseProjectContractTermMock = (
   ...overrideResponse,
 });
 
+export const getMarkEdsProjectDeliveryResponseProjectContractRemarkMock = (
+  overrideResponse: Partial<ProjectContractRemark> = {},
+): ProjectContractRemark => ({
+  ...{
+    id: faker.number.int(),
+    edition: faker.number.int(),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    author_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    file_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_file: faker.datatype.boolean(),
+    summary: {
+      changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      total: faker.number.int(),
+      comparable: faker.datatype.boolean(),
+    },
+    items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+        ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        segments: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => ({
+          op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+          text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        })),
+      }),
+    ),
+    votes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        user: {
+          id: faker.number.int(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        agree: faker.datatype.boolean(),
+        comment: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      }),
+    ),
+    awaiting: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    deciders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.number.int(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    dispute: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["vote", "decide"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkEdsProjectDeliveryResponseProjectContractSendBlockerMock = (
   overrideResponse: Partial<ProjectContractSendBlocker> = {},
 ): ProjectContractSendBlocker => ({
@@ -8277,6 +8857,7 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
       "revise",
       "mark_issued",
       "attach_scan",
+      "mark_signed",
     ] as const),
     template: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectContractTemplateMock() },
@@ -8284,6 +8865,10 @@ export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
     ]),
     term: faker.helpers.arrayElement([
       { ...getMarkEdsProjectDeliveryResponseProjectContractTermMock() },
+      null,
+    ]),
+    remark: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectContractRemarkMock() },
       null,
     ]),
     send_blocker: faker.helpers.arrayElement([

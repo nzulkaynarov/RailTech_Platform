@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { ProjectContractActionsItem } from "./projectContractActionsItem";
+import type { ProjectContractRemark } from "./projectContractRemark";
 import type { ProjectContractSendBlocker } from "./projectContractSendBlocker";
 import type { ProjectContractSendBlockerCode } from "./projectContractSendBlockerCode";
 import type { ProjectContractStatus } from "./projectContractStatus";
@@ -38,6 +39,8 @@ export interface ProjectContract {
   template?: ProjectContractTemplate | null;
   /** ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
   term?: ProjectContractTerm | null;
+  /** ДП-1: замечания контрагента на согласовании — комментарий, файл, что изменилось, ответы ответственных, что можно этому сотруднику; null — замечаний нет. Считает ERP */
+  remark?: ProjectContractRemark | null;
   /** Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
   send_blocker?: ProjectContractSendBlocker | null;
   history: ProjectJournalEntry[];

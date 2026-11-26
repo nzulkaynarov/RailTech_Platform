@@ -79,10 +79,14 @@ def read_file(field) -> tuple[bytes, str, str]:
 
 
 def _holders() -> list:
-    from core.tenant import own_company_id
-    from crm.services.contract_templates import _holders_to_notify
+    """Все, кто отвечает за договор: держатели «Права» и подписи (то же правило, что `contract_remarks.reviewers`, ДП-1)."""
+    from crm.services import contract_remarks as remarks
 
-    return list(_holders_to_notify(own_company_id()))
+    people: dict = {}
+    for permission in remarks.REVIEW_PERMISSIONS:
+        for holder in remarks._holders(permission):
+            people.setdefault(holder.pk, holder)
+    return list(people.values())
 
 
 def four_eyes_on() -> bool:
@@ -115,12 +119,13 @@ def _is_requester(app, user) -> bool:
 
 
 def _directors(holders: list) -> list:
-    """Директор — тот, кто подписывает договоры от компании (право `contract.sign`): на разногласии решает он.
+    """Директор — тот, чей голос решает при разногласии: держатель права подписи (`contract_remarks.DECIDE_PERMISSION`).
 
-    Нет такого среди держателей «Права» — решающими считаются все они (иначе разногласие некому разрешить)."""
-    from crm.services.contract_flow import may
+    Нет такого среди ответственных — решающими считаются все они (иначе разногласие некому разрешить)."""
+    from crm.services import contract_remarks as remarks
 
-    directors = [h for h in holders if may(h, "contract.sign")]
+    sign_ids = {u.pk for u in remarks._holders(remarks.DECIDE_PERMISSION)}
+    directors = [h for h in holders if h.pk in sign_ids]
     return directors or list(holders)
 
 
@@ -171,11 +176,16 @@ def _resolve(app) -> str:
     return "approve" if needed <= approved else ""
 
 
-def decision_state(app, viewer) -> tuple[bool, bool]:
-    """(может решить, нужно подтверждение самостоятельного решения) — по правилу компании и составу держателей."""
+def _may_vote(user) -> bool:
+    """Голос у тех, кто отвечает за договор (держатели «Права» и подписи); администратор — всегда."""
     from crm.services.contract_templates import is_approver
 
-    holder = viewer is not None and is_approver(viewer)
+    return is_approver(user) or user.pk in {h.pk for h in _holders()}
+
+
+def decision_state(app, viewer) -> tuple[bool, bool]:
+    """(может решить, нужно подтверждение самостоятельного решения) — по правилу компании и составу держателей."""
+    holder = viewer is not None and _may_vote(viewer)
     if not holder or app.contract_approval != PartnerContractApproval.REQUESTED:
         return bool(holder), False
     if _disagreement(app) and viewer.pk not in {d.pk for d in _directors(_holders())}:
@@ -423,9 +433,7 @@ def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
 
     ПК-1: договор согласован, когда согласились все ответственные; при разногласии решает директор (его голос после
     возражения). По каждому пункту решений нет — один голос и одно слово."""
-    from crm.services.contract_templates import is_approver
-
-    if not is_approver(user):
+    if not _may_vote(user):
         raise AccessError("CONTRACT_DECISION_FORBIDDEN", 403)
     app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
     if app is None:

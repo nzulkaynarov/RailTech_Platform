@@ -6,6 +6,7 @@ import type {
   ProjectContract,
   ProjectContractActionsItem,
   ProjectContractTemplate,
+  ProjectContractRemark,
   ProjectContractTerm,
   ProjectContractSendBlocker,
   ProjectDeliveryAction,
@@ -58,6 +59,10 @@ interface MutableContract {
   term_declined_by?: "company" | "client";
   /** ДС-1: продлён соглашением — новый срок до этой даты. */
   term_until?: string;
+  /** ДП-1: замечания контрагента на согласовании (разбор, ответы); права этого сотрудника — `remarkActions`. */
+  remark?: Omit<ProjectContractRemark, "actions" | "awaiting" | "dispute">;
+  /** ДП-1: кто ещё должен ответить (имена из мира мока) */
+  remark_awaiting?: ProjectPerson[];
 }
 
 export interface MutableContractTemplate {
@@ -283,9 +288,124 @@ function seed(): ProjectState[] {
           "contract.issued_external",
           "contract",
           "ДОГ-2026/106",
-          "Договор выставлен в ЭДО",
+          "Договор выставлен на подписание",
           "2026-10-27T11:00:00+05:00",
           "Демо Бухгалтеров",
+        ),
+      ],
+    },
+    {
+      // ДП-1: контрагент прислал замечания и свою редакцию (DOCX); ответили двое, мнения разошлись — решает директор
+      id: 112,
+      year: 2026,
+      title: "Упаковочная линия",
+      client: "ООО «Восток Пак»",
+      created_at: "2026-11-25T09:00:00+05:00",
+      manager: OTHER_MANAGER,
+      total: money("412800000.00"),
+      quote: {
+        id: 1230,
+        number: "КП-2026/122",
+        version: 1,
+        outgoing: "ИСХ-088/26",
+        valid_until: "2026-12-05",
+      },
+      contract: {
+        id: 330,
+        number: "ДОГ-2026/112",
+        status: "project",
+        sent_to_client: true,
+        total: money("412800000.00"),
+        created_at: "2026-11-25T11:40:00+05:00",
+        client_agreed_at: null,
+        signed_at: null,
+        has_scan: false,
+        remark: {
+          id: 1,
+          edition: 1,
+          received_at: "2026-11-26T10:02:00+05:00",
+          author_name: "Ш. Юсупов",
+          comment:
+            "Бюджет года закрыт, 50 % сразу не проведём. Склад переехал в Чирчик. Пусконаладку просим включить в цену.",
+          file_name: "SC-2026-0012 — редакция контрагента.docx",
+          has_file: true,
+          summary: {
+            changed: ["2.2", "3.1"],
+            added: ["3.3"],
+            removed: ["5.2"],
+            total: 4,
+            comparable: true,
+          },
+          items: [
+            {
+              point: "2.2",
+              kind: "changed",
+              ours: "Покупатель вносит предоплату 50 % в течение 5 банковских дней с даты подписания договора.",
+              theirs:
+                "Покупатель вносит предоплату 30 % в течение 5 банковских дней с даты подписания договора.",
+              segments: [
+                { op: "equal", text: "Покупатель вносит предоплату " },
+                { op: "del", text: "50" },
+                { op: "ins", text: "30" },
+                { op: "equal", text: " % в течение 5 банковских дней с даты подписания договора." },
+              ],
+            },
+            {
+              point: "3.1",
+              kind: "changed",
+              ours: "Место поставки — склад Покупателя, г. Ташкент.",
+              theirs: "Место поставки — склад Покупателя, г. Чирчик, ул. Заводская, 7.",
+              segments: [
+                { op: "equal", text: "Место поставки — склад Покупателя, " },
+                { op: "del", text: "г. Ташкент" },
+                { op: "ins", text: "г. Чирчик, ул. Заводская, 7" },
+                { op: "equal", text: "." },
+              ],
+            },
+            {
+              point: "3.3",
+              kind: "added",
+              ours: "",
+              theirs:
+                "Поставщик за свой счёт выполняет пусконаладку оборудования на объекте Покупателя.",
+              segments: [],
+            },
+            {
+              point: "5.2",
+              kind: "removed",
+              ours: "За просрочку оплаты Покупатель уплачивает пеню 0,1 % от суммы долга за каждый день, но не более 10 %.",
+              theirs: "",
+              segments: [],
+            },
+          ],
+          votes: [
+            {
+              user: { id: 11, name: "Т. Рахимов" },
+              agree: true,
+              comment: "Чирчик и 15 дней на остаток нас устраивают.",
+              at: "2026-11-26T10:40:00+05:00",
+            },
+            {
+              user: { id: 12, name: "Д. Назаров" },
+              agree: false,
+              comment: "Пеню в п. 5.2 оставляем. Предоплата — не меньше 40 %.",
+              at: "2026-11-26T11:15:00+05:00",
+            },
+          ],
+          deciders: [{ id: 12, name: "Д. Назаров" }],
+        },
+        remark_awaiting: [],
+      },
+      invoices: [],
+      act: null,
+      journal: [
+        entry(
+          "contract.remark_received",
+          "contract",
+          "ДОГ-2026/112",
+          "Получены замечания контрагента",
+          "2026-11-26T10:02:00+05:00",
+          null,
         ),
       ],
     },
@@ -746,6 +866,19 @@ export function sendBlockerOf(c: MutableContract): ProjectContractSendBlocker | 
   return tpl.signed_ours_at === null ? templateBlocker("CONTRACT_NEEDS_OUR_SIGNATURE") : null;
 }
 
+/** ДП-1: замечания контрагента как их отдаёт ERP: «ждём ответ» и разногласие считаются из ответов, действия — по правам. */
+export function remarkOf(c: MutableContract, writer: boolean): ProjectContractRemark | null {
+  if (!c.remark || c.status !== "project") return null;
+  const awaiting = c.remark_awaiting ?? [];
+  const dispute = awaiting.length === 0 && c.remark.votes.some((v) => !v.agree);
+  return {
+    ...c.remark,
+    awaiting,
+    dispute,
+    actions: writer ? (dispute ? ["vote", "decide"] : ["vote"]) : [],
+  };
+}
+
 /** Действия по договору, доступные сейчас: допустимо из статуса (таблица ERP) и разрешено правами (`full` — директор, бухгалтер). */
 export function contractActions(c: MutableContract, writer: boolean): ProjectContractActionsItem[] {
   if (!writer) return [];
@@ -754,9 +887,8 @@ export function contractActions(c: MutableContract, writer: boolean): ProjectCon
       if (c.sent_to_client) return ["client_agreed", "reject"];
       return sendBlockerOf(c) ? [] : ["send_to_client"];
     case "client_agreed":
-      return ["mark_issued", "reject"];
     case "issued_at_operator":
-      return ["attach_scan", "reject"];
+      return ["reject", "attach_scan", "mark_signed"]; // «Ожидает подписания»: скан или заметка (ДП-1)
     case "rejected":
       return ["revise"];
     default:
@@ -934,6 +1066,7 @@ export function toCard(
           actions: contractActions(c, writer),
           template: templateOf(c, writer, approver),
           term: termOf(c, writer),
+          remark: remarkOf(c, writer),
           send_blocker: sendBlockerOf(c),
           history: historyOf(p, "contract"),
         }

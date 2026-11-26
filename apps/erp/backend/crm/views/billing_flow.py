@@ -8,7 +8,7 @@
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from crm.serializers.projects import (
@@ -17,6 +17,8 @@ from crm.serializers.projects import (
     ActScanInSerializer,
     ContractConflictSerializer,
     ContractFlowSerializer,
+    ContractRemarkDecideInSerializer,
+    ContractRemarkVoteInSerializer,
     ContractScanInSerializer,
     ContractTransitionInSerializer,
 )
@@ -32,12 +34,17 @@ _HTTP = {
     # ДОК-10: что мешает отправить договор по шаблону клиенту
     "CONTRACT_DEVIATION_PENDING": 409,
     "CONTRACT_NEEDS_OUR_SIGNATURE": 409,
+    # ДП-1: замечания контрагента
+    "REMARK_NOT_OPEN": 409,
+    "REMARK_NO_DISPUTE": 409,
+    "REMARK_FORBIDDEN": 403,
+    "REMARK_DECISION_FORBIDDEN": 403,
 }
 _ERRORS = {
     400: OpenApiResponse(
         description=(
             "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / "
-            "COUNTERPARTY_PERSON_REQUIRED"
+            "COUNTERPARTY_PERSON_REQUIRED / NOTE_REQUIRED / COMMENT_REQUIRED"
         )
     ),
     403: OpenApiResponse(description="MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED"),
@@ -143,13 +150,75 @@ class ContractFlowMixin:
         return self._transition(request, pk, "mark_issued")
 
     @extend_schema(
-        summary="Отметить: договор подписан — со сканом или заметкой (PENDING_MANAGER, ISSUED_EXTERNAL → SIGNED)",
+        summary="Отметить: договор подписан, заметкой без скана (PENDING_MANAGER → SIGNED), ДП-1",
         description=(
-            "Скан — PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. "
-            "Скан не обязателен: вместо него можно передать `note` (JSON). Договор становится «Подписан», срок "
-            "считается в этот момент, сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату."
+            "Заметка обязательна: где и когда подписан, где оригинал. Срок договора считается в момент отметки; "
+            "сделка уходит в `CLOSED_WON`, как при скане."
         ),
-        request={"multipart/form-data": ContractScanInSerializer, "application/json": ContractScanInSerializer},
+        request=ContractTransitionInSerializer,
+        responses={200: ContractFlowSerializer, **_ERRORS},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="mark-signed")
+    def mark_signed(self, request, pk=None):
+        return self._transition(request, pk, "mark_signed")
+
+    @extend_schema(
+        summary="Ответ ответственного на замечания контрагента: «Согласен» / «Не согласен» (ДП-1)",
+        request=ContractRemarkVoteInSerializer,
+        responses={200: ContractFlowSerializer, **_ERRORS},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="remark-vote")
+    def remark_vote(self, request, pk=None):
+        from crm.services import contract_remarks
+
+        contract = self.get_object()
+        if not is_object_body(request):
+            return invalid_body_response()
+        body = ContractRemarkVoteInSerializer(data=request.data)
+        if not body.is_valid():
+            return Response({"detail": "VALIDATION_FAILED"}, status=400)
+        updated, error = contract_remarks.vote(
+            contract.id,
+            request.user,
+            agree=body.validated_data["agree"],
+            comment=body.validated_data.get("comment", ""),
+        )
+        if error:
+            return _fail(error)
+        return Response(ContractFlowSerializer(updated, context=self.get_serializer_context()).data)
+
+    @extend_schema(
+        summary="Решение директора при разногласии по замечаниям: принять редакцию контрагента или ответить своей (ДП-1)",
+        request=ContractRemarkDecideInSerializer,
+        responses={200: ContractFlowSerializer, **_ERRORS},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="remark-decide")
+    def remark_decide(self, request, pk=None):
+        from crm.services import contract_remarks
+
+        contract = self.get_object()
+        if not is_object_body(request):
+            return invalid_body_response()
+        body = ContractRemarkDecideInSerializer(data=request.data)
+        if not body.is_valid():
+            return Response({"detail": "VALIDATION_FAILED"}, status=400)
+        updated, error = contract_remarks.decide(
+            contract.id, request.user, accept=body.validated_data["accept"], text=body.validated_data.get("text", "")
+        )
+        if error:
+            return _fail(error)
+        return Response(ContractFlowSerializer(updated, context=self.get_serializer_context()).data)
+
+    @extend_schema(
+        summary="Прикрепить скан подписанного договора (PENDING_MANAGER или ISSUED_EXTERNAL → SIGNED)",
+        description=(
+            "PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор "
+            "становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату."
+        ),
+        request={"multipart/form-data": ContractScanInSerializer},
         responses={200: ContractFlowSerializer, **_ERRORS},
         tags=["CRM"],
     )
@@ -157,7 +226,7 @@ class ContractFlowMixin:
         detail=True,
         methods=["post"],
         url_path="attach-scan",
-        parser_classes=[MultiPartParser, FormParser, JSONParser],
+        parser_classes=[MultiPartParser, FormParser],
     )
     def attach_scan(self, request, pk=None):
         return self._transition(request, pk, "attach_scan", with_file=True)

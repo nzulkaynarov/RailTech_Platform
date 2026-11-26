@@ -117,11 +117,27 @@ TRANSITIONS = {
             S.SIGNED,
             "contract.sign",
             "contract.scan_attached",
-            "Договор отмечен подписанным",
+            "Прикреплён скан подписанного договора",
             needs_file=True,
+        ),
+        # ДП-1: «Отметить: подписан» заметкой, без скана (владелец 2026-11-25: скан ИЛИ заметка).
+        Transition(
+            "mark_signed",
+            frozenset({S.PENDING_MANAGER, S.ISSUED_EXTERNAL}),
+            S.SIGNED,
+            "contract.sign",
+            "contract.marked_signed",
+            "Договор отмечен подписанным",
         ),
     )
 }
+
+
+#: ДП-1: «выставлен у оператора» больше не шаг пути (после согласования сразу «Ожидает подписания»); действие осталось
+#: в таблице для прежних вызовов и договоров в этом статусе, но сотруднику не предлагается.
+RETIRED_ACTIONS = frozenset({"mark_issued"})
+#: Переходы в «Подписан» (скан или заметка): срок и событие «подписан» — одним и тем же крючком.
+SIGNING_ACTIONS = frozenset({"attach_scan", "mark_signed"})
 
 
 def _status_code(contract) -> Optional[str]:
@@ -145,7 +161,9 @@ def allowed_actions(contract, user) -> list:
     """
     code = _status_code(contract)
     actions = [
-        t.action for t in TRANSITIONS.values() if code in t.sources and may(user, t.permission) and is_staff(user)
+        t.action
+        for t in TRANSITIONS.values()
+        if code in t.sources and may(user, t.permission) and is_staff(user) and t.action not in RETIRED_ACTIONS
     ]
     # Х-1 и ДОК-10: «Отправить клиенту» не предлагается, пока отправка ответит 409 (причина — `send_blocker`).
     if "send_to_client" in actions and send_blocker(contract) is not None:
@@ -348,12 +366,12 @@ def apply_transition(
     note = (note or "").strip()
     if transition.needs_reason and not reason:
         return None, "REASON_REQUIRED"
+    if action == "mark_signed" and not note:
+        return None, "NOTE_REQUIRED"
     if transition.needs_file:
-        # ПК-1: «Подписан» — скан ИЛИ заметка (скан не обязателен); заметка без скана — слово менеджера в журнале
-        if scan is not None or not note:
-            error = _check_scan(scan)
-            if error:
-                return None, error
+        error = _check_scan(scan)
+        if error:
+            return None, error
     on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
     if error:
         return None, error
@@ -378,8 +396,8 @@ def apply_transition(
             contract.manager_signer = None
             fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
             fields += _drop_company_stamp(contract)
-        elif action == "attach_scan":
-            if scan is not None:
+        elif action in SIGNING_ACTIONS:
+            if action == "attach_scan":
                 contract.signed_file = scan
                 fields.append("signed_file")
             contract.manager_signed_at = now
@@ -392,11 +410,11 @@ def apply_transition(
     _publish(contract, actor, reason=reason)
     if action == "send_to_client" and not was_sent:
         _notify_sent(contract)
-    if action == "attach_scan":
+    if action in SIGNING_ACTIONS:
         from .contract_term import apply_at_signing
 
         # ДС-1: срок и последний день отказа из правила, до события «подписан». Срок считается в момент отметки
-        # «подписан» (скан или заметка — ПК-1): крючок один, другого места нет.
+        # «подписан» — скан (`attach_scan`) или заметка (`mark_signed`, ДП-1): крючок один, другого места нет.
         apply_at_signing(contract)
         events.publish_contract_signed(contract, by="both", actor=events.build_actor(actor) if actor else None)
         _after_signed(contract)

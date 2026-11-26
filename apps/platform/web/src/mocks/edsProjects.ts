@@ -133,6 +133,9 @@ const TRANSITIONS: Record<
     | "restore_renewal"
     | "renew"
     | "send_new_edition"
+    | "mark_signed"
+    | "remark_vote"
+    | "remark_decide"
   >,
   { from: string[]; to: string; code: string; text: string }
 > = {
@@ -166,13 +169,118 @@ const TRANSITIONS: Record<
     code: "contract.issued_external",
     text: "Договор выставлен в ЭДО",
   },
-  attach_scan: {
-    from: ["client_agreed", "issued_at_operator"],
-    to: "signed",
-    code: "contract.scan_attached",
-    text: "Договор отмечен подписанным",
-  },
 };
+
+/** Подписан (скан или заметка): ERP закрывает сделку как выигранную и создаёт черновик счёта на предоплату (D2-4 его выставит). */
+function signed(
+  p: ProjectState,
+  ok: { writer: boolean; marker: boolean; approver: boolean },
+  code: string,
+  text: string,
+  note: string,
+  hasScan = false,
+): Response {
+  const c = p.contract;
+  if (!c) return notFound();
+  const draft = {
+    id: 5000 + p.id,
+    number: `СЧ-${String(p.year)}/${String(p.id).padStart(3, "0")}`,
+    status: "to_issue" as const,
+    total: p.total,
+    paid: { amount: "0.00", currency: "UZS" },
+    balance_due: p.total,
+    issued_at: null,
+    due_date: null,
+    has_pdf: false,
+  };
+  const next = logged(
+    {
+      ...p,
+      invoices: p.invoices.length > 0 ? p.invoices : [draft],
+      contract: { ...c, status: "signed", signed_at: now(), has_scan: hasScan },
+    },
+    code,
+    "contract",
+    c.number,
+    text,
+    note,
+  );
+  writeProject(next);
+  return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
+}
+
+/** ДП-1: ответ «Согласен» / «Не согласен» и решение директора; все согласны — редакция контрагента принята. */
+function remarkAnswer(
+  p: ProjectState,
+  body: ProjectContractActionIn,
+  ok: { writer: boolean; marker: boolean; approver: boolean },
+): Response {
+  const c = p.contract;
+  const remark = c?.remark;
+  if (!c || !remark || c.status !== "project") {
+    return conflict("remark_not_open", "Замечаний на согласовании нет.");
+  }
+  if (body.action === "remark_vote") {
+    if (body.approve === false && !body.text?.trim()) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
+        fields: ["text"],
+      });
+    }
+    const me = { id: 1, name: "Вы" };
+    const votes = [
+      ...remark.votes.filter((v) => v.user.id !== me.id),
+      { user: me, agree: body.approve === true, comment: (body.text ?? "").trim(), at: now() },
+    ];
+    const awaiting = (c.remark_awaiting ?? []).filter((person) => person.id !== me.id);
+    const accepted = awaiting.length === 0 && votes.every((v) => v.agree);
+    const contract: typeof c = accepted
+      ? {
+          ...c,
+          status: "client_agreed",
+          remark: undefined,
+          remark_awaiting: undefined,
+          client_agreed_at: now(),
+        }
+      : { ...c, remark: { ...remark, votes }, remark_awaiting: awaiting };
+    const next = logged(
+      { ...p, contract },
+      accepted ? "contract.remark_accepted" : "contract.remark_voted",
+      "contract",
+      c.number,
+      accepted ? "Принята редакция контрагента" : "Ответ по замечаниям контрагента",
+      (body.text ?? "").trim(),
+    );
+    writeProject(next);
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
+  }
+  const dispute = (c.remark_awaiting ?? []).length === 0 && remark.votes.some((v) => !v.agree);
+  if (!dispute) return conflict("remark_no_dispute", "Разногласия нет: решать нечего.");
+  if (body.approve === false && !body.text?.trim()) {
+    return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
+      fields: ["text"],
+    });
+  }
+  const accepted = body.approve === true;
+  const contract: typeof c = accepted
+    ? {
+        ...c,
+        status: "client_agreed",
+        remark: undefined,
+        remark_awaiting: undefined,
+        client_agreed_at: now(),
+      }
+    : { ...c, remark: undefined, remark_awaiting: undefined };
+  const next = logged(
+    { ...p, contract },
+    accepted ? "contract.remark_accepted" : "contract.remark_countered",
+    "contract",
+    c.number,
+    accepted ? "Принята редакция контрагента" : "Ответ контрагенту: наша редакция",
+    (body.text ?? "").trim(),
+  );
+  writeProject(next);
+  return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
+}
 
 /** ДС-1: отказ от продления и продление соглашением — по факту подписанного договора. */
 function termAction(
@@ -481,7 +589,9 @@ export const edsProjectsHandlers = [
     const p = findProject(refOf(request));
     if (!p?.contract) return notFound();
     const body = (await request.json()) as ProjectContractActionIn;
-    if (!ok.writer && !(body.action === "decide_deviation" && ok.approver)) {
+    // ДП-1: ответ на замечания даёт и сотрудник с «Проекты» — чтение (кто вправе, решает ERP)
+    const answers = body.action === "remark_vote" || body.action === "remark_decide";
+    if (!ok.writer && !(body.action === "decide_deviation" && ok.approver) && !answers) {
       return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
         resource: "eds.projects",
         need: "full",
@@ -504,6 +614,26 @@ export const edsProjectsHandlers = [
       body.action === "decide_deviation"
     ) {
       return templateAction(p, body, ok);
+    }
+    if (body.action === "mark_signed") {
+      if (!body.note?.trim()) {
+        return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
+          fields: ["note"],
+        });
+      }
+      if (stateOf(p) !== "client_agreed" && stateOf(p) !== "issued_at_operator") {
+        return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
+      }
+      return signed(
+        p,
+        ok,
+        "contract.marked_signed",
+        "Договор отмечен подписанным",
+        body.note.trim(),
+      );
+    }
+    if (body.action === "remark_vote" || body.action === "remark_decide") {
+      return remarkAnswer(p, body, ok);
     }
     if (
       body.action === "decline_renewal" ||
@@ -581,38 +711,19 @@ export const edsProjectsHandlers = [
     if (ok.error) return ok.error;
     const p = findProject(refOf(request));
     if (!p?.contract) return notFound();
-    if (stateOf(p) !== "issued_at_operator") {
+    if (stateOf(p) !== "client_agreed" && stateOf(p) !== "issued_at_operator") {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
     }
     const verdict = await scanVerdict(request.clone());
     if (verdict !== "ok") return scanFailure(verdict);
-    const c = p.contract;
-    const moment = now();
-    // Подписан: ERP закрывает сделку как выигранную и создаёт черновик счёта на предоплату (D2-4 его выставит).
-    const draft = {
-      id: 5000 + p.id,
-      number: `СЧ-${String(p.year)}/${String(p.id).padStart(3, "0")}`,
-      status: "to_issue" as const,
-      total: p.total,
-      paid: { amount: "0.00", currency: "UZS" },
-      balance_due: p.total,
-      issued_at: null,
-      due_date: null,
-      has_pdf: false,
-    };
-    const next = logged(
-      {
-        ...p,
-        invoices: p.invoices.length > 0 ? p.invoices : [draft],
-        contract: { ...c, status: "signed", signed_at: moment, has_scan: true },
-      },
+    return signed(
+      p,
+      ok,
       "contract.scan_attached",
-      "contract",
-      c.number,
       "Прикреплён скан подписанного договора",
+      "",
+      true,
     );
-    writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer, ok.marker, ok.approver));
   }),
 
   // --- акт --------------------------------------------------------------------------------------------------

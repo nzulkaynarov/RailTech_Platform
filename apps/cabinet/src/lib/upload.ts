@@ -12,3 +12,13 @@ export function scanProblem(file: Pick<File, 'type' | 'name' | 'size'>): UploadP
   if (file.size > MAX_UPLOAD_BYTES) return 'tooLarge';
   return isScanFile(file) ? null : 'badType';
 }
+
+/** Своя редакция договора к замечаниям (ДП-1): Word или Excel до 10 МБ. */
+export function isEditionFile(file: Pick<File, 'name'>): boolean {
+  return /\.(docx|xlsx)$/i.test(file.name);
+}
+
+export function editionProblem(file: Pick<File, 'name' | 'size'>): UploadProblem | null {
+  if (file.size > MAX_UPLOAD_BYTES) return 'tooLarge';
+  return isEditionFile(file) ? null : 'badType';
+}

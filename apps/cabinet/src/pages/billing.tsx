@@ -4,13 +4,14 @@ import { AlertTriangle, CalendarCheck, CalendarX2, CheckCircle2, ClipboardCheck,
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useRestoreContractRenewal, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useDeclineContractRenewal, useInvoices, useRestoreContractRenewal, useReturnAct, useSignContract, useSubmitContractRemarks, useSubmitPaymentProof } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { DateField } from '@/components/DateField';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentMenuItem } from '@/components/DocumentButton';
+import { downloadContractDocx } from '@/lib/download';
 import { EmptyState } from '@/components/EmptyState';
 import { FileField } from '@/components/FileField';
 import { PageHeader } from '@/components/PageHeader';
@@ -32,7 +33,7 @@ import { businessToday, currencyLabel, formatDate, formatDateTime, formatMoney, 
 import { invoiceOpen, invoiceView, parseAmount, PROOF_COMMENT_MAX } from '@/lib/invoice';
 import { dealContext } from '@/lib/messages';
 import { contractAwaitsClient } from '@/lib/status';
-import { scanProblem, type UploadProblem } from '@/lib/upload';
+import { editionProblem, scanProblem, type UploadProblem } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
 
 /**
@@ -70,12 +71,13 @@ function ContractTermLine({ term }: { term: Contract['term'] }) {
 }
 
 export function ContractsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const contracts = useContracts();
   const sign = useSignContract();
   const decline = useDeclineContractRenewal();
   const restore = useRestoreContractRenewal();
   const [target, setTarget] = useState<Contract | null>(null);
+  const [remarking, setRemarking] = useState<Contract | null>(null);
   const [declining, setDeclining] = useState<Contract | null>(null);
   const awaiting = (contracts.data ?? []).filter((item) => contractAwaitsClient(item.status)).length;
 
@@ -117,6 +119,13 @@ export function ContractsPage() {
                 cell: (row) => (
                   <div className="flex flex-col items-start gap-1">
                     <StatusBadge entity="contract" code={row.status} />
+                    {row.remark ? (
+                      <span className="max-w-56 text-xs whitespace-normal text-muted-foreground">
+                        {row.remark.state === 'review'
+                          ? t('pages.contracts.remarks.review')
+                          : t('pages.contracts.remarks.answered', { text: row.remark.response ?? '' })}
+                      </span>
+                    ) : null}
                     {row.status === 'signed_by_client' ? (
                       <span className="max-w-48 text-xs whitespace-normal text-muted-foreground">{t('pages.contracts.willBeSent')}</span>
                     ) : null}
@@ -139,7 +148,14 @@ export function ContractsPage() {
               header: t('common.actions'),
               cell: (row) => (
                 <>
-                  {contractAwaitsClient(row.status) ? (
+                  {contractAwaitsClient(row.status) && row.remark?.state !== 'review' && !i18n.language.startsWith('uz') ? (
+                    <CanAct>
+                      <Button size="sm" variant="outline" onClick={() => setRemarking(row)} aria-label={t('pages.contracts.remarks.openNamed', { number: row.number })}>
+                        {t('pages.contracts.remarks.open')}
+                      </Button>
+                    </CanAct>
+                  ) : null}
+                  {contractAwaitsClient(row.status) && row.remark?.state !== 'review' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget(row)} aria-label={t('pages.contracts.signNamed', { number: row.number })}>
                         <PenLine aria-hidden="true" />
@@ -149,6 +165,11 @@ export function ContractsPage() {
                   ) : null}
                   <RowMenu name={row.number}>
                     <RowDocumentItem documentId={row.document_id} number={row.number} />
+                    {row.can_download_docx ? (
+                      <RowMenuAction icon={Download} onSelect={() => void downloadContractDocx(row.id, `${row.number}.docx`)}>
+                        {t('pages.contracts.remarks.docx')}
+                      </RowMenuAction>
+                    ) : null}
                     {row.term?.can_decline ? (
                       <CanAct>
                         <RowMenuAction icon={CalendarX2} onSelect={() => setDeclining(row)}>
@@ -178,6 +199,7 @@ export function ContractsPage() {
           />
         </>
       )}
+      <ContractRemarksDialog contract={remarking} onClose={() => setRemarking(null)} />
       <ActionDialog
         open={declining !== null}
         onOpenChange={(open) => {
@@ -227,6 +249,72 @@ export function ContractsPage() {
         }
       />
     </>
+  );
+}
+
+/** «Есть замечания» (ДП-1): одно окно — что изменить и, при желании, своя редакция (Word или Excel); файл — вложение. */
+function ContractRemarksDialog({ contract, onClose }: { contract: Contract | null; onClose: () => void }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const submit = useSubmitContractRemarks();
+  const [comment, setComment] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [problem, setProblem] = useState<UploadProblem | 'commentMissing' | null>(null);
+
+  const close = () => {
+    setComment('');
+    setFile(null);
+    setProblem(null);
+    submit.reset();
+    onClose();
+  };
+  const choose = (picked: File | null) => {
+    submit.reset();
+    const found = picked ? editionProblem(picked) : null;
+    setProblem(found);
+    setFile(picked && !found ? picked : null);
+  };
+  const send = () => {
+    if (!contract) return;
+    if (!comment.trim()) return setProblem('commentMissing');
+    setProblem(null);
+    submit.mutate(
+      { id: contract.id, comment: comment.trim(), file },
+      {
+        onSuccess: () => {
+          toast.success(t('pages.contracts.remarks.sent', { number: contract.number }));
+          close();
+        },
+      },
+    );
+  };
+
+  return (
+    <ActionDialog
+      open={contract !== null}
+      onOpenChange={(open) => !open && close()}
+      title={t('pages.contracts.remarks.title', { number: contract?.number ?? '' })}
+      description={t('pages.contracts.remarks.text')}
+      confirmLabel={t('pages.contracts.remarks.confirm')}
+      pending={submit.isPending}
+      error={submit.error}
+      message={problem ? t(`pages.contracts.remarks.problem.${problem}`) : null}
+      onSubmit={send}
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-comment`}>{t('pages.contracts.remarks.comment')}</Label>
+          <Textarea id={`${id}-comment`} value={comment} rows={4} maxLength={4000} onChange={(event) => setComment(event.target.value)} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-file`}>{t('pages.contracts.remarks.file')}</Label>
+          <FileField id={`${id}-file`} value={file} accept=".docx,.xlsx" describedBy={`${id}-file-hint`} invalid={problem === 'tooLarge' || problem === 'badType'} onChange={choose} />
+          <p id={`${id}-file-hint`} className="text-xs text-muted-foreground">
+            {t('pages.contracts.remarks.fileHint')}
+          </p>
+        </div>
+      </div>
+    </ActionDialog>
   );
 }
 

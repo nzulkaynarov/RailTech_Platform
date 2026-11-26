@@ -1842,7 +1842,7 @@ export interface paths {
     };
     /**
      * EDS · Проект: файл документа (PDF или скан)
-     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта), `docx` — наша редакция договора в Word для правок, `remark` — редакция контрагента, приложенная к замечаниям (ДП-1, только договор); скан и вложения всегда скачиваются (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
      */
     get: operations["downloadEdsProjectFile"];
     put?: never;
@@ -9359,46 +9359,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/erp/catalog/partner-applications/{id}/invite": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет
-     * @description ERP `POST catalog/partner-applications/{id}/invite/` — право `supply.manage`. ПК-1. Договор можно отправить и без почты кандидата; когда адрес появился — он в `email` (или уже записан в заявке), и приглашение уходит письмом. Нет адреса — 422 `candidate_email_required`.
-     */
-    post: operations["invitePartnerCandidate"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/erp/catalog/partner-applications/{id}/signed-scan": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Расчёт · Заявка в партнёры: скан подписанного договора
-     * @description ERP `POST catalog/partner-applications/{id}/signed-scan/` (multipart) — право `supply.manage`. ПК-1. Скан не обязателен, отметка «подписан» принимает скан ИЛИ заметку (`signed_note` в `approvePartnerApplication`). PDF или изображение; содержимое сверяется с расширением.
-     */
-    post: operations["uploadPartnerSignedScan"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/erp/catalog/partner-applications/{id}/document": {
     parameters: {
       query?: never;
@@ -9408,7 +9368,7 @@ export interface paths {
     };
     /**
      * Расчёт · Заявка в партнёры: договор или скан подписанного
-     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат. Вложением, с `nosniff`; файл в памяти BFF не копится.
+     * @description Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
      */
     get: operations["downloadPartnerApplicationDocument"];
     put?: never;
@@ -12308,14 +12268,60 @@ export interface components {
         | "revise"
         | "mark_issued"
         | "attach_scan"
+        | "mark_signed"
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
       /** @description ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
       term?: components["schemas"]["ProjectContractTerm"] | null;
+      /** @description ДП-1: замечания контрагента на согласовании — комментарий, файл, что изменилось, ответы ответственных, что можно этому сотруднику; null — замечаний нет. Считает ERP */
+      remark?: components["schemas"]["ProjectContractRemark"] | null;
       /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
       send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description ДП-1: замечания контрагента к редакции договора. Разбор DOCX («что изменилось») и права считает ERP. */
+    ProjectContractRemark: {
+      id: number;
+      edition: number;
+      /** Format: date-time */
+      received_at: string;
+      author_name: string;
+      comment: string;
+      file_name: string;
+      has_file: boolean;
+      summary: {
+        changed: string[];
+        added: string[];
+        removed: string[];
+        total: number;
+        /** @description Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет */
+        comparable: boolean;
+      };
+      items: {
+        point: string;
+        /** @enum {string} */
+        kind: "changed" | "added" | "removed";
+        ours: string;
+        theirs: string;
+        segments: {
+          /** @enum {string} */
+          op: "equal" | "del" | "ins";
+          text: string;
+        }[];
+      }[];
+      votes: {
+        user: components["schemas"]["ProjectPerson"];
+        agree: boolean;
+        comment: string;
+        /** Format: date-time */
+        at: string;
+      }[];
+      awaiting: components["schemas"]["ProjectPerson"][];
+      deciders: components["schemas"]["ProjectPerson"][];
+      /** @description Есть «Не согласен» и все ответили: решение за директором */
+      dispute: boolean;
+      actions: ("vote" | "decide")[];
     };
     /** @description Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится */
     ProjectContractTerm: {
@@ -12512,7 +12518,7 @@ export interface components {
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /**
-       * @description `attach_scan` с `note` — «Отметить: подписан» без скана (ПК-1): скан или заметка, срок считается в этот момент; `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись; `mark_signed` (ДП-1) — «Подписан» заметкой без скана, `note` обязательна; `remark_vote`, `remark_decide` (ДП-1) — ответ «Согласен»/«Не согласен» и решение директора по замечаниям контрагента: `approve` обязательно, слова — в `text`
        * @enum {string}
        */
       action:
@@ -12521,14 +12527,16 @@ export interface components {
         | "reject"
         | "revise"
         | "mark_issued"
-        | "attach_scan"
         | "sign_ours"
         | "request_deviation"
         | "decide_deviation"
         | "decline_renewal"
         | "restore_renewal"
         | "renew"
-        | "send_new_edition";
+        | "send_new_edition"
+        | "mark_signed"
+        | "remark_vote"
+        | "remark_decide";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
@@ -18502,7 +18510,7 @@ export interface components {
         comment?: string | null;
       } | null;
     };
-    /** @description Почта не обязательна (ПК-1) — хватает телефона или Telegram лида, приглашение в Кабинет уйдёт, когда почта появится; если указана — формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
+    /** @description Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`) */
     PartnerHandoffIn: {
       company_name: string;
       /**
@@ -18515,7 +18523,6 @@ export interface components {
       /** @description Что предлагает кандидат (из запроса лида) */
       offer: string;
       contact_name: string;
-      /** @default  */
       email: string;
       /** @default  */
       phone: string;
@@ -19576,26 +19583,6 @@ export interface components {
       has_signed_scan: boolean;
       /** Format: date-time */
       signed_scan_at: string | null;
-      /** @description ПК-1: голоса ответственных за договор по порядку; согласован, когда согласны все, на разногласии решает директор */
-      contract_votes: components["schemas"]["PartnerContractVote"][];
-      /** @description Кто ещё не высказался; при разногласии — директор, который решает */
-      contract_waiting_for: string[];
-      /** @description Есть возражение: решает директор */
-      contract_disagreement: boolean;
-      /** @description Кандидат приложил свою редакцию (`which=candidate`) */
-      has_candidate_file: boolean;
-      /** @description Заметка вместо скана при отметке «подписан» */
-      signed_note: string;
-      /** Format: date */
-      contract_valid_from: string | null;
-      /**
-       * Format: date
-       * @description Срок договора, посчитанный в момент отметки «подписан» по правилу компании (ДС-1)
-       */
-      contract_valid_until: string | null;
-      /** Format: date */
-      contract_last_notice_date: string | null;
-      contract_renewal_mode: string;
     };
     PartnerContractPrepareRequest: {
       /** @description Шаблон библиотеки; пусто — умолчание из настроек компании */
@@ -19624,13 +19611,6 @@ export interface components {
       /** Format: date */
       contract_date?: string;
     };
-    PartnerSignedScanUpload: {
-      /**
-       * Format: binary
-       * @description До 20 МБ: PDF или изображение
-       */
-      file: string;
-    };
     PartnerContractDecisionRequest: {
       /** @enum {string} */
       decision: "approve" | "return";
@@ -19647,12 +19627,6 @@ export interface components {
       /** @description Держатели зоны «Право» по имени */
       approvers: string[];
       can_decide: boolean;
-    };
-    PartnerContractVote: {
-      name: string;
-      /** @enum {string} */
-      decision: "approve" | "return";
-      note?: string;
     };
     PartnerContractTemplateOption: {
       id: string;
@@ -19686,12 +19660,6 @@ export interface components {
       kind?: components["schemas"]["PartnerApplicationKind"];
       /** @description Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1) */
       override_reason?: string;
-      /** @description ПК-1: «Отметить: подписан» — скан (`uploadPartnerSignedScan`) ИЛИ эта заметка; без обоих — 422 `signed_proof_required` */
-      signed_note?: string;
-    };
-    PartnerApplicationInviteRequest: {
-      /** @description Адрес кандидата; пусто — взять уже записанный в заявке */
-      email?: string;
     };
     /** @enum {string} */
     BankChangeStatus: "pending" | "approved" | "rejected";
@@ -23604,7 +23572,7 @@ export interface operations {
   downloadEdsProjectFile: {
     parameters: {
       query?: {
-        variant?: "pdf" | "scan";
+        variant?: "pdf" | "scan" | "docx" | "remark";
       };
       header?: never;
       path: {
@@ -37242,89 +37210,10 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
-  invitePartnerCandidate: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Значение cookie `rt_pf_csrf` */
-        "X-CSRF-Token": components["parameters"]["CsrfToken"];
-      };
-      path: {
-        /** @description Id заявки */
-        id: components["schemas"]["CompanyItemRef"];
-      };
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["PartnerApplicationInviteRequest"];
-      };
-    };
-    responses: {
-      /** @description Приглашение отправлено */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PartnerApplicationItem"];
-        };
-      };
-      400: components["responses"]["ValidationFailed"];
-      401: components["responses"]["SessionExpired"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      503: components["responses"]["BackendUnavailable"];
-    };
-  };
-  uploadPartnerSignedScan: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Значение cookie `rt_pf_csrf` */
-        "X-CSRF-Token": components["parameters"]["CsrfToken"];
-      };
-      path: {
-        /** @description Id заявки */
-        id: components["schemas"]["CompanyItemRef"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "multipart/form-data": components["schemas"]["PartnerSignedScanUpload"];
-      };
-    };
-    responses: {
-      /** @description Скан прикреплён */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PartnerApplicationItem"];
-        };
-      };
-      400: components["responses"]["ValidationFailed"];
-      401: components["responses"]["SessionExpired"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ */
-      413: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Error"];
-        };
-      };
-      503: components["responses"]["BackendUnavailable"];
-    };
-  };
   downloadPartnerApplicationDocument: {
     parameters: {
       query?: {
-        which?: "contract" | "scan" | "candidate";
+        which?: "contract" | "scan";
       };
       header?: never;
       path: {
