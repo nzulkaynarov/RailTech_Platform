@@ -1,4 +1,4 @@
-"""«Вид» для агрегатов: явный `role` (id), иначе активная роль, иначе все роли (Q-PLT-12-1)."""
+"""«Вид» для агрегатов: явный `role` (id) — фильтр, иначе все роли сотрудника."""
 
 from app.deps import Authed
 from app.errors import PlatformError
