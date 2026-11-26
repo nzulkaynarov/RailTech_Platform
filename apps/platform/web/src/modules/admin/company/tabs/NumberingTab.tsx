@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Form, Input, InputNumber, Radio, Select } from "antd";
+import { App, Card, Form, Input, InputNumber, Radio, Select } from "antd";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +15,7 @@ import {
   usePreviewNumbering,
   useUpdateNumberingScheme,
 } from "../../../../shared/api/generated/platform-bff";
+import { FieldGrid } from "../../../../shared/ui/PageFrame";
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields, numberingErrorKey } from "../errors";
@@ -77,7 +78,7 @@ export function NumberingTab() {
   const { t } = useTranslation("company");
   const query = useGetNumberingScheme();
   return (
-    <div className="pf-co-body">
+    <div className="pf-co-body pf-co-body--bare">
       <TabHeader title={t("numbering.title")} hint={t("numbering.hint")} />
       <ReadOnlyFence>
         <QueryGate query={query}>
@@ -157,116 +158,136 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
   };
 
   return (
-    <div className="pf-co-split">
-      <Form<Values> form={form} layout="vertical" initialValues={initial} onFinish={submit}>
-        <Form.Item
-          name="prefix"
-          label={t("numbering.prefix")}
-          extra={t("numbering.prefixHint")}
-          rules={[{ pattern: /^[A-Za-z0-9_-]*$/, message: t("numbering.prefixInvalid") }]}
-        >
-          <Input maxLength={16} className="pf-co-mono" autoComplete="off" />
-        </Form.Item>
-        <Form.Item label={t("numbering.format")} style={{ marginBottom: 8 }}>
-          <Radio.Group
-            aria-label={t("numbering.format")}
-            value={presetOf(values.pattern)}
-            onChange={(event) => {
-              const preset = PRESETS.find((p) => p.id === event.target.value);
-              if (preset) form.setFieldValue("pattern", preset.pattern);
-            }}
-            style={{ display: "flex", flexDirection: "column", gap: 4 }}
-          >
-            {PRESETS.map((preset) => (
-              <Radio key={preset.id} value={preset.id}>
-                {t(`numbering.presets.${preset.id}`)}{" "}
-                <span className="pf-co-hint pf-co-mono">{preset.pattern}</span>
-              </Radio>
-            ))}
-            <Radio value="custom">{t("numbering.presets.custom")}</Radio>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item
-          name="pattern"
-          label={t("numbering.mask")}
-          extra={t("numbering.maskHint")}
-          validateStatus={maskOk ? undefined : "error"}
-          help={maskOk ? undefined : t("numbering.maskInvalid")}
-        >
-          <Input className="pf-co-mono" autoComplete="off" maxLength={100} />
-        </Form.Item>
-        <div className="pf-co-grid">
+    <div className="pf-frame pf-frame--settings">
+      <Form<Values>
+        form={form}
+        layout="vertical"
+        initialValues={initial}
+        onFinish={submit}
+        className="pf-frame-in"
+      >
+        <Card className="pf-frame-card">
+          <h3 className="pf-co-title">{t("numbering.formatTitle")}</h3>
           <Form.Item
-            name="padding"
-            label={t("numbering.padding")}
-            extra={t("numbering.paddingHint")}
+            name="prefix"
+            label={t("numbering.prefix")}
+            extra={t("numbering.prefixHint")}
+            rules={[{ pattern: /^[A-Za-z0-9_-]*$/, message: t("numbering.prefixInvalid") }]}
           >
-            <InputNumber min={1} max={10} precision={0} style={{ width: "100%" }} />
+            <Input maxLength={16} className="pf-co-mono" autoComplete="off" />
           </Form.Item>
-          <Form.Item name="reset_period" label={t("numbering.reset")}>
-            <Select
-              options={RESET.map((value) => ({ value, label: t(`numbering.resets.${value}`) }))}
-            />
+          <Form.Item label={t("numbering.format")} style={{ marginBottom: 8 }}>
+            <Radio.Group
+              aria-label={t("numbering.format")}
+              value={presetOf(values.pattern)}
+              onChange={(event) => {
+                const preset = PRESETS.find((p) => p.id === event.target.value);
+                if (preset) form.setFieldValue("pattern", preset.pattern);
+              }}
+              style={{ display: "flex", flexDirection: "column", gap: 4 }}
+            >
+              {PRESETS.map((preset) => (
+                <Radio key={preset.id} value={preset.id}>
+                  {t(`numbering.presets.${preset.id}`)}{" "}
+                  <span className="pf-co-hint pf-co-mono">{preset.pattern}</span>
+                </Radio>
+              ))}
+              <Radio value="custom">{t("numbering.presets.custom")}</Radio>
+            </Radio.Group>
           </Form.Item>
           <Form.Item
-            name="start_value"
-            label={t("numbering.start")}
-            extra={t("numbering.startHint")}
+            name="pattern"
+            label={t("numbering.mask")}
+            extra={t("numbering.maskHint")}
+            validateStatus={maskOk ? undefined : "error"}
+            help={maskOk ? undefined : t("numbering.maskInvalid")}
           >
-            <InputNumber min={0} precision={0} style={{ width: "100%" }} />
+            <Input className="pf-co-mono" autoComplete="off" maxLength={100} />
           </Form.Item>
+        </Card>
+        <Card className="pf-frame-card">
+          <h3 className="pf-co-title">{t("numbering.counterTitle")}</h3>
+          <FieldGrid>
+            <Form.Item
+              name="padding"
+              label={t("numbering.padding")}
+              extra={t("numbering.paddingHint")}
+            >
+              <InputNumber min={1} max={10} precision={0} style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item name="reset_period" label={t("numbering.reset")}>
+              <Select
+                options={RESET.map((value) => ({ value, label: t(`numbering.resets.${value}`) }))}
+              />
+            </Form.Item>
+            <Form.Item
+              name="start_value"
+              label={t("numbering.start")}
+              extra={t("numbering.startHint")}
+            >
+              <InputNumber min={0} precision={0} style={{ width: "100%" }} />
+            </Form.Item>
+          </FieldGrid>
+        </Card>
+        <div className="pf-frame-wide">
+          <Card>
+            <fieldset className="pf-co-fieldset">
+              <legend className="pf-co-legend">{t("numbering.labelsTitle")}</legend>
+              <p className="pf-co-hint">{t("numbering.labelsHint")}</p>
+              <FieldGrid>
+                {KINDS.map((kind) => (
+                  <Form.Item
+                    key={kind}
+                    name={["type_labels", kind]}
+                    label={t(`kinds.${kind}`)}
+                    style={{ marginBottom: 12 }}
+                    rules={[{ pattern: LABEL_PATTERN, message: t("numbering.labelInvalid") }]}
+                  >
+                    <Input maxLength={16} autoComplete="off" />
+                  </Form.Item>
+                ))}
+              </FieldGrid>
+            </fieldset>
+          </Card>
         </div>
-        <fieldset className="pf-co-fieldset">
-          <legend className="pf-co-legend">{t("numbering.labelsTitle")}</legend>
-          <p className="pf-co-hint">{t("numbering.labelsHint")}</p>
-          <div className="pf-co-grid">
-            {KINDS.map((kind) => (
-              <Form.Item
-                key={kind}
-                name={["type_labels", kind]}
-                label={t(`kinds.${kind}`)}
-                style={{ marginBottom: 12 }}
-                rules={[{ pattern: LABEL_PATTERN, message: t("numbering.labelInvalid") }]}
+        <div className="pf-frame-wide">
+          <SaveBlock
+            label={t("numbering.save")}
+            loading={update.isPending}
+            disabled={isEmptyObject(changed) || !maskOk}
+            dirty={!isEmptyObject(changed)}
+            error={update.error}
+            note={t("numbering.note")}
+            onDiscard={() => {
+              form.resetFields();
+              update.reset();
+            }}
+          />
+        </div>
+        <Card className="pf-frame-card">
+          <div className="pf-co-panel">
+            <h3 className="pf-co-title">{t("numbering.previewTitle")}</h3>
+            {maskOk ? (
+              <ul
+                className="pf-co-numbers"
+                aria-label={t("numbering.previewTitle")}
+                aria-live="polite"
+                aria-busy={preview.isPending}
               >
-                <Input maxLength={16} autoComplete="off" />
-              </Form.Item>
-            ))}
+                {(preview.data?.items ?? []).map((row) => (
+                  <li key={row.kind}>
+                    <span>{t(`kinds.${row.kind}`)}</span>
+                    <b>{row.number}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="pf-co-hint">{t("numbering.previewUnavailable")}</p>
+            )}
+            <p className="pf-co-hint">{t("numbering.previewHint")}</p>
           </div>
-        </fieldset>
-        <SaveBlock
-          label={t("numbering.save")}
-          loading={update.isPending}
-          disabled={isEmptyObject(changed) || !maskOk}
-          dirty={!isEmptyObject(changed)}
-          error={update.error}
-          note={t("numbering.note")}
-          onDiscard={() => {
-            form.resetFields();
-            update.reset();
-          }}
-        />
+        </Card>
       </Form>
-      <div className="pf-co-panel">
-        <h3 className="pf-co-title">{t("numbering.previewTitle")}</h3>
-        {maskOk ? (
-          <ul
-            className="pf-co-numbers"
-            aria-label={t("numbering.previewTitle")}
-            aria-live="polite"
-            aria-busy={preview.isPending}
-          >
-            {(preview.data?.items ?? []).map((row) => (
-              <li key={row.kind}>
-                <span>{t(`kinds.${row.kind}`)}</span>
-                <b>{row.number}</b>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="pf-co-hint">{t("numbering.previewUnavailable")}</p>
-        )}
-        <p className="pf-co-hint">{t("numbering.previewHint")}</p>
-      </div>
     </div>
   );
 }
