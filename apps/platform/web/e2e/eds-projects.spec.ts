@@ -96,19 +96,17 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(panel.getByText("Проект ещё не отправлен клиенту.")).toBeVisible();
     await expect(panel.getByTestId("contract-send-blocker")).toHaveCount(0);
     await panel.getByRole("button", { name: "На согласование клиенту" }).click();
-    await expect(panel.getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
+    await expect(panel.getByText(/Договор у контрагента\./)).toBeVisible();
     // A2: согласие клиента — как сообщил и кто со стороны клиента
     await chooseOption(panel.getByLabel("Как клиент сообщил"), "почта");
     await panel.getByLabel("Кто со стороны клиента").fill("Каримов А., снабженец");
     await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
-    await expect(panel.getByText(/Клиент согласовал редакцию/)).toBeVisible(); // «Отмечено сотрудником» — в «Истории»
-    await panel.getByRole("button", { name: "Отметить: выставлен на подписание" }).click();
-    await expect(panel.getByText(/Договор ожидает подписания\. Когда обе стороны/)).toBeVisible();
+    await expect(panel.getByText(/Редакция согласована/)).toBeVisible(); // «Отмечено сотрудником» — в «Истории»
     await settledScreenshot(page, "contract-issued");
-    await expectNoViolations(page, "договор: выставлен в ЭДО");
+    await expectNoViolations(page, "договор: ожидает подписания");
 
     // скан: файл не выбран — кнопка неактивна; чужой тип не принимается; PDF — «Подписан (скан)»
-    const submit = panel.getByRole("button", { name: "Прикрепить скан" });
+    const submit = panel.getByRole("button", { name: "Отметить: подписан" });
     await expect(submit).toBeDisabled();
     const input = panel.getByLabel("Скан подписанного договора");
     await input.setInputFiles({
@@ -121,10 +119,8 @@ test.describe("Проекты: бухгалтер", () => {
     await input.setInputFiles(SCAN("dogovor-demo.pdf"));
     await expect(submit).toBeEnabled();
     await submit.click();
-    await expect(
-      panel.getByText("Договор подписан обеими сторонами, скан сохранён."),
-    ).toBeVisible();
-    await expect(panel.getByText("Подписан").first()).toBeVisible();
+    await expect(panel.getByText("Договор подписан.").first()).toBeVisible();
+    await expect(panel.getByText("Подписан", { exact: true }).first()).toBeVisible();
     await settledScreenshot(page, "contract-signed");
     await expectNoViolations(page, "договор подписан");
     await expectNoInvoiceWord(page);

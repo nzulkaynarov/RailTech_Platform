@@ -634,11 +634,11 @@
       },
       "notSigned": "Hali yöq",
       "willBeSent": "Şartnoma imzolaşga qöyiladi",
-      "sign": "Kelişiş",
-      "signNamed": "{{number}} şartnomasini kelişiş",
-      "signTitle": "{{number}} şartnomasini kelişiş",
+      "sign": "Tahrirni qabul qiliş",
+      "signNamed": "{{number}} şartnomasi tahririni qabul qiliş",
+      "signTitle": "{{number}} şartnomasi tahririni qabul qiliş",
       "signText": "Kompaniya nomidan şartnoma matni bilan rozi ekaningizni tasdiqlaysiz. Şartnomani imzolaşga qöyamiz va imzolanganda xabar beramiz.",
-      "signConfirm": "Şartnomani kelişiş",
+      "signConfirm": "Tahrirni qabul qiliş",
       "signedClient": "{{number}} şartnomasi kelişildi. U imzolaşga qöyiladi.",
       "signedBoth": "{{number}} şartnomasi ikki tomon tomonidan imzolandi.",
       "term": {
@@ -653,10 +653,29 @@
         },
         "decline": "Uzaytirişdan boş tortiş",
         "declineTitle": "{{number}} şartnomasini uzaytirişdan boş tortiş",
-        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mümkin.",
+        "declineText": "Şartnoma {{until}}gaça amal qiladi va undan keyin tugaydi. Boşlangan yetkazib beriş, tölov va daʼvolar tegilmaydi. Boş tortiş {{notice}}gaça mumkin.",
         "declined": "Siz {{number}} şartnomasini uzaytirişdan boş tortdingiz.",
         "restore": "Uzaytirişni qaytariş",
         "restored": "{{number}} şartnomasi uzaytirişi qaytarildi."
+      },
+      "remarks": {
+        "open": "Izohlarim bor",
+        "openNamed": "{{number}} şartnomasi böyiça izohlar",
+        "title": "{{number}} şartnomasiga izohlar",
+        "text": "Nimani özgartiriş kerakligini yozing.",
+        "comment": "Nimani özgartiriş kerak",
+        "file": "Sizning tahriringiz (ixtiyoriy)",
+        "fileHint": "Word yoki Excel, 10 MB gaçha.",
+        "confirm": "Izohlarni yuboriş",
+        "sent": "{{number}} şartnomasi böyiça izohlar yuborildi.",
+        "review": "Izohlaringiz bizda körilyapti",
+        "answered": "Bizning javob: {{text}}",
+        "docx": "Tahrir uçun yuklab oliş (DOCX)",
+        "problem": {
+          "commentMissing": "Nimani özgartiriş kerakligini yozing.",
+          "tooLarge": "Fayl 10 MB dan katta.",
+          "badType": "Word (.docx) yoki Excel (.xlsx) fayli kerak."
+        }
       }
     },
     "invoices": {
@@ -1463,7 +1482,10 @@
     "GENERATING": "Fayl hali tayyorlanmoqda — bir neça soniyadan keyin qayta urining.",
     "SCAN_NOT_EXPECTED": "Hozir skan kutilmayapti.",
     "SCAN_INVALID": "Fayl mos kelmadi: 20 MB gaça PDF yoki rasm kerak.",
-    "RETURN_NOTE_REQUIRED": "Izoh yozing."
+    "RETURN_NOTE_REQUIRED": "Izoh yozing.",
+    "REMARK_OPEN": "Izohlaringiz hali körilmoqda — javobni kutib turing.",
+    "CONTRACT_REMARK_NOT_ALLOWED": "Bu şartnoma böyiça izoh yuborib bölmaydi.",
+    "COMMENT_REQUIRED": "Nimani özgartiriş kerakligini yozing."
   },
   "widgets": {
     "actionRequired": {
@@ -1472,7 +1494,7 @@
       "quoteBadge": "Taklif",
       "reviewQuote": "Taklifni köriş",
       "contractBadge": "Şartnoma",
-      "signContract": "Şartnomani kelişiş",
+      "signContract": "Tahrirni qabul qiliş",
       "invoiceBadge": "Hisob",
       "payInvoice": "Tölaş",
       "actBadge": "Dalolatnoma",
@@ -1822,7 +1844,9 @@
       "bank_requisites_change_rejected": "Bank rekvizitlarini özgartiriş sörovi rad etildi: {{reason}}",
       "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi",
       "contract_renewed": "{{number}} şartnomasi {{until}}gaça uzaytirildi",
-      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi"
+      "contract_renewal_declined": "Biz {{number}} şartnomasini uzaytirişdan boş tortdik: u {{until}}da tugaydi",
+      "contract_remark_answered": "Izohlaringizga javobimiz ({{number}}): {{text}}",
+      "contract_awaiting_signature": "{{number}} şartnomasi imzoga qöyiladi"
     }
   },
   "verify": {
@@ -1959,7 +1983,7 @@
       "reject": "Izoh bilan qaytariş",
       "question": "Savol beriş",
       "open": "Kabinetni oçiş",
-      "accept_contract": "Şartnomani kelişiş",
+      "accept_contract": "Tahrirni qabul qiliş",
       "accept_act": "Dalolatnomani qabul qiliş",
       "answer": "Sörovga javob beriş",
       "confirm": "Buyurtmani tasdiqlaş"
@@ -2012,7 +2036,7 @@
       "memberText": "Summa {{total}}. Şartnoma kabinetingizda paydo böladi.",
       "working": "Bajarilmoqda…",
       "openTitle": "Kabinetni oçiş",
-      "memberTitle_contract": "Şartnomani kelişasizmi?",
+      "memberTitle_contract": "Şartnoma tahririni qabul qilasizmi?",
       "memberText_contract": "Summa {{total}}. Şartnoma matni bilan rozi ekaningizni tasdiqlaysiz.",
       "memberTitle_act": "Dalolatnomani qabul qilasizmi?",
       "memberText_act": "Summa {{total}}. Qabul qilingan dalolatnomani qaytarib bölmaydi.",

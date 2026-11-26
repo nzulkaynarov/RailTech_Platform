@@ -181,7 +181,7 @@ async def test_manager_all_morning_has_costing_payment_invoice_and_contract_rows
     assert issue["title"] == "Выставить счёт СЧ-2027/143"
     assert issue["object"]["path"] == "/eds/payments/143?panel=open&tab=payment"
     scan = by_kind["attach_scan"]
-    assert scan["title"] == "Прикрепить скан подписанного договора ДОГ-2027/106 по ПР-2027-106"
+    assert scan["title"] == "Отметить подписанным договор ДОГ-2027/106 по ПР-2027-106"
     assert scan["object"]["kind"] == "contract"
     assert scan["object"]["path"] == ("/eds/projects/%D0%9F%D0%A0-2027-106")
     # одна строка — одно действие: у роли, совмещающей пять ролей SPEC, дублей нет
@@ -380,8 +380,8 @@ async def test_menu_badge_of_my_costings_counts_the_queue_rows(web: Web, fb: Fee
         ),
         (
             project(104, client_status="contract_signing", contract=contract("client_agreed")),
-            "issue_contract",
-            "Выставить на подписание договор ДОГ-2027/106 по ПР-2027-104",
+            "attach_scan",
+            "Отметить подписанным договор ДОГ-2027/106 по ПР-2027-104",
         ),
         (
             project(104, contract=contract("rejected"), problems=["contract_rejected"]),

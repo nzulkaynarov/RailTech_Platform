@@ -360,6 +360,18 @@ export function rejectQuote(id: number, reason: string): Promise<Quote> {
 
 export const listContracts = () => portalRequest<Contract[]>('/contracts');
 export const signContract = (id: number) => portalRequest<Contract>(`/contracts/${id}/sign`, { method: 'POST' });
+export type ContractRemarksIn = Schemas['ContractRemarksIn'];
+/** ДП-1: «Есть замечания» — комментарий и, при желании, своя редакция (`upload_id` из `POST /uploads`). */
+export const submitContractRemarks = (id: number, body: ContractRemarksIn) =>
+  portalRequest<Contract>(`/contracts/${id}/remarks`, { method: 'POST', body });
+/** ДП-1: наша редакция в DOCX для правок. */
+export async function getContractDocx(id: number): Promise<{ blob: Blob; fileName: string | null }> {
+  const response = await send(`/contracts/${id}/docx`, {
+    accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+  return { blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition')) };
+}
+
 /** ДС-1: отказ от автопродления договора (до `term.last_notice_date`). */
 export const declineContractRenewal = (id: number) =>
   portalRequest<Contract>(`/contracts/${id}/decline-renewal`, { method: 'POST' });

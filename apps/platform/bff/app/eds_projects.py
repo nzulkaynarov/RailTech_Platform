@@ -307,6 +307,10 @@ class ErpProjects:
         }
         if body.action == "decide_deviation":
             payload["approve"] = bool(body.approve)
+        if body.action == "remark_vote":  # ДП-1: «Согласен» / «Не согласен» (слова — в `text`)
+            payload = {"agree": bool(body.approve), "comment": (body.text or "").strip()}
+        if body.action == "remark_decide":  # ДП-1: решение директора; ответ контрагенту — в `text`
+            payload = {"accept": bool(body.approve), "text": (body.text or "").strip()}
         await self._json("POST", f"{API}/contracts/{card.contract.id}/{slug}/", json=payload)
         return await self.card(ref)
 
@@ -465,8 +469,22 @@ class ErpProjects:
         """Путь файла в ERP: документ обязан быть в карточке этого проекта."""
         card = await self.raw_card(ref)
         if kind == "contract" and card.contract is not None and card.contract.id == doc_id:
-            ok = variant == "pdf" or card.contract.has_scan
-            tail = "download-pdf" if variant == "pdf" else "download-signed"
+            tails = {
+                "pdf": "download-pdf",
+                "scan": "download-signed",
+                "docx": "download-docx",
+                "remark": "download-remark",
+            }
+            ok = (
+                variant in ("pdf", "docx")
+                or (variant == "scan" and card.contract.has_scan)
+                or (
+                    variant == "remark"
+                    and card.contract.remark is not None
+                    and card.contract.remark.has_file
+                )
+            )
+            tail = tails[variant]
             base = "contracts"
         elif kind == "act" and card.act is not None and card.act.id == doc_id:
             ok = variant == "pdf" or card.act.has_scan

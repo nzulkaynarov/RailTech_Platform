@@ -13,4 +13,5 @@ export const ProjectContractActionsItem = {
   revise: "revise",
   mark_issued: "mark_issued",
   attach_scan: "attach_scan",
+  mark_signed: "mark_signed",
 } as const;

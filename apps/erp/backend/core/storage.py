@@ -227,6 +227,12 @@ def contract_signed_path(instance, filename):
     return f"deals/{instance.deal_id}/contracts/signed/{name}"
 
 
+def contract_remark_path(instance, filename):
+    """deals/{deal_id}/contracts/remarks/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.contract.deal_id}/contracts/remarks/{name}"
+
+
 def invoice_pdf_path(instance, filename):
     """deals/{deal_id}/invoices/{uuid}.pdf"""
     name = _uuid_filename(instance, filename)

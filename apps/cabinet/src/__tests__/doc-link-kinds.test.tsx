@@ -18,11 +18,11 @@ const open = (token: string) => renderApp(`/d/${token}`);
 const heading = (name: string) => screen.findByRole('heading', { level: 1, name });
 
 describe('договор по ссылке', () => {
-  it('гость видит договор и одно действие — «Согласовать договор»; состава КП и чужих кнопок нет', async () => {
+  it('гость видит договор и одно действие — «Принять редакцию»; состава КП и чужих кнопок нет', async () => {
     open(CONTRACT);
     await heading('Договор CT-0042');
 
-    expect(screen.getByRole('button', { name: 'Согласовать договор' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Принять редакцию' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Скачать PDF: договор CT-0042' })).toBeEnabled();
     for (const name of ['Принять предложение', 'Вернуть с замечаниями', 'Задать вопрос']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
@@ -38,10 +38,10 @@ describe('договор по ссылке', () => {
     open(CONTRACT);
     await heading('Договор CT-0042');
 
-    await user.click(screen.getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(screen.getByRole('button', { name: 'Принять редакцию' }));
     const dialog = await screen.findByRole('dialog', { name: 'Подтвердите, что это вы' });
     await user.type(await within(dialog).findByLabelText('Код из письма'), '123456');
-    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Принять редакцию' }));
 
     expect(await screen.findByText('Договор согласован. Он будет выставлен на подписание — сообщим.')).toBeInTheDocument();
     expect(calls.filter((path) => path === 'act')).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('договор по ссылке', () => {
     open('contract-viewer-0123456789');
     await heading('Договор CT-0042');
 
-    expect(screen.getByRole('button', { name: 'Согласовать договор' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Принять редакцию' })).toBeDisabled();
     expect(screen.getByText(/нет права принимать решения/)).toBeInTheDocument();
   });
 });

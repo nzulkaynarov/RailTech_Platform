@@ -459,6 +459,8 @@ def sign_contract_by_client(
         allowed_statuses = {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}
     if contract.status_code not in allowed_statuses:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
+    if portal_contact is not None and contract.remarks.filter(resolution="").exists():
+        return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"  # ДП-1: замечания на согласовании — принять редакцию нельзя
     from integration.services import document_events
 
     before = contract.status_code
@@ -520,7 +522,7 @@ def _notify_client_agreed(contract, portal_contact) -> None:
     notify_user(
         user=recipient,
         title=f"Клиент согласовал договор {number}",
-        message=(f"{who}: " if who else "") + f"договор {number} согласован в кабинете — выставьте его у оператора.",
+        message=(f"{who}: " if who else "") + f"договор {number} согласован в кабинете и ожидает подписания.",
         link=f"/eds/projects/{url_quote(contract.deal.number or f'D-{contract.deal_id}', safe='')}",
         deal=contract.deal,
         type_code="INFO",

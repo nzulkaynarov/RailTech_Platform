@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.24.0
+  version: 0.25.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -1594,7 +1594,8 @@ paths:
       operationId: signContract
       summary: Подписать договор со стороны клиента
       description: >-
-        Согласие клиента с редакцией договора (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись:
+        Согласие клиента с редакцией договора («Принять редакцию»; пока замечания клиента на согласовании у компании —
+        409 `REMARK_OPEN`) (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись:
         в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус
         становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client)
         не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей
@@ -1623,6 +1624,82 @@ paths:
                 $ref: '#/components/schemas/Error'
         '400':
           $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /contracts/{id}/remarks:
+    post:
+      tags: [contracts]
+      operationId: submitContractRemarks
+      summary: Отправить замечания к редакции договора
+      description: >-
+        «Есть замечания» (ДП-1): один ответ — комментарий и, при желании, своя редакция договора (DOCX или XLSX) из
+        `POST /uploads`; файл — вложение и точка правды. Сотрудники получают разбор «что изменилось» (DOCX сравнивается
+        с нашей редакцией), отвечают «Согласен» / «Не согласен», при разногласии решает директор. Принята редакция —
+        договор «Согласован клиентом» (`signed_by_client`); иначе приходит наш ответ (`remark.state = answered`).
+        Только для договора `sent` и только контакту с правом действовать. Замечания уже на согласовании — 409
+        `REMARK_OPEN`, договор не у клиента — 409 `CONTRACT_REMARK_NOT_ALLOWED`, пустой комментарий — 422
+        `COMMENT_REQUIRED`, чужая загрузка — 422 `UPLOAD_NOT_FOUND`, не DOCX/XLSX или подделанная сигнатура — 422
+        `VALIDATION_ERROR`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRemarksIn'
+      responses:
+        '201':
+          description: Замечания приняты, договор остаётся на согласовании
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Замечания уже на согласовании или договор не у клиента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /contracts/{id}/docx:
+    get:
+      tags: [contracts]
+      operationId: getContractDocx
+      summary: Скачать редакцию договора в DOCX для правок
+      description: >-
+        Наша редакция договора абзацами в Word (ДП-1): скачать, поправить и приложить к замечаниям — система покажет,
+        что изменилось. Только пока договор у клиента на согласовании (`can_download_docx`); иначе 404.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: DOCX
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -4056,6 +4133,9 @@ components:
         - TERM_ALREADY_DECLINED
         - TERM_NOT_AVAILABLE
         - TERM_NOT_DECLINED
+        - REMARK_OPEN
+        - CONTRACT_REMARK_NOT_ALLOWED
+        - COMMENT_REQUIRED
         - ACT_FINALIZED
         - DELIVERY_LINE_NOT_ACCEPTABLE
         - DOCUMENT_PENDING
@@ -5899,7 +5979,7 @@ components:
         сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
         с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
         безопасности, `params`: `name`, `device`, `ip`), `contract_renewed` — срок договора продлён (ДС-1; `params`:
-        `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`).
+        `number`, `until`, `count`, `note`), `contract_renewal_declined` — компания отказалась от продления (`number`, `until`), `contract_remark_answered` — компания ответила на замечания клиента (ДП-1; `number`, `text`), `contract_awaiting_signature` — редакция принята, договор будет выставлен на подписание (`number`).
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -5920,6 +6000,8 @@ components:
         - new_device_login
         - contract_renewed
         - contract_renewal_declined
+        - contract_remark_answered
+        - contract_awaiting_signature
 
     NotificationGroup:
       type: string
@@ -6577,6 +6659,52 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ContractTerm'
             - type: 'null'
+        remark:
+          description: >-
+            Замечания клиента к редакции (ДП-1): на согласовании у компании или наш ответ; `null` — замечаний нет
+            (или они приняты и договор согласован)
+          oneOf:
+            - $ref: '#/components/schemas/ContractRemark'
+            - type: 'null'
+        can_download_docx:
+          type: boolean
+          description: Редакцию можно скачать в DOCX для правок (`GET /contracts/{id}/docx`)
+
+    ContractRemarksIn:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          maxLength: 4000
+          description: Что изменить
+        upload_id:
+          type: string
+          format: uuid
+          description: Своя редакция (DOCX или XLSX), загруженная через `POST /uploads`
+      additionalProperties: false
+
+    ContractRemark:
+      type: object
+      required: [state, comment, created_at]
+      properties:
+        state:
+          type: string
+          enum: [review, answered]
+          description: '`review` — замечания на согласовании у компании; `answered` — компания ответила своей редакцией'
+        comment:
+          type: string
+        response:
+          type: [string, 'null']
+          description: Ответ компании (при `answered`)
+        file_name:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        answered_at:
+          type: [string, 'null']
+          format: date-time
 
     ContractTerm:
       type: object
