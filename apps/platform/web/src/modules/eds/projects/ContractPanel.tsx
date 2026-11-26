@@ -133,6 +133,9 @@ function ContractBody({
   // Какое действие сейчас выполняется: кнопка следующего шага, появившаяся с новой карточкой, не должна вертеться.
   const [pending, setPending] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  // ПК-1: «подписан» — скан ИЛИ заметка: заметка раскрывается рядом со сканом
+  const [signingByNote, setSigningByNote] = useState(false);
+  const [signedNote, setSignedNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const fail = (e: unknown) => {
@@ -147,6 +150,8 @@ function ContractBody({
     setPerson("");
     setAgreedTouched(false);
     setRejecting(false);
+    setSigningByNote(false);
+    setSignedNote("");
     apply(next);
     void message.success(t(`contract.done.${key}`));
     onDone?.();
@@ -335,6 +340,47 @@ function ContractBody({
         <SendBlocker blocker={contract.send_blocker} />
       ) : null}
       {primaryBlock}
+      {may("attach_scan") && (contract.status === "client_agreed" || contract.status === "issued_at_operator") ? (
+        <ActionToggle
+          label={t("contract.signedNote.toggle")}
+          open={signingByNote}
+          disabled={busy}
+          onToggle={setSigningByNote}
+        >
+          <form
+            className="pf-fp-form"
+            aria-label={t("contract.signedNote.toggle")}
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (busy || !signedNote.trim()) return;
+              send("attach_scan", { note: signedNote.trim() });
+            }}
+          >
+            <NoteField
+              label={t("contract.signedNote.label")}
+              hint={t("contract.signedNote.hint")}
+              placeholder={t("contract.signedNote.placeholder")}
+              value={signedNote}
+              onChange={setSignedNote}
+            />
+            {error && signingByNote ? (
+              <p className="pf-field-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              loading={pending === "attach_scan"}
+              disabled={busy || !signedNote.trim()}
+            >
+              {t("contract.signedNote.submit")}
+            </Button>
+          </form>
+        </ActionToggle>
+      ) : null}
       {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (
         <p className="pf-hint">{t("contract.readOnly")}</p>
       ) : null}

@@ -22,4 +22,9 @@ export interface PartnerApplicationApproveRequest {
    * @maxLength 1000
    */
   override_reason?: string;
+  /**
+   * ПК-1: «Отметить: подписан» — скан (`uploadPartnerSignedScan`) ИЛИ эта заметка; без обоих — 422 `signed_proof_required`
+   * @maxLength 1000
+   */
+  signed_note?: string;
 }

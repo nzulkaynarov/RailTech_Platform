@@ -16930,15 +16930,85 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/invite:
+    post:
+      tags: [erp-catalog]
+      operationId: invitePartnerCandidate
+      summary: 'Расчёт · Заявка в партнёры: пригласить кандидата в Кабинет'
+      description: ERP `POST catalog/partner-applications/{id}/invite/` — право `supply.manage`. ПК-1. Договор можно отправить и без почты кандидата; когда адрес появился — он в `email` (или уже записан в заявке), и приглашение уходит письмом. Нет адреса — 422 `candidate_email_required`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationInviteRequest'
+      responses:
+        '200':
+          description: Приглашение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/signed-scan:
+    post:
+      tags: [erp-catalog]
+      operationId: uploadPartnerSignedScan
+      summary: 'Расчёт · Заявка в партнёры: скан подписанного договора'
+      description: ERP `POST catalog/partner-applications/{id}/signed-scan/` (multipart) — право `supply.manage`. ПК-1. Скан не обязателен, отметка «подписан» принимает скан ИЛИ заметку (`signed_note` в `approvePartnerApplication`). PDF или изображение; содержимое сверяется с расширением.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PartnerSignedScanUpload'
+      responses:
+        '200':
+          description: Скан прикреплён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 20 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/partner-applications/{id}/document:
     get:
       tags: [erp-catalog]
       operationId: downloadPartnerApplicationDocument
       summary: 'Расчёт · Заявка в партнёры: договор или скан подписанного'
-      description: Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного. Вложением, с `nosniff`; файл в памяти BFF не копится.
+      description: Читает и держатель зоны «Право» (`eds.visa.legal`). ERP `GET catalog/partner-applications/{id}/document/`. `which=contract` — файл, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат. Вложением, с `nosniff`; файл в памяти BFF не копится.
       parameters:
         - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
-        - {name: which, in: query, required: false, schema: {type: string, enum: [contract, scan], default: contract}}
+        - {name: which, in: query, required: false, schema: {type: string, enum: [contract, scan, candidate], default: contract}}
       responses:
         '200':
           description: Файл
@@ -22524,9 +22594,9 @@ components:
       description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
-          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition]
+          enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition]
           type: string
-          description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись'
+          description: '`attach_scan` с `note` — «Отметить: подписан» без скана (ПК-1): скан или заметка, срок считается в этот момент; `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись'
         reason:
           maxLength: 1000
           type: [string, 'null']
@@ -30926,15 +30996,15 @@ components:
     PartnerHandoffIn:
       type: object
       additionalProperties: false
-      required: [company_name, offer, contact_name, email]
-      description: Почта обязательна — по ней ERP приглашает кандидата согласовать договор; формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
+      required: [company_name, offer, contact_name]
+      description: Почта не обязательна (ПК-1) — хватает телефона или Telegram лида, приглашение в Кабинет уйдёт, когда почта появится; если указана — формат проверяет CRM (`details.reason = invalid_email`, поле `email`)
       properties:
         company_name: {type: string, minLength: 1, maxLength: 255}
         country: {type: string, pattern: '^[A-Za-z]{2}$', default: UZ, description: ISO 3166-1 alpha-2}
         inn: {type: string, maxLength: 32, default: ''}
         offer: {type: string, minLength: 1, maxLength: 4000, description: Что предлагает кандидат (из запроса лида)}
         contact_name: {type: string, minLength: 1, maxLength: 255}
-        email: {type: string, minLength: 3, maxLength: 254}
+        email: {type: string, maxLength: 254, default: ''}
         phone: {type: string, maxLength: 32, default: ''}
 
     PartnerHandoffView:
@@ -31959,7 +32029,7 @@ components:
     PartnerApplicationItem:
       type: object
       additionalProperties: false
-      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, decision_needs_confirmation, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at]
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery, contract_source, contract_template_id, contract_template_name, contract_template_edition, contract_language, contract_deviation_text, contract_approval, contract_approval_requested_by, contract_approval_decided_by, contract_approval_note, contract_blocker, contract_approvers, can_decide_contract, decision_needs_confirmation, candidate_notes, candidate_returned_at, has_signed_scan, signed_scan_at, contract_votes, contract_waiting_for, contract_disagreement, has_candidate_file, signed_note, contract_valid_from, contract_valid_until, contract_last_notice_date, contract_renewal_mode]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
@@ -32009,6 +32079,18 @@ components:
         candidate_returned_at: {type: [string, 'null'], format: date-time, description: 'Когда кандидат вернул договор с замечанием'}
         has_signed_scan: {type: boolean, description: 'Кандидат загрузил скан подписанного договора'}
         signed_scan_at: {type: [string, 'null'], format: date-time}
+        contract_votes:
+          type: array
+          items: {$ref: '#/components/schemas/PartnerContractVote'}
+          description: 'ПК-1: голоса ответственных за договор по порядку; согласован, когда согласны все, на разногласии решает директор'
+        contract_waiting_for: {type: array, items: {type: string}, description: 'Кто ещё не высказался; при разногласии — директор, который решает'}
+        contract_disagreement: {type: boolean, description: 'Есть возражение: решает директор'}
+        has_candidate_file: {type: boolean, description: 'Кандидат приложил свою редакцию (`which=candidate`)'}
+        signed_note: {type: string, description: 'Заметка вместо скана при отметке «подписан»'}
+        contract_valid_from: {type: [string, 'null'], format: date}
+        contract_valid_until: {type: [string, 'null'], format: date, description: 'Срок договора, посчитанный в момент отметки «подписан» по правилу компании (ДС-1)'}
+        contract_last_notice_date: {type: [string, 'null'], format: date}
+        contract_renewal_mode: {type: string}
     PartnerContractPrepareRequest:
       type: object
       additionalProperties: false
@@ -32027,6 +32109,11 @@ components:
         deviation_text: {type: string, maxLength: 4000}
         contract_number: {type: string, maxLength: 64}
         contract_date: {type: string, format: date}
+    PartnerSignedScanUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, description: 'До 20 МБ: PDF или изображение'}
     PartnerContractDecisionRequest:
       type: object
       additionalProperties: false
@@ -32047,6 +32134,14 @@ components:
         deviations_allowed: {type: boolean, description: 'Правило компании: свой файл и отступления допустимы'}
         approvers: {type: array, items: {type: string}, description: 'Держатели зоны «Право» по имени'}
         can_decide: {type: boolean}
+    PartnerContractVote:
+      type: object
+      additionalProperties: false
+      required: [name, decision]
+      properties:
+        name: {type: string}
+        decision: {type: string, enum: [approve, return]}
+        note: {type: string}
     PartnerContractTemplateOption:
       type: object
       additionalProperties: false
@@ -32096,6 +32191,15 @@ components:
           type: string
           maxLength: 1000
           description: 'Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1)'
+        signed_note:
+          type: string
+          maxLength: 1000
+          description: 'ПК-1: «Отметить: подписан» — скан (`uploadPartnerSignedScan`) ИЛИ эта заметка; без обоих — 422 `signed_proof_required`'
+    PartnerApplicationInviteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email: {type: string, maxLength: 254, description: 'Адрес кандидата; пусто — взять уже записанный в заявке'}
     BankChangeStatus:
       type: string
       enum: [pending, approved, rejected]

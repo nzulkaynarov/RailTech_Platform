@@ -240,6 +240,34 @@ class PartnerApplication(models.Model):
         verbose_name=_("Скан подписанного договора"),
     )
     signed_scan_at = models.DateTimeField(null=True, blank=True)
+    # ПК-1: общий путь договора. Редакция контрагента (его DOCX) — вложение и точка правды; голоса ответственных за договор;
+    # «Подписан» отмечает менеджер со сканом ИЛИ заметкой; срок считается в этот момент по правилу компании (ДС-1).
+    candidate_file = models.FileField(
+        upload_to=partner_application_contract_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Редакция кандидата"),
+        help_text=_(
+            "Свой DOCX, который кандидат приложил к замечаниям; он же становится файлом договора на согласовании"
+        ),
+    )
+    contract_approval_votes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Голоса ответственных за договор"),
+        help_text=_("[{user_id, name, decision, note, at}]; сбрасывается новой редакцией"),
+    )
+    signed_note = models.TextField(
+        max_length=1000, blank=True, default="", verbose_name=_("Заметка об отметке «подписан»")
+    )
+    signed_marked_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Когда отмечено «подписан»"))
+    contract_valid_from = models.DateField(null=True, blank=True, verbose_name=_("Договор действует с"))
+    contract_valid_until = models.DateField(null=True, blank=True, verbose_name=_("Договор действует до"))
+    contract_last_notice_date = models.DateField(null=True, blank=True, verbose_name=_("Последний день отказа"))
+    contract_term_rule = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Правило срока"))
+    contract_renewal_mode = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Продление"))
+    contract_notice_days = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name=_("Дней на отказ"))
     contract_draft_sent_at = models.DateTimeField(
         null=True,
         blank=True,

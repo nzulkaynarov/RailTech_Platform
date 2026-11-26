@@ -184,6 +184,19 @@ class DeskPartnerContractFacts(serializers.Serializer):
     contract_approvers = serializers.ListField(
         child=serializers.CharField(), help_text="Кто решает, пока согласование ждёт решения."
     )
+    contract_votes = serializers.ListField(
+        child=serializers.DictField(), help_text="ПК-1: голоса ответственных `{name, decision, note}` по порядку."
+    )
+    contract_waiting_for = serializers.ListField(
+        child=serializers.CharField(), help_text="Кто ещё не высказался; при разногласии — директор, который решает."
+    )
+    contract_disagreement = serializers.BooleanField(help_text="Есть возражение: решает директор.")
+    has_candidate_file = serializers.BooleanField(help_text="Кандидат приложил свою редакцию (DOCX).")
+    signed_note = serializers.CharField(allow_blank=True, help_text="Заметка вместо скана при отметке «подписан».")
+    contract_valid_from = serializers.DateField(allow_null=True)
+    contract_valid_until = serializers.DateField(allow_null=True, help_text="Срок договора, посчитанный при отметке.")
+    contract_last_notice_date = serializers.DateField(allow_null=True)
+    contract_renewal_mode = serializers.CharField(allow_blank=True)
 
 
 class DeskPartnerApplicationListItem(DeskPartnerContractFacts):
@@ -304,6 +317,22 @@ class DeskPartnerApplicationApproveIn(serializers.Serializer):
         max_length=1000,
         help_text="Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.",
     )
+    signed_note = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=1000,
+        help_text="ПК-1: «Отметить: подписан» — скан ИЛИ эта заметка (как подписали и где оригинал); скан не обязателен.",
+    )
+
+
+class DeskPartnerScanIn(serializers.Serializer):
+    file = serializers.FileField(help_text="Скан подписанного договора: PDF или изображение до 20 МБ")
+
+
+class DeskPartnerInviteIn(serializers.Serializer):
+    """«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора."""
+
+    email = serializers.EmailField(required=False, allow_blank=True, max_length=254)
 
 
 class DeskPartnerTemplateOption(serializers.Serializer):

@@ -362,8 +362,12 @@ class ContractTransitionInSerializer(serializers.Serializer):
 
 
 class ContractScanInSerializer(serializers.Serializer):
-    file = serializers.FileField(help_text="Скан подписанного договора: PDF, jpg, png или webp до 20 МБ")
-    note = serializers.CharField(required=False, allow_blank=True)
+    file = serializers.FileField(
+        required=False, help_text="Скан подписанного договора: PDF, jpg, png или webp до 20 МБ; без скана — `note`"
+    )
+    note = serializers.CharField(
+        required=False, allow_blank=True, help_text="Заметка вместо скана (ПК-1): как договор подписан и где оригинал"
+    )
 
 
 class ActScanInSerializer(serializers.Serializer):

@@ -16,15 +16,18 @@ import {
   getDownloadPartnerApplicationDocumentUrl,
   getListPartnerApplicationsQueryKey,
   useApprovePartnerApplication,
+  useInvitePartnerCandidate,
   useListPartnerApplications,
   useRejectPartnerApplication,
   useSendContractPartnerApplication,
+  useUploadPartnerSignedScan,
 } from "../../../shared/api/generated/platform-bff";
 import { downloadFile } from "../../../shared/api/download";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilterBar } from "../../../shared/ui/FilterBar";
+import { FileField } from "../../../shared/ui/FileField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormPanel } from "./common";
@@ -71,6 +74,7 @@ export function PartnerApplicationsPanel() {
   const [decisionRow, setDecisionRow] = useState<PartnerApplicationItem | null>(null);
   const [sendContractRow, setSendContractRow] = useState<PartnerApplicationItem | null>(null);
   const [approveRow, setApproveRow] = useState<PartnerApplicationItem | null>(null);
+  const [inviteRow, setInviteRow] = useState<PartnerApplicationItem | null>(null);
   const [rejectRow, setRejectRow] = useState<PartnerApplicationItem | null>(null);
 
   const canManage = canEdit(me, "erp.stock");
@@ -215,6 +219,16 @@ export function PartnerApplicationsPanel() {
                 )}
               </Button>
             ) : null}
+            {canManage && row.status === "contract_sent" && row.email.trim() === "" ? (
+              <Button
+                size="small"
+                onClick={() => {
+                  setInviteRow(row);
+                }}
+              >
+                {t("partnerApplications.actions.invite")}
+              </Button>
+            ) : null}
             {canManage && row.status !== "submitted" ? (
               <Button
                 type={row.status === "candidate_agreed" ? "primary" : "default"}
@@ -334,6 +348,19 @@ export function PartnerApplicationsPanel() {
         />
       ) : null}
 
+      {inviteRow ? (
+        <InviteModal
+          item={inviteRow}
+          onDone={() => {
+            invalidate();
+            setInviteRow(null);
+          }}
+          onClose={() => {
+            setInviteRow(null);
+          }}
+        />
+      ) : null}
+
       {rejectRow ? (
         <RejectModal
           item={rejectRow}
@@ -410,7 +437,7 @@ function CompanyMatchChoice({
 function ContractCell({ row }: { row: PartnerApplicationItem }) {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
-  const open = (which: "contract" | "scan") => {
+  const open = (which: "contract" | "scan" | "candidate") => {
     void downloadFile(
       getDownloadPartnerApplicationDocumentUrl(row.id, { which }),
       `${which}-${row.id}`,
@@ -431,6 +458,8 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
         : row.contract_approval === "returned"
           ? t("partnerApplications.contractLine.returned", { note: row.contract_approval_note })
           : null;
+  const waiting = row.contract_waiting_for.join(", ");
+  const voted = row.contract_votes.filter((vote) => vote.decision === "approve").map((vote) => vote.name);
   return (
     <div>
       {row.contract_number ? <div>№ {row.contract_number}</div> : null}
@@ -450,6 +479,21 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
         <span className="pf-cat-sub">{t("partnerApplications.contractLine.upload")}</span>
       ) : null}
       {approvalLine ? <span className="pf-cat-sub">{approvalLine}</span> : null}
+      {row.contract_approval === "requested" && voted.length > 0 ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.votedApprove", { who: voted.join(", ") })}
+        </span>
+      ) : null}
+      {row.contract_approval === "requested" && row.contract_disagreement ? (
+        <span className="pf-cat-sub pf-cat-danger">
+          {t("partnerApplications.contractLine.disagreement", { who: waiting })}
+        </span>
+      ) : null}
+      {row.contract_approval === "requested" && !row.contract_disagreement && waiting ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.waitingFor", { who: waiting })}
+        </span>
+      ) : null}
       {row.status === "submitted" && row.contract_blocker === "CONTRACT_NOT_PREPARED" ? (
         <>
           <span className="pf-cat-sub pf-cat-danger">
@@ -471,13 +515,27 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
       {row.status === "contract_sent" && !row.candidate_returned_at ? (
         <span className="pf-cat-sub">{t("partnerApplications.contractLine.waitingCandidate")}</span>
       ) : null}
+      {row.status === "contract_sent" && row.email.trim() === "" ? (
+        <span className="pf-cat-sub pf-cat-danger">
+          {t("partnerApplications.contractLine.noEmail")}
+        </span>
+      ) : null}
       {row.status === "candidate_agreed" ? (
         <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.awaitingSignature")}
           {row.has_signed_scan
-            ? t("partnerApplications.contractLine.scanReady", {
+            ? ` · ${t("partnerApplications.contractLine.scanReady", {
                 date: row.signed_scan_at ? date(row.signed_scan_at) : "",
-              })
-            : t("partnerApplications.contractLine.waitingScan")}
+              })}`
+            : ""}
+        </span>
+      ) : null}
+      {row.status === "approved" && row.contract_valid_until ? (
+        <span className="pf-cat-sub">
+          {t("partnerApplications.contractLine.validUntil", { date: date(row.contract_valid_until) })}
+          {row.signed_note
+            ? ` · ${t("partnerApplications.contractLine.signedNote", { note: row.signed_note })}`
+            : ""}
         </span>
       ) : null}
       {row.contract_source ? (
@@ -489,6 +547,17 @@ function ContractCell({ row }: { row: PartnerApplicationItem }) {
           }}
         >
           {t("partnerApplications.contractLine.openContract")}
+        </Button>
+      ) : null}
+      {row.has_candidate_file ? (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => {
+            open("candidate");
+          }}
+        >
+          {t("partnerApplications.contractLine.openCandidateFile")}
         </Button>
       ) : null}
       {row.has_signed_scan ? (
@@ -557,6 +626,10 @@ function SendContractModal({
   );
 }
 
+/**
+ * «Отметить: подписан» (ПК-1): скан подписанного договора ИЛИ заметка — скан не обязателен. Срок договора считается в
+ * этот момент по правилу компании. Без согласия кандидата — только с причиной (журнал), как и раньше.
+ */
 function ApproveModal({
   item,
   onDone,
@@ -570,6 +643,8 @@ function ApproveModal({
   const numId = useId();
   const dateId = useId();
   const kindId = useId();
+  const scanId = useId();
+  const noteId = useId();
   const [contractNumber, setContractNumber] = useState(item.contract_number || "");
   const [contractDate, setContractDate] = useState(
     item.contract_date || new Date().toISOString().slice(0, 10),
@@ -577,53 +652,68 @@ function ApproveModal({
   const [kind, setKind] = useState<PartnerApplicationKind>(item.kind || "supplier");
   const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
   const [overrideReason, setOverrideReason] = useState("");
+  const [signedNote, setSignedNote] = useState("");
+  const [scan, setScan] = useState<File | null>(null);
   const needsChoice = Boolean(item.company_match_pending);
   const withoutAgreement = item.status === "contract_sent";
-  // Договор подготовлен в системе: подтверждается скан подписанного; без него — только причина в журнал (ПД-1)
-  const withoutScan = item.contract_source !== "" && !item.has_signed_scan;
-  const needsReason = withoutAgreement || withoutScan;
+  // Договор подготовлен в системе: «подписан» подтверждается сканом ИЛИ заметкой (скан не обязателен)
+  const needsProof = item.contract_source !== "" && !item.has_signed_scan;
+  const proofGiven = scan !== null || signedNote.trim() !== "";
 
   const approve = useApprovePartnerApplication({
     mutation: {
       onSuccess: onDone,
     },
   });
+  const upload = useUploadPartnerSignedScan();
 
   const fields = errorFields(approve.error);
   const reasonId = useId();
+  const send = () => {
+    approve.mutate({
+      id: item.id,
+      data: {
+        contract_number: contractNumber.trim(),
+        contract_date: contractDate || undefined,
+        kind,
+        ...companyDecision(item, companyChoice),
+        ...(withoutAgreement ? { override_reason: overrideReason.trim() } : {}),
+        ...(signedNote.trim() ? { signed_note: signedNote.trim() } : {}),
+      },
+    });
+  };
 
   return (
     <FormPanel
       title={t("partnerApplications.approveModal.title", { name: item.company_name })}
       okLabel={t("partnerApplications.approveModal.ok")}
-      loading={approve.isPending}
-      error={approve.error}
+      loading={approve.isPending || upload.isPending}
+      error={approve.error ?? upload.error}
       disabled={
         !contractNumber.trim() ||
         (needsChoice && !companyChoice) ||
-        (needsReason && !overrideReason.trim())
+        (needsProof && !proofGiven) ||
+        (withoutAgreement && !overrideReason.trim())
       }
       onOk={() => {
-        approve.mutate({
-          id: item.id,
-          data: {
-            contract_number: contractNumber.trim(),
-            contract_date: contractDate || undefined,
-            kind,
-            ...companyDecision(item, companyChoice),
-            ...(needsReason ? { override_reason: overrideReason.trim() } : {}),
-          },
-        });
+        if (scan) {
+          upload.mutate({ id: item.id, data: { file: scan } }, { onSuccess: send });
+        } else {
+          send();
+        }
       }}
       onCancel={onClose}
     >
+      {withoutAgreement && !overrideReason.trim() ? (
+        <p className="pf-hint" role="status">
+          {t("partnerApplications.approveModal.needReason")}
+        </p>
+      ) : null}
       <p>
         {t(
           withoutAgreement
             ? "partnerApplications.approveModal.hintOverride"
-            : withoutScan
-              ? "partnerApplications.approveModal.hintNoScan"
-              : "partnerApplications.approveModal.hint",
+            : "partnerApplications.approveModal.hint",
         )}
       </p>
 
@@ -631,7 +721,7 @@ function ApproveModal({
         <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
       ) : null}
 
-      {needsReason ? (
+      {withoutAgreement ? (
         <FormField id={reasonId} label={t("partnerApplications.approveModal.overrideLabel")}>
           <Input.TextArea
             id={reasonId}
@@ -644,6 +734,39 @@ function ApproveModal({
             maxLength={1000}
           />
         </FormField>
+      ) : null}
+
+      {needsProof ? (
+        <>
+          <FormField
+            id={scanId}
+            label={t("partnerApplications.approveModal.scanLabel")}
+            hint={t("partnerApplications.approveModal.scanHint")}
+          >
+            <FileField
+              id={scanId}
+              value={scan ? [scan] : []}
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              maxSize={20 * 1024 * 1024}
+              aria-describedby={`${scanId}-hint`}
+              onChange={(files) => {
+                setScan(files[0] ?? null);
+              }}
+            />
+          </FormField>
+          <FormField id={noteId} label={t("partnerApplications.approveModal.noteLabel")}>
+            <Input.TextArea
+              id={noteId}
+              rows={2}
+              value={signedNote}
+              onChange={(e) => {
+                setSignedNote(e.target.value);
+              }}
+              placeholder={t("partnerApplications.approveModal.notePlaceholder")}
+              maxLength={1000}
+            />
+          </FormField>
+        </>
       ) : null}
 
       <FormField id={numId} label={t("partnerApplications.contractNumber")}>
@@ -679,6 +802,49 @@ function ApproveModal({
             value: k,
             label: t(`cabinetAccess.kind.${k}`),
           }))}
+        />
+      </FormField>
+    </FormPanel>
+  );
+}
+
+/** «Пригласить в Кабинет» позже (ПК-1): договор ушёл без почты, теперь адрес известен. */
+function InviteModal({
+  item,
+  onDone,
+  onClose,
+}: {
+  item: PartnerApplicationItem;
+  onDone: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("catalog");
+  const emailId = useId();
+  const [email, setEmail] = useState("");
+  const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const invite = useInvitePartnerCandidate({ mutation: { onSuccess: onDone } });
+  return (
+    <FormPanel
+      title={t("partnerApplications.inviteModal.title", { name: item.company_name })}
+      okLabel={t("partnerApplications.inviteModal.ok")}
+      loading={invite.isPending}
+      error={invite.error}
+      disabled={!valid}
+      onOk={() => {
+        invite.mutate({ id: item.id, data: { email: email.trim() } });
+      }}
+      onCancel={onClose}
+    >
+      <p>{t("partnerApplications.inviteModal.hint")}</p>
+      <FormField id={emailId} label={t("partnerApplications.inviteModal.email")}>
+        <Input
+          id={emailId}
+          type="email"
+          value={email}
+          maxLength={254}
+          onChange={(e) => {
+            setEmail(e.target.value);
+          }}
         />
       </FormField>
     </FormPanel>

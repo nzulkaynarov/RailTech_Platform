@@ -4,7 +4,7 @@
  */
 
 /**
- * `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
+ * `attach_scan` с `note` — «Отметить: подписан» без скана (ПК-1): скан или заметка, срок считается в этот момент; `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
  */
 export type ProjectContractActionInAction =
   (typeof ProjectContractActionInAction)[keyof typeof ProjectContractActionInAction];
@@ -15,6 +15,7 @@ export const ProjectContractActionInAction = {
   reject: "reject",
   revise: "revise",
   mark_issued: "mark_issued",
+  attach_scan: "attach_scan",
   sign_ours: "sign_ours",
   request_deviation: "request_deviation",
   decide_deviation: "decide_deviation",

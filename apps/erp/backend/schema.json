@@ -1168,7 +1168,7 @@
         "/api/portal/v1/company/partner-application/return": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_return_create",
-                "description": "POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1).",
+                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды.",
                 "tags": [
                     "api"
                 ],
@@ -1182,7 +1182,7 @@
         "/api/portal/v1/company/partner-application/return/": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_return_create_2",
-                "description": "POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1).",
+                "description": "POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.\n\nJSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды.",
                 "tags": [
                     "api"
                 ],
@@ -14159,7 +14159,7 @@
         "/api/v1/catalog/partner-applications/{id}/document/": {
             "get": {
                 "operationId": "catalog_partner_applications_document",
-                "description": "`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного.",
+                "description": "`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного; `which=candidate` — редакция, которую приложил кандидат.",
                 "summary": "Download the contract or the signed scan",
                 "parameters": [
                     {
@@ -14177,6 +14177,7 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "candidate",
                                 "contract",
                                 "scan"
                             ]
@@ -14219,6 +14220,96 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/invite/": {
+            "post": {
+                "operationId": "catalog_partner_applications_invite",
+                "description": "ПК-1: договор можно отправить и без почты кандидата; когда адрес появился — `email` (или уже записанный) и приглашение в Кабинет уходит письмом.",
+                "summary": "Invite the candidate to the Cabinet (later, when the e-mail appears)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerInviteInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerInviteInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerInviteInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -14436,6 +14527,87 @@
                             }
                         }
                     }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/signed-scan/": {
+            "post": {
+                "operationId": "catalog_partner_applications_signed_scan",
+                "description": "ПК-1: скан не обязателен — «Отметить: подписан» принимает скан ИЛИ заметку. Multipart, `file`.",
+                "summary": "Attach the scan of the signed contract (optional)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerScanInRequest"
+                            }
+                        }
+                    },
+                    "required": true
                 },
                 "security": [
                     {
@@ -19835,8 +20007,8 @@
         "/api/v1/crm/contracts/{id}/attach-scan/": {
             "post": {
                 "operationId": "crm_contracts_attach_scan_create",
-                "description": "PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.",
-                "summary": "Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)",
+                "description": "Скан — PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Скан не обязателен: вместо него можно передать `note` (JSON). Договор становится «Подписан», срок считается в этот момент, сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.",
+                "summary": "Отметить: договор подписан — со сканом или заметкой (PENDING_MANAGER, ISSUED_EXTERNAL → SIGNED)",
                 "parameters": [
                     {
                         "in": "path",
@@ -19857,9 +20029,13 @@
                             "schema": {
                                 "$ref": "#/components/schemas/ContractScanInRequest"
                             }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractScanInRequest"
+                            }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -45186,15 +45362,13 @@
                     "file": {
                         "type": "string",
                         "format": "binary",
-                        "description": "Скан подписанного договора: PDF, jpg, png или webp до 20 МБ"
+                        "description": "Скан подписанного договора: PDF, jpg, png или webp до 20 МБ; без скана — `note`"
                     },
                     "note": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Заметка вместо скана (ПК-1): как договор подписан и где оригинал"
                     }
-                },
-                "required": [
-                    "file"
-                ]
+                }
             },
             "ContractSendBlocker": {
                 "type": "object",
@@ -48760,6 +48934,11 @@
                         "type": "string",
                         "description": "Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.",
                         "maxLength": 1000
+                    },
+                    "signed_note": {
+                        "type": "string",
+                        "description": "ПК-1: «Отметить: подписан» — скан ИЛИ эта заметка (как подписали и где оригинал); скан не обязателен.",
+                        "maxLength": 1000
                     }
                 },
                 "required": [
@@ -48943,6 +49122,52 @@
                         },
                         "description": "Кто решает, пока согласование ждёт решения."
                     },
+                    "contract_votes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "ПК-1: голоса ответственных `{name, decision, note}` по порядку."
+                    },
+                    "contract_waiting_for": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Кто ещё не высказался; при разногласии — директор, который решает."
+                    },
+                    "contract_disagreement": {
+                        "type": "boolean",
+                        "description": "Есть возражение: решает директор."
+                    },
+                    "has_candidate_file": {
+                        "type": "boolean",
+                        "description": "Кандидат приложил свою редакцию (DOCX)."
+                    },
+                    "signed_note": {
+                        "type": "string",
+                        "description": "Заметка вместо скана при отметке «подписан»."
+                    },
+                    "contract_valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "contract_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Срок договора, посчитанный при отметке."
+                    },
+                    "contract_last_notice_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "contract_renewal_mode": {
+                        "type": "string"
+                    },
                     "id": {
                         "type": "integer"
                     },
@@ -49104,15 +49329,23 @@
                     "contract_blocker",
                     "contract_date",
                     "contract_deviation_text",
+                    "contract_disagreement",
                     "contract_language",
+                    "contract_last_notice_date",
                     "contract_number",
+                    "contract_renewal_mode",
                     "contract_source",
                     "contract_template_edition",
                     "contract_template_id",
                     "contract_template_name",
+                    "contract_valid_from",
+                    "contract_valid_until",
+                    "contract_votes",
+                    "contract_waiting_for",
                     "created_at",
                     "decision_needs_confirmation",
                     "email",
+                    "has_candidate_file",
                     "has_signed_scan",
                     "id",
                     "inn",
@@ -49125,6 +49358,7 @@
                     "rejected_reason",
                     "reviewed_at",
                     "reviewed_by",
+                    "signed_note",
                     "signed_scan_at",
                     "source",
                     "status"
@@ -49224,6 +49458,52 @@
                             "type": "string"
                         },
                         "description": "Кто решает, пока согласование ждёт решения."
+                    },
+                    "contract_votes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "ПК-1: голоса ответственных `{name, decision, note}` по порядку."
+                    },
+                    "contract_waiting_for": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Кто ещё не высказался; при разногласии — директор, который решает."
+                    },
+                    "contract_disagreement": {
+                        "type": "boolean",
+                        "description": "Есть возражение: решает директор."
+                    },
+                    "has_candidate_file": {
+                        "type": "boolean",
+                        "description": "Кандидат приложил свою редакцию (DOCX)."
+                    },
+                    "signed_note": {
+                        "type": "string",
+                        "description": "Заметка вместо скана при отметке «подписан»."
+                    },
+                    "contract_valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "contract_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Срок договора, посчитанный при отметке."
+                    },
+                    "contract_last_notice_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "contract_renewal_mode": {
+                        "type": "string"
                     },
                     "id": {
                         "type": "integer"
@@ -49368,15 +49648,23 @@
                     "contract_blocker",
                     "contract_date",
                     "contract_deviation_text",
+                    "contract_disagreement",
                     "contract_language",
+                    "contract_last_notice_date",
                     "contract_number",
+                    "contract_renewal_mode",
                     "contract_source",
                     "contract_template_edition",
                     "contract_template_id",
                     "contract_template_name",
+                    "contract_valid_from",
+                    "contract_valid_until",
+                    "contract_votes",
+                    "contract_waiting_for",
                     "created_at",
                     "decision_needs_confirmation",
                     "email",
+                    "has_candidate_file",
                     "has_signed_scan",
                     "id",
                     "inn",
@@ -49388,6 +49676,7 @@
                     "phone",
                     "rejected_reason",
                     "reviewed_at",
+                    "signed_note",
                     "signed_scan_at",
                     "source",
                     "status"
@@ -49547,6 +49836,38 @@
                         "description": "Свой файл договора: PDF или DOCX, до 20 МБ."
                     }
                 }
+            },
+            "DeskPartnerInviteInRequest": {
+                "type": "object",
+                "description": "«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора.",
+                "properties": {
+                    "email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            "DeskPartnerScanInRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Скан подписанного договора: PDF или изображение до 20 МБ"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
             },
             "DeskPartnerTemplateOption": {
                 "type": "object",

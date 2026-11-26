@@ -258,7 +258,7 @@
     "state": {
       "project": "The draft has not been sent to the client yet.",
       "atClient": "The draft is with the client for wording agreement.",
-      "client_agreed": "The client agreed the wording. Next, issue the contract in EDI (outside the Platform).",
+      "client_agreed": "The client agreed the wording. Awaiting signature: once the contract is signed, mark it — a scan or a note.",
       "issued_at_operator": "The contract is issued in EDI. When both sides have signed, attach the scan.",
       "signed": "The contract is signed by both sides, the scan is stored.",
       "rejected": "The client rejected the contract. Fix the draft and send it for agreement again.",
@@ -286,6 +286,13 @@
       "submit": "Record the rejection",
       "cancel": "Cancel",
       "disabled": "The button becomes available when you write a reason."
+    },
+    "signedNote": {
+      "toggle": "Signed, no scan",
+      "label": "Note instead of a scan",
+      "hint": "How it was signed and where the original is. The contract term is calculated at the moment of marking.",
+      "placeholder": "e.g.: signed on our side, the original is in the contracts folder",
+      "submit": "Mark as signed"
     },
     "scan": {
       "label": "Scan of the signed contract",

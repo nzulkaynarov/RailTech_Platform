@@ -106,7 +106,7 @@ from portal.throttles import (
     PortalVerifyRateThrottle,
 )
 from rest_framework import exceptions, status
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from sales.models import DeliveryLine
@@ -1759,9 +1759,12 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
 
 
 class CompanyPartnerContractReturnView(BasePortalView):
-    """POST /company/partner-application/return — кандидат вернул договор с замечанием (ПД-1)."""
+    """POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.
+
+    JSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды."""
 
     required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
+    parser_classes = [JSONParser, MultiPartParser]
 
     def post(self, request):
         from portal.desk import service_partner_contract as contract_step
@@ -1779,7 +1782,7 @@ class CompanyPartnerContractReturnView(BasePortalView):
             if not app:
                 raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
             try:
-                contract_step.candidate_return(app, request.data.get("notes") or "")
+                contract_step.candidate_return(app, request.data.get("notes") or "", request.FILES.get("file"))
             except AccessError as error:
                 raise PortalBadRequest(error.code) from None
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)

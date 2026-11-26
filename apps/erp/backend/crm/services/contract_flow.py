@@ -113,11 +113,11 @@ TRANSITIONS = {
         ),
         Transition(
             "attach_scan",
-            frozenset({S.ISSUED_EXTERNAL}),
+            frozenset({S.PENDING_MANAGER, S.ISSUED_EXTERNAL}),
             S.SIGNED,
             "contract.sign",
             "contract.scan_attached",
-            "Прикреплён скан подписанного договора",
+            "Договор отмечен подписанным",
             needs_file=True,
         ),
     )
@@ -349,9 +349,11 @@ def apply_transition(
     if transition.needs_reason and not reason:
         return None, "REASON_REQUIRED"
     if transition.needs_file:
-        error = _check_scan(scan)
-        if error:
-            return None, error
+        # ПК-1: «Подписан» — скан ИЛИ заметка (скан не обязателен); заметка без скана — слово менеджера в журнале
+        if scan is not None or not note:
+            error = _check_scan(scan)
+            if error:
+                return None, error
     on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
     if error:
         return None, error
@@ -377,12 +379,14 @@ def apply_transition(
             fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
             fields += _drop_company_stamp(contract)
         elif action == "attach_scan":
-            contract.signed_file = scan
+            if scan is not None:
+                contract.signed_file = scan
+                fields.append("signed_file")
             contract.manager_signed_at = now
             if contract.client_signed_at is None:
                 contract.client_signed_at = now
                 fields.append("client_signed_at")
-            fields += ["signed_file", "manager_signed_at"]
+            fields.append("manager_signed_at")
         contract.save(update_fields=fields)
     _journal(contract, transition, actor, reason=reason, note=note, before=before, on_behalf=on_behalf)
     _publish(contract, actor, reason=reason)
@@ -392,8 +396,7 @@ def apply_transition(
         from .contract_term import apply_at_signing
 
         # ДС-1: срок и последний день отказа из правила, до события «подписан». Срок считается в момент отметки
-        # «подписан»: сейчас единственный путь — скан (`attach_scan`). Когда появится отметка «подписан» с заметкой без
-        # скана (ДП-1), она обязана вызвать `apply_at_signing(contract)` тут же — крючок один, другого места нет.
+        # «подписан» (скан или заметка — ПК-1): крючок один, другого места нет.
         apply_at_signing(contract)
         events.publish_contract_signed(contract, by="both", actor=events.build_actor(actor) if actor else None)
         _after_signed(contract)

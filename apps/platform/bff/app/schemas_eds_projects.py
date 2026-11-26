@@ -36,6 +36,8 @@ ContractAction = Literal[
     "reject",
     "revise",
     "mark_issued",
+    # ПК-1: «Отметить: подписан» со сканом (отдельный запрос) или заметкой (это действие)
+    "attach_scan",
     # ДОК-10: договор по утверждённому шаблону
     "sign_ours",
     "request_deviation",
@@ -376,6 +378,8 @@ class ContractActionIn(BaseModel):
             raise ValueError("approve")
         if self.action == "reject" and not (self.reason or "").strip():
             raise ValueError("reason")
+        if self.action == "attach_scan" and not (self.note or "").strip():
+            raise ValueError("note")  # без скана «подписан» отмечается заметкой (ПК-1)
         if self.action == "client_agreed":
             if self.channel is None:
                 raise ValueError("channel")

@@ -166,6 +166,12 @@ const TRANSITIONS: Record<
     code: "contract.issued_external",
     text: "Договор выставлен в ЭДО",
   },
+  attach_scan: {
+    from: ["client_agreed", "issued_at_operator"],
+    to: "signed",
+    code: "contract.scan_attached",
+    text: "Договор отмечен подписанным",
+  },
 };
 
 /** ДС-1: отказ от продления и продление соглашением — по факту подписанного договора. */

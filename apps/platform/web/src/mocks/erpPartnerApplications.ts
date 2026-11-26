@@ -26,6 +26,15 @@ const NO_CONTRACT = {
   candidate_returned_at: null,
   has_signed_scan: false,
   signed_scan_at: null,
+  contract_votes: [],
+  contract_waiting_for: [],
+  contract_disagreement: false,
+  has_candidate_file: false,
+  signed_note: "",
+  contract_valid_from: null,
+  contract_valid_until: null,
+  contract_last_notice_date: null,
+  contract_renewal_mode: "",
 } as const satisfies Partial<PartnerApplicationItem>;
 
 /** Договор по утверждённому шаблону без отступлений: согласование не нужно, можно отправлять. */
@@ -457,6 +466,7 @@ export const erpPartnerApplicationsHandlers = [
       company_id?: string;
       create_new_company?: boolean;
       override_reason?: string;
+      signed_note?: string;
     };
     if (
       item.status !== "candidate_agreed" &&
@@ -471,12 +481,17 @@ export const erpPartnerApplicationsHandlers = [
         { status: 422 },
       );
     }
-    if (item.contract_source !== "" && !item.has_signed_scan && !body.override_reason) {
+    if (
+      item.contract_source !== "" &&
+      !item.has_signed_scan &&
+      !body.override_reason &&
+      !body.signed_note
+    ) {
       return HttpResponse.json(
         {
           code: "VALIDATION_FAILED",
           message: "Проверьте заполнение полей.",
-          details: { reason: "signed_scan_required" },
+          details: { reason: "signed_proof_required" },
         },
         { status: 422 },
       );

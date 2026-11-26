@@ -130,12 +130,13 @@ describe("Договор кандидата в партнёры (ПД-1)", () =>
     expect(within(modal).getByRole("button", { name: "Подготовить договор" })).toBeDisabled();
   });
 
-  it("одобрение без скана подписанного — только с причиной", async () => {
+  it("отметка «подписан» без согласия — с причиной, а скан или заметка — на выбор", async () => {
     await openApplications("supply@demo.example");
     const row = rowOf("ООО «Восток Снаб»");
-    fireEvent.click(within(row).getByRole("button", { name: "Одобрить без согласия" }));
-    const modal = await findModal(/Одобрение заявки/);
+    fireEvent.click(within(row).getByRole("button", { name: "Отметить: подписан без согласия" }));
+    const modal = await findModal(/Договор подписан/);
     expect(within(modal).getByLabelText(/Причина одобрения без согласия/)).toBeVisible();
+    expect(within(modal).getByLabelText("Заметка вместо скана")).toBeVisible();
   });
 
   it("держатель «Право» без раздела снабжения видит заявки и решает, но не готовит договор", async () => {

@@ -26,6 +26,12 @@ class Out(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ContractVote(Out):
+    name: str
+    decision: Literal["approve", "return"]
+    note: str = ""
+
+
 class PartnerApplicationItem(Out):
     id: str
     source: PartnerApplicationSource
@@ -68,6 +74,17 @@ class PartnerApplicationItem(Out):
     candidate_returned_at: str | None
     has_signed_scan: bool
     signed_scan_at: str | None
+    # ПК-1: общий путь договора: голоса ответственных, редакция кандидата,
+    # «подписан» со сканом или заметкой, срок
+    contract_votes: list[ContractVote]
+    contract_waiting_for: list[str]
+    contract_disagreement: bool
+    has_candidate_file: bool
+    signed_note: str
+    contract_valid_from: str | None
+    contract_valid_until: str | None
+    contract_last_notice_date: str | None
+    contract_renewal_mode: str
 
 
 class PartnerApplicationListResponse(Out):
@@ -91,6 +108,16 @@ class PartnerApplicationApproveRequest(Body):
     create_new_company: bool | None = None
     kind: PartnerApplicationKind | None = None
     override_reason: str | None = Field(default=None, max_length=1000)
+    # ПК-1: «Отметить: подписан» — скан (загружается отдельно) ИЛИ заметка
+    signed_note: str | None = Field(default=None, max_length=1000)
+
+
+class PartnerApplicationInviteRequest(Body):
+    """«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора."""
+
+    email: str | None = Field(
+        default=None, max_length=254, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
 
 
 class PartnerApplicationCreateRequest(Body):
@@ -218,6 +245,28 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         ),
         has_signed_scan=bool(raw.get("has_signed_scan")),
         signed_scan_at=str(raw["signed_scan_at"]) if raw.get("signed_scan_at") else None,
+        contract_votes=[
+            ContractVote(
+                name=text(v.get("name")),
+                decision="return" if v.get("decision") == "return" else "approve",
+                note=text(v.get("note")),
+            )
+            for v in raw.get("contract_votes") or []
+        ],
+        contract_waiting_for=[str(name) for name in raw.get("contract_waiting_for") or []],
+        contract_disagreement=bool(raw.get("contract_disagreement")),
+        has_candidate_file=bool(raw.get("has_candidate_file")),
+        signed_note=text(raw.get("signed_note")),
+        contract_valid_from=str(raw["contract_valid_from"])
+        if raw.get("contract_valid_from")
+        else None,
+        contract_valid_until=str(raw["contract_valid_until"])
+        if raw.get("contract_valid_until")
+        else None,
+        contract_last_notice_date=(
+            str(raw["contract_last_notice_date"]) if raw.get("contract_last_notice_date") else None
+        ),
+        contract_renewal_mode=text(raw.get("contract_renewal_mode")),
     )
 
 

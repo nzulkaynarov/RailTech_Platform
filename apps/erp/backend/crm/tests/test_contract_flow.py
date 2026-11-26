@@ -128,8 +128,8 @@ def test_transition_only_from_allowed_statuses(pw, action, slug, body, allowed, 
         assert not bus_support.published("contract.status_changed")
 
 
-@pytest.mark.parametrize("status", [s for s in ALL if s != S.ISSUED_EXTERNAL])
-def test_scan_only_from_issued_at_operator(pw, status):  # noqa: F811
+@pytest.mark.parametrize("status", [s for s in ALL if s not in (S.ISSUED_EXTERNAL, S.PENDING_MANAGER)])
+def test_scan_only_after_client_agreed(pw, status):  # noqa: F811
     contract = contract_in(pw, status)
     response = _post(pw.accountant, contract, "attach-scan", {"file": scan()}, format="multipart")
     assert response.status_code == 409
@@ -249,10 +249,10 @@ def test_service_checks_the_right_even_without_the_view_gate(pw):  # noqa: F811
 
 def test_allowed_actions_follow_status_and_rights(pw):  # noqa: F811
     contract = contract_in(pw, S.PENDING_MANAGER)
-    assert contract_flow.allowed_actions(contract, pw.accountant) == ["reject", "mark_issued"]
+    assert contract_flow.allowed_actions(contract, pw.accountant) == ["reject", "mark_issued", "attach_scan"]
     assert contract_flow.allowed_actions(contract, pw.manager) == []
     assert contract_flow.allowed_actions(contract, pw.outsider) == []
-    assert set(contract_flow.allowed_actions(contract, pw.admin)) == {"reject", "mark_issued"}
+    assert set(contract_flow.allowed_actions(contract, pw.admin)) == {"reject", "mark_issued", "attach_scan"}
 
 
 # ── Создание проекта договора и события ───────────────────────────────────────────────────────────────
@@ -362,16 +362,22 @@ def test_portal_signature_never_signs_around_the_operator_and_the_scan(pw):  # n
     assert not bus_support.published("contract.signed") or all(
         e["data"]["payload"].get("signed_by") != "both" for e in bus_support.published("contract.signed")
     )
-    # дальше — только оператор и скан
-    assert (
-        api(pw.accountant)
-        .post(f"/api/v1/crm/contracts/{contract.id}/attach-scan/", {"file": scan()}, format="multipart")
-        .status_code
-        == 409
-    )
-    assert contract_flow.apply_transition(contract.id, "mark_issued", pw.accountant)[1] is None
+    # дальше «подписан» отмечает менеджер: скан или заметка (ПК-1), срок считается в этот момент
     signed, error = contract_flow.apply_transition(contract.id, "attach_scan", pw.accountant, scan=scan())
     assert error is None and signed.status.code == S.SIGNED
+
+
+def test_signed_with_a_note_instead_of_a_scan_computes_the_term(pw):  # noqa: F811
+    """ПК-1: скан не обязателен — заметка; без обоих — `SCAN_REQUIRED`; срок считается в момент отметки."""
+    contract = contract_in(pw, S.PENDING_MANAGER)
+    assert contract_flow.apply_transition(contract.id, "attach_scan", pw.accountant)[1] == "SCAN_REQUIRED"
+    response = api(pw.accountant).post(
+        f"/api/v1/crm/contracts/{contract.id}/attach-scan/", {"note": "Подписан у нас, оригинал в папке"}, format="json"
+    )
+    assert response.status_code == 200, response.content
+    contract.refresh_from_db()
+    assert contract.status.code == S.SIGNED and not contract.signed_file
+    assert contract.valid_until is not None and contract.term_rule
 
 
 def test_revise_drops_every_previous_signature(pw):  # noqa: F811

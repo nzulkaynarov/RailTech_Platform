@@ -384,17 +384,37 @@ class TestSendInvitesCandidateForAnySource:
         assert len(mail.outbox) == 1 and mail.outbox[0].to == ["li@jichuang.example"]
         assert response.json()["invite_delivery"] in ("queued", "sent")
 
-    def test_lead_without_email_says_what_is_missing(self, world, supply):
+    def test_lead_without_email_does_not_stop_the_path(self, world, supply):
+        """ПК-1: почты нет — договор отправляется, компания и контакт заведены, письма нет; приглашение позже."""
         tpl = template(world)
         set_default(world, tpl)
-        app = make_app(source=PartnerApplicationSource.LEAD, email="")
+        app = make_app(source=PartnerApplicationSource.LEAD, email="", phone="+998901112233")
         post(supply, app, "prepare-contract", {})
 
         response = post(supply, app, "send-contract")
 
-        assert response.status_code == 400 and response.json()["detail"] == "CANDIDATE_EMAIL_REQUIRED"
+        assert response.status_code == 200, response.content
         app.refresh_from_db()
-        assert app.status == PartnerApplicationStatus.SUBMITTED and not app.company_id
+        assert app.status == PartnerApplicationStatus.CONTRACT_SENT and app.company_id and app.applicant_contact_id
+        assert len(mail.outbox) == 0
+
+        later = post(supply, app, "invite", {"email": "late@partner.example"})
+
+        assert later.status_code == 200, later.content
+        app.refresh_from_db()
+        assert app.email == "late@partner.example" and app.applicant_contact.email == "late@partner.example"
+        assert len(mail.outbox) == 1 and mail.outbox[0].to == ["late@partner.example"]
+
+    def test_invite_without_any_email_says_what_is_missing(self, world, supply):
+        tpl = template(world)
+        set_default(world, tpl)
+        app = make_app(source=PartnerApplicationSource.LEAD, email="")
+        post(supply, app, "prepare-contract", {})
+        post(supply, app, "send-contract")
+
+        response = post(supply, app, "invite", {})
+
+        assert response.status_code == 400 and response.json()["detail"] == "CANDIDATE_EMAIL_REQUIRED"
 
 
 # ── Шаги 3–5 целиком: кандидат в кабинете → согласие → скан → подтверждение ──────────────────────────────────────
@@ -427,24 +447,19 @@ class TestWholePath:
         assert listed["candidate_returned_at"] and listed["candidate_notes"] == "Срок оплаты 60 дней"
         assert listed["status"] == "contract_sent"
 
-        # скан до согласия не принимается
-        early = candidate.post(f"{PORTAL}/signed-scan", {"file": upload("s.pdf")}, format="multipart")
-        assert early.status_code == 400 and early.json()["detail"] == "SCAN_NOT_EXPECTED"
-
         assert candidate.post(f"{PORTAL}/agree", {"notes": "ok"}, format="json").status_code == 200
-        bad = candidate.post(
-            f"{PORTAL}/signed-scan", {"file": upload("s.exe", b"MZ", "application/octet-stream")}, format="multipart"
-        )
-        assert bad.json()["detail"] == "SCAN_INVALID"
 
-        # без скана подтвердить нельзя
+        # без скана и без заметки отметить «подписан» нельзя
         refused = post(supply, app, "approve", {"contract_number": app.contract_number})
-        assert refused.status_code == 400 and refused.json()["detail"] == "SIGNED_SCAN_REQUIRED"
+        assert refused.status_code == 400 and refused.json()["detail"] == "SIGNED_PROOF_REQUIRED"
         assert not CompanyRelationship.objects.filter(
             company=app.company, role=RelationshipRole.PARTNER, status=RelationshipStatus.ACTIVE
         ).exists()
 
-        done = candidate.post(f"{PORTAL}/signed-scan", {"file": upload("s.pdf")}, format="multipart")
+        # скан прикрепляет менеджер, не контрагент
+        bad = supply.post(f"{DESK}/{app.pk}/signed-scan/", {"file": upload("s.exe", b"MZ", "application/octet-stream")})
+        assert bad.status_code == 400 and bad.json()["detail"] == "SCAN_INVALID"
+        done = supply.post(f"{DESK}/{app.pk}/signed-scan/", {"file": upload("s.pdf")}, format="multipart")
         assert done.status_code == 200 and done.json()["has_signed_scan"] is True
         scan = supply.get(f"{DESK}/{app.pk}/document/?which=scan")
         assert scan.status_code == 200 and scan.content == PDF
@@ -452,6 +467,7 @@ class TestWholePath:
         approved = post(supply, app, "approve", {"contract_number": app.contract_number})
         assert approved.status_code == 200, approved.content
         assert approved.json()["status"] == "approved"
+        assert approved.json()["contract_valid_until"], "срок посчитан в момент отметки «подписан»"
         rel = CompanyRelationship.objects.get(company=app.company, role=RelationshipRole.PARTNER)
         assert rel.status == RelationshipStatus.ACTIVE and "my_products" in rel.modules
         assert ActivityLog.objects.filter(event_code="admin.partner_application.approved").exists()
@@ -461,18 +477,48 @@ class TestWholePath:
         response = supply.get(f"{DESK}/{app.pk}/document/?which=contract")
         assert response.status_code == 200 and response.content.startswith(b"%PDF")
 
-    def test_approving_without_scan_is_possible_only_with_a_reason_in_the_journal(self, world, supply):
+    def test_signed_with_a_note_instead_of_a_scan_sets_the_same_term(self, world, supply):
+        """ПК-1: скан не обязателен — заметка достаточна; срок считается в момент отметки, по общему правилу компании."""
+        import datetime
+
         app, candidate = self._sent(world, supply)
         candidate.post(f"{PORTAL}/agree", {"notes": ""}, format="json")
 
         response = post(
-            supply, app, "approve", {"contract_number": app.contract_number, "override_reason": "Оригинал по почте"}
+            supply,
+            app,
+            "approve",
+            {"contract_number": app.contract_number, "signed_note": "Подписан у нас, оригинал в папке"},
+        )
+
+        assert response.status_code == 200, response.content
+        app.refresh_from_db()
+        assert app.signed_note.startswith("Подписан") and not app.signed_scan
+        assert app.contract_valid_from == datetime.date.today() and app.contract_valid_until is not None
+        assert app.contract_term_rule and app.contract_last_notice_date <= app.contract_valid_until
+
+    def test_approving_without_the_candidates_agreement_still_needs_a_reason(self, world, supply):
+        app, _candidate = self._sent(world, supply)
+
+        refused = post(supply, app, "approve", {"contract_number": app.contract_number, "signed_note": "ok"})
+        assert refused.status_code == 400 and refused.json()["detail"] == "CANDIDATE_AGREEMENT_REQUIRED"
+
+        response = post(
+            supply,
+            app,
+            "approve",
+            {
+                "contract_number": app.contract_number,
+                "signed_note": "Подписали на встрече",
+                "override_reason": "Встреча",
+            },
         )
 
         assert response.status_code == 200
-        entry = ActivityLog.objects.filter(event_code="admin.partner_application.approved_without_scan").latest("id")
+        entry = ActivityLog.objects.filter(event_code="admin.partner_application.approved_without_agreement").latest(
+            "id"
+        )
         assert entry.level == "WARNING"
-        assert entry.after_data["scan_bypassed"] == "Оригинал по почте"
 
     def test_other_company_cannot_read_the_candidates_contract(self, world, supply):
         app, _candidate = self._sent(world, supply)

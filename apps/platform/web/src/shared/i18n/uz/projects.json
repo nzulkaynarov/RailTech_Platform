@@ -258,7 +258,7 @@
     "state": {
       "project": "Loyiha hali mijozga yuborilmagan.",
       "atClient": "Loyiha mijozda matn kelişuvida.",
-      "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani EHTda (platformadan taşqarida) rasmiylaştiring.",
+      "client_agreed": "Mijoz matnni kelişdi. Imzolaşni kutmoqda: şartnoma imzolangach, buni belgilang — skan yoki izoh.",
       "issued_at_operator": "Şartnoma EHTda rasmiylaştirilgan. Ikki tomon imzolagaç, skanni biriktiring.",
       "signed": "Şartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
       "rejected": "Mijoz şartnomani rad etdi. Loyihani töğrilab, qaytadan kelişuvga yuboring.",
@@ -286,6 +286,13 @@
       "submit": "Rad etişni yoziş",
       "cancel": "Bekor qiliş",
       "disabled": "Sabab yozganingizda tugma faollaşadi."
+    },
+    "signedNote": {
+      "toggle": "Imzolandi, skan yöq",
+      "label": "Skan örniga izoh",
+      "hint": "Qanday imzolandi va asl nusxa qayerda. Şartnoma muddati belgilaş paytida hisoblanadi.",
+      "placeholder": "Masalan: bizda imzolandi, asl nusxa şartnomalar papkasida",
+      "submit": "Belgilaş: imzolangan"
     },
     "scan": {
       "label": "Imzolangan şartnoma skani",

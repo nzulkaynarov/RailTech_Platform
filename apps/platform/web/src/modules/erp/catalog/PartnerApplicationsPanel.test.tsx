@@ -120,18 +120,18 @@ describe("Очередь заявок кандидатов в партнёры (
     await openApplications("supply@demo.example");
 
     expect(screen.getByText("Согласован кандидатом")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Одобрить и открыть кабинет" }));
+    fireEvent.click(screen.getByRole("button", { name: "Отметить: подписан" }));
 
-    const modal = await findModal(/Одобрение заявки и открытие кабинета/);
+    const modal = await findModal(/Договор подписан/);
     expect(within(modal).queryByLabelText(/Причина одобрения без согласия/)).toBeNull();
 
     fireEvent.change(within(modal).getByLabelText(/Номер договора/), {
       target: { value: "DOG-PART-FINAL" },
     });
     fireEvent.click(
-      within(modal).getByRole("button", { name: "Подтвердить договор и открыть доступ" }),
+      within(modal).getByRole("button", { name: "Отметить: подписан" }),
     );
-    await modalClosed(/Одобрение заявки и открытие кабинета/);
+    await modalClosed(/Договор подписан/);
 
     expect(await screen.findByText("№ DOG-PART-FINAL")).toBeVisible();
     expect(await screen.findByText("Одобрена")).toBeVisible();
@@ -143,23 +143,26 @@ describe("Очередь заявок кандидатов в партнёры (
     const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
     if (!vostokRow) throw new Error("Row not found");
     expect(
-      within(vostokRow).queryByRole("button", { name: "Одобрить и открыть кабинет" }),
+      within(vostokRow).queryByRole("button", { name: "Отметить: подписан" }),
     ).toBeNull();
-    fireEvent.click(within(vostokRow).getByRole("button", { name: "Одобрить без согласия" }));
+    fireEvent.click(within(vostokRow).getByRole("button", { name: "Отметить: подписан без согласия" }));
 
-    const modal = await findModal(/Одобрение заявки и открытие кабинета/);
+    const modal = await findModal(/Договор подписан/);
     const okBtn = within(modal).getByRole("button", {
-      name: "Подтвердить договор и открыть доступ",
+      name: "Отметить: подписан",
     });
     expect(okBtn).toBeDisabled();
 
     fireEvent.change(within(modal).getByLabelText(/Причина одобрения без согласия/), {
       target: { value: "Договор подписан на бумаге" },
     });
+    fireEvent.change(within(modal).getByLabelText("Заметка вместо скана"), {
+      target: { value: "Подписан на встрече" },
+    });
     expect(okBtn).not.toBeDisabled();
 
     fireEvent.click(okBtn);
-    await modalClosed(/Одобрение заявки и открытие кабинета/);
+    await modalClosed(/Договор подписан/);
     expect(await screen.findByText("Одобрена")).toBeVisible();
   });
 
@@ -168,8 +171,8 @@ describe("Очередь заявок кандидатов в партнёры (
 
     const newRow = screen.getByText("ООО «Сталь-Транс»").closest("tr");
     if (!newRow) throw new Error("Row not found");
-    expect(within(newRow).queryByRole("button", { name: "Одобрить без согласия" })).toBeNull();
-    expect(within(newRow).queryByRole("button", { name: "Одобрить и открыть кабинет" })).toBeNull();
+    expect(within(newRow).queryByRole("button", { name: "Отметить: подписан без согласия" })).toBeNull();
+    expect(within(newRow).queryByRole("button", { name: "Отметить: подписан" })).toBeNull();
   });
 
   it("сбой письма виден в строке, договор можно отправить снова", async () => {
@@ -215,7 +218,7 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(await screen.findByText("ООО «Сталь-Транс»")).toBeVisible();
 
     expect(screen.queryByRole("button", { name: "Отправить договор" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Одобрить и открыть кабинет" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Отметить: подписан" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
   });
 });

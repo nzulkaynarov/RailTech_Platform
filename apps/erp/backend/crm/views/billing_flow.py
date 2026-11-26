@@ -8,7 +8,7 @@
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from crm.serializers.projects import (
@@ -143,12 +143,13 @@ class ContractFlowMixin:
         return self._transition(request, pk, "mark_issued")
 
     @extend_schema(
-        summary="Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)",
+        summary="Отметить: договор подписан — со сканом или заметкой (PENDING_MANAGER, ISSUED_EXTERNAL → SIGNED)",
         description=(
-            "PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор "
-            "становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату."
+            "Скан — PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. "
+            "Скан не обязателен: вместо него можно передать `note` (JSON). Договор становится «Подписан», срок "
+            "считается в этот момент, сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату."
         ),
-        request={"multipart/form-data": ContractScanInSerializer},
+        request={"multipart/form-data": ContractScanInSerializer, "application/json": ContractScanInSerializer},
         responses={200: ContractFlowSerializer, **_ERRORS},
         tags=["CRM"],
     )
@@ -156,7 +157,7 @@ class ContractFlowMixin:
         detail=True,
         methods=["post"],
         url_path="attach-scan",
-        parser_classes=[MultiPartParser, FormParser],
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
     )
     def attach_scan(self, request, pk=None):
         return self._transition(request, pk, "attach_scan", with_file=True)

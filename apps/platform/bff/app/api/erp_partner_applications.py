@@ -17,6 +17,7 @@ from app.errors import PlatformError
 from app.schemas_partner_applications import (
     PartnerApplicationApproveRequest,
     PartnerApplicationCreateRequest,
+    PartnerApplicationInviteRequest,
     PartnerApplicationItem,
     PartnerApplicationListResponse,
     PartnerApplicationRejectRequest,
@@ -121,6 +122,45 @@ async def approve_partner_application(
 
 
 @router.post(
+    "/erp/catalog/partner-applications/{id}/invite",
+    response_model=PartnerApplicationItem,
+    operation_id="invitePartnerCandidate",
+)
+async def invite_candidate(
+    id: ApplicationId,
+    authed: Writer,
+    body: PartnerApplicationInviteRequest | None = None,
+) -> PartnerApplicationItem:
+    """«Пригласить в Кабинет» позже (ПК-1): договор отправлен без почты, теперь адрес есть."""
+    raw = await _erp(authed).data("POST", _path(id, "invite/"), json=body.sent() if body else {})
+    return to_partner_application(raw)
+
+
+@router.post(
+    "/erp/catalog/partner-applications/{id}/signed-scan",
+    response_model=PartnerApplicationItem,
+    operation_id="uploadPartnerSignedScan",
+)
+async def upload_signed_scan(
+    id: ApplicationId, request: Request, authed: Writer
+) -> PartnerApplicationItem:
+    """Скан подписанного договора по желанию (ПК-1): multipart уходит в ERP как есть."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Файл нужно передать формой multipart.",
+            status_code=422,
+            details={"fields": ["file"], "reason": "multipart_required"},
+        )
+    body = await _read_limited(request)
+    response = await _erp(authed).request(
+        "POST", _path(id, "signed-scan/"), content=body, content_type=content_type
+    )
+    return to_partner_application(response.json())
+
+
+@router.post(
     "/erp/catalog/partner-applications/{id}/reject",
     response_model=PartnerApplicationItem,
     operation_id="rejectPartnerApplication",
@@ -206,7 +246,7 @@ async def decide_contract(
 async def download_document(
     id: ApplicationId,
     authed: Reader,
-    which: Annotated[str, Query(pattern=r"^(contract|scan)$")] = "contract",
+    which: Annotated[str, Query(pattern=r"^(contract|scan|candidate)$")] = "contract",
 ) -> Response:
     """Договор, который видит кандидат, или скан подписанного — вложением."""
     response = await authed.call(

@@ -709,9 +709,20 @@ export const getPartnerContractPdfUrl = () => portalUrl('/company/partner-applic
 export const agreeCompanyPartnerContract = (body?: { notes?: string }) =>
   portalRequest<PartnerApplication>('/company/partner-application/agree', { method: 'POST', body: body ?? {} });
 
-/** Кандидат не согласен с договором: возвращает с замечанием (ПД-1). */
-export const returnCompanyPartnerContract = (body: { notes: string }) =>
-  portalRequest<PartnerApplication>('/company/partner-application/return', { method: 'POST', body });
+/** «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция договора (DOCX) — вложение и точка правды. */
+export async function returnCompanyPartnerContract(body: { notes: string; file?: File | null }): Promise<PartnerApplication> {
+  if (!body.file) {
+    return portalRequest<PartnerApplication>('/company/partner-application/return', {
+      method: 'POST',
+      body: { notes: body.notes },
+    });
+  }
+  const formData = new FormData();
+  formData.append('notes', body.notes);
+  formData.append('file', body.file);
+  const response = await postForm('/company/partner-application/return', formData);
+  return (await response.json()) as PartnerApplication;
+}
 
 /** Скан подписанного договора после согласия кандидата (ПД-1): файл multipart, повторная загрузка заменяет. */
 export async function uploadCompanyPartnerSignedScan(file: File): Promise<PartnerApplication> {
