@@ -31,6 +31,7 @@ import { ClosedBanner } from "../tasks/LetterOutcomes";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments, RequestAttachments } from "./Parts";
 import { ResolutionPanel } from "./ResolutionPanel";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 function Decision({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
@@ -145,160 +146,166 @@ function Content({
   const withDeal = Boolean(letter.request || letter.client);
 
   return (
-    <div className="pf-letters pf-overlay-aware">
-      <PageHeader
-        title={t("card.title", { number: letter.number })}
-        subtitle={letter.subject}
-        extra={
-          <div className="pf-fp-row">
-            {letter.urgent ? <StatusTag tone="red">{t("card.urgent")}</StatusTag> : null}
-            <StatusTag kind="incoming" status={letter.status} />
-            {letter.on_control ? <StatusTag tone="blue">{t("card.onControl")}</StatusTag> : null}
-            {canResolve ? null : (
-              <StatusTag tone="default">
-                <span className="pf-letters-lock">
-                  <LockIcon size={12} />
-                  {t("card.readOnly")}
-                </span>
-              </StatusTag>
-            )}
-          </div>
-        }
-      />
-      <SourceBanner sources={letter.sources} onRetry={refetch} />
-      <DuplicateBanner letter={letter} />
-      <ClosedBanner letter={letter} />
-      {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
-      {letter.track === "office" ? null : (
-        <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>
-          <RequestSteps
-            stage={letter.stage}
-            {...(letter.lost_at_step ? { step: letter.lost_at_step } : {})}
-            {...(letter.request ? { number: letter.request.number } : {})}
-          />
-        </section>
-      )}
-      {/* EDS-DUP: «Это дубль ВХ-…» — у делопроизводителя */}
-      {canRegister && letter.status !== "duplicate" ? (
-        <div>
-          <MarkDuplicateAction letter={letter} />
-        </div>
-      ) : null}
-      <Card size="small" title={<h2 className="pf-letters-title">{t("card.summary")}</h2>}>
-        <p className="pf-letters-summary">{letter.summary}</p>
-      </Card>
-      <Card size="small" title={<h2 className="pf-letters-title">{t("card.files")}</h2>}>
-        {letter.files.length > 0 ? <Attachments files={letter.files} /> : null}
-        {letter.request?.files?.length ? (
-          <RequestAttachments
-            letterId={letter.id}
-            number={letter.request.number}
-            files={letter.request.files}
-          />
-        ) : null}
-        {letter.files.length === 0 && !letter.request?.files?.length ? (
-          <p className="pf-hint">{t("card.noFiles")}</p>
-        ) : null}
-      </Card>
-      <DecisionCenter legacyTab="resolution" legacySheet="resolution" label={t("panel.sheetLabel")}>
-        <ResolutionPanel letterRef={refKey} />
-      </DecisionCenter>
-      <Decision letter={letter} />
-      <OfficeDecision letter={letter} />
-      <InstructionsCard letter={letter} />
-      <ReplyCard letter={letter} />
-      <RecordTab tab="facts">
-        <DefinitionList
-          items={[
-            // СЦ-5: номер до перенумерации на латиницу — одна строка, только если он был
-            ...(letter.previous_number
-              ? [{ label: t("card.fields.previousNumber"), value: letter.previous_number }]
-              : []),
-            ...registry,
-            // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент». Клиент CRM,
-            // найденный по письму, — та же строка со ссылкой на карточку, а не вторая «Клиент».
-            ...(letter.client
-              ? [
-                  {
-                    label: t("card.linkFields.client"),
-                    value: (
-                      <>
-                        <Link className="pf-focusable" to={letter.client.path}>
-                          {letter.client.name ?? letter.client.id}
-                        </Link>
-                        {letter.client.inn ? (
-                          <div className="pf-hint">
-                            {t("card.byClient", { inn: letter.client.inn })}
-                          </div>
-                        ) : null}
-                      </>
-                    ),
-                  },
-                ]
-              : [
-                  {
-                    label: t(office ? "card.fields.correspondent" : "card.fields.client"),
-                    value: letter.sender.name,
-                  },
-                  {
-                    label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
-                    value: letter.sender.inn,
-                  },
-                ]),
-            ...(withDeal
-              ? [
-                  {
-                    label: t("card.linkFields.request"),
-                    value: letter.request ? (
-                      <>
-                        <Link className="pf-focusable" to={letter.request.path}>
-                          {letter.request.number}
-                        </Link>
-                        {letter.request.title ? (
-                          <div className="pf-hint">{letter.request.title}</div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span className="pf-hint">{t("card.noRequest")}</span>
-                    ),
-                  },
-                ]
-              : []),
-            { label: t("card.fields.contact"), value: letter.sender.contact },
-            {
-              label: t("card.fields.senderRef"),
-              value: [
-                letter.sender_ref.number,
-                letter.sender_ref.date ? date(letter.sender_ref.date) : null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-            },
-            { label: t("card.fields.addressee"), value: letter.addressee.name },
-            { label: t("card.fields.received"), value: date(letter.received_at) },
-            { label: t("card.linkFields.manager"), value: letter.manager?.name },
-            {
-              label: t("card.linkFields.registered"),
-              value: (
-                <span className="pf-instr-people">
-                  <span>{date(letter.registered_at, "datetime")}</span>
-                  {letter.registered_by ? (
-                    <PersonRefCell person={letter.registered_by} caption={null} />
-                  ) : (
-                    <span className="pf-hint">{t("card.bySystem")}</span>
-                  )}
-                </span>
-              ),
-            },
-          ]}
+    <PageFrame layout="object">
+      <div className="pf-letters pf-overlay-aware">
+        <PageHeader
+          title={t("card.title", { number: letter.number })}
+          subtitle={letter.subject}
+          extra={
+            <div className="pf-fp-row">
+              {letter.urgent ? <StatusTag tone="red">{t("card.urgent")}</StatusTag> : null}
+              <StatusTag kind="incoming" status={letter.status} />
+              {letter.on_control ? <StatusTag tone="blue">{t("card.onControl")}</StatusTag> : null}
+              {canResolve ? null : (
+                <StatusTag tone="default">
+                  <span className="pf-letters-lock">
+                    <LockIcon size={12} />
+                    {t("card.readOnly")}
+                  </span>
+                </StatusTag>
+              )}
+            </div>
+          }
         />
-      </RecordTab>
-      {history.length > 0 ? (
-        <RecordTab tab="history">
-          <RecordHistory label={t("card.journal")} entries={history} />
+        <SourceBanner sources={letter.sources} onRetry={refetch} />
+        <DuplicateBanner letter={letter} />
+        <ClosedBanner letter={letter} />
+        {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
+        {letter.track === "office" ? null : (
+          <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>
+            <RequestSteps
+              stage={letter.stage}
+              {...(letter.lost_at_step ? { step: letter.lost_at_step } : {})}
+              {...(letter.request ? { number: letter.request.number } : {})}
+            />
+          </section>
+        )}
+        {/* EDS-DUP: «Это дубль ВХ-…» — у делопроизводителя */}
+        {canRegister && letter.status !== "duplicate" ? (
+          <div>
+            <MarkDuplicateAction letter={letter} />
+          </div>
+        ) : null}
+        <Card size="small" title={<h2 className="pf-letters-title">{t("card.summary")}</h2>}>
+          <p className="pf-letters-summary">{letter.summary}</p>
+        </Card>
+        <Card size="small" title={<h2 className="pf-letters-title">{t("card.files")}</h2>}>
+          {letter.files.length > 0 ? <Attachments files={letter.files} /> : null}
+          {letter.request?.files?.length ? (
+            <RequestAttachments
+              letterId={letter.id}
+              number={letter.request.number}
+              files={letter.request.files}
+            />
+          ) : null}
+          {letter.files.length === 0 && !letter.request?.files?.length ? (
+            <p className="pf-hint">{t("card.noFiles")}</p>
+          ) : null}
+        </Card>
+        <DecisionCenter
+          legacyTab="resolution"
+          legacySheet="resolution"
+          label={t("panel.sheetLabel")}
+        >
+          <ResolutionPanel letterRef={refKey} />
+        </DecisionCenter>
+        <Decision letter={letter} />
+        <OfficeDecision letter={letter} />
+        <InstructionsCard letter={letter} />
+        <ReplyCard letter={letter} />
+        <RecordTab tab="facts">
+          <DefinitionList
+            items={[
+              // СЦ-5: номер до перенумерации на латиницу — одна строка, только если он был
+              ...(letter.previous_number
+                ? [{ label: t("card.fields.previousNumber"), value: letter.previous_number }]
+                : []),
+              ...registry,
+              // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент». Клиент CRM,
+              // найденный по письму, — та же строка со ссылкой на карточку, а не вторая «Клиент».
+              ...(letter.client
+                ? [
+                    {
+                      label: t("card.linkFields.client"),
+                      value: (
+                        <>
+                          <Link className="pf-focusable" to={letter.client.path}>
+                            {letter.client.name ?? letter.client.id}
+                          </Link>
+                          {letter.client.inn ? (
+                            <div className="pf-hint">
+                              {t("card.byClient", { inn: letter.client.inn })}
+                            </div>
+                          ) : null}
+                        </>
+                      ),
+                    },
+                  ]
+                : [
+                    {
+                      label: t(office ? "card.fields.correspondent" : "card.fields.client"),
+                      value: letter.sender.name,
+                    },
+                    {
+                      label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
+                      value: letter.sender.inn,
+                    },
+                  ]),
+              ...(withDeal
+                ? [
+                    {
+                      label: t("card.linkFields.request"),
+                      value: letter.request ? (
+                        <>
+                          <Link className="pf-focusable" to={letter.request.path}>
+                            {letter.request.number}
+                          </Link>
+                          {letter.request.title ? (
+                            <div className="pf-hint">{letter.request.title}</div>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="pf-hint">{t("card.noRequest")}</span>
+                      ),
+                    },
+                  ]
+                : []),
+              { label: t("card.fields.contact"), value: letter.sender.contact },
+              {
+                label: t("card.fields.senderRef"),
+                value: [
+                  letter.sender_ref.number,
+                  letter.sender_ref.date ? date(letter.sender_ref.date) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              },
+              { label: t("card.fields.addressee"), value: letter.addressee.name },
+              { label: t("card.fields.received"), value: date(letter.received_at) },
+              { label: t("card.linkFields.manager"), value: letter.manager?.name },
+              {
+                label: t("card.linkFields.registered"),
+                value: (
+                  <span className="pf-instr-people">
+                    <span>{date(letter.registered_at, "datetime")}</span>
+                    {letter.registered_by ? (
+                      <PersonRefCell person={letter.registered_by} caption={null} />
+                    ) : (
+                      <span className="pf-hint">{t("card.bySystem")}</span>
+                    )}
+                  </span>
+                ),
+              },
+            ]}
+          />
         </RecordTab>
-      ) : null}
-    </div>
+        {history.length > 0 ? (
+          <RecordTab tab="history">
+            <RecordHistory label={t("card.journal")} entries={history} />
+          </RecordTab>
+        ) : null}
+      </div>
+    </PageFrame>
   );
 }
 

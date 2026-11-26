@@ -29,6 +29,7 @@ import { DeliveryReport } from "./DeliveryReport";
 import { useStateLabels } from "./labels";
 import { QuoteStatusTag } from "./QuoteStatus";
 import { InternalBlock, QuoteLines } from "./QuoteParts";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 function Requisites({ quote }: { quote: QuoteApprovalCard }) {
   const { t } = useTranslation("quotes");
@@ -117,69 +118,71 @@ function Content({
   const mayDecide = canEdit(me, "eds.drafts") || Boolean(quote.acting_for);
 
   return (
-    <div className="pf-dec-page pf-overlay-aware">
-      <PageHeader
-        title={t("card.title", { number: quote.number })}
-        subtitle={t("card.version", { version: quote.version })}
-        extra={
-          <div className="pf-dec-row">
-            <QuoteStatusTag quote={quote} />
-            {quote.approved_late ? <StatusTag tone="gold">{t("card.lateTag")}</StatusTag> : null}
-            {mayDecide ? null : (
-              <StatusTag tone="default">
-                <span className="pf-dec-lock">
-                  <LockIcon size={12} />
-                  {t("card.readOnly")}
-                </span>
-              </StatusTag>
-            )}
-          </div>
-        }
-      />
-      <SourceBanner sources={quote.sources} onRetry={refetch} />
-      {quote.superseded_by ? (
-        <Alert
-          type="info"
-          showIcon
-          message={t("card.superseded", { version: quote.version, next: quote.superseded_by })}
-          action={
-            <Link className="pf-focusable" to={quotePath(quote.number)}>
-              {t("card.supersededOpen", { next: quote.superseded_by })}
-            </Link>
+    <PageFrame layout="object">
+      <div className="pf-dec-page pf-overlay-aware">
+        <PageHeader
+          title={t("card.title", { number: quote.number })}
+          subtitle={t("card.version", { version: quote.version })}
+          extra={
+            <div className="pf-dec-row">
+              <QuoteStatusTag quote={quote} />
+              {quote.approved_late ? <StatusTag tone="gold">{t("card.lateTag")}</StatusTag> : null}
+              {mayDecide ? null : (
+                <StatusTag tone="default">
+                  <span className="pf-dec-lock">
+                    <LockIcon size={12} />
+                    {t("card.readOnly")}
+                  </span>
+                </StatusTag>
+              )}
+            </div>
           }
         />
-      ) : null}
-      <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
-        <RequestSteps
-          stage={quote.stage}
-          {...(quote.request ? { number: quote.request.number } : {})}
-        />
-      </section>
-      <ClientDecisionCard quote={quote} />
-      <DeliveryReport quote={quote} />
-      <ClientLinkCard quote={quote} />
-      <Card size="small" title={<h2 className="pf-dec-title">{t("card.lines")}</h2>}>
-        <QuoteLines quote={quote} />
-      </Card>
-      <InternalBlock quote={quote} />
-      <DecisionCenter legacyTab="approve" legacySheet="approve" label={t("panel.sheetLabel")}>
-        <ApprovalPanel quoteRef={refKey} />
-      </DecisionCenter>
-      <RecordTab tab="facts">
-        <Requisites quote={quote} />
-      </RecordTab>
-      {quote.steps.length > 0 ? (
-        <RecordTab tab="route">
-          <RouteTimeline
-            label={t("card.route")}
-            steps={quote.steps}
-            stepTitle={(step) => t(`card.routeStep.${step.status}`, { label: step.label })}
-            decisionTitle={() => null}
+        <SourceBanner sources={quote.sources} onRetry={refetch} />
+        {quote.superseded_by ? (
+          <Alert
+            type="info"
+            showIcon
+            message={t("card.superseded", { version: quote.version, next: quote.superseded_by })}
+            action={
+              <Link className="pf-focusable" to={quotePath(quote.number)}>
+                {t("card.supersededOpen", { next: quote.superseded_by })}
+              </Link>
+            }
           />
+        ) : null}
+        <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
+          <RequestSteps
+            stage={quote.stage}
+            {...(quote.request ? { number: quote.request.number } : {})}
+          />
+        </section>
+        <ClientDecisionCard quote={quote} />
+        <DeliveryReport quote={quote} />
+        <ClientLinkCard quote={quote} />
+        <Card size="small" title={<h2 className="pf-dec-title">{t("card.lines")}</h2>}>
+          <QuoteLines quote={quote} />
+        </Card>
+        <InternalBlock quote={quote} />
+        <DecisionCenter legacyTab="approve" legacySheet="approve" label={t("panel.sheetLabel")}>
+          <ApprovalPanel quoteRef={refKey} />
+        </DecisionCenter>
+        <RecordTab tab="facts">
+          <Requisites quote={quote} />
         </RecordTab>
-      ) : null}
-      <ClientComments quote={quote} />
-    </div>
+        {quote.steps.length > 0 ? (
+          <RecordTab tab="route">
+            <RouteTimeline
+              label={t("card.route")}
+              steps={quote.steps}
+              stepTitle={(step) => t(`card.routeStep.${step.status}`, { label: step.label })}
+              decisionTitle={() => null}
+            />
+          </RecordTab>
+        ) : null}
+        <ClientComments quote={quote} />
+      </div>
+    </PageFrame>
   );
 }
 
