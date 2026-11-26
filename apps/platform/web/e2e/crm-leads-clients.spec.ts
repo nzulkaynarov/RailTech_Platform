@@ -97,7 +97,9 @@ test.describe("Лиды → «Создать заявку» → карточка
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/crm/messages?lead=L-2041");
-    await page.getByRole("link", { name: "В заявку: Заявка-демо.pdf — письмом на согласование" }).click();
+    await page
+      .getByRole("link", { name: "В заявку: Заявка-демо.pdf — письмом на согласование" })
+      .click();
     const panel = page.locator("#pf-context-panel");
     const form = panel.getByRole("form", { name: "Создать заявку" });
     await form.getByRole("button", { name: /^Запрос/, expanded: false }).click();
