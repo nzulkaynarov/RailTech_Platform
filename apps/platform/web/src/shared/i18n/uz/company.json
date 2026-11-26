@@ -783,7 +783,6 @@
       "template_locked": "Tasdiqlangan matn özgarmaydi. Yangi tahrir yarating.",
       "template_transition_not_allowed": "Şablon boşqa holatda. Sahifani yangilang.",
       "template_edition_in_progress": "Yangi tahrir allaqaçon işlanmoqda.",
-      "template_unknown_placeholders": "Matnda tizim bilmaydigan almaştirişlar bor: {{codes}}. Ularni tuzatib, qayta yuboring.",
       "template_counterparty_required": "Şablon kim uçun ekanini belgilang.",
       "template_approval_forbidden": "«Huquq» zonasi egasi tasdiqlaydi."
     }

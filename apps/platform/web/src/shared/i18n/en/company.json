@@ -783,7 +783,6 @@
       "template_locked": "Approved text is not edited. Create a new edition.",
       "template_transition_not_allowed": "The template is in another status. Refresh the page.",
       "template_edition_in_progress": "A new edition is already in progress.",
-      "template_unknown_placeholders": "The text has placeholders the system does not know: {{codes}}. Fix them and send again.",
       "template_counterparty_required": "Choose who the template is for.",
       "template_approval_forbidden": "Approved by the holder of the Legal zone."
     }

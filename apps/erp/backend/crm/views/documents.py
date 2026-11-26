@@ -269,12 +269,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     def _contract_action(self, request, fn, *args, status=200):
         template, err = fn(*args)
         if err:
-            body: dict = {"detail": err}
-            if err == "TEMPLATE_UNKNOWN_PLACEHOLDERS":
-                from crm.services import contract_templates as svc
-
-                body["unknown_placeholders"] = svc.unknown_placeholders(args[0])
-            return Response(body, status=403 if err.endswith("FORBIDDEN") else 400)
+            return Response({"detail": err}, status=403 if err.endswith("FORBIDDEN") else 400)
         return Response(self.get_serializer(template).data, status=status)
 
     @extend_schema(
@@ -386,7 +381,11 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         from crm.services import contract_templates as svc
 
         self._assert_owned(self.get_object())
-        return self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        response = self._contract_action(request, svc.submit_for_approval, self.get_object(), request.user)
+        if response.status_code == 200:
+            # Предупреждение, не запрет: подстановки, которых система не знает, остаются в договоре как есть
+            response.data["unknown_placeholders"] = svc.unknown_placeholders(self.get_object())
+        return response
 
     @extend_schema(
         summary="Approve a contract template (holder of contract.approve_template)",

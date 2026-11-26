@@ -783,7 +783,6 @@
       "template_locked": "Утверждённый текст не правится. Создайте новую редакцию.",
       "template_transition_not_allowed": "Шаблон уже в другом статусе. Обновите страницу.",
       "template_edition_in_progress": "Новая редакция уже в работе.",
-      "template_unknown_placeholders": "В тексте есть подстановки, которых система не знает: {{codes}}. Исправьте их и отправьте снова.",
       "template_counterparty_required": "Укажите, для кого шаблон.",
       "template_approval_forbidden": "Утверждает держатель зоны «Право»."
     }

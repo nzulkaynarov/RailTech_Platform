@@ -70,10 +70,6 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "template_counterparty_required",
         "Укажите, для кого шаблон и какой у него предмет.",
     ),
-    "TEMPLATE_UNKNOWN_PLACEHOLDERS": (
-        "template_unknown_placeholders",
-        "В тексте есть подстановки, которых система не знает. Исправьте их и отправьте снова.",
-    ),
     "TEMPLATE_APPROVAL_FORBIDDEN": (
         "template_approval_forbidden",
         "Утверждает держатель зоны «Право».",
@@ -319,9 +315,6 @@ def erp_error(response: httpx.Response) -> PlatformError:
         details["reason"] = reason
         if erp_code in _FIELD_OF:
             details["fields"] = [_FIELD_OF[erp_code]]
-        unknown = body.get("unknown_placeholders") if isinstance(body, dict) else None
-        if erp_code == "TEMPLATE_UNKNOWN_PLACEHOLDERS" and isinstance(unknown, list):
-            details["unknown_placeholders"] = [c for c in unknown[:20] if isinstance(c, str)]
         facts = body.get("do_not_work") if isinstance(body, dict) else None
         if erp_code == "COMPANY_DO_NOT_WORK" and isinstance(facts, dict):
             details["do_not_work"] = facts

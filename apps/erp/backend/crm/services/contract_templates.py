@@ -228,9 +228,7 @@ def submit_for_approval(template, user) -> Tuple[Optional[DocumentTemplate], Opt
         return None, "TEMPLATE_COUNTERPARTY_REQUIRED"
     if missing_required_blocks(CONTRACT_KIND, template.body_html):
         return None, "TEMPLATE_MISSING_REQUIRED_BLOCKS"
-    # Неизвестная подстановка остаётся в договоре как есть: на утверждение такой текст не уходит
-    if unknown_placeholders(template):
-        return None, "TEMPLATE_UNKNOWN_PLACEHOLDERS"
+    # Неизвестные подстановки — предупреждение, не запрет (`unknown_placeholders`; список ответ «на утверждение» отдаёт)
     template.approval_status = TemplateApproval.ON_APPROVAL
     template.submitted_at = timezone.now()
     template.save(update_fields=["approval_status", "submitted_at", "updated_at"])
