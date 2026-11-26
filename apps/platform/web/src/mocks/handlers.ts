@@ -233,13 +233,8 @@ export const handlers = [
     const current = readSession();
     if (!current) return sessionExpired();
     const body = (await request.json()) as MeUpdate;
-    const user = buildMe(current);
-    if (body.active_role && !user?.roles.some((role) => role.id === body.active_role)) {
-      return failure(422, "VALIDATION_FAILED", "Роль не выдана сотруднику");
-    }
     const next = updateSession({
       ...(body.language ? { language: body.language } : {}),
-      ...("active_role" in body ? { activeRole: body.active_role ?? null } : {}),
     });
     const me = next ? buildMe(next) : undefined;
     return me ? HttpResponse.json(me) : sessionExpired();

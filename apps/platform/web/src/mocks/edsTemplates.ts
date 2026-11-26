@@ -65,7 +65,7 @@ export function resetEdsTemplatesMock(): void {
 
 function held() {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   return me?.resources ?? null;
 }
 

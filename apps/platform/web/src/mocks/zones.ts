@@ -288,7 +288,7 @@ export function zoneCards(view: readonly MockRole[]): QueueCard[] {
 function level(resource: string): "full" | "read" | undefined | "no-session" {
   const session = readSession();
   if (!session) return "no-session";
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   if (!me) return "no-session";
   return me.resources[resource];
 }

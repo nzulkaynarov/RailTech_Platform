@@ -3,9 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { Language } from "./language";
-import type { RoleId } from "./roleId";
 
 export interface MeUpdate {
   language?: Language;
-  active_role?: RoleId | null;
 }

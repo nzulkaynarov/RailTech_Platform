@@ -879,8 +879,6 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     data.platform_access = access
     data.must_change_password = bool(profile.get("must_change_password"))
     data.profile_checked_at = now()
-    if data.active_role not in {r.id for r in roles}:
-        data.active_role = None
     if "erp" not in access:
         data.erp, data.erp_state = None, "not_applicable"
     elif data.erp_state == "not_applicable":

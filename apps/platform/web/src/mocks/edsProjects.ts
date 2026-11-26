@@ -55,7 +55,7 @@ function guard(need: Level) {
   const session = readSession();
   if (!session) return { error: failure(401, "SESSION_EXPIRED", "Сессия истекла") };
   // Права операций — по объединению ролей, а не по активной роли («вид»), как в BFF.
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   const level = me?.resources["eds.projects"];
   if (!level || (need === "full" && level !== "full")) {
     return {

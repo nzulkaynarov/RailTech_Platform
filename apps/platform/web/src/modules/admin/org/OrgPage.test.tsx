@@ -205,7 +205,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     endSession();
     signIn("manager@demo.example");
     const me = buildMe(
-      readSession() ?? { userId: "", activeRole: null, language: "ru", mustChangePassword: false },
+      readSession() ?? { userId: "", language: "ru", mustChangePassword: false },
     );
     expect(me?.roles).toEqual([ref("DIRECTOR")]);
     expect(me?.resources["erp.calc"]).toBe("full");

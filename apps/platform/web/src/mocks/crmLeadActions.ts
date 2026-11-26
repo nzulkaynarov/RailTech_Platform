@@ -29,7 +29,7 @@ export const MOCK_LOST_REASONS = ["Дорого", "Выбрали другого
 function guard() {
   const session = readSession();
   if (!session) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-  if (buildMe({ ...session, activeRole: null })?.resources["crm.leads"] === "full") return null;
+  if (buildMe(session)?.resources["crm.leads"] === "full") return null;
   return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
     resource: "crm.leads",
     need: "full",

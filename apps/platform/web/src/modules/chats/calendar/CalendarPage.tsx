@@ -81,8 +81,7 @@ export function CalendarPage() {
   const { me } = useAuth();
   const { mobile } = useViewport();
   const navigate = useNavigate();
-  const role = me.active_role ?? undefined;
-  const queue = useGetQueue(role ? { role } : undefined, { query: usePollQuery() });
+  const queue = useGetQueue(undefined, { query: usePollQuery() });
   const [shown, setShown] = useState<readonly Category[]>(CATEGORIES);
   const title = t("modules:chats.sections.calendar");
   useDocumentTitle(title);

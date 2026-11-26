@@ -89,7 +89,7 @@ export function readResolutionTemplates(): Stored[] {
 function who() {
   const session = readSession();
   if (!session) return null;
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   const user = sessionRoles(session)?.user;
   if (!me || !user) return null;
   const r = me.resources;

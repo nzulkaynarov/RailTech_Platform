@@ -146,22 +146,12 @@ class View:
         return None
 
 
-def view_roles(roles: Sequence[RoleMatrix], active_role: int | None) -> list[RoleMatrix]:
-    """Роли «вида»: активная одна, если задана и есть у сотрудника, иначе все."""
-    if active_role is not None:
-        chosen = [r for r in roles if r.id == active_role]
-        if chosen:
-            return chosen
-    return list(roles)
-
-
 def strip_restricted(
     payload: Any, visible_fields: Collection[str], rules: Mapping[str, Collection[str]]
 ) -> Any:
     """Вырезать из ответа поля групп, которых сотрудник не видит.
 
-    `visible_fields` — поля с ограничением по объединению ролей (как права операций; активная роль
-    скрывает поля только в SPA через `Me.restricted_fields`). `rules` — какие ключи ответа относятся
+    `visible_fields` — поля с ограничением по объединению ролей (как права операций). `rules` — какие ключи ответа относятся
     к какой группе (`{"cost_margin": ("cost", "margin")}`): их задаёт экран. Работает рекурсивно по
     словарям и спискам и возвращает копию.
     """

@@ -132,7 +132,7 @@ const isErpKind = (value: unknown): value is ReferenceKind =>
 
 function access() {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   const r = me?.resources ?? {};
   return {
     signedIn: Boolean(me),
@@ -232,7 +232,7 @@ export const erpDictionaryHandlers = [
     const kind = guard(params["kind"], true);
     if (kind === undefined || kind instanceof Response) return kind;
     const session = readSession();
-    const me = session ? buildMe({ ...session, activeRole: null }) : null;
+    const me = session ? buildMe(session) : null;
     if (!allows(me?.resources ?? {}, "admin", "full")) {
       return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     }

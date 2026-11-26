@@ -119,7 +119,7 @@ export function me(): Me | null {
   const session = readSession();
   if (!session) return null;
   // Права операций — по объединению ролей, как в BFF.
-  return buildMe({ ...session, activeRole: null }) ?? null;
+  return buildMe(session) ?? null;
 }
 
 export function level(user: Me, resource: string): "read" | "full" | undefined {

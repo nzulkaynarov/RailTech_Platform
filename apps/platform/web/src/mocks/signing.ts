@@ -236,7 +236,7 @@ setSigningKindUsage(() => new Set(read().flatMap((item) => item.kinds)));
 function who() {
   const session = readSession();
   if (!session) return null;
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   const user = sessionRoles(session)?.user;
   if (!me || !user) return null;
   return { id: user.id, keeper: allows(me.resources, "eds.signing.manage", "full") };

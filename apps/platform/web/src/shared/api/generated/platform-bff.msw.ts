@@ -481,7 +481,6 @@ export const getLoginResponseMock = (
             ]),
           }),
         ),
-        active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
         modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
         resources: {
           [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -549,7 +548,6 @@ export const getLoginEnrollResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -605,7 +603,6 @@ export const getLoginSecondFactorResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -665,7 +662,6 @@ export const getGetSessionResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -732,7 +728,6 @@ export const getCreateFirstAdminResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -852,7 +847,6 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -899,7 +893,6 @@ export const getUpdateMeResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1014,7 +1007,6 @@ export const getFinishOnboardingResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1061,7 +1053,6 @@ export const getMarkWhatsNewResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1982,7 +1973,6 @@ export const getUploadAvatarResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -2029,7 +2019,6 @@ export const getDeleteAvatarResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),

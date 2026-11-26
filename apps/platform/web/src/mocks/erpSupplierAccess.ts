@@ -149,7 +149,7 @@ interface Caller {
 function guard(need: "read" | "full"): Caller | Response {
   const session = readSession();
   if (!session) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   const level = me?.resources["erp.stock"];
   if (!me || !level || (need === "full" && level !== "full")) {
     return HttpResponse.json(

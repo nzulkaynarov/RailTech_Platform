@@ -346,7 +346,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Язык интерфейса и активная роль */
+    /** Язык интерфейса */
     patch: operations["updateMe"];
     trace?: never;
   };
@@ -1112,7 +1112,7 @@ export interface paths {
     };
     /**
      * «Моя очередь» — что сделать сейчас
-     * @description Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+     * @description Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли).
      *     Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
      *     его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
      *     действие.
@@ -11335,11 +11335,9 @@ export interface components {
       language: components["schemas"]["Language"];
       /** @description Роли сотрудника (названия — данные CRM) */
       roles: components["schemas"]["RoleRef"][];
-      /** @description Id роли, выбранной в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет их по объединению ролей. */
-      active_role?: components["schemas"]["RoleId"] | null;
-      /** @description Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей */
+      /** @description Модули рейла в порядке показа — по объединению всего, что делегировано сотруднику */
       modules: components["schemas"]["ModuleCode"][];
-      /** @description Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей) — для активной роли, если задана, иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла. */
+      /** @description Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей сотрудника). Видимость пункта меню — по секции `menu` того же файла. */
       resources: {
         [key: string]: components["schemas"]["AccessLevel"];
       };
@@ -11761,7 +11759,6 @@ export interface components {
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
-      active_role?: components["schemas"]["RoleId"] | null;
     };
     /**
      * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.22.0) — `listCrmMessages` и открытая лента `getCrmThread` / `getCrmConversation`.

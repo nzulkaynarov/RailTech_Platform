@@ -35,7 +35,7 @@ function adminLevel(): Level | "no-session" {
   const session = readSession();
   if (!session) return "no-session";
   // Права операций — по объединению ролей, а не по активной роли («вид»).
-  const all = buildMe({ ...session, activeRole: null });
+  const all = buildMe(session);
   if (!all) return "no-session";
   return all.resources["admin"];
 }

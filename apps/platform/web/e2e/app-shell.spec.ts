@@ -163,12 +163,10 @@ test.describe("роли и доступ", () => {
   test.skip(({ isMobile }) => isMobile, "смена роли — десктоп");
 
   for (const role of ROLES) {
-    test(`смена активной роли на «${ROLE_NAMES[role]}» оставляет в рейле модули матрицы; прямые URL — по матрице`, async ({
+    test(`у сотрудника с набором «${ROLE_NAMES[role]}» в рейле модули матрицы; прямые URL — по матрице`, async ({
       page,
     }) => {
-      await loginAndWait(page, "all@demo.example");
-      await openAvatarMenu(page);
-      await page.getByRole("menuitem", { name: ROLE_NAMES[role], exact: true }).click();
+      await loginAndWait(page, `${role.toLowerCase()}@demo.example`);
       // роль под аватаром сменилась
       await expect(page.getByRole("button", { name: /профиль и настройки/i })).toHaveAccessibleName(
         new RegExp(`${ROLE_CAPTIONS[role].replace(".", "\\.")}: профиль и настройки`),
@@ -198,20 +196,17 @@ test.describe("роли и доступ", () => {
     });
   }
 
-  test("«Все роли» возвращает объединение ролей", async ({ page }) => {
+  test("нет переключателя ролей: у сотрудника с несколькими ролями всё делегированное сразу", async ({
+    page,
+  }) => {
     await loginAndWait(page, "all@demo.example");
-    await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "Менеджер", exact: true }).click();
-    await expect(railLinks(page)).toHaveCount(visibleModules("MANAGER").length);
-    await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "Все роли" }).click();
     await expect(railLinks(page)).toHaveCount(6);
-  });
-
-  test("у сотрудника с одной ролью выбора роли нет", async ({ page }) => {
-    await loginAndWait(page, "accountant@demo.example");
     await openAvatarMenu(page);
     await expect(page.getByText("Активная роль")).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Все роли" })).toHaveCount(0);
+    for (const name of ["Профиль", "Сменить пароль", "Выйти"]) {
+      await expect(page.getByRole("menuitem", { name })).toBeVisible();
+    }
   });
 
   test("модуль вне роли не рендерится в рейле; раздел вне роли — Forbidden с кнопкой «Написать администратору»", async ({

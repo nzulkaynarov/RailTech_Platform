@@ -45,10 +45,8 @@ export function fieldLabel(field: string, language: string): string {
     : field;
 }
 
-/** Роли «вида» сотрудника словами: активная или все; несколько без выбора — «Все роли». */
+/** Подпись сотрудника словами: одна роль — её название; несколько — «Все роли». */
 export function viewRoleNames(me: Me, allRoles: string): string {
-  const active = me.roles.find((role) => role.id === me.active_role);
-  if (active) return active.name;
   if (me.roles.length > 1) return allRoles;
   return me.roles[0]?.name ?? "";
 }

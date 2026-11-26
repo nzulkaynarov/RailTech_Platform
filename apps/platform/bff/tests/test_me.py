@@ -52,7 +52,7 @@ async def test_me_for_each_role(web: Web, check: ContractChecker, role: str) -> 
     check(response, "/me", "get")
     me = response.json()
     assert me["roles"] == refs_of(role)
-    assert me["active_role"] is None
+    assert "active_role" not in me
     assert me["modules"] == expected_modules([role])
     assert me["resources"] == expected_resources([role])
     assert all(v in ("full", "read") for v in me["resources"].values())  # скрытые не перечисляются
@@ -170,46 +170,6 @@ async def test_patch_language_crm_rejects(web: Web, check: ContractChecker) -> N
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-async def test_patch_active_role_does_not_call_crm(web: Web) -> None:
-    await web.login(["MANAGER", "ACCOUNTANT"])
-
-    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("ACCOUNTANT")})
-
-    assert web.be.crm_patch_me.call_count == 0
-
-
-async def test_active_role_is_a_view(web: Web, check: ContractChecker) -> None:
-    await web.login(["MANAGER", "ACCOUNTANT"])
-
-    response = await web.send("PATCH", "/api/v1/me", json={"active_role": rid("ACCOUNTANT")})
-
-    assert response.status_code == 200
-    check(response, "/me", "patch")
-    me = response.json()
-    assert me["roles"] == refs_of("MANAGER", "ACCOUNTANT")  # роли остаются все
-    assert me["active_role"] == rid("ACCOUNTANT")
-    assert me["modules"] == expected_modules(["ACCOUNTANT"])
-    assert me["resources"] == expected_resources(["ACCOUNTANT"])
-    assert me["restricted_fields"] == ["totals_only"]
-    assert "crm.leads" not in me["resources"]  # у бухгалтера раздела нет, у менеджера есть
-
-    reset = await web.send("PATCH", "/api/v1/me", json={"active_role": None})
-    assert reset.status_code == 200
-    assert reset.json()["active_role"] is None
-    assert reset.json()["resources"] == expected_resources(["MANAGER", "ACCOUNTANT"])
-
-
-async def test_active_role_must_be_one_of_own_roles(web: Web, check: ContractChecker) -> None:
-    await web.login(["MANAGER"])
-
-    for role in (rid("ADMIN"), "999"):
-        response = await web.send("PATCH", "/api/v1/me", json={"active_role": role})
-        assert response.status_code == 422
-        check(response, "/me", "patch")
-        assert response.json()["code"] == "VALIDATION_FAILED"
-    assert (await web.client.get("/api/v1/me")).json()["active_role"] is None
-
-
 @pytest.mark.parametrize(
     "payload",
     [
@@ -217,8 +177,7 @@ async def test_active_role_must_be_one_of_own_roles(web: Web, check: ContractChe
         {"language": "fr"},
         {"language": None},
         {"theme": "dark"},
-        {"active_role": 5},
-        {"active_role": "MANAGER"},
+        {"active_role": rid("MANAGER")},  # активной роли нет
     ],
 )
 async def test_patch_validation(
@@ -231,42 +190,6 @@ async def test_patch_validation(
     assert response.status_code == 422
     check(response, "/me", "patch")
     assert response.json()["code"] == "VALIDATION_FAILED"
-
-
-async def test_patch_active_role_does_not_change_operation_rights(web: Web) -> None:
-    """Q-PLT-12-1: активная роль — «вид»; право на операцию считается по объединению ролей."""
-
-    @web.app.get("/api/v1/_op/projects-full")
-    async def projects_full(
-        _: Annotated[Authed, Depends(require("eds.projects", "full"))],
-    ) -> dict[str, bool]:
-        return {"ok": True}
-
-    @web.app.get("/api/v1/_op/admin")
-    async def admin_read(
-        _: Annotated[Authed, Depends(require("admin", "read"))],
-    ) -> dict[str, bool]:
-        return {"ok": True}
-
-    # DIRECTOR: eds.projects = full; SUPPLY: eds.projects = read.
-    await web.login(["DIRECTOR", "SUPPLY"])
-    assert level("SUPPLY", "eds.projects") == "read"
-    before = (await web.client.get("/api/v1/_op/projects-full")).status_code
-    assert before == 200
-
-    patched = await web.send("PATCH", "/api/v1/me", json={"active_role": rid("SUPPLY")})
-
-    assert patched.json()["resources"]["eds.projects"] == "read"  # вид сузился ...
-    assert (await web.client.get("/api/v1/_op/projects-full")).status_code == 200  # ... право нет
-    assert (await web.client.get("/api/v1/_op/admin")).status_code == 200  # DIRECTOR: admin = read
-
-    # И наоборот: вид не расширяет права — чужую роль взять нельзя, права не растут.
-    admin = {"active_role": rid("ADMIN")}
-    assert (await web.send("PATCH", "/api/v1/me", json=admin)).status_code == 422
-    web.client.cookies.clear()
-    await web.login(["SUPPLY"])
-    assert (await web.client.get("/api/v1/_op/projects-full")).status_code == 403
-    assert (await web.client.get("/api/v1/_op/admin")).status_code == 403
 
 
 # --- синхронизация профиля с CRM ------------------------------------------------------------------
@@ -284,7 +207,6 @@ async def test_profile_is_not_reread_within_a_minute(web: Web) -> None:
 
 async def test_role_change_in_crm_is_picked_up(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER", "SUPPLY"])
-    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("SUPPLY")})
     web.be.set_roles(["MANAGER", "DIRECTOR"])
     web.be.profile["position"] = "Заместитель"
     web.clock.advance(61)
@@ -295,7 +217,6 @@ async def test_role_change_in_crm_is_picked_up(web: Web, check: ContractChecker)
     check(response, "/me", "get")
     me = response.json()
     assert me["roles"] == refs_of("MANAGER", "DIRECTOR")
-    assert me["active_role"] is None  # активной роли больше нет — вид сброшен
     assert me["position"] == "Заместитель"
     assert me["resources"] == expected_resources(["MANAGER", "DIRECTOR"])
 
@@ -393,3 +314,16 @@ async def test_require_closes_session_when_all_roles_removed(web: Web) -> None:
     assert response.status_code == 403
     assert response.json()["code"] == "NO_PLATFORM_ROLE"
     assert web.redis.session_keys() == []
+
+
+async def test_me_has_no_active_role_and_user_sees_all_delegated(
+    web: Web, check: ContractChecker
+) -> None:
+    """СОТР-2: переключателя ролей нет — модули и разделы всегда по объединению ролей."""
+    await web.login(["MANAGER", "ACCOUNTANT"])
+
+    me = (await web.client.get("/api/v1/me")).json()
+
+    assert "active_role" not in me
+    assert me["resources"] == expected_resources(["MANAGER", "ACCOUNTANT"])
+    assert me["modules"] == expected_modules(["MANAGER", "ACCOUNTANT"])

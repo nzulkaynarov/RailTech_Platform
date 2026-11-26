@@ -61,11 +61,9 @@ export function QueuePage() {
   const { me } = useAuth();
   const { t, i18n } = useTranslation(["modules", "shell"]);
   const format = useFormat();
-  const role = me.active_role ?? undefined;
-  const params = role ? { role } : undefined;
   const poll = usePollQuery();
-  const queue = useGetQueue(params, { query: poll });
-  const cards = useGetQueueCards(params, { query: poll });
+  const queue = useGetQueue(undefined, { query: poll });
+  const cards = useGetQueueCards(undefined, { query: poll });
   // Сколько счётчиков было в прошлый раз: до ответа — столько же карточек-скелетонов той же высоты (UX-1c, S10).
   const cardsCount = useCardsCount(me.id, cards.data?.cards.length);
   // Замещение (СЦ-9): «Вы замещаете {имя} до {дата}» и фильтр «За {имя}»; профиль не открылся — без плашки, очередь та же

@@ -36,7 +36,7 @@ type Level = "read" | "full" | "triage";
 function guard(need: Level) {
   const session = readSession();
   if (!session) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-  const resources = buildMe({ ...session, activeRole: null })?.resources ?? {};
+  const resources = buildMe(session)?.resources ?? {};
   const level = resources["crm.leads"];
   const triage = resources["crm.leads.triage"] === "full";
   if (need === "triage" && triage) return null;

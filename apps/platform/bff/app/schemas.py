@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
-from app.rbac import View, modules_for, view_roles
+from app.rbac import View, modules_for
 from app.rbac_generated import ModuleCode, RestrictedField
 from app.schemas_profile import avatar_url
 from app.session import Language, SessionData, SessionRole
@@ -67,12 +67,11 @@ class MeUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     language: Language | None = None
-    active_role: RoleId | None = None
 
     @model_validator(mode="after")
     def _not_empty(self) -> "MeUpdate":
         if not self.model_fields_set:
-            raise ValueError("укажите language или active_role")
+            raise ValueError("укажите language")
         if "language" in self.model_fields_set and self.language is None:
             raise ValueError("language не может быть null")
         return self
@@ -112,7 +111,6 @@ class Me(BaseModel):
     avatar_url: str | None = None
     language: Language
     roles: list[RoleRef]
-    active_role: str | None
     modules: list[ModuleCode]
     resources: dict[str, Literal["full", "read"]]
     restricted_fields: list[RestrictedField]
@@ -151,9 +149,8 @@ def initials_of(name: str, email: str) -> str:
 
 
 def build_me(data: SessionData) -> Me:
-    """`Me` по снимку профиля. Вид (модули, разделы, поля) — по активной роли, если она задана."""
-    shown = View.of(view_roles(data.roles, data.active_role))
-    active = data.active_role if any(r.id == data.active_role for r in data.roles) else None
+    """`Me` по снимку профиля: модули, разделы и поля — по объединению всего, что делегировано сотруднику."""
+    shown = View.of(data.roles)
     return Me(
         id=str(data.user_id),
         email=data.email,
@@ -163,7 +160,6 @@ def build_me(data: SessionData) -> Me:
         avatar_url=avatar_url(data.user_id, data.avatar_version),
         language=data.language,
         roles=[RoleRef.of(r) for r in data.roles],
-        active_role=str(active) if active is not None else None,
         modules=modules_for(shown.access),
         resources=dict(shown.access),
         restricted_fields=cast(list[RestrictedField], list(shown.fields)),

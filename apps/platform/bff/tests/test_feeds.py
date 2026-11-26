@@ -200,10 +200,10 @@ def test_accountant_template_sees_no_supplier_price_keys_in_feeds() -> None:
     assert strip_restricted(payload, fields, RESTRICTED_KEYS) == {"items": [{"name": "x"}]}
 
 
-# --- Роли: активная роль, объединение, явный role -------------------------------------------------
+# --- Роли: объединение, явный role -------------------------------------------------
 
 
-async def test_queue_unites_roles_and_active_role_narrows_it(web: Web, fb: FeedBackends) -> None:
+async def test_queue_unites_roles(web: Web, fb: FeedBackends) -> None:
     director_data(fb)
     fb.state["inbox"]["unassigned"] = [lead(2060, "Свободный")]
     await web.login(["MANAGER", "DIRECTOR"])
@@ -212,13 +212,6 @@ async def test_queue_unites_roles_and_active_role_narrows_it(web: Web, fb: FeedB
 
     assert {i["role_id"] for i in union} == {rid("MANAGER"), rid("DIRECTOR")}
     assert len(union) == 3
-
-    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("DIRECTOR")})
-    only_director = (await web.client.get("/api/v1/queue")).json()["items"]
-    assert {i["role_id"] for i in only_director} == {rid("DIRECTOR")}
-    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("MANAGER")})
-    only_manager = (await web.client.get("/api/v1/queue")).json()["items"]
-    assert [i["object"]["number"] for i in only_manager] == ["L-2060"]
 
 
 async def test_explicit_role_parameter(web: Web, fb: FeedBackends, check: ContractChecker) -> None:

@@ -13,8 +13,6 @@ const KEY = "rt-pf-mock-session";
 
 interface MockSession {
   userId: string;
-  /** Id активной роли («вид») */
-  activeRole: string | null;
   language: Language;
   mustChangePassword: boolean;
   /** Приветствие и тур первого входа закрыты (W15-H7); без поля — закрыты */
@@ -72,7 +70,6 @@ export function writeSession(session: MockSession | null): void {
 export function startSession(user: DemoUser): MockSession {
   const session: MockSession = {
     userId: user.id,
-    activeRole: null,
     language: user.language,
     mustChangePassword: user.mustChangePassword ?? false,
     onboardingDone: !onboardingPending(),
@@ -106,16 +103,15 @@ export function sessionRoles(session: MockSession) {
     user.roles.map((code) => ROLE_ID[code]),
   );
   const all = rolesOf(ids, readRoles());
-  const active = all.find((r) => r.id === session.activeRole);
-  return { user, all, view: active ? [active] : all, active };
+  return { user, all, view: all };
 }
 
-/** `Me` для сессии: при выбранной активной роли модули и разделы считаются по ней одной, иначе — по объединению ролей. */
+/** `Me` для сессии: модули и разделы — по объединению ролей. */
 export function buildMe(session: MockSession): Me | undefined {
   const roles = sessionRoles(session);
   if (!roles) return undefined;
-  const { user, all, view, active } = roles;
-  const computed = computeAccess(view);
+  const { user, all } = roles;
+  const computed = computeAccess(all);
   const avatar = avatarUrlOf(user.id);
   // Имя, которое сотрудник сменил на странице /me (W15-H6), и фото вместо инициалов.
   const name = nameOf(user.id) || user.name;
@@ -128,7 +124,6 @@ export function buildMe(session: MockSession): Me | undefined {
     position: user.position,
     language: session.language,
     roles: all.map(roleRefOf),
-    active_role: active ? active.id : null,
     modules: computed.modules,
     resources: computed.resources as Me["resources"],
     restricted_fields: computed.restricted_fields,

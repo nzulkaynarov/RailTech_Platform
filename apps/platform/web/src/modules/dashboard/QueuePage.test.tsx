@@ -740,19 +740,19 @@ describe("Dashboard · Моя очередь", () => {
     expect(await within(page).findByText("Решений от вас пока не требуется")).toBeVisible();
   });
 
-  it("смена активной роли: запрос уходит с role, очередь пересчитывается", async () => {
+  it("активной роли нет: запрос очереди уходит без role, видно всё делегированное", async () => {
     const seen: (string | null)[] = [];
     server.events.on("request:start", ({ request }) => {
       const url = new URL(request.url);
       if (url.pathname.endsWith("/queue")) seen.push(url.searchParams.get("role"));
     });
-    signInAs("all@demo.example", "MANAGER");
+    signInAs("all@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
-    expect(within(page).queryByText(/Наложить резолюцию/)).toBeNull();
-    expect(seen).toContain(ROLE_ID.MANAGER);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((role) => role === null)).toBe(true);
     server.events.removeAllListeners();
   });
 
