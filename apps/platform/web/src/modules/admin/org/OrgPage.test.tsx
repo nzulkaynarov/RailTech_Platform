@@ -15,6 +15,12 @@ import i18n from "../../../shared/i18n";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 
+/** Набор по должности — выпадающий список: открыть и выбрать пункт по названию. */
+async function choosePreset(name: RegExp) {
+  fireEvent.mouseDown(await screen.findByRole("combobox", { name: "Набор по должности" }));
+  fireEvent.click(await screen.findByTitle(name));
+}
+
 function renderAt(path: string) {
   const queryClient = createQueryClient({ retry: false, staleTime: 0 });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
@@ -323,7 +329,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     fireEvent.change(await within(panel).findByLabelText("Имя и фамилия"), {
       target: { value: "Черновик Приглашения" },
     });
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
     expect(within(panel).getByLabelText("Имя и фамилия")).toHaveValue("Черновик Приглашения");
 
     await router.navigate("/admin/org?invite=open&panel=open");
@@ -331,7 +337,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     await waitFor(() => {
       expect(within(panel).getByLabelText("Имя и фамилия")).toHaveValue("");
     });
-    for (const box of within(panel).getAllByRole("checkbox")) expect(box).not.toBeChecked();
+    expect(panel.querySelector(".ant-select-selection-item")).toBeNull();
   });
 
   it("смена ширины через 1200 и 390 px не очищает форму приглашения (R3-D-4)", async () => {
@@ -340,7 +346,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     fireEvent.change(await within(await panelEl()).findByLabelText("Имя и фамилия"), {
       target: { value: "Демо Новый" },
     });
-    fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Бухгалтер/ }));
+    await choosePreset(/^Бухгалтер/);
 
     for (const width of [390, 1440]) {
       act(() => {
@@ -348,7 +354,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       });
       const panel = await panelEl();
       expect(await within(panel).findByLabelText("Имя и фамилия")).toHaveValue("Демо Новый");
-      expect(within(panel).getByRole("checkbox", { name: /^Бухгалтер/ })).toBeChecked();
+      expect(panel.querySelector(".ant-select-selection-item")?.textContent).toMatch(/^Бухгалтер/);
     }
   });
 

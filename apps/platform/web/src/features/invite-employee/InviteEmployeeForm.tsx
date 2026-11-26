@@ -236,6 +236,7 @@ export function InviteEmployeeForm({
             id={presetId}
             style={{ width: "100%" }}
             loading={catalog.isPending}
+            virtual={false}
             status={showRoleNote ? "error" : undefined}
             placeholder={t("admin.org.delegation.presetPlaceholder")}
             value={roles[0]}

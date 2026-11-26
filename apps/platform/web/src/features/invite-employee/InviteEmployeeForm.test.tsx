@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Employee, EmployeeInvite } from "../../shared/api/generated/model";
-import { ROLE_ID, ref, rolesHandler } from "../../test/roles";
+import { ROLE_ID, delegationCatalogHandler, ref, rolesHandler } from "../../test/roles";
 import { server } from "../../test/server";
 import { renderUi } from "../../test/renderUi";
 import { InviteEmployeeForm } from "./InviteEmployeeForm";
@@ -33,6 +33,7 @@ beforeEach(() => {
   onCancel.mockReset();
   server.use(
     rolesHandler(),
+    delegationCatalogHandler(),
     http.post("*/admin/users/invite", async ({ request }) => {
       bodies.push((await request.json()) as EmployeeInvite);
       return HttpResponse.json(created, { status: 201 });
@@ -45,7 +46,13 @@ async function setup() {
   renderUi(
     <InviteEmployeeForm onInvited={onInvited} onOpenCard={onOpenCard} onCancel={onCancel} />,
   );
-  await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ });
+  await screen.findByRole("combobox", { name: "Набор по должности" });
+}
+
+/** Набор по должности — выпадающий список: открыть и выбрать пункт по названию. */
+async function choosePreset(name: RegExp) {
+  fireEvent.mouseDown(await screen.findByRole("combobox", { name: "Набор по должности" }));
+  fireEvent.click(await screen.findByTitle(name));
 }
 
 function fill(label: string, value: string) {
@@ -62,7 +69,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
 
     expect(await screen.findByText("Укажите имя и фамилию")).toBeInTheDocument();
     expect(screen.getByText("Укажите почту сотрудника")).toBeInTheDocument();
-    expect(screen.getByText("Выберите хотя бы одну роль.")).toBeInTheDocument();
+    expect(screen.getByText("Выберите набор по должности.")).toBeInTheDocument();
     expect(bodies).toEqual([]);
   });
 
@@ -70,7 +77,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     await setup();
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "не-почта");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
+    await choosePreset(/^Снабженец/);
 
     submit();
 
@@ -80,16 +87,15 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
 
   it("«Что произойдёт» говорит про письмо и модули выбранных ролей", async () => {
     await setup();
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Администратор/ }));
+    await choosePreset(/^Администратор/);
   });
 
-  it("отправляет данные без лишних пробелов, роли в порядке контракта", async () => {
+  it("отправляет данные без лишних пробелов, набор по должности", async () => {
     await setup();
     fill("Имя и фамилия", "  Новый Сотрудник ");
     fill("Электронная почта", "new@demo.example");
     fill("Должность (необязательно)", " Инженер ");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер(?!-)/ }));
+    await choosePreset(/^Менеджер(?!-)/);
 
     submit();
 
@@ -101,7 +107,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
         email: "new@demo.example",
         name: "Новый Сотрудник",
         position: "Инженер",
-        role_ids: [ROLE_ID.MANAGER, ROLE_ID.SUPPLY],
+        role_ids: [ROLE_ID.MANAGER],
       },
     ]);
   });
@@ -110,7 +116,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     await setup();
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "new@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 
@@ -129,7 +135,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     await setup();
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "dup@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 
@@ -154,7 +160,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     await setup();
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "new@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 
@@ -183,7 +189,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "new@demo.example");
     fill("Должность (необязательно)", "Инженер");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 
@@ -191,14 +197,14 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     expect(screen.getByLabelText("Имя и фамилия")).toHaveValue("");
     expect(screen.getByLabelText("Электронная почта")).toHaveValue("");
     expect(screen.getByLabelText("Должность (необязательно)")).toHaveValue("");
-    for (const box of screen.getAllByRole("checkbox")) expect(box).not.toBeChecked();
+    expect(document.querySelector(".ant-select-selection-item")).toBeNull();
   });
 
   it("после успеха форма пустая, роли не накапливаются в следующем приглашении", async () => {
     await setup();
     fill("Имя и фамилия", "Первый Сотрудник");
     fill("Электронная почта", "first@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 
@@ -206,11 +212,11 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
       expect(onInvited).toHaveBeenCalledTimes(1);
     });
     expect(screen.getByLabelText("Имя и фамилия")).toHaveValue("");
-    for (const box of screen.getAllByRole("checkbox")) expect(box).not.toBeChecked();
+    expect(document.querySelector(".ant-select-selection-item")).toBeNull();
 
     fill("Имя и фамилия", "Второй Сотрудник");
     fill("Электронная почта", "second@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
+    await choosePreset(/^Снабженец/);
     // у кнопки ещё доигрывает анимация загрузки, и значок входит в её имя
     fireEvent.click(screen.getByRole("button", { name: /Отправить приглашение/ }));
 
@@ -237,7 +243,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     await setup();
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "new@demo.example");
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+    await choosePreset(/^Директор/);
 
     submit();
 

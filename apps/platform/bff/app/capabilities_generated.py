@@ -30,7 +30,7 @@ AREAS: Final[dict[str, dict[str, str]]] = {
     },
     "work": {
         "ru": "Работа",
-        "uz": "Ish",
+        "uz": "Iş",
         "en": "Work",
     },
     "admin": {
@@ -47,7 +47,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Вести лиды и клиентов",
-            "uz": "Lidlar va mijozlar bilan ishlash",
+            "uz": "Lidlar va mijozlar bilan işlaş",
             "en": "Work leads and clients",
         },
         "grants": {
@@ -61,7 +61,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Разбирать лиды и передавать менеджеру",
-            "uz": "Lidlarni saralab, menejerga topshirish",
+            "uz": "Lidlarni saralab, menejerga topşiriş",
             "en": "Triage leads and hand them to a manager",
         },
         "grants": {
@@ -74,7 +74,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Смотреть воронку и переписку с клиентами",
-            "uz": "Voronka va mijozlar yozishmasini ko'rish",
+            "uz": "Voronka va mijozlar yozişmasini köriş",
             "en": "View the funnel and client conversations",
         },
         "grants": {
@@ -87,7 +87,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Готовить расчёт и КП",
-            "uz": "Hisob-kitob va TT tayyorlash",
+            "uz": "Hisob-kitob va TT tayyorlaş",
             "en": "Prepare calculations and quotes",
         },
         "grants": {
@@ -99,7 +99,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Утверждать и отправлять КП",
-            "uz": "TT ni tasdiqlash va yuborish",
+            "uz": "TT ni tasdiqlaş va yuboriş",
             "en": "Approve and send quotes",
         },
         "grants": {
@@ -111,7 +111,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Визировать расчёт: товары и склад",
-            "uz": "Hisobni vizalash: tovar va ombor",
+            "uz": "Hisobni vizalaş: tovar va ombor",
             "en": "Sign off calculations: goods and stock",
         },
         "grants": {
@@ -123,7 +123,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "sales",
         "label": {
             "ru": "Визировать расчёт: услуги",
-            "uz": "Hisobni vizalash: xizmatlar",
+            "uz": "Hisobni vizalaş: xizmatlar",
             "en": "Sign off calculations: services",
         },
         "grants": {
@@ -135,7 +135,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Регистрировать письма",
-            "uz": "Xatlarni ro'yxatga olish",
+            "uz": "Xatlarni röyxatga oliş",
             "en": "Register letters",
         },
         "grants": {
@@ -147,7 +147,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Накладывать резолюции",
-            "uz": "Rezolyutsiya qo'yish",
+            "uz": "Rezolyutsiya qöyiş",
             "en": "Put resolutions",
         },
         "grants": {
@@ -159,7 +159,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Видеть всю очередь почты",
-            "uz": "Pochtaning butun navbatini ko'rish",
+            "uz": "Poçtaning butun navbatini köriş",
             "en": "See the whole mail queue",
         },
         "grants": {
@@ -171,7 +171,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Вести договоры и проекты",
-            "uz": "Shartnoma va loyihalarni yuritish",
+            "uz": "Şartnoma va loyihalarni yuritiş",
             "en": "Handle contracts and projects",
         },
         "grants": {
@@ -183,7 +183,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Смотреть договоры и проекты",
-            "uz": "Shartnoma va loyihalarni ko'rish",
+            "uz": "Şartnoma va loyihalarni köriş",
             "en": "View contracts and projects",
         },
         "grants": {
@@ -197,7 +197,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Создавать внутренние документы",
-            "uz": "Ichki hujjatlarni yaratish",
+            "uz": "Içki hujjatlarni yaratiş",
             "en": "Create internal documents",
         },
         "grants": {
@@ -209,7 +209,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Согласовывать внутренние документы",
-            "uz": "Ichki hujjatlarni kelishish",
+            "uz": "Içki hujjatlarni kelişiş",
             "en": "Approve internal documents",
         },
         "grants": {
@@ -221,7 +221,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Визировать договоры как юрист",
-            "uz": "Shartnomalarni yurist sifatida vizalash",
+            "uz": "Şartnomalarni yurist sifatida vizalaş",
             "en": "Sign off contracts as legal",
         },
         "grants": {
@@ -233,7 +233,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Визировать счета, акты и договоры как бухгалтер",
-            "uz": "Hisob, dalolatnoma va shartnomalarni buxgalter sifatida vizalash",
+            "uz": "Hisob, dalolatnoma va şartnomalarni buxgalter sifatida vizalaş",
             "en": "Sign off invoices, acts and contracts as accountant",
         },
         "grants": {
@@ -245,7 +245,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "documents",
         "label": {
             "ru": "Выдавать права подписи",
-            "uz": "Imzo huquqlarini berish",
+            "uz": "Imzo huquqlarini beriş",
             "en": "Grant signing authority",
         },
         "grants": {
@@ -257,7 +257,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "money",
         "label": {
             "ru": "Подтверждать оплату",
-            "uz": "To'lovni tasdiqlash",
+            "uz": "Tölovni tasdiqlaş",
             "en": "Confirm payments",
         },
         "grants": {
@@ -269,7 +269,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "money",
         "label": {
             "ru": "Смотреть оплаты",
-            "uz": "To'lovlarni ko'rish",
+            "uz": "Tölovlarni köriş",
             "en": "View payments",
         },
         "grants": {
@@ -281,7 +281,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "purchasing",
         "label": {
             "ru": "Вести каталог и закупки",
-            "uz": "Katalog va xaridlarni yuritish",
+            "uz": "Katalog va xaridlarni yuritiş",
             "en": "Handle catalog and purchasing",
         },
         "grants": {
@@ -293,7 +293,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "purchasing",
         "label": {
             "ru": "Смотреть каталог и склад",
-            "uz": "Katalog va omborni ko'rish",
+            "uz": "Katalog va omborni köriş",
             "en": "View catalog and stock",
         },
         "grants": {
@@ -305,7 +305,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "work",
         "label": {
             "ru": "Видеть сводку по компании",
-            "uz": "Kompaniya xulosasini ko'rish",
+            "uz": "Kompaniya xulosasini köriş",
             "en": "See the company summary",
         },
         "grants": {
@@ -317,7 +317,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "work",
         "label": {
             "ru": "Писать коллегам и вести свои задачи",
-            "uz": "Hamkasblarga yozish va o'z vazifalarini yuritish",
+            "uz": "Hamkasblarga yoziş va öz vazifalarini yuritiş",
             "en": "Message colleagues and keep own tasks",
         },
         "grants": {
@@ -330,7 +330,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "admin",
         "label": {
             "ru": "Управлять сотрудниками и делегированием",
-            "uz": "Xodimlar va vakolatlarni boshqarish",
+            "uz": "Xodimlar va vakolatlarni boşqariş",
             "en": "Manage employees and delegation",
         },
         "grants": {
@@ -342,7 +342,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "admin",
         "label": {
             "ru": "Смотреть настройки и журнал",
-            "uz": "Sozlamalar va jurnalni ko'rish",
+            "uz": "Sozlamalar va jurnalni köriş",
             "en": "View settings and the log",
         },
         "grants": {
@@ -354,7 +354,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "admin",
         "label": {
             "ru": "Менять каналы, подключения и ИИ",
-            "uz": "Kanallar, ulanishlar va AI ni o'zgartirish",
+            "uz": "Kanallar, ulanişlar va AI ni özgartiriş",
             "en": "Change channels, connections and AI",
         },
         "grants": {
@@ -366,7 +366,7 @@ CAPABILITIES: Final[tuple[dict[str, Any], ...]] = (
         "area": "admin",
         "label": {
             "ru": "Менять настройки компании и шаблоны",
-            "uz": "Kompaniya sozlamalari va shablonlarni o'zgartirish",
+            "uz": "Kompaniya sozlamalari va şablonlarni özgartiriş",
             "en": "Change company settings and templates",
         },
         "grants": {

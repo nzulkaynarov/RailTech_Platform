@@ -12,6 +12,17 @@ export function rolesHandler(extra: Role[] = []) {
   return http.get("*/admin/roles", () => HttpResponse.json({ items: companyRoles(extra) }));
 }
 
+/** Каталог делегирования для тестов без сессии: наборы по должности — роли компании (СОТР-2). */
+export function delegationCatalogHandler() {
+  return http.get("*/admin/delegation", () =>
+    HttpResponse.json({
+      areas: [],
+      actions: [],
+      presets: companyRoles().map((role) => ({ id: role.id, name: role.name, codes: [] })),
+    }),
+  );
+}
+
 /** Ссылка на роль-предустановку, как её отдаёт BFF в `Employee.roles` и `Me.roles`. */
 export function ref(code: PresetCode): RoleRef {
   const role = seedRoles().find((r) => r.id === ROLE_ID[code]);
