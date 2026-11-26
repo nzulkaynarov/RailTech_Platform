@@ -59,9 +59,12 @@ def new_lead_recipients(staff: Iterable[Staff]) -> list[int]:
     return seen
 
 
-def lead_dm_target(owner_mode: str, manager: Staff | None) -> int | None:
-    """Кому писать о новом сообщении лида: ответственному менеджеру лида в работе у человека."""
-    if owner_mode != "human" or manager is None:
+def lead_dm_target(
+    owner_mode: str, manager: Staff | None, *, company_conversation: bool = False
+) -> int | None:
+    """Кому писать о новом сообщении лида: ответственному менеджеру лида в работе у человека или
+    беседы известного контакта компании (КОНТР-1а, бот при этом отвечает)."""
+    if (owner_mode != "human" and not company_conversation) or manager is None:
         return None
     if not (manager.is_active and manager.notify_leads):
         return None

@@ -167,6 +167,8 @@
     },
     "lead": {
       "take": "Took a lead",
+      "known_contact": "Company contact conversation assigned to the owner",
+      "contact_sync": "Lead e-mail or phone copied to the company contact",
       "reply": "Replied to a lead",
       "note": "Added a note",
       "snooze": "Snoozed a lead",

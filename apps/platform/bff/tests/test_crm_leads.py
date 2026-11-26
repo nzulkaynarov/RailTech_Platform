@@ -53,7 +53,9 @@ async def test_list_maps_rows_and_keeps_the_total_of_crm(
         "handoff_open": True,
         "overdue": True,  # срок передачи 2026-10-27 09:03 уже прошёл
         "client_id": None,
+        "company": None,
     }
+    assert second["company"] == "ООО Демо-Логистик"  # КОНТР-1а: компания рядом с именем
     assert second["status"] == "client"  # CRM без platform_status — по стадии `customer`
     assert second["channel"] == "web"
     assert second["handoff_open"] is False

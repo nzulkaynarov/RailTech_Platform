@@ -10,6 +10,8 @@ export const AUDIT_ACTIONS = [
   "auth.login_failed",
   "sso.exchange",
   "lead.take",
+  "lead.known_contact",
+  "lead.contact_sync",
   "lead.reply",
   "lead.note",
   "lead.snooze",

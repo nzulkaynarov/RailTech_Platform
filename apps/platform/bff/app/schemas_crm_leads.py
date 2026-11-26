@@ -69,6 +69,8 @@ class LeadRow(BaseModel):
     handoff_open: bool
     overdue: bool
     client_id: int | None
+    # Компания, к которой относится лид (КОНТР-1а): известный контакт или привязанный клиент.
+    company: str | None = None
 
 
 class LeadPage(BaseModel):

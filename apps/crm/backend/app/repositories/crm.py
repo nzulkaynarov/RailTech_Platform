@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, exists, func, or_, select
+from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.company_conversation import MARK_KEY
 from app.domain.lead_sources import normalize_phone_e164
 from app.models.auth import User
 from app.models.clients import ClientContact
@@ -164,7 +165,11 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
             select(Lead)
             .where(
                 Lead.assigned_user_id == me,
-                Lead.owner_mode == "human",
+                or_(
+                    Lead.owner_mode == "human",
+                    # КОНТР-1а: беседа известного контакта: бот отвечает, ведёт ответственный.
+                    and_(Lead.owner_mode == "bot", Lead.qualification.has_key(MARK_KEY)),
+                ),
                 Lead.erased_at.is_(None),
                 Lead.discarded_kind.is_(None),
                 lead_visibility.listed(),

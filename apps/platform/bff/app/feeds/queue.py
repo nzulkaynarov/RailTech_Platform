@@ -184,6 +184,14 @@ def _lead_row(
     waiting = parse_dt(lead.get("last_lead_msg_at")) or parse_dt(lead.get("created_at"))
     action = tr(*_LEAD_ACTION.get(kind, _LEAD_ACTION["answer_lead"]))
     title = f"{action} {number}"
+    company = _company_conversation(lead) if kind == "answer_lead" else None
+    if company is not None:
+        # КОНТР-1а: бот отвечает, беседу ведёт ответственный за компанию; действие — «Ответить».
+        title = tr(
+            f"{name} ({company}) — новое сообщение",
+            f"{name} ({company}) — yangi xabar",
+            f"{name} ({company}) — new message",
+        )
     if handed_by is not None:
         # D17G-1: передача первой линии — строка с запиской делопроизводителя и его именем.
         title = tr(
@@ -194,6 +202,12 @@ def _lead_row(
         waiting = parse_dt((lead.get("escalation") or {}).get("created_at")) or waiting
     if handed_by is not None:
         reason = tr(f"вам {handed_by}", f"sizga {handed_by}", f"to you: {handed_by}")
+    elif kind == "answer_lead" and company is not None:
+        reason = tr("ваш контрагент", "sizning kontragentingiz", "your counterparty") + (
+            f" · {short(why, 60)}"
+            if why
+            else tr(" ждёт ответа", " javob kutmoqda", " is waiting for a reply")
+        )
     elif kind == "answer_lead":
         reason = tr("ваш клиент", "sizning mijozingiz", "your client") + (
             f" · {short(why, 60)}"
@@ -222,6 +236,14 @@ def _lead_row(
         object=lead_ref(lead_id, name, conversation=True),
     )
     return Row(item, waiting)
+
+
+def _company_conversation(lead: dict[str, Any]) -> str | None:
+    """Название компании, если лид — беседа известного контакта при работающем боте (КОНТР-1а)."""
+    company = lead.get("company_name")
+    if lead.get("owner_mode") == "bot" and lead.get("client_id") is not None and company:
+        return str(company)
+    return None
 
 
 def _handed_over(lead: dict[str, Any]) -> bool:

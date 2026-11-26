@@ -72,6 +72,9 @@ function consentText(t: TFunction, fmt: Format, card: LeadCard): string {
       card.channel === "telegram" ? "leads:card.consentMissingBot" : "leads:card.consentMissing",
     );
   }
+  if (method === null && card.channel === "web") {
+    return t("leads:card.consentForm", { date: fmt.date(at) });
+  }
   if (method === null) return t("leads:card.consentBot", { date: fmt.date(at) });
   return t("leads:card.consentStaff", {
     date: fmt.date(at),

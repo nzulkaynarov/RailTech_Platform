@@ -248,6 +248,7 @@ class CrmLeadsFake:
                         platform_status=None,
                         stage="customer",
                         client_id=12,
+                        company_name="ООО Демо-Логистик",
                         assigned_user_id=7,
                         assigned_user_name="Дилшод Менеджеров",
                         unread=True,
