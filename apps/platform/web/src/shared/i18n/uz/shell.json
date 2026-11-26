@@ -89,7 +89,7 @@
       "open": "Açiş",
       "read": "Oqildi",
       "more": "Yana {{count}} ta yangi",
-      "moreAction": "Barcha xabarnomalar"
+      "moreAction": "Barça xabarnomalar"
     },
     "events_few": "{{count}} voqea",
     "events_many": "{{count}} voqea"

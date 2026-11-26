@@ -195,7 +195,10 @@ async def test_feed_uses_the_session_language(
 
 def test_needs_action_follows_the_decisions_tab() -> None:
     """УВЕД-1: «требует действия» — от вкладки «Решения»; к сведению — остальное."""
-    decision = map_erp(erp_row("quote.submitted_for_review", "КП на согласовании", number="КП-1"), {})
+    row = erp_row("quote.submitted_for_review", "КП на согласовании", number="КП-1")
+    decision = map_erp(row, {})
     info = map_erp(erp_row("document.created", "Документ создан"), {})
-    assert decision is not None and decision.needs_action is True
-    assert info is not None and info.needs_action is False
+    assert decision is not None
+    assert decision.needs_action is True
+    assert info is not None
+    assert info.needs_action is False
