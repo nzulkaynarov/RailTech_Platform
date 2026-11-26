@@ -1,4 +1,4 @@
-import { Alert, App, Button, Form, Input, Radio, Space } from "antd";
+import { Alert, App, Button, Form, Input, Radio, Select, Space } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,8 +7,7 @@ import { ApiError } from "../../shared/api/errors";
 import type { Employee, EmployeeCredentials } from "../../shared/api/generated/model";
 import { TemporaryPasswordCard } from "../temporary-password/TemporaryPasswordCard";
 import { useCreateEmployeeWithPassword } from "../temporary-password/useTemporaryPassword";
-import { RoleCheckboxes } from "../assign-role/RoleCheckboxes";
-import { useRoles } from "../assign-role/useRoles";
+import { useGetDelegationCatalog } from "../../shared/api/generated/platform-bff";
 import { useEmployeeInvite } from "../assign-role/useEmployeeMutations";
 import { isStepUpError, useStepUp } from "../step-up/useStepUp";
 
@@ -53,8 +52,9 @@ export function InviteEmployeeForm({
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
   const [form] = Form.useForm<Values>();
-  const noteId = useId();
-  const { query: rolesQuery, roles: companyRoles } = useRoles();
+  const presetId = useId();
+  const catalog = useGetDelegationCatalog();
+  const presets = catalog.data?.presets ?? [];
   const [roles, setRoles] = useState<string[]>([]);
   const [rolesTouched, setRolesTouched] = useState(false);
   const [notSent, setNotSent] = useState<{ id: string; crmDown: boolean } | null>(null);
@@ -228,20 +228,40 @@ export function InviteEmployeeForm({
             </Space>
           </Radio.Group>
         </div>
-        <RoleCheckboxes
-          roles={companyRoles}
-          loading={rolesQuery.isPending}
-          error={rolesQuery.isError}
-          onRetry={() => {
-            void rolesQuery.refetch();
-          }}
-          value={roles}
-          onChange={(next) => {
-            setRoles(next);
-            setRolesTouched(true);
-          }}
-          note={showRoleNote ? { id: noteId, text: t("admin.org.invite.needRole") } : null}
-        />
+        <div>
+          <label htmlFor={presetId} style={{ display: "block", marginBottom: 4 }}>
+            {t("admin.org.delegation.preset")}
+          </label>
+          <Select<string>
+            id={presetId}
+            style={{ width: "100%" }}
+            loading={catalog.isPending}
+            status={showRoleNote ? "error" : undefined}
+            placeholder={t("admin.org.delegation.presetPlaceholder")}
+            value={roles[0]}
+            options={presets.map((preset) => ({
+              value: preset.id,
+              label: `${preset.name} · ${t("admin.org.delegation.presetCount", { count: preset.codes.length })}`,
+            }))}
+            onChange={(id) => {
+              setRoles([id]);
+              setRolesTouched(true);
+            }}
+          />
+          {showRoleNote ? (
+            <p
+              role="alert"
+              className="pf-hint"
+              style={{ margin: "4px 0 0", color: "var(--rt-color-error, #cf1322)" }}
+            >
+              {t("admin.org.invite.needRole")}
+            </p>
+          ) : (
+            <p className="pf-hint" style={{ margin: "4px 0 0" }}>
+              {t("admin.org.delegation.inviteNote")}
+            </p>
+          )}
+        </div>
         {notSent !== null ? (
           <Alert
             type="warning"

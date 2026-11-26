@@ -7783,6 +7783,94 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/delegation:
+    get:
+      tags: [admin]
+      operationId: getDelegationCatalog
+      summary: Действия делегирования по областям и наборы по должности (СОТР-2)
+      description: >-
+        Раздел `admin` — чтение. Действия — данные (`platform-rbac-capabilities.yaml`): глагол и область; набор по должности —
+        роль компании и действия, которые она даёт. Личные наборы сотрудников (служебные роли) в списке наборов не показываются.
+      responses:
+        '200':
+          description: Каталог
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegationCatalog'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/delegation:
+    get:
+      tags: [admin]
+      operationId: getEmployeeDelegation
+      summary: Что делегировано сотруднику
+      description: Раздел `admin` — чтение. Действие включено, если все его разделы у сотрудника на нужном уровне или выше.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Включённые действия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDelegation'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [admin]
+      operationId: setEmployeeDelegation
+      summary: Сохранить, что делегировано сотруднику
+      description: >-
+        Раздел `admin` — полный. `codes` — все включённые действия: личный набор сотрудника собирается из них (разделы вне
+        каталога действий сохраняются как есть) и становится его единственной ролью в CRM; права в CRM, ERP и EDS вычисляет
+        CRM. Больше, чем есть у самого выдающего (в том числе себе), выдать нельзя — 403 `FORBIDDEN`,
+        `details.reason = delegation_exceeds_own`. Выдача нового права требует свежий код второго фактора
+        (`X-Step-Up-Token`, ДВ-4б). Последнего администратора или директора лишить нельзя — 409 `LAST_ADMIN` /
+        `LAST_DIRECTOR`. Неизвестное действие или пустой набор — 422 `VALIDATION_FAILED`.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/StepUpToken'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeDelegationUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeDelegation'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT` (`details.reason = user_has_active_leads` — повтор с `transfer_to_user_id`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: '`VALIDATION_FAILED` (`details.fields`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/users/{id}/reset-password/email:
     post:
       tags: [admin]
@@ -21300,6 +21388,94 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DeputyUpdate'
             - type: 'null'
+
+    DelegationLabel:
+      type: object
+      description: Подпись на трёх языках
+      required: [ru, uz, en]
+      properties:
+        ru: {type: string}
+        uz: {type: string}
+        en: {type: string}
+
+    DelegationArea:
+      type: object
+      required: [code, label]
+      properties:
+        code: {type: string}
+        label:
+          $ref: '#/components/schemas/DelegationLabel'
+
+    DelegationAction:
+      type: object
+      required: [code, area, label]
+      properties:
+        code: {type: string, description: 'Код действия (`platform-rbac-capabilities.yaml`)'}
+        area: {type: string, description: Код области}
+        label:
+          $ref: '#/components/schemas/DelegationLabel'
+
+    DelegationPreset:
+      type: object
+      description: Набор по должности — роль компании и действия, которые она даёт
+      required: [id, name, codes]
+      properties:
+        id:
+          $ref: '#/components/schemas/RoleId'
+        name: {type: string}
+        codes:
+          type: array
+          items: {type: string}
+
+    DelegationCatalog:
+      type: object
+      required: [areas, actions, presets]
+      properties:
+        areas:
+          type: array
+          items:
+            $ref: '#/components/schemas/DelegationArea'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DelegationAction'
+        presets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DelegationPreset'
+
+    EmployeeDelegation:
+      type: object
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          description: Включённые действия
+          items: {type: string}
+        suggested_preset_id:
+          description: Набор по должности, название которого совпадает с должностью сотрудника
+          oneOf:
+            - $ref: '#/components/schemas/RoleId'
+            - type: 'null'
+
+    EmployeeDelegationUpdate:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          maxItems: 200
+          items: {type: string}
+        preset_id:
+          description: 'Набор по должности, с которого начали (от него берутся ограничения полей)'
+          oneOf:
+            - $ref: '#/components/schemas/RoleId'
+            - type: 'null'
+        transfer_to_user_id:
+          description: 'Кому передать лиды в работе, если сотрудник теряет работу с лидами (как у `updateEmployee`)'
+          type: [string, 'null']
+          pattern: '^[1-9][0-9]*$'
 
     MeUpdate:
       type: object

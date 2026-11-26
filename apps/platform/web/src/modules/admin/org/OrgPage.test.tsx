@@ -178,38 +178,42 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     expect(router.state.location.search).toContain("employee=u-demo-manager");
     expect(router.state.location.search).toContain("panel=open");
     expect(
-      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер(?!-)/ }),
+      await within(await panelEl()).findByRole("switch", { name: "Вести лиды и клиентов" }),
     ).toBeChecked();
+    expect(within(await panelEl()).getByRole("tab", { name: "Документы" })).toBeVisible();
   });
 
-  it("выдача роли: список и сохранённые роли меняются, при следующем входе — модули по матрице", async () => {
+  it("делегирование: переключатель, «Сохранить» только после изменения, при следующем входе — права по матрице", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/org?employee=u-demo-manager&panel=open");
     await within(await panelEl()).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
+    const approve = await within(await panelEl()).findByRole("switch", {
+      name: "Утверждать и отправлять КП",
+    });
+    expect(approve).not.toBeChecked();
+    expect(within(await panelEl()).queryByRole("button", { name: "Сохранить" })).toBeNull();
 
-    fireEvent.click(
-      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер(?!-)/ }),
-    );
-    fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Директор/ }));
-    fireEvent.click(within(await panelEl()).getByRole("button", { name: "Сохранить роли" }));
+    fireEvent.click(approve);
+    fireEvent.click(await within(await panelEl()).findByRole("button", { name: "Сохранить" }));
 
     await waitFor(() => {
-      expect(
-        within(screen.getByRole("row", { name: /Демо Менеджеров/ })).getByText("Директор"),
-      ).toBeVisible();
+      expect(readEmployees().find((e) => e.id === "u-demo-manager")?.role_ids).toEqual([
+        "p-u-demo-manager",
+      ]);
     });
-    expect(readEmployees().find((e) => e.id === "u-demo-manager")?.role_ids).toEqual([
-      ROLE_ID.DIRECTOR,
-    ]);
-    // тот же сотрудник входит позже: профиль мока считается по выданным ролям и матрице
+    await waitFor(() => {
+      expect(
+        within(document.getElementById("pf-context-panel") ?? document.body).queryByRole("button", {
+          name: "Сохранить",
+        }),
+      ).toBeNull();
+    });
+    // тот же сотрудник входит позже: профиль мока считается по личному набору
     endSession();
     signIn("manager@demo.example");
-    const me = buildMe(
-      readSession() ?? { userId: "", language: "ru", mustChangePassword: false },
-    );
-    expect(me?.roles).toEqual([ref("DIRECTOR")]);
-    expect(me?.resources["erp.calc"]).toBe("full");
-    expect(me?.modules).toContain("admin");
+    const me = buildMe(readSession() ?? { userId: "", language: "ru", mustChangePassword: false });
+    expect(me?.resources["eds.drafts"]).toBe("full");
+    expect(me?.resources["crm.leads"]).toBe("full");
   });
 
   it("включённый после отключения, с ещё временным паролем, снова «Приглашён»", async () => {
@@ -240,8 +244,10 @@ describe("Admin · Оргструктура (экран целиком на MSW)
 
     await within(await panelEl()).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
     expect(screen.queryByRole("button", { name: "Пригласить сотрудника" })).toBeNull();
-    expect(within(await panelEl()).queryAllByRole("checkbox")).toHaveLength(0);
-    expect(within(await panelEl()).queryByRole("button", { name: "Сохранить роли" })).toBeNull();
+    const switches = await within(await panelEl()).findAllByRole("switch");
+    expect(switches.length).toBeGreaterThan(0);
+    for (const item of switches) expect(item).toBeDisabled();
+    expect(within(await panelEl()).queryByRole("button", { name: "Сохранить" })).toBeNull();
   });
 
   it("сотрудник без раздела Admin видит «Нет доступа»", async () => {

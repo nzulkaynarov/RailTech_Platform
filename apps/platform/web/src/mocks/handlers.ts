@@ -62,6 +62,7 @@ import { zonesHandlers } from "./zones";
 import { edsSigningHandlers } from "./edsSigning";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
+import { adminDelegationHandlers } from "./adminDelegation";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -245,6 +246,7 @@ export const handlers = [
   ...peopleContactsHandlers,
   ...profileHandlers,
   ...aboutHandlers,
+  ...adminDelegationHandlers,
   ...adminUsersHandlers,
   ...adminAuditHandlers,
   ...adminRolesHandlers,

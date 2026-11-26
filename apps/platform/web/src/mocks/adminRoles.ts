@@ -91,7 +91,11 @@ export const adminRolesHandlers = [
   http.get("*/admin/roles", () => {
     const denied = guard("read");
     if (denied) return denied;
-    return HttpResponse.json({ items: readRoles().map((r) => toRole(r, holders(r.id))) });
+    return HttpResponse.json({
+      items: readRoles()
+        .filter((r) => !r.description.startsWith("personal:"))
+        .map((r) => toRole(r, holders(r.id))),
+    });
   }),
 
   http.post("*/admin/roles/preview", async ({ request }) => {

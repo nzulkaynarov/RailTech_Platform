@@ -1,0 +1,81 @@
+/* «Что делегировано» (СОТР-2): действия по областям, у каждого выключатель. */
+.pf-deleg {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-deleg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-deleg-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.pf-deleg-count {
+  margin-left: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--rt-color-text-secondary);
+}
+.pf-deleg-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 32px;
+}
+.pf-deleg-area {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pf-deleg-area-title {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 4px;
+  margin: 0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--rt-color-text-secondary);
+}
+.pf-deleg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+}
+.pf-deleg-row--changed {
+  background: var(--rt-color-primary-bg, #eef3ff);
+}
+.pf-deleg-row-label {
+  min-width: 0;
+  line-height: 20px;
+}
+.pf-deleg-badge {
+  margin-right: 8px;
+  font-size: 12px;
+  color: var(--rt-color-primary, #1d4ed8);
+}
+.pf-deleg-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  background: var(--rt-color-surface, #fff);
+  border-top: 1px solid var(--rt-color-surface-split);
+}

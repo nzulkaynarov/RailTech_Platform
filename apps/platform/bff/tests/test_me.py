@@ -10,7 +10,7 @@ from fastapi import Depends
 from app.deps import Authed, require
 from app.rbac_generated import MENU
 from tests.conftest import ContractChecker, Web
-from tests.rbac_oracle import FIELDS, MATRIX, ROLES, level, union
+from tests.rbac_oracle import FIELDS, MATRIX, ROLES, union
 from tests.roles import NAMES, custom, rid
 
 FIELD_ORDER = ("cost_margin", "supplier_prices", "totals_only")

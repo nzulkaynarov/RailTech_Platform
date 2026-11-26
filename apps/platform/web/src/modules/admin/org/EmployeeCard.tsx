@@ -1,7 +1,7 @@
-import { Alert } from "antd";
+import { Alert, Tabs } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
+import { DelegationPanel } from "../../../features/delegation/DelegationPanel";
 import { EmployeeDeputy } from "../../../features/assign-deputy/EmployeeDeputy";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
@@ -11,8 +11,9 @@ import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention, erpSyncReason } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { EmployeeStatusTag, RoleTags, TelegramText } from "./EmployeeCells";
+import { EmployeeStatusTag, TelegramText } from "./EmployeeCells";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PersonAvatar } from "../../../shared/ui/EntityCell";
 
 export interface EmployeeCardProps {
@@ -46,10 +47,9 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
       <DefinitionList
         items={[
           { label: t("admin.org.card.email"), value: employee.email },
-          { label: t("admin.org.card.position"), value: employee.position },
           ...(canEdit && !disabled
             ? []
-            : [{ label: t("admin.org.card.roles"), value: <RoleTags roles={employee.roles} /> }]),
+            : [{ label: t("admin.org.card.position"), value: employee.position }]),
           {
             label: t("admin.org.card.telegram"),
             value: <TelegramText state={employee.telegram} />,
@@ -84,6 +84,27 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
           action={canEdit ? <RetryErpSync employee={employee} /> : undefined}
         />
       ) : null}
+      <Tabs
+        items={[
+          {
+            key: "delegation",
+            label: t("admin.org.delegation.title"),
+            children: <DelegationPanel employee={employee} selfId={selfId} canEdit={canEdit} />,
+          },
+          {
+            key: "documents",
+            label: t("admin.org.delegation.tabDocuments"),
+            children: (
+              <EmptyState
+                level={3}
+                compact
+                title={t("admin.org.delegation.documentsEmpty")}
+                text={t("admin.org.delegation.documentsEmptyText")}
+              />
+            ),
+          },
+        ]}
+      />
       {!canEdit ? null : disabled ? (
         <>
           <Alert type="info" showIcon message={t("admin.org.card.disabledNote")} />
@@ -95,11 +116,6 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
         </>
       ) : (
         <>
-          <AssignRoleForm
-            employee={employee}
-            selfId={selfId}
-            otherActiveAdmins={otherActiveAdmins}
-          />
           <EmployeeDeputy employee={employee} selfId={selfId} />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
           <ResetPassword employee={employee} selfId={selfId} />

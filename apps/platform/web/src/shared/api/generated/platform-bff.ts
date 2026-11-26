@@ -143,6 +143,7 @@ import type {
   CounterpartyRoleIn,
   CreatedId,
   CsrfFailedResponse,
+  DelegationCatalog,
   DeputyUpdate,
   DictionaryImportResult,
   DictionaryItem,
@@ -201,6 +202,8 @@ import type {
   EmailTemplateUpdate,
   Employee,
   EmployeeCredentials,
+  EmployeeDelegation,
+  EmployeeDelegationUpdate,
   EmployeeInvite,
   EmployeeList,
   EmployeeUpdate,
@@ -29000,6 +29003,382 @@ export const useUpdateEmployee = <
   TContext
 > => {
   return useMutation(getUpdateEmployeeMutationOptions(options), queryClient);
+};
+
+export const getGetDelegationCatalogUrl = () => {
+  return `/api/v1/admin/delegation`;
+};
+
+/**
+ * Раздел `admin` — чтение. Действия — данные (`platform-rbac-capabilities.yaml`): глагол и область; набор по должности — роль компании и действия, которые она даёт. Личные наборы сотрудников (служебные роли) в списке наборов не показываются.
+ * @summary Действия делегирования по областям и наборы по должности (СОТР-2)
+ */
+export const getDelegationCatalog = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DelegationCatalog> => {
+  return http<DelegationCatalog>(getGetDelegationCatalogUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDelegationCatalogQueryKey = () => {
+  return [`/api/v1/admin/delegation`] as const;
+};
+
+export const getGetDelegationCatalogQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDelegationCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDelegationCatalog>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDelegationCatalogQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDelegationCatalog>>> = ({ signal }) =>
+    getDelegationCatalog({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDelegationCatalog>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDelegationCatalogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDelegationCatalog>>
+>;
+export type GetDelegationCatalogQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetDelegationCatalog<
+  TData = Awaited<ReturnType<typeof getDelegationCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDelegationCatalog>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDelegationCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof getDelegationCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDelegationCatalog<
+  TData = Awaited<ReturnType<typeof getDelegationCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDelegationCatalog>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDelegationCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof getDelegationCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDelegationCatalog<
+  TData = Awaited<ReturnType<typeof getDelegationCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDelegationCatalog>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Действия делегирования по областям и наборы по должности (СОТР-2)
+ */
+
+export function useGetDelegationCatalog<
+  TData = Awaited<ReturnType<typeof getDelegationCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDelegationCatalog>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDelegationCatalogQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetEmployeeDelegationUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/delegation`;
+};
+
+/**
+ * Раздел `admin` — чтение. Действие включено, если все его разделы у сотрудника на нужном уровне или выше.
+ * @summary Что делегировано сотруднику
+ */
+export const getEmployeeDelegation = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EmployeeDelegation> => {
+  return http<EmployeeDelegation>(getGetEmployeeDelegationUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEmployeeDelegationQueryKey = (id: string) => {
+  return [`/api/v1/admin/users/${id}/delegation`] as const;
+};
+
+export const getGetEmployeeDelegationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEmployeeDelegation>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEmployeeDelegationQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeDelegation>>> = ({ signal }) =>
+    getEmployeeDelegation(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEmployeeDelegationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEmployeeDelegation>>
+>;
+export type GetEmployeeDelegationQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetEmployeeDelegation<
+  TData = Awaited<ReturnType<typeof getEmployeeDelegation>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeDelegation>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeDelegation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEmployeeDelegation<
+  TData = Awaited<ReturnType<typeof getEmployeeDelegation>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeDelegation>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeDelegation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEmployeeDelegation<
+  TData = Awaited<ReturnType<typeof getEmployeeDelegation>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Что делегировано сотруднику
+ */
+
+export function useGetEmployeeDelegation<
+  TData = Awaited<ReturnType<typeof getEmployeeDelegation>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeDelegation>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEmployeeDelegationQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetEmployeeDelegationUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/delegation`;
+};
+
+/**
+ * Раздел `admin` — полный. `codes` — все включённые действия: личный набор сотрудника собирается из них (разделы вне каталога действий сохраняются как есть) и становится его единственной ролью в CRM; права в CRM, ERP и EDS вычисляет CRM. Больше, чем есть у самого выдающего (в том числе себе), выдать нельзя — 403 `FORBIDDEN`, `details.reason = delegation_exceeds_own`. Выдача нового права требует свежий код второго фактора (`X-Step-Up-Token`, ДВ-4б). Последнего администратора или директора лишить нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. Неизвестное действие или пустой набор — 422 `VALIDATION_FAILED`.
+ * @summary Сохранить, что делегировано сотруднику
+ */
+export const setEmployeeDelegation = async (
+  id: string,
+  employeeDelegationUpdate: EmployeeDelegationUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<EmployeeDelegation> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EmployeeDelegation>(getSetEmployeeDelegationUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(employeeDelegationUpdate),
+  });
+};
+
+export const getSetEmployeeDelegationMutationKey = () => ["setEmployeeDelegation"] as const;
+
+export const getSetEmployeeDelegationMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setEmployeeDelegation>>,
+    TError,
+    SetEmployeeDelegationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setEmployeeDelegation>>,
+  TError,
+  SetEmployeeDelegationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetEmployeeDelegationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setEmployeeDelegation>>,
+    SetEmployeeDelegationMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setEmployeeDelegation(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetEmployeeDelegationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setEmployeeDelegation>>
+>;
+export type SetEmployeeDelegationMutationBody = EmployeeDelegationUpdate;
+export type SetEmployeeDelegationMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type SetEmployeeDelegationMutationVariables = { id: string; data: EmployeeDelegationUpdate };
+
+/**
+ * @summary Сохранить, что делегировано сотруднику
+ */
+export const useSetEmployeeDelegation = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setEmployeeDelegation>>,
+      TError,
+      SetEmployeeDelegationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setEmployeeDelegation>>,
+  TError,
+  SetEmployeeDelegationMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetEmployeeDelegationMutationOptions(options), queryClient);
 };
 
 export const getResetEmployeePasswordByEmailUrl = (id: string) => {

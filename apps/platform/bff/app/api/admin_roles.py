@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Path, Response, status
 
 from app.clients.crm_users import CrmRoles
+from app.delegation import is_personal
 from app.deps import Authed, require
 from app.schemas_admin import (
     Role,
@@ -54,7 +55,10 @@ async def _refresh_own_profile(authed: Authed, role_id: str) -> None:
     operation_id="listRoles",
 )
 async def list_roles(authed: Reader) -> RoleList:
-    return RoleList(items=[to_role(r) for r in await _roles(authed).list_all()])
+    # Личные наборы сотрудников (СОТР-2) — не роли компании: в матрице их нет
+    return RoleList(
+        items=[to_role(r) for r in await _roles(authed).list_all() if not is_personal(r)]
+    )
 
 
 @router.post(

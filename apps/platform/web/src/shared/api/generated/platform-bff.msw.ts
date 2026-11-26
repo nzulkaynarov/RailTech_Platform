@@ -185,6 +185,7 @@ import type {
   CounterpartyPickList,
   CreatedId,
   CrewRate,
+  DelegationCatalog,
   DictionaryImportResult,
   DictionaryItem,
   DictionaryItemList,
@@ -227,6 +228,7 @@ import type {
   EmailTemplatePreview,
   Employee,
   EmployeeCredentials,
+  EmployeeDelegation,
   EmployeeList,
   EnrolledSession,
   ErpCheck,
@@ -17914,6 +17916,66 @@ export const getUpdateEmployeeResponseMock = (
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetDelegationCatalogResponseMock = (
+  overrideResponse: Partial<Extract<DelegationCatalog, object>> = {},
+): DelegationCatalog => ({
+  areas: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    label: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  })),
+  actions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      area: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      label: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+    }),
+  ),
+  presets: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getGetEmployeeDelegationResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeDelegation, object>> = {},
+): EmployeeDelegation => ({
+  codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  suggested_preset_id: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSetEmployeeDelegationResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeDelegation, object>> = {},
+): EmployeeDelegation => ({
+  codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  suggested_preset_id: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    null,
   ]),
   ...overrideResponse,
 });
@@ -49585,6 +49647,78 @@ export const getUpdateEmployeeMockHandler = (
   );
 };
 
+export const getGetDelegationCatalogMockHandler = (
+  overrideResponse?:
+    | DelegationCatalog
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DelegationCatalog> | DelegationCatalog),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/delegation",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDelegationCatalogResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEmployeeDelegationMockHandler = (
+  overrideResponse?:
+    | EmployeeDelegation
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EmployeeDelegation> | EmployeeDelegation),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/users/:id/delegation",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEmployeeDelegationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetEmployeeDelegationMockHandler = (
+  overrideResponse?:
+    | EmployeeDelegation
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<EmployeeDelegation> | EmployeeDelegation),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/users/:id/delegation",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetEmployeeDelegationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getResetEmployeePasswordByEmailMockHandler = (
   overrideResponse?:
     | MailQueued
@@ -57560,6 +57694,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getIssueTemporaryPasswordMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
+  getGetDelegationCatalogMockHandler(),
+  getGetEmployeeDelegationMockHandler(),
+  getSetEmployeeDelegationMockHandler(),
   getResetEmployeePasswordByEmailMockHandler(),
   getListRolesMockHandler(),
   getCreateRoleMockHandler(),

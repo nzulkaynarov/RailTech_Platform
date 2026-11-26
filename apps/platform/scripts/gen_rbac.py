@@ -25,6 +25,8 @@ import yaml
 REPO = Path(__file__).resolve().parents[3]
 CONTRACT = REPO / "packages" / "contracts" / "platform-rbac.yaml"
 SCHEMA = REPO / "packages" / "contracts" / "platform-rbac.schema.json"
+CAPABILITIES = REPO / "packages" / "contracts" / "platform-rbac-capabilities.yaml"
+CAP_OUTPUT = REPO / "apps" / "platform" / "bff" / "app" / "capabilities_generated.py"
 PY_OUTPUT = REPO / "apps" / "platform" / "bff" / "app" / "rbac_generated.py"
 TS_OUTPUT = REPO / "apps" / "platform" / "web" / "src" / "app" / "rbac.generated.ts"
 
@@ -418,13 +420,63 @@ def render_ts(spec: dict[str, Any]) -> str:
     return "\n".join(out) + "\n"
 
 
+def render_capabilities(spec: dict[str, Any]) -> str:
+    """Действия делегирования (СОТР-2) для `app/delegation.py`; разделы сверены с `resources`."""
+    caps: dict[str, Any] = yaml.safe_load(CAPABILITIES.read_text(encoding="utf-8"))
+    levels = {r["key"]: tuple(r.get("levels", DEFAULT_LEVELS)) for r in spec["resources"]}
+    order = [r["key"] for r in spec["resources"]]
+    areas = {code: {lang: label[lang] for lang in LANGS} for code, label in caps["areas"].items()}
+    items: list[dict[str, Any]] = []
+    for cap in caps["capabilities"]:
+        if cap["area"] not in areas:
+            raise SystemExit(f"capabilities.{cap['code']}: нет области {cap['area']}")
+        for key, level in cap["grants"].items():
+            if level not in levels.get(key, ()):
+                raise SystemExit(f"capabilities.{cap['code']}: нет раздела {key} с уровнем {level}")
+        items.append(
+            {
+                "code": cap["code"],
+                "area": cap["area"],
+                "label": {lang: cap["label"][lang] for lang in LANGS},
+                "grants": {k: cap["grants"][k] for k in order if k in cap["grants"]},
+            }
+        )
+    codes = [i["code"] for i in items]
+    if len(set(codes)) != len(codes):
+        raise SystemExit("capabilities: коды действий не уникальны")
+    lines = [
+        '"""Действия делегирования (СОТР-2). ГЕНЕРИРУЕТСЯ — не править руками.',
+        "",
+        "Источник: packages/contracts/platform-rbac-capabilities.yaml.",
+        "Пересоздание: `make -C apps/platform rbac`. Логика — `app/delegation.py`.",
+        '"""',
+        "",
+        "from typing import Any, Final",
+        "",
+        *_py_const(
+            "AREAS", "dict[str, dict[str, str]]", areas, "Области списка «Что делегировано»"
+        ),
+        *_py_const(
+            "CAPABILITIES",
+            "tuple[dict[str, Any], ...]",
+            tuple(items),
+            "Действие: код, область, подпись ru/uz/en и разделы каталога с уровнем",
+        ),
+    ]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="только сверить файлы с контрактом")
     args = parser.parse_args()
     spec = load()
     _check_references(spec)
-    targets = {PY_OUTPUT: render_py(spec), TS_OUTPUT: render_ts(spec)}
+    targets = {
+        PY_OUTPUT: render_py(spec),
+        TS_OUTPUT: render_ts(spec),
+        CAP_OUTPUT: render_capabilities(spec),
+    }
     if args.check:
         stale = [p for p, text in targets.items() if not p.exists() or p.read_text("utf-8") != text]
         for p in stale:
