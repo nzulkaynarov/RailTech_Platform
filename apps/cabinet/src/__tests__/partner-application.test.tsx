@@ -263,7 +263,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       expect(screen.getByText('Партнёрский договор подготовлен и направлен на согласование вашей компании.')).toBeInTheDocument();
       expect(screen.getByText('№ PRT-2026-088 от 5 нояб. 2026 г.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Открыть договор/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Согласовать проект договора/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Принять редакцию/ })).toBeInTheDocument();
     });
 
     it('согласование проекта договора кандидатом', async () => {
@@ -289,7 +289,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       renderApp('/company');
       await heading('Компания');
 
-      const agreeBtn = await screen.findByRole('button', { name: /Согласовать проект договора/ });
+      const agreeBtn = await screen.findByRole('button', { name: /Принять редакцию/ });
       await user.click(agreeBtn);
 
       const dialog = await screen.findByRole('dialog');
@@ -355,7 +355,7 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       renderApp('/company');
       await heading('Компания');
 
-      await user.click(await screen.findByRole('button', { name: 'Вернуть с замечанием' }));
+      await user.click(await screen.findByRole('button', { name: 'Есть замечания' }));
       const dialog = await screen.findByRole('dialog');
       const submit = within(dialog).getByRole('button', { name: 'Вернуть договор' });
       expect(submit).toBeDisabled();
@@ -365,10 +365,10 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
 
       await waitFor(() => expect(body.current).toEqual({ notes: 'Срок оплаты 60 дней' }));
       expect(await screen.findByText(/Вы вернули договор с замечанием/)).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Согласовать проект договора/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Принять редакцию/ })).toBeNull();
     });
 
-    it('после согласия кандидат загружает скан подписанного', async () => {
+    it('после согласия кандидат видит, что договор будет выставлен на подписание', async () => {
       signedIn('actor');
       setMockPartnerApplication({
         id: 602,
@@ -376,15 +376,11 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
         candidate_agreed_at: '2026-11-25T13:00:00Z',
         ...base,
       });
-      const user = userEvent.setup();
       renderApp('/company');
       await heading('Компания');
 
-      expect(await screen.findByText('Подпишите договор и загрузите скан подписанного.')).toBeInTheDocument();
-      const input = screen.getByLabelText('Скан подписанного договора');
-      await user.upload(input, new File(['%PDF-1.4'], 'signed.pdf', { type: 'application/pdf' }));
-
-      expect(await screen.findByText(/Скан получен\. Мы подтвердим договор/)).toBeInTheDocument();
+      expect(await screen.findByText(/Договор будет выставлен на подписание/)).toBeInTheDocument();
+      expect(screen.queryByLabelText('Скан подписанного договора')).toBeNull();
       await expectNoAxeViolations();
     });
   });

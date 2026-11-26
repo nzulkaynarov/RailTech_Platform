@@ -6409,7 +6409,8 @@ paths:
   /api/v1/catalog/partner-applications/{id}/document/:
     get:
       operationId: catalog_partner_applications_document
-      description: '`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного.'
+      description: '`which=contract` — договор, который видит кандидат; `which=scan` — скан подписанного; `which=candidate`
+        — редакция, которую приложил кандидат.'
       summary: Download the contract or the signed scan
       parameters:
       - in: path
@@ -6423,6 +6424,7 @@ paths:
         schema:
           type: string
           enum:
+          - candidate
           - contract
           - scan
         required: true
@@ -6448,6 +6450,61 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/partner-applications/{id}/invite/:
+    post:
+      operationId: catalog_partner_applications_invite
+      description: 'ПК-1: договор можно отправить и без почты кандидата; когда адрес появился — `email` (или уже записанный)
+        и приглашение в Кабинет уходит письмом.'
+      summary: Invite the candidate to the Cabinet (later, when the e-mail appears)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerInviteInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerInviteInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerInviteInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/partner-applications/{id}/prepare-contract/:
     post:
       operationId: catalog_partner_applications_prepare_contract
@@ -6580,6 +6637,55 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/DeskPartnerApplicationSendContractInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskPartnerApplicationDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/partner-applications/{id}/signed-scan/:
+    post:
+      operationId: catalog_partner_applications_signed_scan
+      description: 'ПК-1: скан не обязателен — «Отметить: подписан» принимает скан ИЛИ заметку. Multipart, `file`.'
+      summary: Attach the scan of the signed contract (optional)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskPartnerScanInRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -30099,6 +30205,10 @@ components:
           type: string
           description: Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.
           maxLength: 1000
+        signed_note:
+          type: string
+          description: 'ПК-1: «Отметить: подписан» — скан ИЛИ эта заметка (как подписали и где оригинал); скан не обязателен.'
+          maxLength: 1000
       required:
       - contract_number
     DeskPartnerApplicationCreateInKindEnum:
@@ -30235,6 +30345,41 @@ components:
           items:
             type: string
           description: Кто решает, пока согласование ждёт решения.
+        contract_votes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: 'ПК-1: голоса ответственных `{name, decision, note}` по порядку.'
+        contract_waiting_for:
+          type: array
+          items:
+            type: string
+          description: Кто ещё не высказался; при разногласии — директор, который решает.
+        contract_disagreement:
+          type: boolean
+          description: 'Есть возражение: решает директор.'
+        has_candidate_file:
+          type: boolean
+          description: Кандидат приложил свою редакцию (DOCX).
+        signed_note:
+          type: string
+          description: Заметка вместо скана при отметке «подписан».
+        contract_valid_from:
+          type: string
+          format: date
+          nullable: true
+        contract_valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Срок договора, посчитанный при отметке.
+        contract_last_notice_date:
+          type: string
+          format: date
+          nullable: true
+        contract_renewal_mode:
+          type: string
         id:
           type: integer
         source:
@@ -30361,15 +30506,23 @@ components:
       - contract_blocker
       - contract_date
       - contract_deviation_text
+      - contract_disagreement
       - contract_language
+      - contract_last_notice_date
       - contract_number
+      - contract_renewal_mode
       - contract_source
       - contract_template_edition
       - contract_template_id
       - contract_template_name
+      - contract_valid_from
+      - contract_valid_until
+      - contract_votes
+      - contract_waiting_for
       - created_at
       - decision_needs_confirmation
       - email
+      - has_candidate_file
       - has_signed_scan
       - id
       - inn
@@ -30382,6 +30535,7 @@ components:
       - rejected_reason
       - reviewed_at
       - reviewed_by
+      - signed_note
       - signed_scan_at
       - source
       - status
@@ -30454,6 +30608,41 @@ components:
           items:
             type: string
           description: Кто решает, пока согласование ждёт решения.
+        contract_votes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: 'ПК-1: голоса ответственных `{name, decision, note}` по порядку.'
+        contract_waiting_for:
+          type: array
+          items:
+            type: string
+          description: Кто ещё не высказался; при разногласии — директор, который решает.
+        contract_disagreement:
+          type: boolean
+          description: 'Есть возражение: решает директор.'
+        has_candidate_file:
+          type: boolean
+          description: Кандидат приложил свою редакцию (DOCX).
+        signed_note:
+          type: string
+          description: Заметка вместо скана при отметке «подписан».
+        contract_valid_from:
+          type: string
+          format: date
+          nullable: true
+        contract_valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Срок договора, посчитанный при отметке.
+        contract_last_notice_date:
+          type: string
+          format: date
+          nullable: true
+        contract_renewal_mode:
+          type: string
         id:
           type: integer
         source:
@@ -30568,15 +30757,23 @@ components:
       - contract_blocker
       - contract_date
       - contract_deviation_text
+      - contract_disagreement
       - contract_language
+      - contract_last_notice_date
       - contract_number
+      - contract_renewal_mode
       - contract_source
       - contract_template_edition
       - contract_template_id
       - contract_template_name
+      - contract_valid_from
+      - contract_valid_until
+      - contract_votes
+      - contract_waiting_for
       - created_at
       - decision_needs_confirmation
       - email
+      - has_candidate_file
       - has_signed_scan
       - id
       - inn
@@ -30588,6 +30785,7 @@ components:
       - phone
       - rejected_reason
       - reviewed_at
+      - signed_note
       - signed_scan_at
       - source
       - status
@@ -30706,6 +30904,26 @@ components:
           type: string
           format: binary
           description: 'Свой файл договора: PDF или DOCX, до 20 МБ.'
+    DeskPartnerInviteInRequest:
+      type: object
+      description: '«Пригласить в Кабинет» позже (ПК-1): почта могла появиться после отправки договора.'
+      properties:
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+    DeskPartnerScanInRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'Скан подписанного договора: PDF или изображение до 20 МБ'
+      required:
+      - file
     DeskPartnerTemplateOption:
       type: object
       properties:
@@ -31998,6 +32216,10 @@ components:
             шаблонов.'
         body_html:
           type: string
+        template_id:
+          type: integer
+          description: 'Шаблон своей компании, который открыт в редакторе: название и подписи сторон образца договора берутся
+            у него (ПК-1).'
         draft:
           type: object
           additionalProperties: {}

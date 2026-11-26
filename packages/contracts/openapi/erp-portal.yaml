@@ -13,7 +13,7 @@ info:
 
     Защита сессии в cookie от CSRF (FIX-15): каждый `POST` и `PATCH` обязан нести
     заголовок `Idempotency-Key` (без него — 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json`
-    (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; исключения — `multipart/form-data` на `/uploads` и `/partner/price-list`). Повтор с тем же
+    (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; исключения — `multipart/form-data` на `/uploads`, `/partner/price-list` и `/company/partner-application/return`). Повтор с тем же
     ключом и тем же методом/путём в пределах сессии возвращает прежний ответ (заголовок `Idempotent-Replay: true`);
     исключение — ответы с `Set-Cookie` (`/auth/*`): они не кэшируются, повтор исполняется заново.
 
@@ -3647,11 +3647,15 @@ paths:
     post:
       tags: [company]
       operationId: returnCompanyPartnerContract
-      summary: Вернуть партнёрский договор с замечанием
+      summary: '«Есть замечания» к партнёрскому договору (одно окно, комментарий и своя редакция)'
       description: |
-        Кандидат не согласен с договором и возвращает его с замечанием (ПД-1). Статус остаётся `contract_sent`,
-        `candidate_returned_at` заполняется, замечание — в `candidate_notes`; сотрудник готовит новую версию.
-        Открыт любой сессии (FX-1), требует права действовать `can_act`. Замечание обязательно (`RETURN_NOTE_REQUIRED`).
+        Кандидат не принимает редакцию и пишет замечания (ПД-1, ПК-1): комментарий и, по желанию, свою редакцию договора
+        (DOCX или PDF). Файл — вложение и точка правды: он становится файлом договора на согласовании у ответственных,
+        новая редакция уходит кандидату после их согласия. Статус остаётся `contract_sent`, `candidate_returned_at`
+        заполняется, замечание — в `candidate_notes`; ответственным приходит уведомление. Тело — JSON `{notes}` либо
+        `multipart/form-data` (`notes`, `file`); multipart допущен и здесь (как `/uploads`). Нужен комментарий или файл
+        (`RETURN_NOTE_REQUIRED`); файл неподходящего вида — `CONTRACT_FILE_INVALID`. Открыт любой сессии (FX-1), требует
+        права действовать `can_act`.
       requestBody:
         required: true
         content:
@@ -3664,6 +3668,18 @@ paths:
                   type: string
                   maxLength: 1000
                   description: Замечание кандидата к договору
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Комментарий; обязателен, если файла нет
+                file:
+                  type: string
+                  format: binary
+                  description: Своя редакция договора (DOCX или PDF) — вложение и точка правды
       responses:
         '200':
           description: Замечание принято
@@ -3672,7 +3688,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PartnerApplication'
         '400':
-          description: Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет замечания (`RETURN_NOTE_REQUIRED`)
+          description: Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет ни замечания, ни файла (`RETURN_NOTE_REQUIRED`), или файл не подходит (`CONTRACT_FILE_INVALID`)
           content:
             application/json:
               schema:
@@ -4173,6 +4189,7 @@ components:
         - SCAN_NOT_EXPECTED
         - SCAN_INVALID
         - RETURN_NOTE_REQUIRED
+        - CONTRACT_FILE_INVALID
         - NOT_IN_CONTRACT_SENT_STATUS
         - LAST_ADMIN_CANNOT_BE_REMOVED
         - CANNOT_DEACTIVATE_SELF

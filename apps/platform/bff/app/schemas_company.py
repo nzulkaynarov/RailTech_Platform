@@ -334,6 +334,7 @@ class DocumentSampleIn(Body):
     kind: DocumentKind | None = None
     template_kind: TemplateKind | None = None
     body_html: str | None = None
+    template_id: int | None = None
     draft: BrandProfileUpdate | None = None
     language: Literal["ru", "en", "uz"] | None = None
 

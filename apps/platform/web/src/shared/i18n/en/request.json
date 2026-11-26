@@ -152,7 +152,7 @@
     "email": "Email",
     "phone": "Phone",
     "offer": "What they offer",
-    "channelsHint": "Email is required: the contract is sent there",
+    "channelsHint": "Email is optional: a phone is enough. We will send the account invitation when an email appears",
     "submit": "Hand over as partner",
     "submitting": "Handing over…",
     "cancel": "Cancel",

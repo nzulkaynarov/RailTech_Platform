@@ -87,10 +87,9 @@ def test_rejected_application_does_not_block_a_new_one():
 
 
 @pytest.mark.django_db
-def test_email_is_required_and_must_be_valid():
-    """Кандидата приглашают по почте: без неё (или с адресом, который отвергает Django) заявка не заводится."""
+def test_email_must_be_valid_when_given():
+    """Почта не обязательна (ПК-1), но указанный адрес, который отвергает Django, заявку не заводит."""
     api = _api()
-    assert _post(api, _body(lead=78, email="")).status_code == 422
     assert _post(api, _body(lead=79, email="not-an-email")).status_code == 422
     assert _post(api, _body(lead=80, email="a@b")).status_code == 422
     assert PartnerApplication.objects.count() == 0
@@ -116,3 +115,16 @@ def test_concurrent_submits_create_one_application():
         thread.join(timeout=60)
     assert sorted(results) == [200, 201]
     assert PartnerApplication.objects.filter(source_ref="L-0090").count() == 1
+
+
+@pytest.mark.django_db
+def test_application_without_email_is_created(settings):
+    """ПК-1: почты нет (хватает телефона) — заявка заводится, путь не останавливается."""
+    body = _body(78, email="")
+    response = _post(_api(), body)
+    assert response.status_code == 201, response.content
+    app = PartnerApplication.objects.get(source_ref="L-0078")
+    assert app.email == "" and app.phone == "+998901234567"
+    no_field = _body(81)
+    del no_field["email"]
+    assert _post(_api(), no_field).status_code == 201

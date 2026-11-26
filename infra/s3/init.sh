@@ -35,8 +35,9 @@ rw_of() {
 ro_of() {
   case "$1" in
     crm) echo "backups" ;; # статус бэкапа в «Центре внешних сервисов»: только чтение
-    # копирует уже зашифрованные WAL-G объекты на Drive: чтение, без записи и удаления в архиве
-    offsite) echo "wal offsite-config" ;;
+    # копирует уже зашифрованные WAL-G объекты на Диск: чтение, без записи и удаления в архиве; файловые бакеты (ХРАН-1) — тоже
+    # только чтение: сервис копирует их на Диск, а не меняет (не erp-temp, не langfuse, не backups)
+    offsite) echo "wal offsite-config eds-private erp-private erp-public client-documents tg-attachments kb-sources" ;;
     *) echo "" ;;
   esac
 }

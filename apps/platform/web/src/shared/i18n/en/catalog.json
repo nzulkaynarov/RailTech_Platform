@@ -160,7 +160,7 @@
       "contract_return_note_required": "Write a remark: what to fix.",
       "contract_decision_invalid": "Choose Approve or Return.",
       "candidate_email_required": "The candidate has no e-mail: nowhere to send the sign-in.",
-      "signed_scan_required": "The signed scan has not been received. Give a reason to confirm without it.",
+      "signed_proof_required": "Attach the signed scan or write a note.",
       "contract_date_invalid": "The contract date is invalid.",
       "self_approval_not_allowed": "Another holder of the Legal zone decides. The name is in the application row.",
       "self_decision_confirmation_required": "Confirm the self-decision: tick that there are no other holders."
@@ -1134,8 +1134,10 @@
     "actions": {
       "sendContract": "Send contract",
       "resendContract": "Send contract again",
-      "approve": "Approve and open account",
-      "approveWithoutAgreement": "Approve without agreement",
+      "approve": "Mark as signed",
+      "invite": "Invite to the account",
+      "more": "More",
+      "approveWithoutAgreement": "Mark as signed without agreement",
       "reject": "Reject",
       "prepare": "Prepare contract",
       "prepareAgain": "Prepare again",
@@ -1154,15 +1156,21 @@
         "The candidate will receive the partner contract draft",
         "The candidate contact will receive an email with account sign-in"
       ],
-      "noEmail": "The candidate has no e-mail: nowhere to send the sign-in."
+      "noEmail": "The candidate has no e-mail: the contract will be sent, and the account invitation can follow when an address appears."
     },
     "approveModal": {
-      "title": "Approve application and open account: {{name}}",
-      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner account access, the contact is invited, and the counterparty appears among the clients.",
+      "title": "Contract signed: {{name}}",
+      "hint": "Attach the scan of the signed contract or leave a note — the scan is optional. The contract term is calculated now, the company gets the partner account and the contact an invitation.",
+      "needFields": "Enter the contract number, the counterparty signature (scan or note) and the company choice to enable the button.",
+      "needReason": "The button becomes available once you give a reason.",
+      "scanLabel": "Signed scan",
+      "scanHint": "PDF or image, up to 20 MB",
+      "noteLabel": "Note instead of a scan",
+      "notePlaceholder": "e.g.: signed on our side, the original is in the contracts folder",
       "hintOverride": "The candidate has not agreed the contract yet. You can approve only with a reason, recorded in the log.",
       "overrideLabel": "Reason for approval without agreement",
       "overridePlaceholder": "e.g.: the contract was signed on paper",
-      "ok": "Confirm contract and open access",
+      "ok": "Mark as signed",
       "linkToExisting": "Link to existing organization: {{name}}",
       "createNew": "Create a new partner organization",
       "steps": [
@@ -1170,8 +1178,13 @@
         "Contract number and date will be recorded in partner profile",
         "Contact person will receive invitation code",
         "Counterparty will be added to the clients"
-      ],
-      "hintNoScan": "The signed scan has not been received. You can confirm only with a reason, which goes to the journal."
+      ]
+    },
+    "inviteModal": {
+      "title": "Invitation to the account: {{name}}",
+      "hint": "The contract is already with the candidate in the application. Enter the e-mail — the invitation with the account sign-in goes there.",
+      "email": "Candidate e-mail",
+      "ok": "Send the invitation"
     },
     "rejectModal": {
       "title": "Reject application: {{name}}",
@@ -1192,7 +1205,14 @@
       "ready": "Ready to send",
       "candidateReturned": "Candidate returned: {{note}}",
       "waitingCandidate": "Waiting for the candidate",
-      "waitingScan": "Waiting for the signed scan",
+      "awaitingSignature": "Awaiting signature",
+      "votedApprove": "Agreed: {{who}}",
+      "waitingFor": "Waiting for: {{who}}",
+      "disagreement": "There is an objection, {{who}} decides",
+      "noEmail": "No e-mail: the account invitation comes later",
+      "validUntil": "Valid until {{date}}",
+      "signedNote": "note: {{note}}",
+      "openCandidateFile": "Candidate's edition",
       "scanReady": "Scan received {{date}}",
       "openContract": "Contract",
       "openScan": "Scan"
@@ -1234,7 +1254,9 @@
         "approve": "Approve contract",
         "return": "Return for revision"
       },
-      "selfConfirm": "There are no other holders — the decision will be recorded as self-made"
+      "selfConfirm": "There are no other holders — the decision will be recorded as self-made",
+      "hintRemarks": "The candidate returned the contract with remarks and their own edition. Everyone responsible agrees.",
+      "hintDirector": "There is an objection: the approver decides."
     }
   },
   "backToItems": "Back to items"
