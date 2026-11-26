@@ -219,7 +219,7 @@ async def test_known_contact_message_is_a_company_row_with_one_reply_action(
 
     row = (await rows(web))["lead:3:answer_lead"]
 
-    assert row["title"] == "Демо Контакт (Демо Партнёр) написал(а) в Telegram"
+    assert row["title"] == "Демо Контакт (Демо Партнёр) — новое сообщение"
     assert (row["action_label"], row["reason"]) == ("Ответить", "ваш контрагент ждёт ответа")
 
 

@@ -188,9 +188,9 @@ def _lead_row(
     if company is not None:
         # КОНТР-1а: бот отвечает, беседу ведёт ответственный за компанию; действие — «Ответить».
         title = tr(
-            f"{name} ({company}) написал(а) в Telegram",
-            f"{name} ({company}) Telegramda yozdi",
-            f"{name} ({company}) wrote in Telegram",
+            f"{name} ({company}) — новое сообщение",
+            f"{name} ({company}) — yangi xabar",
+            f"{name} ({company}) — new message",
         )
     if handed_by is not None:
         # D17G-1: передача первой линии — строка с запиской делопроизводителя и его именем.
