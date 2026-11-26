@@ -184,6 +184,7 @@ def test_start_without_request_lines_makes_an_empty_draft_once(world):
         "lines": 0,
         "files": [],
         "files_pending": False,
+        "crm_client_id": None,
     }
     assert body["ready"] == {"allowed": False, "blocker": "no_lines", "missing": 0}
     again = _api(world["engineer"]).post(_url(world, "start/"))

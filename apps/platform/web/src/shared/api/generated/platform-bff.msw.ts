@@ -28543,7 +28543,9 @@ export const getListCalcRequestsResponseMock = (
       }),
     ),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   })),
+  total: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -28736,6 +28738,7 @@ export const getGetCalcSheetResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29028,6 +29031,7 @@ export const getStartCalcResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29317,6 +29321,7 @@ export const getAddCalcLinesResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29606,6 +29611,7 @@ export const getUpdateCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29898,6 +29904,7 @@ export const getDeleteCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30190,6 +30197,7 @@ export const getSignCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30479,6 +30487,7 @@ export const getUpdateCalcTermsResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30771,6 +30780,7 @@ export const getMarkCalcReadyResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31060,6 +31070,7 @@ export const getNewCalcQuoteVersionResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31355,6 +31366,7 @@ export const getLoseCalcRequestResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31535,6 +31547,7 @@ export const getGetCalcRequestCardResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -31572,6 +31585,7 @@ export const getCloseCalcRequestResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -31771,6 +31785,7 @@ export const getCopyCalcLinesResponseMock = (
         undefined,
       ]),
       files_pending: faker.datatype.boolean(),
+      crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
     },
     quote: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcQuoteMock() }, null]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -32483,6 +32498,7 @@ export const getReserveCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -32775,6 +32791,7 @@ export const getReleaseCalcLineReservationResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([
     { ...getReleaseCalcLineReservationResponseCalcQuoteMock() },

@@ -70,17 +70,34 @@ class CalcTaskListView(APIView):
         parameters=[
             OpenApiParameter("mine", bool, description="Только где сотрудник — исполнитель резолюции"),
             OpenApiParameter("scope", str, enum=["open", "all"], description="open — стадии расчёта; all — все"),
+            OpenApiParameter(
+                "state",
+                str,
+                enum=["open", "closed", "all"],
+                description="ЗАЯВ-1: реестр заявок — в работе, закрытые (КП ушло, проект, отказ), все; с ним приходит `count`",
+            ),
+            OpenApiParameter("q", str, description="Поиск: номер, клиент, тема, письмо, текст заявки"),
+            OpenApiParameter("limit", int, description="Размер страницы (до 200); с `state`"),
+            OpenApiParameter("offset", int, description="Сколько строк пропустить; с `state`"),
         ],
         responses={200: CalcTaskListSerializer, 403: ERRORS[403]},
     )
     def get(self, request):
         mine = str(request.query_params.get("mine", "")).lower() in ("1", "true", "yes")
         scope = "all" if request.query_params.get("scope") == "all" else "open"
+        state = request.query_params.get("state")
         try:
-            rows = calc.list_tasks(request.user, mine=mine, scope=scope)
+            if state is None:
+                return Response({"results": calc.list_tasks(request.user, mine=mine, scope=scope)})
+            params = request.query_params
+            limit = int(params["limit"]) if str(params.get("limit", "")).isdigit() else calc.MAX_ROWS
+            offset = int(params["offset"]) if str(params.get("offset", "")).isdigit() else 0
+            rows, total = calc.list_tasks_page(
+                request.user, mine=mine, state=state, q=params.get("q", ""), limit=limit, offset=offset
+            )
         except CalcError as exc:
             return _fail(exc)
-        return Response({"results": rows})
+        return Response({"results": rows, "count": total})
 
 
 class RequestIntakeView(APIView):

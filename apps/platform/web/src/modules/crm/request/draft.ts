@@ -142,3 +142,50 @@ export function clearRequestDraft(userId: string, scope: string): void {
     // Не критично.
   }
 }
+
+export interface ListedDraft {
+  scope: string;
+  draft: RequestDraft;
+}
+
+/**
+ * Все черновики сотрудника в этой вкладке — для вкладки «Черновики» реестра заявок (ЗАЯВ-1). Черновик из входящего
+ * (`letter:…`) не показывается: его продолжает сама передача из входящего. Новее — выше.
+ */
+export function listRequestDrafts(userId: string): ListedDraft[] {
+  const rows: ListedDraft[] = [];
+  try {
+    const prefix = `${PREFIX}:${userId}:`;
+    for (let i = 0; i < window.sessionStorage.length; i += 1) {
+      const name = window.sessionStorage.key(i);
+      if (!name?.startsWith(prefix)) continue;
+      const scope = name.slice(prefix.length);
+      if (scope.startsWith("letter:")) continue;
+      const draft = readRequestDraft(userId, scope);
+      if (draft) rows.push({ scope, draft });
+    }
+  } catch {
+    return [];
+  }
+  return rows.sort((a, b) => b.draft.savedAt.localeCompare(a.draft.savedAt));
+}
+
+/** Куда ведёт «Продолжить»: форма того же места, откуда черновик начат (клиент, лид или новая). */
+export function draftContinuePath(scope: string, mobile: boolean): string {
+  // На телефоне форма — лист, боковое окно не нужно; на широком экране форма живёт в боковом окне
+  const open = mobile ? "create=1" : "create=1&panel=open&tab=card";
+  if (scope.startsWith("client:")) {
+    return `/crm/clients?client=${encodeURIComponent(scope.slice("client:".length))}&${open}`;
+  }
+  if (scope === "new") return `/crm/clients?${open}`;
+  return `/crm/leads?lead=${encodeURIComponent(scope)}&${open}`;
+}
+
+/** Вернуть удалённый черновик («Вернуть» в уведомлении): запись целиком, как была. */
+export function restoreRequestDraft(userId: string, scope: string, draft: RequestDraft): void {
+  try {
+    window.sessionStorage.setItem(key(userId, scope), JSON.stringify(draft));
+  } catch {
+    // Не критично.
+  }
+}

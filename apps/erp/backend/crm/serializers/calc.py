@@ -60,10 +60,16 @@ class CalcTaskRowSerializer(serializers.Serializer):
     lines = serializers.IntegerField()
     visas = CalcVisaStatesSerializer()
     assignees = CalcAssigneeSerializer(many=True)
+    crm_client_id = serializers.IntegerField(
+        required=False, allow_null=True, help_text="ЗАЯВ-1: клиент CRM компании заявки; только при `state`"
+    )
 
 
 class CalcTaskListSerializer(serializers.Serializer):
     results = CalcTaskRowSerializer(many=True)
+    count = serializers.IntegerField(
+        required=False, help_text="ЗАЯВ-1: всего подходящих заявок; только при `state`"
+    )
 
 
 class CalcDealRefSerializer(serializers.Serializer):
@@ -104,6 +110,9 @@ class RequestIntakeSerializer(serializers.Serializer):
 
 class CalcRequestSerializer(serializers.Serializer):
     text = serializers.CharField(allow_blank=True)
+    crm_client_id = serializers.IntegerField(
+        allow_null=True, required=False, help_text="ЗАЯВ-1: клиент CRM компании заявки — для «Создать по образцу»"
+    )
     lines = serializers.IntegerField()
     files = RequestFileSerializer(many=True, help_text="Файлы заявки клиента (СЦ-10)")
     files_pending = serializers.BooleanField(

@@ -270,12 +270,13 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const close = () => {
     if (objectId !== undefined) {
       const next = new URLSearchParams(params);
-      for (const key of ["client", "partner", "create", "panel", "tab"]) next.delete(key);
+      for (const key of ["client", "partner", "create", "template", "panel", "tab"])
+        next.delete(key);
       const text = next.toString();
       void navigate(`/crm/clients${text ? `?${text}` : ""}`, { replace: true });
       return;
     }
-    change({ client: null, partner: null, create: null, panel: null, tab: null });
+    change({ client: null, partner: null, create: null, template: null, panel: null, tab: null });
   };
 
   const queue = kind === "applications" || kind === "bank_changes";
@@ -466,6 +467,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
             key={`create-new-${String(freshForm)}`}
             lead={null}
             clientId={null}
+            template={params.get("template")}
             onCancel={close}
           />
         </Sheet>
@@ -477,8 +479,9 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
               key={`create-${String(selected)}`}
               lead={null}
               clientId={selected}
+              template={params.get("template")}
               onCancel={() => {
-                change({ create: null });
+                change({ create: null, template: null });
               }}
             />
           ) : (

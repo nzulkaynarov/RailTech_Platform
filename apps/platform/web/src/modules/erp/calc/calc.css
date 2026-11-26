@@ -404,3 +404,10 @@
   background: var(--rt-color-warning-bg);
   overflow-wrap: anywhere;
 }
+
+.pf-calc-pager {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--pf-border, #f0f0f0);
+}

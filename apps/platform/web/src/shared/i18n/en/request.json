@@ -176,5 +176,9 @@
       "invalid_email": "Check the email address",
       "VALIDATION_FAILED": "Check the entered data"
     }
+  },
+  "template": {
+    "note": "Based on request {{number}}.",
+    "fileFailed": "The file of the previous request was not copied: {{reason}}. Attach it again."
   }
 }

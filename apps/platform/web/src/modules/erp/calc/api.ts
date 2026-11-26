@@ -20,6 +20,16 @@ export function calcPath(number: string): string {
   return `/erp/calc/${encodeURIComponent(number)}`;
 }
 
+/** Куда ведёт «По образцу»: форма новой заявки клиента прежней — с сутью и файлом прежней (ЗАЯВ-1). */
+export function copyPath(
+  number: string,
+  crmClientId: number | null | undefined,
+  mobile: boolean,
+): string {
+  const client = crmClientId != null ? `client=${String(crmClientId)}&` : "";
+  return `/crm/clients?${client}create=1&template=${encodeURIComponent(number)}${mobile ? "" : "&panel=open&tab=card"}`;
+}
+
 /** Ответ действия — новый расчёт: кладётся в кэш карточки, список и счётчики перезапрашиваются. */
 export function useApplySheet(): (sheet: CalcSheet) => void {
   const client = useQueryClient();

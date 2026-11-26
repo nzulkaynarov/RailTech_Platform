@@ -21,14 +21,62 @@
       "action": "Yangilaş",
       "mineTitle": "Sizda hisob-kitob topşiriqlari yöq",
       "mineText": "Hozirça böş.",
-      "mineAction": "Hisob-kitobdagi barça arizalar"
+      "mineAction": "Hisob-kitobdagi barça arizalar",
+      "closedTitle": "Yopilgan arizalar yöq",
+      "closedText": "Yopilgan va avvalgi arizalar şu yerda körinadi.",
+      "allTitle": "Arizalar yöq",
+      "allText": "Ariza yarating — u şu yerda körinadi.",
+      "filteredTitle": "Hech narsa topilmadi",
+      "filteredText": "Izlaşni özgartiring yoki «Barçasi»ni oçing.",
+      "filteredAction": "Izlaşni tozalaş"
     },
     "scope": {
       "label": "Kimning arizalari",
       "all": "Barçasi",
       "mine": "Meniki"
     },
-    "pickForCalc": "Arizani tanlang — fayl tahlili bilan hisob-kitob oçiladi"
+    "pickForCalc": "Arizani tanlang — fayl tahlili bilan hisob-kitob oçiladi",
+    "tabs": {
+      "label": "Qaysi arizalar",
+      "open": "Işda",
+      "drafts": "Qoralamalar",
+      "closed": "Yopilgan",
+      "all": "Barçasi"
+    },
+    "total": "Jami: {{count}}",
+    "filters": "Arizalar filtrlari",
+    "search": {
+      "label": "Arizalarni izlaş",
+      "placeholder": "Raqam, mijoz yoki ariza matni"
+    },
+    "pager": "Arizalar röyxati sahifalari",
+    "outcome": {
+      "LOST": "Yopilgan",
+      "QUOTE": "TT yuborilgan",
+      "CONTRACT": "Loyihaga aylandi",
+      "PAYMENT": "Loyihaga aylandi",
+      "DONE": "Loyihaga aylandi"
+    },
+    "copy": "Namuna böyiça",
+    "copyLabel": "{{number}} namuna böyiça ariza yaratiş",
+    "drafts": {
+      "caption": "Ariza qoralamalari",
+      "scroll": "Ariza qoralamalari jadvali",
+      "client": "Mijoz",
+      "text": "Ariza matni",
+      "saved": "Saqlangan",
+      "noClient": "Mijoz tanlanmagan",
+      "noText": "Matn kiritilmagan",
+      "continue": "Davom etiş",
+      "continueLabel": "Qoralamani davom etiş: {{name}}",
+      "remove": "Qoralamani öçiriş",
+      "removeLabel": "Qoralamani öçiriş: {{name}}",
+      "removed": "Qoralama öçirildi",
+      "undo": "Qaytariş",
+      "emptyTitle": "Qoralamalar yöq",
+      "emptyText": "Boşlangan, lekin yuborilmagan ariza brauzerning şu varağida bir sutka saqlanadi.",
+      "emptyAction": "Ariza yaratiş"
+    }
   },
   "state": {
     "not_started": "Boşlanmagan",
@@ -84,7 +132,8 @@
     "subtitleNoLetter": "{{client}} · hisob-kitob muddati {{due}}",
     "requestFilesPending": "Ariza fayli yuklanmoqda…",
     "openQuote": "TK {{number}}ni oçiş",
-    "openProject": "Loyihani oçiş"
+    "openProject": "Loyihani oçiş",
+    "copy": "Namuna böyiça yaratiş"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",

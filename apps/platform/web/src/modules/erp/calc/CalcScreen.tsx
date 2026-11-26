@@ -22,7 +22,14 @@ import { Sheet } from "../../../shared/ui/Sheet";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { AddLineForm } from "./AddLineForm";
-import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
+import {
+  calcRef,
+  copyPath,
+  readyHintKey,
+  useApplySheet,
+  useErrorText,
+  useStateLabels,
+} from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
@@ -299,7 +306,9 @@ function Content({ sheet }: { sheet: CalcSheet }) {
     setDialog(null);
   };
   const state = stateOf(sheet);
-  const editable = state === "in_progress" || state === "returned";
+  // Закрытая заявка и заявка вне расчёта — только просмотр: кнопок правки нет, остаётся «Создать по образцу» (ЗАЯВ-1)
+  const frozen = sheet.step === "LOST" || sheet.ready.blocker === "not_in_calculation";
+  const editable = (state === "in_progress" || state === "returned") && !frozen;
   const canLines = sheet.rights.goods || sheet.rights.services;
   const subtitle = [
     t(sheet.task.letter_number ? "sheet.subtitle" : "sheet.subtitleNoLetter", {
@@ -333,6 +342,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 {t("sheet.requestPrice")}
               </Button>
             ) : null}
+            {["REQUEST", "RESOLUTION", "CALCULATION"].includes(sheet.step) ? null : (
+              <LinkButton to={copyPath(sheet.number, sheet.request.crm_client_id, mobile)}>
+                {t("sheet.copy")}
+              </LinkButton>
+            )}
             {sheet.quote?.can_revise ? null : <CloseRequestButton target={sheet} />}
             {mobile ? (
               <Button

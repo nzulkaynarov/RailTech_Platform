@@ -21,10 +21,13 @@ export function CreateRequest({
   lead,
   clientId,
   letterFrom = null,
+  template = null,
   onCancel,
 }: {
   lead: string | null;
   clientId: number | null;
+  /** «Создать по образцу»: номер прежней заявки (ЗАЯВ-1) */
+  template?: string | null;
   /** Вложение сообщения лида — письмо директору («В заявку» в «Ждут ответа») */
   letterFrom?: LetterSource | null;
   onCancel: () => void;
@@ -32,7 +35,9 @@ export function CreateRequest({
   const { t } = useTranslation(["leads", "request"]);
   const { me } = useAuth();
   const card = useGetCrmLead(lead ?? "", { query: { enabled: lead !== null } });
-  if (lead === null) return <RequestForm lead={null} clientId={clientId} onCancel={onCancel} />;
+  if (lead === null) {
+    return <RequestForm lead={null} clientId={clientId} template={template} onCancel={onCancel} />;
+  }
   if (card.isPending) return <Skeleton active paragraph={{ rows: 6 }} title={false} />;
   if (card.isError) {
     return (

@@ -16,4 +16,9 @@ export interface CalcRequestText {
   files?: RequestFile[];
   /** РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается» */
   files_pending?: boolean;
+  /**
+   * ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём; нет — форма без клиента
+   * @nullable
+   */
+  crm_client_id?: number | null;
 }

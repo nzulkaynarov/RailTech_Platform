@@ -9,7 +9,7 @@ BFF не решает (CONVENTIONS.md §2 п. 2): зону строки, виз�
 ошибок ERP.
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -222,9 +222,27 @@ async def _sheet(
     response_model_exclude_unset=True,
     operation_id="listCalcRequests",
 )
-async def list_requests(authed: Reader, mine: Annotated[bool, Query()] = False) -> CalcRequestList:
-    data = await _erp(authed).call_calc("GET", "tasks/", params={"mine": 1} if mine else None)
-    return CalcRequestList(items=[to_row(row) for row in data.get("results", [])])
+async def list_requests(
+    authed: Reader,
+    mine: Annotated[bool, Query()] = False,
+    state: Annotated[Literal["open", "closed", "all"] | None, Query()] = None,
+    q: Annotated[str, Query(max_length=200)] = "",
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> CalcRequestList:
+    """Реестр заявок: без `state` — как раньше (в работе, одним списком); с `state` — вкладки «В работе / Закрытые / Все»,
+    поиск `q` и страницы. Видимость — права `erp.calc` и правила ERP, шире не становится."""
+    params: dict[str, Any] = {}
+    if mine:
+        params["mine"] = 1
+    if state is not None:
+        params.update({"state": state, "q": q.strip(), "limit": limit, "offset": offset})
+    data = await _erp(authed).call_calc("GET", "tasks/", params=params or None)
+    total = data.get("count") if isinstance(data, dict) else None
+    return CalcRequestList(
+        items=[to_row(row) for row in data.get("results", [])],
+        total=total if isinstance(total, int) else None,
+    )
 
 
 @router.get(

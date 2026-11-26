@@ -59,10 +59,14 @@ class CalcRequestRow(BaseModel):
     responsible: str | None
     assignees: list[CalcAssignee]
     path: str
+    #: ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём
+    crm_client_id: int | None = None
 
 
 class CalcRequestList(BaseModel):
     items: list[CalcRequestRow]
+    #: ЗАЯВ-1: всего подходящих заявок (страницы реестра); без `state` не заполнено
+    total: int | None = None
 
 
 class CalcTask(BaseModel):
@@ -82,6 +86,8 @@ class CalcRequestText(BaseModel):
     files: list[RequestFile] = []
     # РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — «файл заявки загружается»
     files_pending: bool = False
+    #: ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём
+    crm_client_id: int | None = None
 
 
 class CalcTerms(BaseModel):
@@ -226,6 +232,8 @@ def to_request_card(raw: dict[str, Any]) -> CalcRequestCard:
             text=raw["request"]["text"],
             lines=raw["request"]["lines"],
             files=parse_request_files(raw["request"].get("files")) or [],
+            files_pending=raw["request"].get("files_pending") is True,
+            crm_client_id=raw["request"].get("crm_client_id"),
         ),
         close=CalcClose(**raw["close"]),
     )
@@ -411,6 +419,7 @@ def to_row(raw: dict[str, Any]) -> CalcRequestRow:
         responsible=deal.get("manager_name"),
         assignees=_assignees(raw["assignees"]),
         path=calc_path(number),
+        crm_client_id=raw.get("crm_client_id"),
     )
 
 
@@ -523,6 +532,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
             lines=raw["request"]["lines"],
             files=parse_request_files(raw["request"].get("files")) or [],
             files_pending=raw["request"].get("files_pending") is True,
+            crm_client_id=raw["request"].get("crm_client_id"),
         ),
         quote=None
         if not isinstance(quote, dict)
