@@ -182,9 +182,7 @@ test.describe("КП на одобрение: директор", () => {
     await confirmDialog(page);
 
     await expect(
-      page
-        .getByText(/Не сохранено: КП уже решено другим директором или заменено новой версией/)
-        .first(),
+      page.getByText(/Не сохранено: КП уже решено или заменено новой версией/).first(),
     ).toBeVisible();
     await expect(quoteForm(page)).toHaveCount(0);
   });
@@ -229,7 +227,7 @@ test.describe("КП на одобрение: менеджер", () => {
     await expect(page.getByRole("button", { name: "Вернуть на доработку" })).toHaveCount(0);
     await expect(page.getByRole("form", { name: "Одобрение КП" })).toHaveCount(0);
     await expect(
-      page.locator(CENTER).getByRole("heading", { name: "КП ждёт решения директора" }),
+      page.locator(CENTER).getByRole("heading", { name: "КП ждёт решения" }),
     ).toBeVisible();
     await settledScreenshot(page, "manager-card");
     await expectNoViolations(page, "менеджер: карточка КП");
@@ -274,7 +272,7 @@ test.describe("На согласовании: служебные записки"
 
     await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Передана бухгалтеру").first()).toBeVisible();
+    await expect(page.getByText("Передана на оплату").first()).toBeVisible();
     // SC-8: the card names the agreed step by fact, not «you will be able to decide»
     await expect(page.getByText(/Вы согласовали .*Сейчас шаг: Бухгалтер\./).first()).toBeVisible();
     await settledScreenshot(page, "memo-agreed");

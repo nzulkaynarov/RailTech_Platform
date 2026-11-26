@@ -90,7 +90,7 @@ async def test_feed_has_the_same_dated_items_as_the_queue_and_no_money(
     assert response.headers["content-type"].startswith("text/calendar")
     assert "max-age=300" in response.headers["cache-control"]
     calendar = Calendar.from_ical(response.content)
-    assert str(calendar["X-WR-CALNAME"]) == "RailTech — сроки"
+    assert str(calendar["X-WR-CALNAME"]) == "Сроки"
     dated = [i for i in queue if i.get("due_at")]
     assert dated, "в очереди должна быть строка со сроком"
     shown = events(response)

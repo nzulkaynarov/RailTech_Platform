@@ -25,6 +25,7 @@ import { InvoiceFacts, PaymentPanel } from "./PaymentPanel";
 import { ProofsBlock } from "./ProofsBlock";
 import { useStateLabels } from "./labels";
 import { invoicePath, moneyProps } from "./model";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 type Line = PaymentCard["items"][number];
 type Paid = PaymentCard["payments"][number];
@@ -157,37 +158,39 @@ function Content({ card }: { card: PaymentCard }) {
     };
   });
   return (
-    <div className="pf-dec-page pf-overlay-aware">
-      <PageHeader
-        title={card.number}
-        extra={
-          <div className="pf-dec-row">
-            <InvoiceStatus status={card.status} />
-            <LinkButton to="/eds/payments">{t("view.back")}</LinkButton>
-          </div>
-        }
-      />
-      <Card size="small" title={<h2 className="pf-dec-title">{t("items.title")}</h2>}>
-        <Items card={card} />
-      </Card>
-      <Card size="small" title={<h2 className="pf-dec-title">{t("payments.title")}</h2>}>
-        <Payments card={card} />
-      </Card>
-      <Card size="small" title={<h2 className="pf-dec-title">{t("proofs.title")}</h2>}>
-        <ProofsBlock card={card} heading={false} />
-      </Card>
-      <DecisionCenter legacyTab="payment" legacySheet="payment" label={t("panel.sheetLabel")}>
-        <PaymentPanel invoiceId={card.id} />
-      </DecisionCenter>
-      <RecordTab tab="facts">
-        <InvoiceFacts card={card} />
-      </RecordTab>
-      {history.length > 0 ? (
-        <RecordTab tab="history">
-          <RecordHistory label={t("history.title")} entries={history} />
+    <PageFrame layout="object">
+      <div className="pf-dec-page pf-overlay-aware">
+        <PageHeader
+          title={card.number}
+          extra={
+            <div className="pf-dec-row">
+              <InvoiceStatus status={card.status} />
+              <LinkButton to="/eds/payments">{t("view.back")}</LinkButton>
+            </div>
+          }
+        />
+        <Card size="small" title={<h2 className="pf-dec-title">{t("items.title")}</h2>}>
+          <Items card={card} />
+        </Card>
+        <Card size="small" title={<h2 className="pf-dec-title">{t("payments.title")}</h2>}>
+          <Payments card={card} />
+        </Card>
+        <Card size="small" title={<h2 className="pf-dec-title">{t("proofs.title")}</h2>}>
+          <ProofsBlock card={card} heading={false} />
+        </Card>
+        <DecisionCenter legacyTab="payment" legacySheet="payment" label={t("panel.sheetLabel")}>
+          <PaymentPanel invoiceId={card.id} />
+        </DecisionCenter>
+        <RecordTab tab="facts">
+          <InvoiceFacts card={card} />
         </RecordTab>
-      ) : null}
-    </div>
+        {history.length > 0 ? (
+          <RecordTab tab="history">
+            <RecordHistory label={t("history.title")} entries={history} />
+          </RecordTab>
+        ) : null}
+      </div>
+    </PageFrame>
   );
 }
 

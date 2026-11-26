@@ -47,7 +47,7 @@ describe("Счета и оплаты: список", () => {
     expect(within(first).getByText("ООО «Демо-Рейл»")).toBeVisible();
     expect(within(first).getByText("Выставлен")).toBeVisible();
     const partial = within(table).getByRole("row", { name: /СЧ-2026\/147/ });
-    expect(within(partial).getByText("Частично оплачен")).toBeVisible();
+    expect(within(partial).getByText("Оплачен частично")).toBeVisible();
     expect(within(partial).getByText(/остаток 30\s000\s000/)).toBeVisible();
   });
 
@@ -60,12 +60,12 @@ describe("Счета и оплаты: список", () => {
     expect(within(row).getByText("просрочен на 8 дн.")).toBeVisible();
   });
 
-  it("«Оплаты на подтверждение»: статус «Платёжное поручение получено» и действие «Проверить платёжное поручение»", async () => {
+  it("«Оплаты на подтверждение»: статус «Оплата на проверке» и действие «Проверить платёжное поручение»", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=proofs");
 
     const row = await screen.findByRole("row", { name: /СЧ-2026\/145/ });
-    expect(within(row).getByText("Платёжное поручение получено")).toBeVisible();
+    expect(within(row).getByText("Оплата на проверке")).toBeVisible();
     expect(
       within(row).getByRole("link", { name: "Проверить платёжное поручение: СЧ-2026/145" }),
     ).toHaveTextContent(/^Проверить$/);
@@ -173,7 +173,7 @@ describe("Подтвердить оплату", () => {
     expect(within(panel).queryByRole("form", { name: "Подтверждение оплаты" })).toBeNull();
   });
 
-  it("частичная оплата: кнопка меняет слова, остаток виден; счёт остаётся «Частично оплачен»", async () => {
+  it("частичная оплата: кнопка меняет слова, остаток виден; счёт остаётся «Оплачен частично»", async () => {
     const { form } = await openInvoice("СЧ-2026/142");
     const amount = within(form).getByLabelText(/Сумма по выписке/);
 
@@ -188,7 +188,7 @@ describe("Подтвердить оплату", () => {
     await confirmDialog();
     expect(await screen.findByText(/Частичная оплата подтверждена/)).toBeVisible();
     const row = await screen.findByRole("row", { name: /СЧ-2026\/142/ });
-    expect(within(row).getByText("Частично оплачен")).toBeVisible();
+    expect(within(row).getByText("Оплачен частично")).toBeVisible();
     expect(within(row).getByText(/остаток 72\s000\s000/)).toBeVisible();
   });
 
@@ -270,9 +270,7 @@ describe("Платёжные поручения и запрос платёжки
     const text = within(panel).getByLabelText<HTMLTextAreaElement>("Текст сообщения");
     expect(text.value).toContain("СЧ-2026/142");
     expect(text.value).toContain("Срок оплаты — 07.11.2026");
-    expect(
-      within(panel).getByText(/Автоматической отправки клиенту в бот и почту пока нет/),
-    ).toBeVisible();
+    expect(within(panel).getByText(/Скопируйте текст, отправьте его клиенту/)).toBeVisible();
     fireEvent.click(
       within(panel).getByRole("button", { name: "Отметить: платёжное поручение запросили" }),
     );
@@ -310,7 +308,7 @@ describe("Записки к оплате", () => {
 
     const table = await screen.findByRole("table", { name: "Заявки на оплату" });
     const row = within(table).getByRole("row", { name: /СЗ-2026\/015/ });
-    expect(within(row).getByText("Передана бухгалтеру")).toBeVisible();
+    expect(within(row).getByText("Передана на оплату")).toBeVisible();
     fireEvent.click(
       within(row).getByRole("link", { name: "Показать записку СЗ-2026/015 в боковом окне" }),
     );

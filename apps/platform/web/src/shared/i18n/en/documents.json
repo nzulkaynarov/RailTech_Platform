@@ -13,22 +13,22 @@
   "status": {
     "draft": "Draft",
     "signing": "Awaiting signature",
-    "sent": "Registered",
+    "sent": "Sent",
     "quote": {
       "open": "Awaiting approval",
       "approved": "Approved",
-      "returned": "Returned for rework",
-      "rejected": "Rejected"
+      "returned": "Needs rework",
+      "rejected": "Not approved"
     },
     "filter": {
       "draft": "Draft",
       "on_approval": "Awaiting approval",
-      "returned": "Returned for rework",
+      "returned": "Needs rework",
       "approved": "Approved",
       "rejected": "Rejected",
-      "to_accountant": "Passed to accountant",
+      "to_accountant": "Sent for payment",
       "paid": "Paid",
-      "sent": "Registered",
+      "sent": "Sent",
       "awaiting_resolution": "Awaiting resolution",
       "resolved": "Resolution made",
       "open": "Quote awaiting approval"
@@ -127,7 +127,7 @@
       "version": "Revision",
       "watchers": "Copy to"
     },
-    "toDirector": "Director",
+    "toDirector": "Approval",
     "text": "Text",
     "bodyTable": "Table in the letter text",
     "files": "Attachments",
@@ -145,8 +145,8 @@
       "pending": "{{label}} — next on the route",
       "skipped": "{{label}} — skipped"
     },
-    "routePreview": "The route opens after sending: you → director{{accountant}}.",
-    "routePreviewAccountant": " → accountant",
+    "routePreview": "The route opens after sending: you → approval{{accountant}}.",
+    "routePreviewAccountant": " → payment",
     "decisions": "Decisions",
     "decision": {
       "approve": "Approved",
@@ -176,7 +176,7 @@
       "attention": "To",
       "email": "Addressee email",
       "signatory": "Signatory",
-      "signatoryDefault": "from the letterhead (director)",
+      "signatoryDefault": "from the letterhead",
       "mailings": "Sending log",
       "noMailings": "Not sent to the addressee yet.",
       "mailing": {
@@ -212,7 +212,7 @@
       },
       "dispatchMethodLabel": "Dispatch method",
       "sendImmediately": "Send to the addressee's email immediately after signing",
-      "noEmailWarning": "Addressee email is not provided — automatic sending is unavailable.",
+      "noEmailWarning": "Addressee email is not provided — the letter will not be sent by email.",
       "confirmSign": "Sign letter",
       "cancel": "Cancel",
       "signedBy": "Signed by",
@@ -251,7 +251,7 @@
     }
   },
   "form": {
-    "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “Documents”.",
+    "subtitle": "The document goes for approval. You can save a draft and continue later in “Documents”.",
     "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
     "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
     "formLabel": "New document",
@@ -266,7 +266,7 @@
     },
     "to": {
       "label": "To",
-      "director": "Director"
+      "director": "For approval"
     },
     "recipient": {
       "label": "Addressee (organization)",
@@ -287,14 +287,14 @@
     },
     "files": {
       "label": "Attachments",
-      "hint": "PDF, images and Office documents, each up to 25 MB.",
+      "hint": "PDF, images and Word, Excel and PowerPoint files, each up to 25 MB.",
       "list": "Attached files",
       "uploading": "uploading…",
       "uploaded": "uploaded",
       "attached": "already in the document",
       "remove": "Remove file {{name}}",
       "tooLarge": "The file is larger than 25 MB.",
-      "unsupported": "PDF, images and Office documents are accepted.",
+      "unsupported": "PDF, images and Word, Excel and PowerPoint files are accepted.",
       "failed": "Not uploaded: {{reason}}",
       "invoiceLater": "The partner's invoice will come later"
     },
@@ -308,8 +308,8 @@
     },
     "route": {
       "label": "Approval route",
-      "plain": "You → Director",
-      "withAmount": "You → Director → Accountant (amount given)",
+      "plain": "You → approval",
+      "withAmount": "You → approval → payment (amount given)",
       "letterHandover": "You → signer: they sign, the letter gets its number and goes to the addressee",
       "approvers": "Approvers",
       "approversHint": "Approve before the route steps, in the order chosen.",
@@ -359,7 +359,7 @@
         "VALIDATION_FAILED": "check the fields",
         "BACKEND_UNAVAILABLE": "the documents service is not responding, try again later",
         "PAYLOAD_TOO_LARGE": "the file is larger than 25 MB",
-        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Office documents are accepted",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Word, Excel and PowerPoint files are accepted",
         "REQUEST_TIMEOUT": "the server did not respond in time",
         "DEFAULT": "the server returned an error, try again",
         "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Details & letterhead”",
@@ -486,7 +486,7 @@
     "pending": "Preparing the PDF…",
     "ready": "PDF ready · {{pages}} p.",
     "readyFinal": "PDF with the outgoing number ready · {{pages}} p.",
-    "failed": "Error: {{error}}",
+    "failed": "Error: {{reason}}",
     "failedNoReason": "Error: the PDF was not built",
     "retry": "Retry",
     "download": "Download PDF",

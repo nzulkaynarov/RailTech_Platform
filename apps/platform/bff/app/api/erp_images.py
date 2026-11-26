@@ -80,7 +80,7 @@ async def upload_image(id: Id, request: Request, authed: Writer) -> ItemImage:
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Фото нужно передать формой multipart.",
+            "Приложите фото к запросу.",
             status_code=422,
             details={"fields": ["image"], "reason": "multipart_required"},
         )

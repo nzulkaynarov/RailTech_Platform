@@ -31,7 +31,7 @@ for (const width of WIDTHS) {
     drawer = partnerCard(page, "ИП «Восточный склад»");
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Конфликт", { exact: true })).toBeVisible();
-    await expect(block.getByText(/Проверьте ИНН/)).toBeVisible();
+    await expect(block.getByText(/Сверьте ИНН/)).toBeVisible();
     await expect(block.getByRole("link", { name: "Открыть клиента №88" })).toBeVisible();
     await expectNoViolations(page, "Партнёр · клиент в CRM, конфликт");
     await block.scrollIntoViewIfNeeded();
@@ -95,7 +95,7 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=2");
     let block = page.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Удержано до сверки", { exact: true })).toBeVisible();
-    await expect(block.getByText(/Удержано после передачи клиента/)).toBeVisible();
+    await expect(block.getByText(/Нужна проверка ИНН/)).toBeVisible();
     await expectNoViolations(page, "Партнёр · удержано до сверки");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-held");

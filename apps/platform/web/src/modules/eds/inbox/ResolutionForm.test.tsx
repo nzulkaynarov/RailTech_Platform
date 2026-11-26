@@ -18,7 +18,7 @@ async function openForm(path = LETTER, directoryReady = true) {
   signIn("director@demo.example");
   const view = renderAt(path);
   const panel = await decisionEl();
-  const form = await within(panel).findByRole("form", { name: "Резолюция директора" });
+  const form = await within(panel).findByRole("form", { name: "Резолюция" });
   // справочник сотрудников загружен: зона «услуги» с одним кандидатом выбрана сама
   if (directoryReady) {
     await waitFor(() => {
@@ -180,7 +180,7 @@ describe("Резолюция: форма", () => {
     await waitFor(() => {
       expect(within(panel).queryByRole("form")).toBeNull();
     });
-    expect(await screen.findByRole("heading", { name: "Решение директора" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Решение по письму" })).toBeVisible();
     expect(screen.getByText("15.5 %")).toBeVisible();
     expect(draftKeys()).toHaveLength(0);
   });

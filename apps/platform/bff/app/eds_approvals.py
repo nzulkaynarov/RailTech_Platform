@@ -783,7 +783,7 @@ async def _none() -> None:
     return None
 
 
-SEND_FAILED_MESSAGE = "КП не отправлено: канал недоступен или отправку остановила ERP."
+SEND_FAILED_MESSAGE = "КП не отправлено: канал недоступен или отправка остановлена."
 
 
 async def send_quote(authed: Authed, proxy: EdsProxy, approval_id: str, channel: str) -> Any:

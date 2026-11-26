@@ -160,7 +160,7 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       await search.press("Enter");
       await expect(page).toHaveURL(/\/erp\/requests\?request=%D0%97%D0%92-2026-097/);
       await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
-      await expect(page.getByRole("heading", { name: "Резолюция директора" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Резолюция" })).toBeVisible();
       await expect(
         page.getByRole("link", { name: "Открыть расчёт", exact: true }).last(),
       ).toBeVisible();

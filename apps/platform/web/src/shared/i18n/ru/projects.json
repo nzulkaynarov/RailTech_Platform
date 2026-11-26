@@ -59,7 +59,8 @@
       "accepted": "Принято клиентом"
     },
     "contract": {
-      "project": "Проект",
+      "project": "Черновик",
+      "at_client": "На согласовании у клиента",
       "client_agreed": "Ожидает подписания",
       "issued_at_operator": "Ожидает подписания",
       "signed": "Подписан",
@@ -69,18 +70,18 @@
     "invoice": {
       "to_issue": "К выставлению",
       "issued": "Выставлен",
-      "partial": "Частично оплачен",
+      "partial": "Оплачен частично",
       "paid": "Оплачен",
       "overdue": "Просрочен",
       "cancelled": "Отменён"
     },
     "act": {
-      "project": "Проект",
-      "returned": "Возвращён с причиной",
-      "issued": "Выпущен",
-      "signed": "Подписан (скан)",
+      "project": "Черновик",
+      "returned": "Возвращён с замечаниями",
+      "issued": "Выставлен",
+      "signed": "Подписан",
       "accepted": "Принят клиентом",
-      "cancelled": "Аннулирован"
+      "cancelled": "Отменён"
     }
   },
   "problem": {
@@ -163,12 +164,12 @@
       },
       "lineStatus": {
         "assembling": "Комплектуется",
-        "in_transit": "В пути",
+        "in_transit": "В пути к клиенту",
         "ready_to_ship": "Готово к отгрузке",
         "shipped": "Отгружено",
         "delivered": "Доставлено",
         "accepted": "Принято клиентом",
-        "disputed": "Оспорено клиентом"
+        "disputed": "Есть замечания клиента"
       },
       "proof": "Подтверждение доставки",
       "proofFile": "Файл"
@@ -382,8 +383,8 @@
       "collecting": "Визы собираются.",
       "askAdmin": "Попросите администратора назначить роль: {{roles}}.",
       "role": {
-        "visa_finance": "бухгалтер",
-        "visa_legal": "юрист"
+        "visa_finance": "финансы",
+        "visa_legal": "право"
       }
     },
     "term": {
@@ -483,7 +484,7 @@
     },
     "fields": {
       "total": "Сумма",
-      "issued": "Выпущен",
+      "issued": "Выставлен",
       "signed": "Подписан",
       "accepted": "Принят"
     },
