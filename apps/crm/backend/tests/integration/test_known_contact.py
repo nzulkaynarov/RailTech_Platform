@@ -217,3 +217,65 @@ async def test_email_added_on_lead_reaches_the_company_contact(
         assert not await lead_contact_sync.sync_to_contact(session, row, {"email"}, Actor.system())
         contact = (await session.scalars(select(ClientContact))).one()
         assert contact.email == "contact@example.test"
+
+
+async def _two_contacts(sessions: async_sessionmaker[AsyncSession], q_email: str | None) -> int:
+    """Компания: основной P (с почтой) и второй Q (по телефону); лид Q опознан по телефону."""
+    owner, _ = await make_user(sessions, "owner@example.test", ["manager"])
+    client_id = await company(sessions, "Демо Партнёр", owner=owner.id)
+    async with sessions() as session, session.begin():
+        p = (await session.scalars(select(ClientContact))).one()
+        p.email = "p@example.test"
+        session.add(
+            ClientContact(
+                client_id=client_id,
+                full_name="Демо Второй",
+                phone_e164=PHONE,
+                email=q_email,
+            )
+        )
+    await write(sessions)
+    async with sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        identity.phone_e164 = PHONE
+        lead = await session.get(Lead, identity.lead_id)
+        assert lead is not None
+        assert await known_contact.apply(session, lead) is known_contact.Outcome.ASSIGNED
+        return lead.id
+
+
+async def test_email_typed_for_second_contact_never_overwrites_the_primary(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.security.audit import Actor
+    from app.services import lead_contact_sync
+
+    lead_id = await _two_contacts(sessions, q_email=None)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.email = "q@example.test"
+        assert await lead_contact_sync.sync_to_contact(session, lead, {"email"}, Actor.system())
+        emails = {
+            c.full_name: c.email for c in (await session.scalars(select(ClientContact))).all()
+        }
+    assert emails == {"Демо Контакт": "p@example.test", "Демо Второй": "q@example.test"}
+
+
+async def test_existing_other_email_is_not_overwritten_and_lead_gets_a_note(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.models.leads import LeadNote
+    from app.security.audit import Actor
+    from app.services import lead_contact_sync
+
+    lead_id = await _two_contacts(sessions, q_email="old@example.test")
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.email = "q@example.test"
+        assert not await lead_contact_sync.sync_to_contact(session, lead, {"email"}, Actor.system())
+        emails = sorted(c.email or "" for c in (await session.scalars(select(ClientContact))).all())
+        notes = (await session.scalars(select(LeadNote.text))).all()
+    assert emails == ["old@example.test", "p@example.test"]
+    assert notes == [lead_contact_sync.CONFLICT_NOTE]

@@ -106,13 +106,38 @@ async def company_of_lead(session: AsyncSession, lead: Lead) -> Client | None:
 
 
 def _applicable(lead: Lead) -> bool:
-    return (
-        lead.erased_at is None
-        and lead.discarded_kind is None
-        and lead.owner_mode != "human"
-        and lead.stage in _OPEN_STAGES
-        and (lead.assigned_user_id is None or MARK_KEY in (lead.qualification or {}))
-    )
+    if (
+        lead.erased_at is not None
+        or lead.discarded_kind is not None
+        or lead.owner_mode == "human"
+        or lead.stage not in _OPEN_STAGES
+    ):
+        return False
+    if lead.assigned_user_id is None:
+        return True
+    mark = (lead.qualification or {}).get(MARK_KEY)
+    # Переназначенный человеком после метки лид правило не трогает.
+    return isinstance(mark, dict) and mark.get("user_id") == lead.assigned_user_id
+
+
+async def _matched_contact(session: AsyncSession, lead: Lead, client_id: int) -> int | None:
+    """Контакт компании, опознанный по собственным признакам человека; неоднозначно — `None`."""
+    ev = await _evidence(session, lead)
+    match = []
+    if ev.identity_ids:
+        match.append(ClientContact.telegram_identity_id.in_(ev.identity_ids))
+    if ev.phones:
+        match.append(ClientContact.phone_e164.in_(ev.phones))
+    if ev.emails:
+        match.append(func.lower(ClientContact.email).in_(ev.emails))
+    if not match:
+        return None
+    ids = (
+        await session.scalars(
+            select(ClientContact.id).where(ClientContact.client_id == client_id, or_(*match))
+        )
+    ).all()
+    return int(ids[0]) if len(ids) == 1 else None
 
 
 async def apply(session: AsyncSession, lead: Lead, actor: Actor | None = None) -> Outcome:
@@ -139,7 +164,12 @@ async def apply(session: AsyncSession, lead: Lead, actor: Actor | None = None) -
     moment = datetime.now(UTC)
     lead.qualification = {
         **(lead.qualification or {}),
-        MARK_KEY: {"client_id": client.id, "user_id": owner.id, "at": moment.isoformat()},
+        MARK_KEY: {
+            "client_id": client.id,
+            "user_id": owner.id,
+            "contact_id": await _matched_contact(session, lead, client.id),
+            "at": moment.isoformat(),
+        },
     }
     stage_from = lead.stage
     if lead.stage == Stage.NEW:

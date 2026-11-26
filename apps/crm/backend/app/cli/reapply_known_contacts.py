@@ -28,26 +28,33 @@ async def run(args: argparse.Namespace) -> int:
         from app.tasks.queue import queue
 
         # The queue is open for the command: the commit wakes the bus relay.
-        async with queue.open_async(), container.session_factory() as session:
-            tx = await session.begin()
-            stmt = select(Lead.id).where(
-                Lead.erased_at.is_(None), Lead.discarded_kind.is_(None), Lead.owner_mode != "human"
-            )
-            if args.lead_id is not None:
-                stmt = stmt.where(Lead.id == args.lead_id)
-            for lead_id in (await session.scalars(stmt.order_by(Lead.id))).all():
-                lead = await session.get(Lead, lead_id, with_for_update=True)
-                if lead is None:
-                    continue
-                outcome = await known_contact.apply(session, lead, Actor.system())
-                outcomes[outcome.value] += 1
-                if outcome in (known_contact.Outcome.ASSIGNED, known_contact.Outcome.MARKED):
-                    touched.append(lead_id)
+        async with queue.open_async():
+            async with container.session_factory() as session:
+                stmt = select(Lead.id).where(
+                    Lead.erased_at.is_(None),
+                    Lead.discarded_kind.is_(None),
+                    Lead.owner_mode != "human",
+                )
+                if args.lead_id is not None:
+                    stmt = stmt.where(Lead.id == args.lead_id)
+                lead_ids = list((await session.scalars(stmt.order_by(Lead.id))).all())
+            for lead_id in lead_ids:  # one short transaction per lead
+                async with container.session_factory() as session:
+                    tx = await session.begin()
+                    lead = await session.get(Lead, lead_id, with_for_update=True)
+                    if lead is None:
+                        await tx.rollback()
+                        continue
+                    outcome = await known_contact.apply(session, lead, Actor.system())
+                    outcomes[outcome.value] += 1
+                    if outcome in (known_contact.Outcome.ASSIGNED, known_contact.Outcome.MARKED):
+                        touched.append(lead_id)
+                    if args.apply:
+                        await tx.commit()
+                    else:
+                        await tx.rollback()
             if args.apply:
-                await tx.commit()
                 await container.drain_bus()
-            else:
-                await tx.rollback()
     finally:
         await container.aclose()
     mode = "применено" if args.apply else "dry-run, ничего не записано"
