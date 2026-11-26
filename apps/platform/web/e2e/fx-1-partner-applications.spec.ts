@@ -16,7 +16,7 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/crm/clients?kind=applications");
 
     const list = page.getByRole(width === 390 ? "list" : "table", { name: LIST });
-    await expect(list.getByText("Ожидает подписания")).toBeVisible();
+    await expect(list.getByText("Ожидает подписания", { exact: true })).toBeVisible();
     await expect(list.getByText("Письмо-приглашение не доставлено")).toBeVisible();
     await expect(list.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
     // ПК-1: в строке одно главное действие, остальные — в «Ещё»; одобрить без согласия — не кнопкой в строке
