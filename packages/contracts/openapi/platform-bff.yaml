@@ -30654,6 +30654,7 @@ components:
         handoff_open: {type: boolean, description: 'Открытая передача от бота ждёт «Забрать»'}
         overdue: {type: boolean, description: 'Истёк срок ответа по передаче'}
         client_id: {type: [integer, 'null'], description: 'Клиент, если лид уже стал клиентом'}
+        company: {type: [string, 'null'], description: 'Компания лида (контрагент): известный контакт или привязанный клиент; в строке — рядом с именем'}
 
     PeopleLead:
       type: object

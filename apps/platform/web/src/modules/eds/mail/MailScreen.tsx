@@ -33,6 +33,7 @@ import {
   tabCount,
   useRefreshMail,
 } from "./mailModel";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "../inbox/inbox.css";
 import "./mail.css";
@@ -185,119 +186,121 @@ function MailList({ own }: { own: boolean }) {
     );
   }
   return (
-    <div className="pf-mail">
-      <PageHeader
-        title={title}
-        extra={
-          !own && data ? (
-            <MailCheck
-              lastPollAt={data.mailbox.last_poll_at}
-              configured={data.mailbox.configured}
-            />
-          ) : undefined
-        }
-      />
-      <Card styles={{ body: { padding: 0 } }}>
-        <TabsBar
-          id="pf-mail-tabs"
-          label={t("letters:mail.tabs.label")}
-          activeKey={sent ? "sent" : tab}
-          onChange={(key) => {
-            if (key === "sent") {
-              setParams(new URLSearchParams({ tab: "sent" }), { replace: true });
-              return;
-            }
-            go({ tab: key as MailTab });
-          }}
-          tabBarStyle={{ margin: 0, padding: "0 16px" }}
-          items={[
-            ...tabs.map((key) => ({ key, label: label(key) })),
-            { key: "sent", label: t("letters:mail.tabs.sent") },
-          ]}
-        >
-          {sent ? (
-            <SentMail />
-          ) : (
-            <div className="pf-mail-body">
-              <div className="pf-mail-tools">
-                <Input.Search
-                  allowClear
-                  className="pf-mail-search"
-                  aria-label={t("letters:mail.search.label")}
-                  placeholder={t("letters:mail.search.placeholder")}
-                  value={search}
-                  maxLength={100}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPicked([]);
-                  }}
-                />
-                {!own && (types.data?.items.length ?? 0) > 0 ? (
-                  <Select
-                    className="pf-mail-type-filter"
-                    aria-label={t("letters:mail.type.filter.label")}
-                    value={typeCode ?? ""}
-                    onChange={(value) => {
-                      go({ type: value || null });
+    <PageFrame layout="registry">
+      <div className="pf-mail">
+        <PageHeader
+          title={title}
+          extra={
+            !own && data ? (
+              <MailCheck
+                lastPollAt={data.mailbox.last_poll_at}
+                configured={data.mailbox.configured}
+              />
+            ) : undefined
+          }
+        />
+        <Card styles={{ body: { padding: 0 } }}>
+          <TabsBar
+            id="pf-mail-tabs"
+            label={t("letters:mail.tabs.label")}
+            activeKey={sent ? "sent" : tab}
+            onChange={(key) => {
+              if (key === "sent") {
+                setParams(new URLSearchParams({ tab: "sent" }), { replace: true });
+                return;
+              }
+              go({ tab: key as MailTab });
+            }}
+            tabBarStyle={{ margin: 0, padding: "0 16px" }}
+            items={[
+              ...tabs.map((key) => ({ key, label: label(key) })),
+              { key: "sent", label: t("letters:mail.tabs.sent") },
+            ]}
+          >
+            {sent ? (
+              <SentMail />
+            ) : (
+              <div className="pf-mail-body">
+                <div className="pf-mail-tools">
+                  <Input.Search
+                    allowClear
+                    className="pf-mail-search"
+                    aria-label={t("letters:mail.search.label")}
+                    placeholder={t("letters:mail.search.placeholder")}
+                    value={search}
+                    maxLength={100}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPicked([]);
                     }}
-                    options={[
-                      { value: "", label: t("letters:mail.type.filter.all") },
-                      ...(types.data?.items ?? []).map((item) => ({
-                        value: item.code,
-                        label: localName(item.name, i18n.language),
-                      })),
-                    ]}
                   />
+                  {!own && (types.data?.items.length ?? 0) > 0 ? (
+                    <Select
+                      className="pf-mail-type-filter"
+                      aria-label={t("letters:mail.type.filter.label")}
+                      value={typeCode ?? ""}
+                      onChange={(value) => {
+                        go({ type: value || null });
+                      }}
+                      options={[
+                        { value: "", label: t("letters:mail.type.filter.all") },
+                        ...(types.data?.items ?? []).map((item) => ({
+                          value: item.code,
+                          label: localName(item.name, i18n.language),
+                        })),
+                      ]}
+                    />
+                  ) : null}
+                  {tab === "new" && !own ? (
+                    <Segmented<Show>
+                      aria-label={t("letters:mail.filter.label")}
+                      value={show}
+                      onChange={(value) => {
+                        go({ show: value });
+                      }}
+                      options={[
+                        { value: "all", label: t("letters:mail.filter.all") },
+                        {
+                          value: "history",
+                          label: data
+                            ? `${t("letters:mail.filter.history")} · ${String(data.counts.history)}`
+                            : t("letters:mail.filter.history"),
+                        },
+                      ]}
+                    />
+                  ) : null}
+                </div>
+                {tab === "spam" ? (
+                  <p className="pf-hint pf-mail-what">{t("letters:mail.spamIntro")}</p>
                 ) : null}
-                {tab === "new" && !own ? (
-                  <Segmented<Show>
-                    aria-label={t("letters:mail.filter.label")}
-                    value={show}
-                    onChange={(value) => {
-                      go({ show: value });
+                {canBulk && data && data.items.length > 0 ? (
+                  <div className="pf-mail-pick">
+                    <Checkbox
+                      checked={picked.length > 0 && picked.length === pageIds.length}
+                      indeterminate={picked.length > 0 && picked.length < pageIds.length}
+                      onChange={(event) => {
+                        setPicked(event.target.checked ? pageIds : []);
+                      }}
+                    >
+                      {t("letters:mail.bulk.all")}
+                    </Checkbox>
+                  </div>
+                ) : null}
+                {body}
+                {picked.length > 0 ? (
+                  <BulkBar
+                    ids={picked}
+                    onClear={() => {
+                      setPicked([]);
                     }}
-                    options={[
-                      { value: "all", label: t("letters:mail.filter.all") },
-                      {
-                        value: "history",
-                        label: data
-                          ? `${t("letters:mail.filter.history")} · ${String(data.counts.history)}`
-                          : t("letters:mail.filter.history"),
-                      },
-                    ]}
                   />
                 ) : null}
               </div>
-              {tab === "spam" ? (
-                <p className="pf-hint pf-mail-what">{t("letters:mail.spamIntro")}</p>
-              ) : null}
-              {canBulk && data && data.items.length > 0 ? (
-                <div className="pf-mail-pick">
-                  <Checkbox
-                    checked={picked.length > 0 && picked.length === pageIds.length}
-                    indeterminate={picked.length > 0 && picked.length < pageIds.length}
-                    onChange={(event) => {
-                      setPicked(event.target.checked ? pageIds : []);
-                    }}
-                  >
-                    {t("letters:mail.bulk.all")}
-                  </Checkbox>
-                </div>
-              ) : null}
-              {body}
-              {picked.length > 0 ? (
-                <BulkBar
-                  ids={picked}
-                  onClear={() => {
-                    setPicked([]);
-                  }}
-                />
-              ) : null}
-            </div>
-          )}
-        </TabsBar>
-      </Card>
-    </div>
+            )}
+          </TabsBar>
+        </Card>
+      </div>
+    </PageFrame>
   );
 }
 

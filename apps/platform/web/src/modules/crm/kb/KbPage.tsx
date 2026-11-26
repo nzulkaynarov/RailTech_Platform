@@ -15,6 +15,7 @@ import { GapPanel } from "./GapPanel";
 import { GapsView } from "./GapsView";
 import { parseId, withParams } from "./refresh";
 import { SandboxView } from "./SandboxView";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import "./kb.css";
 
@@ -55,49 +56,51 @@ export function KbPage() {
     panel = <GapPanel key={gapId} id={gapId} editable={editable} />;
 
   return (
-    <div className="pf-kb">
-      <PageHeader
-        title={title}
-        readOnly={!editable}
-        extra={
-          editable && view === "docs" ? (
-            <div className="pf-fp-row">
-              <LinkButton
-                type="primary"
-                to={withParams(params, { new: "upload", doc: null, panel: "open" })}
-              >
-                {t("kb:documents.upload")}
-              </LinkButton>
-              <LinkButton to={withParams(params, { new: "manual", doc: null, panel: "open" })}>
-                {t("kb:documents.manual")}
-              </LinkButton>
-            </div>
-          ) : null
-        }
-      />
-      <Segmented
-        aria-label={t("kb:views.label")}
-        value={view}
-        options={VIEWS.filter((v) => editable || v !== "sandbox").map((value) => ({
-          value,
-          label: t(`kb:views.${value}`),
-        }))}
-        onChange={(value) => {
-          setParams(
-            (prev) => {
-              const next = new URLSearchParams(prev);
-              next.set("view", value);
-              for (const key of ["doc", "gap", "new", "page", "status"]) next.delete(key);
-              return next;
-            },
-            { replace: true },
-          );
-        }}
-      />
-      {view === "docs" ? <DocumentsView editable={editable} /> : null}
-      {view === "gaps" ? <GapsView /> : null}
-      {view === "sandbox" ? <SandboxView /> : null}
-      {panel ? <PanelPortal tab="card">{panel}</PanelPortal> : null}
-    </div>
+    <PageFrame layout="object">
+      <div className="pf-kb">
+        <PageHeader
+          title={title}
+          readOnly={!editable}
+          extra={
+            editable && view === "docs" ? (
+              <div className="pf-fp-row">
+                <LinkButton
+                  type="primary"
+                  to={withParams(params, { new: "upload", doc: null, panel: "open" })}
+                >
+                  {t("kb:documents.upload")}
+                </LinkButton>
+                <LinkButton to={withParams(params, { new: "manual", doc: null, panel: "open" })}>
+                  {t("kb:documents.manual")}
+                </LinkButton>
+              </div>
+            ) : null
+          }
+        />
+        <Segmented
+          aria-label={t("kb:views.label")}
+          value={view}
+          options={VIEWS.filter((v) => editable || v !== "sandbox").map((value) => ({
+            value,
+            label: t(`kb:views.${value}`),
+          }))}
+          onChange={(value) => {
+            setParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("view", value);
+                for (const key of ["doc", "gap", "new", "page", "status"]) next.delete(key);
+                return next;
+              },
+              { replace: true },
+            );
+          }}
+        />
+        {view === "docs" ? <DocumentsView editable={editable} /> : null}
+        {view === "gaps" ? <GapsView /> : null}
+        {view === "sandbox" ? <SandboxView /> : null}
+        {panel ? <PanelPortal tab="card">{panel}</PanelPortal> : null}
+      </div>
+    </PageFrame>
   );
 }

@@ -144,12 +144,12 @@ async def invite_candidate(
 async def upload_signed_scan(
     id: ApplicationId, request: Request, authed: Writer
 ) -> PartnerApplicationItem:
-    """Скан подписанного договора по желанию (ПК-1): multipart уходит в ERP как есть."""
+    """Скан подписанного договора по желанию (ПК-1): форма с файлом уходит в ERP как есть."""
     content_type = request.headers.get("content-type", "")
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Файл нужно передать формой multipart.",
+            "Приложите файл к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )
@@ -213,7 +213,7 @@ async def upload_contract_file(
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Файл нужно передать формой multipart.",
+            "Приложите файл к запросу.",
             status_code=422,
             details={"fields": ["file"], "reason": "multipart_required"},
         )
@@ -237,7 +237,7 @@ async def record_from_archive(
     if not content_type.lower().startswith("multipart/form-data"):
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Дату и сканы нужно передать формой multipart.",
+            "Приложите дату и сканы к запросу.",
             status_code=422,
             details={"fields": ["signed_on"], "reason": "multipart_required"},
         )

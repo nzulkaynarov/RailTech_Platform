@@ -1,9 +1,7 @@
 /* Admin · Внешние интеграции (W13-A1): «Требует внимания», карточки со статусом, панели настроек.
    Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка var(--rt-color-surface-split), радиус 8, без теней и градиентов;
    второстепенный текст var(--rt-color-text-secondary) и var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом). */
-.pf-int {
-  display: flex;
-  flex-direction: column;
+.pf-int > .pf-frame-in {
   gap: 24px;
 }
 .pf-int-section-title {

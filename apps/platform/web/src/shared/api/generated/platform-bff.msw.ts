@@ -36652,6 +36652,10 @@ export const getListCrmLeadsResponseMock = (
     handoff_open: faker.datatype.boolean(),
     overdue: faker.datatype.boolean(),
     client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   total: faker.number.int({ min: 0 }),
   ...overrideResponse,

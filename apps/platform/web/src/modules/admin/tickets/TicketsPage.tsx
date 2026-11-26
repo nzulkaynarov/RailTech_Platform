@@ -26,6 +26,7 @@ import { TicketCard } from "./TicketCard";
 import "../../../features/help/help.css";
 import { RegistryTable } from "../../../shared/ui/RegistryTable";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PATH = "/admin/tickets";
 const PAGE = 50;
@@ -131,7 +132,7 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
   ) : undefined;
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader title={title} />
       <div ref={blockRef}>
         <RegistryTable<TicketRow>
@@ -261,6 +262,6 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
           />
         )}
       </PanelPortal>
-    </>
+    </PageFrame>
   );
 }

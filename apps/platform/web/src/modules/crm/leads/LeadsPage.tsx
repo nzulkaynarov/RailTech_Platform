@@ -43,6 +43,7 @@ import { LeadPanel } from "./LeadPanel";
 
 import "../crm.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const PAGE_SIZE = 50;
 /** Порядок щелчком по шапке (Х-15): ключи, которые принимает BFF `sort` */
@@ -184,6 +185,7 @@ function NameCell({
       >
         {row.name}
       </Link>
+      {row.company ? <span className="pf-hint">({row.company})</span> : null}
       {row.unread ? <StatusTag tone="blue">{t("unread")}</StatusTag> : null}
       {row.overdue ? <StatusTag tone="red">{t("overdue")}</StatusTag> : null}
     </span>
@@ -487,15 +489,17 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
 
   if (waiting) {
     return (
-      <div className="pf-crm">
-        {mobile && lead ? null : (
-          <>
-            <PageHeader title={title} />
-            <FilterBar>{viewSwitch}</FilterBar>
-          </>
-        )}
-        <Conversations />
-      </div>
+      <PageFrame layout="registry">
+        <div className="pf-crm">
+          {mobile && lead ? null : (
+            <>
+              <PageHeader title={title} />
+              <FilterBar>{viewSwitch}</FilterBar>
+            </>
+          )}
+          <Conversations />
+        </div>
+      </PageFrame>
     );
   }
 

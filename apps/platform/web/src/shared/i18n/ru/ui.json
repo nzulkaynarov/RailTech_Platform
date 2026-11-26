@@ -83,11 +83,30 @@
     "tooLarge": "Файл «{{name}}» больше {{max}} — выберите файл поменьше",
     "wrongType": "Файл «{{name}}» не подходит: можно {{accept}}"
   },
-  "pdfViewer": {
+  "documentViewer": {
+    "toolbar": "Инструменты просмотра",
+    "scaleMode": "Масштаб",
+    "fit": "По ширине",
+    "actual": "Исходный",
+    "zoomOut": "Уменьшить",
+    "zoomIn": "Увеличить",
+    "page": "Страница",
+    "pageOf": "из {{total}}",
+    "search": "Поиск по тексту",
+    "searchPlaceholder": "Найти в документе",
+    "matches": "{{current}} из {{total}}",
+    "noMatches": "Не найдено",
+    "prevMatch": "Предыдущее совпадение",
+    "nextMatch": "Следующее совпадение",
+    "download": "Скачать",
+    "full": "На весь экран",
+    "collapse": "Свернуть",
+    "thumbs": "Страницы",
+    "thumbPage": "Страница {{page}}",
+    "pageLabel": "«{{name}}», страница {{page}} из {{total}}",
+    "pagesCount": "PDF · {{count}} стр.",
     "region": "Страницы файла «{{name}}»",
-    "page": "«{{name}}», страница {{page}} из {{total}}",
-    "error": "Не удалось открыть файл для просмотра. Скачайте его.",
-    "truncated": "Показано {{shown}} страниц из {{total}}. Остальное — в скачанном файле."
+    "error": "Не удалось открыть файл для просмотра. Скачайте его."
   },
   "bodyEditor": {
     "addRow": "+ строка",

@@ -30,6 +30,7 @@ import "../../../features/help/help.css";
 import "./articles.css";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { PageFrame } from "../../../shared/ui/PageFrame";
 
 const EDIT_PARAM = "edit";
 const STATUSES: readonly CompanyArticleStatus[] = ["draft", "published"];
@@ -342,7 +343,7 @@ export function ArticlesPage() {
   }
 
   return (
-    <>
+    <PageFrame layout="registry">
       <PageHeader
         title={title}
         extra={
@@ -413,6 +414,6 @@ export function ArticlesPage() {
       <PanelPortal tab="card">
         <EmptyState level={3} compact title={t("admin.panelTitle")} text={t("admin.panelText")} />
       </PanelPortal>
-    </>
+    </PageFrame>
   );
 }

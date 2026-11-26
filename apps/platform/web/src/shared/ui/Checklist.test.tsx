@@ -6,7 +6,7 @@ import { Checklist } from "./Checklist";
 
 describe("Checklist", () => {
   const items = [
-    { state: "ok", label: "Виза снабженца", meta: "Азиз · 22.10" },
+    { state: "ok", label: "Виза «товары и склад»", meta: "Азиз · 22.10" },
     { state: "fail", label: "Маржа ниже 22 %" },
     { state: "pending", label: "Срок клиента выдержан" },
   ] as const;
@@ -16,7 +16,7 @@ describe("Checklist", () => {
     const rows = screen
       .getByRole("list", { name: "Проверка перед отправкой" })
       .querySelectorAll("li");
-    expect(rows[0]).toHaveTextContent("Выполнено: Виза снабженца");
+    expect(rows[0]).toHaveTextContent("Выполнено: Виза «товары и склад»");
     expect(rows[1]).toHaveTextContent("Не выполнено: Маржа ниже 22 %");
     expect(rows[2]).toHaveTextContent("Ожидает: Срок клиента выдержан");
   });

@@ -30,6 +30,21 @@ export function ProjectStatusTag({
   );
 }
 
+/** Тег договора: «Проект» у клиента на согласовании редакции — «На согласовании у клиента» (словарь §3), а не «Черновик». */
+export function ContractStatusTag({
+  contract,
+}: {
+  contract: { status: string; sent_to_client?: boolean };
+}) {
+  const { t } = useTranslation("projects");
+  const atClient = contract.status === "project" && contract.sent_to_client === true;
+  return (
+    <ProjectStatusTag kind="contract" status={contract.status}>
+      {atClient ? t("status.contract.at_client") : undefined}
+    </ProjectStatusTag>
+  );
+}
+
 /** Тег акта: цвет — по статусу ERP, слово — по факту скана (`actStateKey`). */
 export function ActStatusTag({ act }: { act: Pick<ProjectActRef, "status" | "has_scan"> }) {
   const { t } = useTranslation("projects");

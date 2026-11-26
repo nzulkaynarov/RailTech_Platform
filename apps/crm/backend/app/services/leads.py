@@ -45,6 +45,7 @@ from app.security.principal import Principal
 from app.services import (
     cabinet_chat,
     deals,
+    lead_contact_sync,
     lead_email_reply,
     lead_parts,
     lead_snooze,
@@ -570,6 +571,7 @@ class LeadService:
                 await bus_events.lead_updated(
                     session, lead, who.actor, sorted(_SNAPSHOT_FIELDS.get(f, f) for f in changed)
                 )
+                await lead_contact_sync.sync_to_contact(session, lead, changed, who.actor)
         return duplicates
 
     async def add_note(self, who: Principal, lead_id: int, text: str, visible_to_bot: bool) -> int:

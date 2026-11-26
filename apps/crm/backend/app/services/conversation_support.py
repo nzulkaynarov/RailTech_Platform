@@ -100,7 +100,9 @@ def owner_notice_target(early: list[Outgoing], turn: Turn | None) -> int | None:
     или ответ без модели (вложение и т. п.); окончательно решает задача по данным лида."""
     if turn is None:
         return lead_of(early)
-    return turn.lead_id if turn.owner_mode == OwnerMode.HUMAN else None
+    if turn.owner_mode == OwnerMode.HUMAN or turn.company_owner:
+        return turn.lead_id
+    return None
 
 
 async def notify_owner(hook: ActivityHook | None, early: list[Outgoing], turn: Turn | None) -> None:

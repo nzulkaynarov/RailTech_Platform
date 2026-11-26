@@ -92,7 +92,7 @@ describe("«Помощь → О системе» (W-REL)", () => {
     expect(screen.getByText(/^Обновлена/)).toBeInTheDocument();
     const services = screen.getByRole("list", { name: "Сервисы" });
     expect(within(services).getAllByRole("listitem")).toHaveLength(4);
-    expect(within(services).getByText("Документы (EDS)")).toBeInTheDocument();
+    expect(within(services).getByText("Документы")).toBeInTheDocument();
     expect(within(services).getAllByText("Работает")).toHaveLength(4);
     expect(within(services).getAllByText("версию не сообщает")).toHaveLength(2);
 

@@ -150,7 +150,7 @@
     },
     "delivery": {
       "assembling": "Butlanmoqda",
-      "in_transit": "Omborimizga kelmoqda",
+      "in_transit": "Sizga yölda",
       "ready_to_ship": "Jönatişga tayyor",
       "shipped": "Jönatilgan",
       "delivered": "Yetkazilgan",

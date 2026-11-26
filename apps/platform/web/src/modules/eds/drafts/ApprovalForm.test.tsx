@@ -32,7 +32,7 @@ describe("Одобрение КП: форма", () => {
     const checklist = within(form).getByRole("list", { name: "Чек-лист одобрения" });
     const rows = within(checklist).getAllByRole("listitem");
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent("Виза снабженца");
+    expect(rows[0]).toHaveTextContent("Виза «товары и склад»");
     expect(rows[0]).toHaveTextContent("Демо Снабженцев");
     expect(rows[1]).toHaveTextContent("Демо Инженеров");
     expect(within(form).getByRole("checkbox", { name: "Telegram-бот" })).toBeChecked();
@@ -89,7 +89,7 @@ describe("Одобрение КП: форма", () => {
     signIn("manager@demo.example");
     renderAt(QUOTE(115));
     const panel = await decisionEl();
-    await within(panel).findByText("КП ждёт решения директора");
+    await within(panel).findByText("КП ждёт решения");
     expect(within(panel).queryByRole("form", { name: "Одобрение КП" })).toBeNull();
   });
 
@@ -233,7 +233,7 @@ describe("Одобрение КП: форма", () => {
 
     expect(
       await screen.findAllByText(
-        "Не сохранено: КП уже решено другим директором или заменено новой версией, карточка обновлена",
+        "Не сохранено: КП уже решено или заменено новой версией, карточка обновлена",
       ),
     ).not.toHaveLength(0);
     await waitFor(() => {
@@ -247,9 +247,7 @@ describe("Одобрение КП: форма", () => {
     renderAt(QUOTE(115));
     const panel = await decisionEl();
 
-    expect(
-      await within(panel).findByRole("heading", { name: "КП ждёт решения директора" }),
-    ).toBeVisible();
+    expect(await within(panel).findByRole("heading", { name: "КП ждёт решения" })).toBeVisible();
     expect(within(panel).queryByRole("form")).toBeNull();
     expect(await screen.findByText("Только просмотр")).toBeVisible();
     expect(screen.queryByText("Внутренние данные")).toBeNull();

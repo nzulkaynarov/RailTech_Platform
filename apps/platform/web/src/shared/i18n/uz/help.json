@@ -65,17 +65,17 @@
       "supply": {
         "title": "Taʼminotçi",
         "steps": [
-          "«Vazifalar»: hisob-kitob topşiriqlari direktor rezolyutsiyasidan keyin keladi.",
+          "«Vazifalar»: hisob-kitob topşiriqlari rezolyutsiyadan keyin keladi.",
           "Pozitsiyalarni tanlang: ombor, hamkorlar, yetkaziş muddati.",
-          "«Tovarlar va ombor» vizasini qöying. Vizalar yiğilgaç, TT direktorga ketadi."
+          "«Tovarlar va ombor» vizasini qöying. Vizalar yiğilgaç, TT maʼqullaşga ketadi."
         ]
       },
       "engineer": {
         "title": "Boş muhandis",
         "steps": [
-          "«Vazifalar»: xizmatlar böyiça topşiriqlar direktor rezolyutsiyasidan keyin keladi.",
+          "«Vazifalar»: xizmatlar böyiça topşiriqlar rezolyutsiyadan keyin keladi.",
           "Xizmatlarni hisoblang: texnik topşiriq, brigada, muddatlar.",
-          "«Xizmatlar» vizasini qöying. Vizalar yiğilgaç, TT direktorga ketadi."
+          "«Xizmatlar» vizasini qöying. Vizalar yiğilgaç, TT maʼqullaşga ketadi."
         ]
       },
       "accountant": {
@@ -107,7 +107,7 @@
       "registrar": {
         "title": "Iş yurituvçi",
         "steps": [
-          "«Hujjatlar · Kiruvçi»: kelgan xatni röyxatga oling — raqam va qabul qiluvçi; rezolyutsiyani direktor qöyadi.",
+          "«Hujjatlar · Kiruvçi»: kelgan xatni röyxatga oling — raqam va qabul qiluvçi; rezolyutsiyani qabul qiluvçi yoki xat topşirilgan xodim qöyadi.",
           "«Poçta»: umumiy qutidagi röyxatga olinmagan xatlar — saralang, röyxatga oling yoki takror deb belgilang.",
           "«Kontaktlar · Lidlar»: yangi lidning mohiyatini yozing va menejerga izoh bilan uzating.",
           "Qoğozdagi çiquvçi xat: xat kartoçkasida yuborilganini belgilang."
@@ -118,7 +118,7 @@
         "steps": [
           "«Vazifalar»: şartnomalar vizangizni kutmoqda — ularni imzo marşruti keltiradi.",
           "Şartnomani oçing, şartlarni tekşiring va viza qöying yoki sabab bilan rad eting: rad etiş imzolaşni töxtatadi.",
-          "Vizangizsiz şartnoma marşruti işga tuşmaydi — siz bölmasangiz, administrator boşqa yuristni tayinlaydi."
+          "Vizangizsiz şartnoma marşruti işga tuşmaydi — siz bölmasangiz, administrator boşqa xodimni tayinlaydi."
         ]
       },
       "signer": {
@@ -143,7 +143,7 @@
       {
         "title": "Rezolyutsiya",
         "who": "direktor",
-        "text": "Direktor rezolyutsiya qöyadi: qaror, ijroçilar, hisob-kitob muddati. Yoki menejerga qaytaradi, yoki rad etadi."
+        "text": "Rezolyutsiya: qaror, ijroçilar, hisob-kitob muddati. Ariza menejerga qaytariladi yoki rad etiladi."
       },
       {
         "title": "Hisob-kitob",
@@ -153,17 +153,17 @@
       {
         "title": "TT",
         "who": "direktor",
-        "text": "Direktor tijorat taklifini tasdiqlaydi; mijoz uni öz kanali orqali oladi va qabul qiladi yoki rad etadi."
+        "text": "TT tasdiqlanadi; mijoz uni öz kanali orqali oladi va qabul qiladi yoki rad etadi."
       },
       {
         "title": "Şartnoma",
         "who": "buxgalter",
-        "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida EHTda rasmiylaştiriladi va imzolanadi; skaner qölda biriktiriladi."
+        "text": "Mijoz tahrirni kelişadi, şartnoma Platformadan taşqarida imzolaşga qöyiladi va imzolanadi; skaner qölda biriktiriladi."
       },
       {
         "title": "Tölov",
         "who": "buxgalter",
-        "text": "Hisob çiqariladi, mijoz tölov topşiriqnomasini biriktiradi, buxgalter tölovni köçirma böyiça tasdiqlaydi. Bajariş parallel ketadi."
+        "text": "Hisob çiqariladi, mijoz tölov topşiriqnomasini biriktiradi, tölov köçirma böyiça tasdiqlanadi. Bajariş parallel ketadi."
       },
       {
         "title": "Bajarildi",
@@ -194,11 +194,11 @@
       },
       {
         "term": "Kiruvçi xat (IN-104/26)",
-        "text": "Mijozning direktor nomiga rasmiy hujjati; rezolyutsiyani kutadi."
+        "text": "Mijozning kompaniya nomiga rasmiy hujjati; rezolyutsiyani kutadi."
       },
       {
         "term": "Rezolyutsiya",
-        "text": "Direktorning kiruvçi xat böyiça qarori: matn, ijroçilar, muddat, marja çegarasi."
+        "text": "Kiruvçi xat böyiça qaror: matn, ijroçilar, muddat, marja çegarasi."
       },
       {
         "term": "Hisob-kitob",
@@ -206,7 +206,7 @@
       },
       {
         "term": "TT (QT-2026/118)",
-        "text": "Versiyali tijorat taklifi. Mijozga faqat direktor tasdiqlagandan keyin ketadi."
+        "text": "Versiyali tijorat taklifi. Mijozga faqat tasdiqlangandan keyin ketadi."
       },
       {
         "term": "Çiquvçi (OUT-082/26)",
@@ -214,7 +214,7 @@
       },
       {
         "term": "Şartnoma (CT-2026/104)",
-        "text": "Qabul qilingan TTdan şartnoma loyihasi; EHTda imzolanadi, skaner biriktiriladi."
+        "text": "Qabul qilingan TTdan şartnoma loyihasi; imzolanadi, skaner biriktiriladi."
       },
       {
         "term": "Hisob (INV-2026-142)",
@@ -222,7 +222,7 @@
       },
       {
         "term": "Tölov topşiriqnomasi",
-        "text": "Mijozning tölov topşiriqnomasi (fayl); buxgalter tasdiqlaydi."
+        "text": "Mijozning tölov topşiriqnomasi (fayl); tölov uning asosida tasdiqlanadi."
       },
       {
         "term": "Dalolatnoma (ACT-2026/058)",
@@ -230,7 +230,7 @@
       },
       {
         "term": "Xizmat yozuvi (MEMO-2026/031)",
-        "text": "Xodimning direktor nomiga içki hujjati: mavzu, matn, summa yoki muddat."
+        "text": "Xodimning kelişuv uçun içki hujjati: mavzu, matn, summa yoki muddat."
       },
       {
         "term": "Murojaat (TK-0012)",
@@ -276,10 +276,10 @@
     "builtAt": "Yiğilgan: {{date}}",
     "services": "Xizmatlar",
     "service": {
-      "bff": "Platforma (BFF)",
-      "crm": "CRM",
-      "erp": "ERP",
-      "eds": "Hujjatlar (EDS)"
+      "bff": "Platforma",
+      "crm": "Mijozlar",
+      "erp": "Hisob-kitob",
+      "eds": "Hujjatlar"
     },
     "status": {
       "ok": "Işlayapti",
@@ -352,8 +352,8 @@
     "body": "Nima böldi",
     "bodyPlaceholder": "Masalan: xarid topşiriqlarini köriş uçun «Hisob-kitob» bölimiga kiriş kerak",
     "bodyHint": "4000 belgigaça.",
-    "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
-    "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
+    "auto": "Xabarga qöşamiz: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
+    "autoNoPage": "Xabarga qöşamiz: rol {{role}}, Platforma versiyasi.",
     "submit": "Yuboriş",
     "cancel": "Bekor qiliş",
     "sending": "Yuborilmoqda…",
@@ -446,7 +446,7 @@
       "resolve": "Hal qilindi deb belgilaş",
       "reopen": "Işga qaytariş",
       "resolveConsequence": "Muallif murojaat hal qilinganini bilib oladi.",
-      "readOnly": "Direktor murojaatlarni öqiydi; administrator javob beradi va holatni özgartiradi.",
+      "readOnly": "Murojaatlarni öqişi mumkin, lekin javob berişi va holatni özgartirişi faqat administratorga mumkin.",
       "replyRequired": "Javob yozing",
       "errors": {
         "ticket_status_transition": "Holatni bunday özgartirib bölmaydi: sahifani yangilang.",

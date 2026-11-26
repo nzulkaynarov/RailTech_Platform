@@ -163,7 +163,7 @@ describe("EDS · Документы: список", () => {
     const act = (await screen.findByText("Монтаж крепежа, объект «Север»")).closest(
       "tr",
     ) as HTMLElement;
-    expect(within(act).getByText("Выпущен")).toBeVisible();
+    expect(within(act).getByText("Выставлен")).toBeVisible();
     expect(within(act).getByRole("link", { name: /Открыть в проекте/ })).toHaveAttribute(
       "href",
       "/eds/projects/97",
@@ -372,7 +372,7 @@ describe("EDS · Документы: карточка в боковом окне
     expect(
       within(panel).getByText("Возвращена на доработку", { selector: ".ant-tag" }),
     ).toBeVisible();
-    expect(within(panel).getByText("Директор")).toBeVisible();
+    expect(within(panel).getByText("Согласование")).toBeVisible();
     expect(within(panel).getByText("Директор — вернул на доработку")).toBeVisible();
     expect(within(panel).getByText(/Добавьте смету расходов/)).toBeVisible();
     expect(within(panel).getAllByText(/Демо Директоров/).length).toBeGreaterThan(0);
@@ -411,7 +411,7 @@ describe("EDS · Документы: карточка в боковом окне
     const panel = await panelEl();
     expect(
       await within(panel).findByText(
-        "Маршрут откроется после отправки: вы → директор → бухгалтер.",
+        "Маршрут откроется после отправки: вы → согласование → оплата.",
       ),
     ).toBeVisible();
     expect(within(panel).getByText("Решений пока нет.")).toBeVisible();

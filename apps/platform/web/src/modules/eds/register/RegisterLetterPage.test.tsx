@@ -135,7 +135,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     type("Исходящий номер отправителя", "04-12/9999");
     type("Тема", "Требование о пояснениях");
     // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
-    expect(reveal(screen.getAllByText("Директор (по умолчанию)")[0] as HTMLElement)).toBeVisible();
+    expect(reveal(screen.getAllByText("Адресат по умолчанию")[0] as HTMLElement)).toBeVisible();
     await attach();
     expect(await screen.findByText(/Заполнено из файла:/)).toBeVisible();
 
@@ -342,11 +342,7 @@ describe("Карточка ВХ: делопроизводитель готови
 
     expect(await screen.findByRole("heading", { level: 1, name: /ВХ-108\/26/ })).toBeVisible();
     expect(screen.queryByText("Только просмотр")).toBeNull();
-    const form = await screen.findByRole(
-      "form",
-      { name: "Резолюция директора" },
-      { timeout: 3000 },
-    );
+    const form = await screen.findByRole("form", { name: "Резолюция" }, { timeout: 3000 });
     expect(within(form).getByRole("radio", { name: /К исполнению/ })).toBeChecked();
     expect(within(form).getByRole("radio", { name: /Подготовить ответ/ })).not.toBeChecked();
     expect(within(form).getByRole("radio", { name: /Для сведения/ })).not.toBeChecked();
