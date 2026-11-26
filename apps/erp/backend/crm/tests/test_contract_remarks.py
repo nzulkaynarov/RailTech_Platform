@@ -250,6 +250,62 @@ def test_zip_bomb_is_refused_before_python_docx_opens_it(world):
     assert error == "FILE_INVALID" and not ContractRemark.objects.exists()
 
 
+def forged_bomb():
+    """DOCX, где часть в 120 МБ нулей заявлена в каталоге архива как 1000 байт (подделанный размер)."""
+    import io
+    import struct
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        archive.writestr("[Content_Types].xml", b"<Types/>")
+        with archive.open("word/media/big.png", "w") as part:
+            for _ in range(120):
+                part.write(b"\0" * (1 << 20))
+    data = bytearray(buf.getvalue())
+    pos = data.find(b"PK\x01\x02")
+    while pos >= 0:
+        name_len = struct.unpack("<H", data[pos + 28 : pos + 30])[0]
+        if bytes(data[pos + 46 : pos + 46 + name_len]) == b"word/media/big.png":
+            data[pos + 24 : pos + 28] = struct.pack("<I", 1000)
+        pos = data.find(b"PK\x01\x02", pos + 4)
+    return bytes(data)
+
+
+def test_forged_declared_size_does_not_hide_a_zip_bomb_and_memory_stays_bounded():
+    import tracemalloc
+
+    data = forged_bomb()
+    import zipfile
+    from io import BytesIO
+
+    assert zipfile.ZipFile(BytesIO(data)).getinfo("word/media/big.png").file_size == 1000
+    tracemalloc.start()
+    with pytest.raises(contract_compare.HostileFile):
+        contract_compare.check_archive(data)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert peak < 20 * 1024 * 1024
+
+
+def test_long_paragraphs_are_not_compared_pairwise_for_minutes():
+    import random
+    import time
+
+    random.seed(1)
+    words = ["поставка", "оплата", "покупатель", "поставщик", "срок", "договор", "цена", "товар", "акт", "склад"]
+
+    def long_text():
+        return " ".join(random.choice(words) for _ in range(300))[:2000]
+
+    ours = [long_text() for _ in range(120)]
+    theirs = [long_text() for _ in range(83)]
+    started = time.monotonic()
+    with pytest.raises(contract_compare.TooBig):
+        contract_compare.compare(ours, theirs)
+    assert time.monotonic() - started < 5
+
+
 def test_huge_document_is_not_compared_and_stays_fast(world):
     import time
 

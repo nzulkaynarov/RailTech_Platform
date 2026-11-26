@@ -433,7 +433,7 @@
       "title": "Counterparty remarks",
       "counterparty": "Counterparty",
       "from": "{{name}} · edition {{edition}} · {{date}}",
-      "noCompare": "A file is attached; it cannot be compared automatically — open it.",
+      "noCompare": "A file is attached. Comparison not done: the document is too large or cannot be parsed — open the file.",
       "compare": "What changed",
       "point": "cl.",
       "col": {

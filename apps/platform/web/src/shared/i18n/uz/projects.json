@@ -433,7 +433,7 @@
       "title": "Kontragent izohlari",
       "counterparty": "Kontragent",
       "from": "{{name}} · {{edition}}-tahrir · {{date}}",
-      "noCompare": "Fayl biriktirilgan, uni avtomatik taqqoslab bölmaydi — oçib köring.",
+      "noCompare": "Fayl biriktirilgan. Taqqoslaş bajarilmadi: hujjat juda katta yoki oqilmaydi — faylni oçib köring.",
       "compare": "Nima özgardi",
       "point": "band",
       "col": {

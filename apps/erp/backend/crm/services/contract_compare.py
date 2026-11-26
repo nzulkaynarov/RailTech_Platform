@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import difflib
 import re
+import time
 from io import BytesIO
 from typing import Optional
 
@@ -33,18 +34,59 @@ SUMMARY_POINTS = 30
 MAX_PAIR_CELLS = 10_000
 #: Подсветка слов — не более чем для стольких изменённых пунктов.
 MAX_SEGMENTED = 100
+#: Бюджет попарного сравнения: сумма len(a)*len(b) по парам абзацев и предел времени на весь разбор.
+MAX_PAIR_COST = 3_000_000
+MAX_COMPARE_SECONDS = 3.0
 #: Архив DOCX/XLSX (zip): сколько частей, сколько всего после распаковки и во сколько раз одна часть может сжиматься.
 MAX_ARCHIVE_MEMBERS = 2000
 MAX_ARCHIVE_BYTES = 50 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 100
 
 
+class TooBig(Exception):
+    """Сравнение не уложилось в бюджет: файл остаётся вложением, разбора нет."""
+
+
 class HostileFile(ValueError):
     """Файл не разбирается: архив-бомба или слишком большой после распаковки."""
 
 
+def _unpacked_size(content: bytes, member, budget: int) -> int:
+    """Сколько байт на самом деле даёт часть после распаковки (останавливается за `budget`): размеры из каталога архива
+    подделываются, поэтому считаем сами по потоку, кусками, не держа распакованное в памяти."""
+    import struct
+    import zlib
+
+    head = content[member.header_offset : member.header_offset + 30]
+    if len(head) < 30 or head[:4] != b"PK\x03\x04":
+        raise HostileFile("broken local header")
+    name_len, extra_len = struct.unpack("<HH", head[26:30])
+    start = member.header_offset + 30 + name_len + extra_len
+    if member.compress_type == 0:  # stored
+        return min(max(len(content) - start, 0), member.compress_size)
+    if member.compress_type != 8:  # только deflate
+        raise HostileFile("unsupported compression")
+    unpacker = zlib.decompressobj(-15)
+    total, pos = 0, start
+    while not unpacker.eof:
+        data = unpacker.unconsumed_tail
+        if not data:
+            if pos >= len(content):
+                break
+            data = content[pos : pos + 65536]
+            pos += 65536
+        try:
+            total += len(unpacker.decompress(data, 1 << 20))
+        except zlib.error as error:
+            raise HostileFile("broken deflate stream") from error
+        if total > budget:
+            break
+    return total
+
+
 def check_archive(content: bytes) -> None:
-    """Проверка zip-архива ДО python-docx: части, общий размер после распаковки, степень сжатия одной части."""
+    """Проверка zip-архива ДО python-docx: число частей, суммарный размер после распаковки и степень сжатия — по
+    фактически распакованным байтам (размеры в каталоге архива могут лгать)."""
     import zipfile
 
     try:
@@ -56,11 +98,14 @@ def check_archive(content: bytes) -> None:
         raise HostileFile("too many parts")
     total = 0
     for member in members:
-        total += member.file_size
-        if member.file_size > 1024 * 1024 and member.file_size > member.compress_size * MAX_COMPRESSION_RATIO:
+        if member.is_dir():
+            continue
+        actual = _unpacked_size(content, member, MAX_ARCHIVE_BYTES - total)
+        total += actual
+        if total > MAX_ARCHIVE_BYTES:
+            raise HostileFile("too large after unpacking")
+        if actual > 1024 * 1024 and actual > max(member.compress_size, 1) * MAX_COMPRESSION_RATIO:
             raise HostileFile("suspicious compression ratio")
-    if total > MAX_ARCHIVE_BYTES:
-        raise HostileFile("too large after unpacking")
 
 
 def _norm(text: str) -> str:
@@ -203,7 +248,7 @@ def _segments(old: str, new: str) -> list[dict]:
     return out
 
 
-def _pair(old: list[str], new: list[str]) -> dict[int, int]:
+def _pair(old: list[str], new: list[str], deadline: float) -> dict[int, int]:
     """Какой абзац «заменён» каким: тот же номер пункта либо достаточно похожий текст; остальные — добавлены/удалены."""
     pairs: dict[int, int] = {}
     taken: set[int] = set()
@@ -217,15 +262,26 @@ def _pair(old: list[str], new: list[str]) -> dict[int, int]:
                 pairs[k] = m
                 taken.add(m)
         return pairs
+    if sum(len(t) for t in old) * sum(len(t) for t in new) > MAX_PAIR_COST:
+        raise TooBig("pairwise comparison over budget")
     for k, text in enumerate(new):
         point = _point(text)
         best, best_ratio = None, 0.0
         for m, before in enumerate(old):
             if m in taken:
                 continue
-            ratio = difflib.SequenceMatcher(a=before, b=text, autojunk=False).ratio()
-            if point is not None and _point(before) == point:
-                ratio += 1.0  # тот же номер пункта — главный признак
+            if time.monotonic() > deadline:
+                raise TooBig("comparison took too long")
+            matcher = difflib.SequenceMatcher(a=before, b=text, autojunk=False)
+            bonus = (
+                1.0 if point is not None and _point(before) == point else 0.0
+            )  # тот же номер пункта — главный признак
+            # дешёвые верхние оценки: заведомо непохожее и хуже лучшего не считаем точно
+            if bonus + matcher.real_quick_ratio() <= best_ratio or bonus + matcher.quick_ratio() <= best_ratio:
+                continue
+            if not bonus and matcher.quick_ratio() < 0.6:
+                continue
+            ratio = bonus + matcher.ratio()
             if ratio > best_ratio:
                 best, best_ratio = m, ratio
         if best is not None and best_ratio >= 0.6:
@@ -242,12 +298,13 @@ def compare(ours: list[str], theirs: list[str]) -> dict:
     считается в `total`). Абзацы выравниваются `difflib`, внутри «заменённого» куска пары берутся по порядку.
     """
     items: list[dict] = []
+    deadline = time.monotonic() + MAX_COMPARE_SECONDS
     matcher = difflib.SequenceMatcher(a=ours, b=theirs, autojunk=False)
     for op, i1, i2, j1, j2 in matcher.get_opcodes():
         if op == "equal":
             continue
         old, new = ours[i1:i2], theirs[j1:j2]
-        pairs = _pair(old, new) if op == "replace" else {}
+        pairs = _pair(old, new, deadline) if op == "replace" else {}
         for k, text in enumerate(new):
             if k in pairs:
                 before = old[pairs[k]]
@@ -257,7 +314,11 @@ def compare(ours: list[str], theirs: list[str]) -> dict:
                         "kind": "changed",
                         "ours": before,
                         "theirs": text,
-                        "segments": _segments(before, text) if len(items) < MAX_SEGMENTED else [],
+                        "segments": (
+                            _segments(before, text)
+                            if len(items) < MAX_SEGMENTED and time.monotonic() < deadline
+                            else []
+                        ),
                     }
                 )
             else:
@@ -291,6 +352,8 @@ def compare_upload(contract, file_obj, name: str) -> dict:
         if len(theirs) > MAX_PARAGRAPHS or len(ours) > MAX_PARAGRAPHS:
             return unreadable  # слишком большой файл: вложение остаётся, автоматического разбора нет
         result = compare([x[:MAX_PARAGRAPH_CHARS] for x in ours], [x[:MAX_PARAGRAPH_CHARS] for x in theirs])
+    except TooBig:
+        return {**unreadable, "too_big": True}
     except Exception:  # файл с правильной сигнатурой, но не читается как Word: вложение остаётся, разбора нет
         return unreadable
     return {**result, "comparable": True}
