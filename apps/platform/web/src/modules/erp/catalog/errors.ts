@@ -103,6 +103,10 @@ const REASONS = new Set([
   "contract_approval_not_requested",
   "contract_return_note_required",
   "contract_decision_invalid",
+  // ОСН-1: пакет базовых документов
+  "no_approved_base_template",
+  "no_package_roles",
+  "package_no_deviation",
   "candidate_email_required",
   "signed_proof_required",
   "contract_date_invalid",

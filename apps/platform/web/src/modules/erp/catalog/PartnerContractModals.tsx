@@ -3,7 +3,10 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type { PartnerApplicationItem } from "../../../shared/api/generated/model";
+import type {
+  PartnerApplicationItem,
+  PartnerContractOptions,
+} from "../../../shared/api/generated/model";
 import { downloadFile } from "../../../shared/api/download";
 import {
   getDownloadPartnerApplicationDocumentUrl,
@@ -21,7 +24,8 @@ const CONTRACT_MAX_BYTES = 20 * 1024 * 1024;
 const CONTRACT_ACCEPT = ".pdf,.docx";
 const LANGUAGES = ["ru", "en", "uz"] as const;
 type Language = (typeof LANGUAGES)[number];
-type Mode = "template" | "file";
+type Mode = "package" | "template" | "file";
+type PackageRole = PartnerContractOptions["package"]["roles"][number];
 
 /** Путь к библиотеке шаблонов договоров: там партнёрский шаблон готовят и утверждают. */
 export const TEMPLATE_LIBRARY_PATH = "/eds/contract-templates";
@@ -67,6 +71,7 @@ export function PrepareContractModal({
       defaultTemplateId={data.default_template_id}
       approvers={data.approvers}
       deviationsAllowed={data.deviations_allowed}
+      pack={data.package}
       onDone={onDone}
       onClose={onClose}
     />
@@ -79,6 +84,7 @@ function PrepareForm({
   defaultTemplateId,
   approvers,
   deviationsAllowed,
+  pack,
   onDone,
   onClose,
 }: {
@@ -87,6 +93,7 @@ function PrepareForm({
   defaultTemplateId: string | null;
   approvers: string[];
   deviationsAllowed: boolean;
+  pack: PartnerContractOptions["package"];
   onDone: () => void;
   onClose: () => void;
 }) {
@@ -95,7 +102,11 @@ function PrepareForm({
   const numId = useId();
   const dateId = useId();
   const hasTemplates = templates.length > 0;
-  const [mode, setMode] = useState<Mode>(hasTemplates ? "template" : "file");
+  const hasPackage = pack.roles.length > 0;
+  const missing = pack.roles.filter((role) => role.template_id === null);
+  const [mode, setMode] = useState<Mode>(
+    hasPackage ? "package" : hasTemplates ? "template" : "file",
+  );
   const [templateId, setTemplateId] = useState<string | undefined>(
     defaultTemplateId ?? (templates.length === 1 ? templates[0]?.id : undefined),
   );
@@ -107,6 +118,7 @@ function PrepareForm({
   const [date, setDate] = useState(item.contract_date ?? "");
   const languages: readonly Language[] =
     mode === "template" && chosen ? chosen.languages : LANGUAGES;
+  const packageMode = mode === "package";
   const shownLanguage = languages.includes(language) ? language : "ru";
 
   const prepare = usePreparePartnerContract({ mutation: { onSuccess: onDone } });
@@ -117,7 +129,7 @@ function PrepareForm({
     ...(number.trim() ? { contract_number: number.trim() } : {}),
     ...(date ? { contract_date: date } : {}),
   };
-  const needsApproval = mode === "file" || deviation.trim() !== "";
+  const needsApproval = mode === "file" || (!packageMode && deviation.trim() !== "");
 
   return (
     <FormPanel
@@ -125,9 +137,14 @@ function PrepareForm({
       okLabel={t("partnerApplications.prepareModal.ok")}
       loading={pending}
       error={error}
-      disabled={mode === "template" ? !templateId : file === null}
+      disabled={packageMode ? !pack.ready : mode === "template" ? !templateId : file === null}
       onOk={() => {
-        if (mode === "template" && templateId) {
+        if (packageMode) {
+          prepare.mutate({
+            id: item.id,
+            data: { package: true, language: shownLanguage, ...extra },
+          });
+        } else if (mode === "template" && templateId) {
           prepare.mutate({
             id: item.id,
             data: {
@@ -151,7 +168,7 @@ function PrepareForm({
       }}
       onCancel={onClose}
     >
-      {hasTemplates ? null : (
+      {hasTemplates || hasPackage ? null : (
         <Alert
           type="warning"
           showIcon
@@ -164,13 +181,18 @@ function PrepareForm({
           }
         />
       )}
-      {hasTemplates ? (
+      {hasTemplates || hasPackage ? (
         <Segmented
           block
           aria-label={t("partnerApplications.prepareModal.mode")}
           value={mode}
           options={[
-            { value: "template", label: t("partnerApplications.prepareModal.fromTemplate") },
+            ...(hasPackage
+              ? [{ value: "package", label: t("partnerApplications.prepareModal.package") }]
+              : []),
+            ...(hasTemplates
+              ? [{ value: "template", label: t("partnerApplications.prepareModal.fromTemplate") }]
+              : []),
             { value: "file", label: t("partnerApplications.prepareModal.ownFile") },
           ]}
           onChange={(value) => {
@@ -179,7 +201,9 @@ function PrepareForm({
         />
       ) : null}
 
-      {mode === "template" ? (
+      {packageMode ? (
+        <PackageList roles={pack.roles} missing={missing} />
+      ) : mode === "template" ? (
         <FormField id={ids.template} label={t("partnerApplications.prepareModal.template")}>
           <Select
             id={ids.template}
@@ -245,7 +269,7 @@ function PrepareForm({
         <DateField id={dateId} value={date} onChange={setDate} />
       </FormField>
 
-      {deviationsAllowed ? (
+      {deviationsAllowed && !packageMode ? (
         <FormField
           id={ids.deviation}
           label={t("partnerApplications.prepareModal.deviation")}
@@ -265,14 +289,53 @@ function PrepareForm({
       ) : null}
 
       <p className="pf-hint" role="note">
-        {needsApproval
-          ? t("partnerApplications.prepareModal.needsApproval", {
-              who:
-                approvers.length > 0 ? approvers.join(", ") : t("partnerApplications.noApprovers"),
-            })
-          : t("partnerApplications.prepareModal.readyToSend")}
+        {packageMode
+          ? t("partnerApplications.prepareModal.packageReady")
+          : needsApproval
+            ? t("partnerApplications.prepareModal.needsApproval", {
+                who:
+                  approvers.length > 0
+                    ? approvers.join(", ")
+                    : t("partnerApplications.noApprovers"),
+              })
+            : t("partnerApplications.prepareModal.readyToSend")}
       </p>
     </FormPanel>
+  );
+}
+
+/**
+ * Пакет базовых документов (ОСН-1): что получит кандидат. Нет утверждённого шаблона роли — обычная фраза «Нет утверждённого
+ * шаблона: …» и ссылка на «Шаблоны договоров»; кнопки, которая ничего не сделает, нет.
+ */
+function PackageList({ roles, missing }: { roles: PackageRole[]; missing: PackageRole[] }) {
+  const { t } = useTranslation("catalog");
+  return (
+    <div>
+      <p className="pf-hint">{t("partnerApplications.prepareModal.packageHint")}</p>
+      <ul>
+        {roles
+          .filter((role) => role.template_id !== null)
+          .map((role) => (
+            <li key={role.base_role}>
+              {t("partnerApplications.prepareModal.packageItem", {
+                name: role.name ?? "",
+                edition: role.edition ?? 1,
+              })}
+            </li>
+          ))}
+      </ul>
+      {missing.map((role) => (
+        <div key={role.base_role} role="status">
+          <p className="pf-cat-danger">
+            {t("partnerApplications.prepareModal.packageMissing", { role: role.role_name })}
+          </p>
+          <p>
+            <Link to={TEMPLATE_LIBRARY_PATH}>{t("partnerApplications.contractLine.library")}</Link>
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 

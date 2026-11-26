@@ -1810,6 +1810,7 @@ export interface paths {
      * @description Отдаёт файл договора, который сотрудник отправил кандидату (ПД-1): PDF по утверждённому шаблону либо свой файл
      *     компании (PDF или DOCX; тип — в `Content-Type`, вид — `PartnerApplication.contract_file_kind`). Открыт любой
      *     сессии (FX-1). До отправки файла для кандидата нет — 404. Документ не собирается на лету: встроенного образца нет.
+     *     Пакет базовых документов (ОСН-1): `doc` — id из `PartnerApplication.documents`; без него — основной договор.
      */
     get: operations["getCompanyPartnerContractPdf"];
     put?: never;
@@ -2092,6 +2093,8 @@ export interface components {
        * @enum {string|null}
        */
       contract_file_kind?: "pdf" | "docx" | null;
+      /** @description Пакет базовых документов (ОСН-1), один шаг для кандидата, каждый документ открывается отдельно; пусто — договор одним файлом */
+      documents?: components["schemas"]["PartnerPackageDocument"][];
       /**
        * Format: date-time
        * @description Когда кандидат вернул договор с замечанием; сбрасывается при повторной отправке
@@ -2107,6 +2110,17 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at?: string;
+    };
+    PartnerPackageDocument: {
+      id: number;
+      /** @enum {string} */
+      base_role: "partnership" | "nda" | "offer";
+      title: string;
+      number: string;
+      /** @enum {string} */
+      file_kind: "pdf" | "docx";
+      /** @description Что кандидат вернул по этому документу */
+      remark: string;
     };
     PartnerApplicationPublicCreate: {
       /** @description Название организации */
@@ -7563,7 +7577,10 @@ export interface operations {
   };
   getCompanyPartnerContractPdf: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Документ пакета базовых документов (`PartnerApplication.documents[].id`) */
+        doc?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -7638,10 +7655,14 @@ export interface operations {
         "application/json": {
           /** @description Замечание кандидата к договору */
           notes: string;
+          /** @description Документ пакета, к которому относится замечание (`PartnerApplication.documents[].id`) */
+          document?: number;
         };
         "multipart/form-data": {
           /** @description Комментарий; обязателен, если файла нет */
           notes?: string;
+          /** @description Документ пакета (ОСН-1); обязателен вместе с `file`, если в пакете несколько документов */
+          document?: number;
           /**
            * Format: binary
            * @description Своя редакция договора (DOCX или PDF) — вложение и точка правды

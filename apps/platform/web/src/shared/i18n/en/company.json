@@ -358,7 +358,9 @@
       "partner": "Partner (framework)",
       "supply": "Supply",
       "services": "Services"
-    }
+    },
+    "partner_base_roles": "Documents for partners",
+    "partner_base_rolesHint": "A partner candidate gets a package of these documents; the text comes from approved templates."
   },
   "charges": {
     "title": "Quote charge items",
@@ -784,8 +786,23 @@
       "template_transition_not_allowed": "The template is in another status. Refresh the page.",
       "template_edition_in_progress": "A new edition is already in progress.",
       "template_counterparty_required": "Choose who the template is for.",
-      "template_approval_forbidden": "Approved by the holder of the Legal zone."
-    }
+      "template_approval_forbidden": "Approved by the holder of the Legal zone.",
+      "template_base_role_taken": "This base document is already approved in another template. Make a new edition of it.",
+      "template_base_role_invalid": "Choose a base document from the list."
+    },
+    "baseRole": {
+      "partnership": "Partnership agreement",
+      "nda": "Non-disclosure agreement",
+      "offer": "Offer"
+    },
+    "baseRoleNone": "Ordinary template",
+    "baseRoleLabel": "Base document",
+    "baseRoleMark": "Base document: {{role}}",
+    "baseRoleHint": "A base document is approved once, the terms are the same for everyone. The mark is set in a draft.",
+    "baseRoleTitle": "Base document: {{name}}",
+    "baseRoleSave": "Save",
+    "doneBase": "Mark saved.",
+    "actionBase": "Base document"
   },
   "sample": {
     "language": "Document language",

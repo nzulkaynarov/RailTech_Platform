@@ -1773,8 +1773,11 @@ class CompanyPartnerContractPdfView(BasePortalView):
             PartnerApplicationStatus.APPROVED,
         ):
             raise exceptions.NotFound("NOT_FOUND")
+        doc = request.query_params.get("doc")
         try:
-            data, content_type, name = contract_step.read_file(contract_step.current_document(app))
+            # ОСН-1: документ пакета открывается по `doc`; без него — основной договор, как раньше
+            field = contract_step.package_document(app, doc).file if doc else contract_step.current_document(app)
+            data, content_type, name = contract_step.read_file(field)
         except AccessError:
             raise exceptions.NotFound("NOT_FOUND") from None
         response = HttpResponse(data, content_type=content_type)
@@ -1820,7 +1823,8 @@ class CompanyPartnerApplicationAgreeView(BasePortalView):
 class CompanyPartnerContractReturnView(BasePortalView):
     """POST /company/partner-application/return — «Есть замечания» (ПД-1, ПК-1): комментарий и, по желанию, своя редакция.
 
-    JSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды."""
+    JSON `{notes}` или multipart `notes` + `file` (DOCX): файл — вложение и точка правды. В пакете документов (ОСН-1)
+    `document` — id документа, к которому относится замечание или файл."""
 
     required_module = ANY_MODULE  # см. CompanyPartnerApplicationView
     parser_classes = [JSONParser, MultiPartParser]
@@ -1841,7 +1845,9 @@ class CompanyPartnerContractReturnView(BasePortalView):
             if not app:
                 raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
             try:
-                contract_step.candidate_return(app, request.data.get("notes") or "", request.FILES.get("file"))
+                contract_step.candidate_return(
+                    app, request.data.get("notes") or "", request.FILES.get("file"), request.data.get("document")
+                )
             except AccessError as error:
                 raise PortalBadRequest(error.code) from None
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)

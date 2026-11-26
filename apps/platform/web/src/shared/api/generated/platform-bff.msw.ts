@@ -2601,6 +2601,10 @@ export const getListContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    base_role: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      null,
+    ]),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
   ...overrideResponse,
@@ -2636,6 +2640,10 @@ export const getCreateContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2676,6 +2684,10 @@ export const getListOfferedContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    base_role: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      null,
+    ]),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
   ...overrideResponse,
@@ -2711,6 +2723,48 @@ export const getNewContractTemplateEditionResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
+  updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getSetContractTemplateBaseRoleResponseMock = (
+  overrideResponse: Partial<Extract<ContractTemplate, object>> = {},
+): ContractTemplate => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  status: faker.helpers.arrayElement(["draft", "on_approval", "approved"] as const),
+  counterparty: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["client", "partner"] as const),
+    null,
+  ]),
+  subject: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["supply", "services"] as const),
+    null,
+  ]),
+  approved_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  approved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  submitted_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  is_active: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2745,6 +2799,10 @@ export const getSubmitContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2779,6 +2837,10 @@ export const getApproveContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -2813,6 +2875,10 @@ export const getReturnContractTemplateToDraftResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  base_role: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+    null,
+  ]),
   updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
@@ -19024,6 +19090,10 @@ export const getGetQuoteDefaultsResponseMock = (
     faker.helpers.arrayElement(["block", "warn"] as const),
     undefined,
   ]),
+  partner_base_roles: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["partnership", "nda", "offer"] as const),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -19109,6 +19179,10 @@ export const getUpdateQuoteDefaultsResponseMock = (
   ]),
   contract_expired_action: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["block", "warn"] as const),
+    undefined,
+  ]),
+  partner_base_roles: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(["partnership", "nda", "offer"] as const),
     undefined,
   ]),
   ...overrideResponse,
@@ -42007,6 +42081,30 @@ export const getListPartnerApplicationsResponseMock = (
       null,
     ]),
     contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+        title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        template_edition: faker.number.int(),
+        has_file: faker.datatype.boolean(),
+        has_candidate_file: faker.datatype.boolean(),
+        candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        valid_from: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+        trade_secret_indefinite: faker.datatype.boolean(),
+        from_archive: faker.datatype.boolean(),
+      }),
+    ),
+    from_archive: faker.datatype.boolean(),
   })),
   pending_count: faker.number.int(),
   ...overrideResponse,
@@ -42131,6 +42229,24 @@ export const getCreatePartnerApplicationResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -42253,6 +42369,24 @@ export const getSendContractPartnerApplicationResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -42375,6 +42509,24 @@ export const getApprovePartnerApplicationResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -42497,12 +42649,49 @@ export const getRejectPartnerApplicationResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
 export const getGetPartnerContractOptionsResponseMock = (
   overrideResponse: Partial<Extract<PartnerContractOptions, object>> = {},
 ): PartnerContractOptions => ({
+  package: {
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+        role_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        template_id: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        edition: faker.helpers.arrayElement([faker.number.int(), null]),
+        languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+      }),
+    ),
+    ready: faker.datatype.boolean(),
+  },
   templates: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -42643,6 +42832,24 @@ export const getPreparePartnerContractResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -42765,6 +42972,24 @@ export const getUploadPartnerContractFileResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -42887,6 +43112,24 @@ export const getDecidePartnerContractResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -43009,6 +43252,24 @@ export const getInvitePartnerCandidateResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -43131,6 +43392,164 @@ export const getUploadPartnerSignedScanResponseMock = (
     null,
   ]),
   contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getRecordPartnerPackageFromArchiveResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
+): PartnerApplicationItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  source_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+  kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  matching_company_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  matching_company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  company_match_pending: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    null,
+  ]),
+  invite_delivery: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    null,
+  ]),
+  contract_source: faker.helpers.arrayElement(["", "template", "upload"] as const),
+  contract_template_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  contract_template_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  contract_template_edition: faker.helpers.arrayElement([faker.number.int(), null]),
+  contract_language: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_deviation_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_approval: faker.helpers.arrayElement(["", "requested", "approved", "returned"] as const),
+  contract_approval_requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  contract_approval_decided_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  contract_approval_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement([
+      "CONTRACT_NOT_PREPARED",
+      "CONTRACT_APPROVAL_PENDING",
+      "CONTRACT_APPROVAL_RETURNED",
+    ] as const),
+    null,
+  ]),
+  contract_approvers: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  can_decide_contract: faker.datatype.boolean(),
+  decision_needs_confirmation: faker.datatype.boolean(),
+  candidate_notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  candidate_returned_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  has_signed_scan: faker.datatype.boolean(),
+  signed_scan_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  contract_votes: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    decision: faker.helpers.arrayElement(["approve", "return"] as const),
+    note: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  contract_waiting_for: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  contract_disagreement: faker.datatype.boolean(),
+  has_candidate_file: faker.datatype.boolean(),
+  signed_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_valid_from: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  contract_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  contract_last_notice_date: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  contract_renewal_mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  package: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      base_role: faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      template_edition: faker.number.int(),
+      has_file: faker.datatype.boolean(),
+      has_candidate_file: faker.datatype.boolean(),
+      candidate_remark: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      confidentiality_years: faker.helpers.arrayElement([faker.number.int(), null]),
+      trade_secret_indefinite: faker.datatype.boolean(),
+      from_archive: faker.datatype.boolean(),
+    }),
+  ),
+  from_archive: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -45628,6 +46047,30 @@ export const getNewContractTemplateEditionMockHandler = (
             : overrideResponse
           : getNewContractTemplateEditionResponseMock(),
         { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetContractTemplateBaseRoleMockHandler = (
+  overrideResponse?:
+    | ContractTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<ContractTemplate> | ContractTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/document-templates/contracts/:id/base-role",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetContractTemplateBaseRoleResponseMock(),
+        { status: 200 },
       );
     },
     options,
@@ -56277,6 +56720,30 @@ export const getUploadPartnerSignedScanMockHandler = (
   );
 };
 
+export const getRecordPartnerPackageFromArchiveMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerApplicationItem> | PartnerApplicationItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/partner-applications/:id/from-archive",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRecordPartnerPackageFromArchiveResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDownloadPartnerApplicationDocumentMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -56950,6 +57417,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateContractTemplateMockHandler(),
   getListOfferedContractTemplatesMockHandler(),
   getNewContractTemplateEditionMockHandler(),
+  getSetContractTemplateBaseRoleMockHandler(),
   getSubmitContractTemplateMockHandler(),
   getApproveContractTemplateMockHandler(),
   getReturnContractTemplateToDraftMockHandler(),
@@ -57411,6 +57879,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDecidePartnerContractMockHandler(),
   getInvitePartnerCandidateMockHandler(),
   getUploadPartnerSignedScanMockHandler(),
+  getRecordPartnerPackageFromArchiveMockHandler(),
   getDownloadPartnerApplicationDocumentMockHandler(),
   getUpdateSupplierOfferMockHandler(),
   getDownloadPriceImportTemplateMockHandler(),
