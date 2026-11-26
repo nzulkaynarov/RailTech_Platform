@@ -329,6 +329,8 @@
     "requireMxikHint": "MXIK (IKPU) kodsiz kartani eʼlon qilib bölmaydi. Eʼlon qilinganlar qoladi; tekşiriş — keyingi eʼlonda.",
     "requireHs": "Olib kirilgan tovar uçun TIF TN majburiy",
     "requireHsHint": "Çiqiş mamlakati Özbekiston emas yoki körsatilmagan — TIF TN kodisiz eʼlon qilib bölmaydi.",
+    "moreSettings": "Qoʻshimcha",
+    "lessSettings": "Qoʻshimchani yashirish",
     "contract_term_rule": "Şartnomaning odatdagi muddati",
     "termRule": {
       "calendar_year": "Imzolangan yilning 31 dekabrigaça",

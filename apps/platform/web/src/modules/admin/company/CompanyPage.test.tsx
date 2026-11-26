@@ -706,6 +706,7 @@ describe("Условия КП разошлись по страницам сво�
     await openTab("quote");
     const before = readCompanyMock().quote;
     expect(before.contract_auto_send).toBe(true);
+    fireEvent.click(await button("Дополнительно"));
     const sign = await screen.findByRole("switch", { name: "Наша подпись — до отправки клиенту" });
     expect(sign).toBeChecked();
     expect(

@@ -46,6 +46,8 @@ def partner_email(raw: str) -> str:
     """Почта кандидата в партнёры: правила ERP (`django.core.validators.validate_email`),
     чтобы CRM не принимала адрес, который ERP потом отвергнет; ошибка — у поля `email`."""
     value = raw.strip()
+    if not value:
+        return ""  # почта не обязательна: путь партнёра не останавливается на её отсутствии (ПК-1)
     user, at, domain = value.rpartition("@")
     ok = bool(at) and len(value) <= 254 and bool(_DJANGO_USER.match(user))
     if ok and not _DJANGO_DOMAIN.match(domain):

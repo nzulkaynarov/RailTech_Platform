@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Form, Input, InputNumber, Select, Switch } from "antd";
-import { useMemo } from "react";
+import { Alert, App, Button, Form, Input, InputNumber, Select, Switch } from "antd";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { QuoteDefaults } from "../../../../shared/api/generated/model";
@@ -73,6 +73,21 @@ const GROUPS: Record<QuoteGroup, readonly (keyof QuoteDefaults)[]> = {
   reminders: ["remind_overdue_invoices", "act_reminder_hours"],
 };
 
+/** Настройки договоров, спрятанные под «Дополнительно»: срок, продление и шаблоны остаются на виду. */
+const CONTRACT_EXTRA: readonly (keyof QuoteDefaults)[] = [
+  "contract_auto_send",
+  "contract_sign_before_send",
+  "contract_deviations_allowed",
+  "contract_four_eyes",
+  "contract_next_year_from_day",
+  "contract_remind_first_days",
+  "contract_remind_last_days",
+  "contract_foreign_remind_days",
+  "contract_expired_action",
+  "contract_foreign_by_agreement",
+  "contract_gating_kinds",
+];
+
 const pick = (defaults: QuoteDefaults, group: QuoteGroup): Values =>
   Object.fromEntries(
     GROUPS[group].filter((key) => key in defaults).map((key) => [key, defaults[key]]),
@@ -109,7 +124,10 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
   const initial = useMemo<Values>(() => pick(defaults, group), [defaults, group]);
-  const shows = (name: keyof QuoteDefaults) => GROUPS[group].includes(name);
+  const [more, setMore] = useState(false);
+  const shows = (name: keyof QuoteDefaults) =>
+    GROUPS[group].includes(name) &&
+    (group !== "contracts" || more || !CONTRACT_EXTRA.includes(name));
   const watched = Form.useWatch([], form);
   const changed = changedFields(initial, watched);
   const currencies = useListReferenceItems("currencies");
@@ -506,6 +524,16 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
           update.reset();
         }}
       />
+      {group === "contracts" ? (
+        <Button
+          type="link"
+          onClick={() => {
+            setMore((v) => !v);
+          }}
+        >
+          {t(more ? "quote.lessSettings" : "quote.moreSettings")}
+        </Button>
+      ) : null}
     </Form>
   );
 }

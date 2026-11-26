@@ -1851,10 +1851,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Вернуть партнёрский договор с замечанием
-         * @description Кандидат не согласен с договором и возвращает его с замечанием (ПД-1). Статус остаётся `contract_sent`,
-         *     `candidate_returned_at` заполняется, замечание — в `candidate_notes`; сотрудник готовит новую версию.
-         *     Открыт любой сессии (FX-1), требует права действовать `can_act`. Замечание обязательно (`RETURN_NOTE_REQUIRED`).
+         * «Есть замечания» к партнёрскому договору (одно окно, комментарий и своя редакция)
+         * @description Кандидат не принимает редакцию и пишет замечания (ПД-1, ПК-1): комментарий и, по желанию, свою редакцию договора
+         *     (DOCX или PDF). Файл — вложение и точка правды: он становится файлом договора на согласовании у ответственных,
+         *     новая редакция уходит кандидату после их согласия. Статус остаётся `contract_sent`, `candidate_returned_at`
+         *     заполняется, замечание — в `candidate_notes`; ответственным приходит уведомление. Тело — JSON `{notes}` либо
+         *     `multipart/form-data` (`notes`, `file`); multipart допущен и здесь (как `/uploads`). Нужен комментарий или файл
+         *     (`RETURN_NOTE_REQUIRED`); файл неподходящего вида — `CONTRACT_FILE_INVALID`. Открыт любой сессии (FX-1), требует
+         *     права действовать `can_act`.
          */
         post: operations["returnCompanyPartnerContract"];
         delete?: never;
@@ -7511,6 +7515,15 @@ export interface operations {
                     /** @description Замечание кандидата к договору */
                     notes: string;
                 };
+                "multipart/form-data": {
+                    /** @description Комментарий; обязателен, если файла нет */
+                    notes?: string;
+                    /**
+                     * Format: binary
+                     * @description Своя редакция договора (DOCX или PDF) — вложение и точка правды
+                     */
+                    file?: string;
+                };
             };
         };
         responses: {
@@ -7523,7 +7536,7 @@ export interface operations {
                     "application/json": components["schemas"]["PartnerApplication"];
                 };
             };
-            /** @description Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет замечания (`RETURN_NOTE_REQUIRED`) */
+            /** @description Заявка не в статусе contract_sent (`NOT_IN_CONTRACT_SENT_STATUS`) или нет ни замечания, ни файла (`RETURN_NOTE_REQUIRED`), или файл не подходит (`CONTRACT_FILE_INVALID`) */
             400: {
                 headers: {
                     [name: string]: unknown;

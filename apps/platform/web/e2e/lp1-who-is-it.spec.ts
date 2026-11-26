@@ -83,13 +83,13 @@ for (const width of WIDTHS) {
       await expect(page.getByRole("form", { name: "Создать заявку" })).toBeVisible();
     });
 
-    test("лид только с телефоном: без почты не уйдёт, ошибка у поля", async ({ page }) => {
+    test("лид только с телефоном: без почты уходит, неверная почта — ошибка у поля", async ({
+      page,
+    }) => {
       await open(page, width, "L-2077");
       await page.getByRole("radio", { name: "Партнёр" }).check();
       const form = page.getByRole("form", { name: "Партнёр" });
       await expect(form.getByLabel("Телефон")).not.toHaveValue("");
-      await form.getByRole("button", { name: "Передать как партнёра" }).click();
-      await expect(form.getByText("Укажите почту")).toBeVisible();
       await form.getByLabel("Почта").fill("нет-собаки");
       await form.getByRole("button", { name: "Передать как партнёра" }).click();
       await expect(form.getByText("Проверьте адрес почты")).toBeVisible();

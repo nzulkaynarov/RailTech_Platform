@@ -104,7 +104,7 @@ const REASONS = new Set([
   "contract_return_note_required",
   "contract_decision_invalid",
   "candidate_email_required",
-  "signed_scan_required",
+  "signed_proof_required",
   "contract_date_invalid",
   "self_approval_not_allowed",
   "self_decision_confirmation_required",

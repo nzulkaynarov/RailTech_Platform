@@ -329,6 +329,8 @@
     "requireMxikHint": "A card without an MXIK (IKPU) code cannot be published. Published cards stay; the check applies on the next publish.",
     "requireHs": "HS code is required for imported goods",
     "requireHsHint": "Origin is not Uzbekistan or is not set — it cannot be published without an HS code.",
+    "moreSettings": "More settings",
+    "lessSettings": "Hide more settings",
     "contract_term_rule": "Default contract term",
     "termRule": {
       "calendar_year": "Until 31 December of the signing year",

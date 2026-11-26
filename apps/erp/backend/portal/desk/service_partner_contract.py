@@ -79,10 +79,14 @@ def read_file(field) -> tuple[bytes, str, str]:
 
 
 def _holders() -> list:
-    from core.tenant import own_company_id
-    from crm.services.contract_templates import _holders_to_notify
+    """Все, кто отвечает за договор: держатели «Права» и подписи (то же правило, что `contract_remarks.reviewers`, ДП-1)."""
+    from crm.services import contract_remarks as remarks
 
-    return list(_holders_to_notify(own_company_id()))
+    people: dict = {}
+    for permission in remarks.REVIEW_PERMISSIONS:
+        for holder in remarks._holders(permission):
+            people.setdefault(holder.pk, holder)
+    return list(people.values())
 
 
 def four_eyes_on() -> bool:
@@ -114,13 +118,78 @@ def _is_requester(app, user) -> bool:
     )
 
 
-def decision_state(app, viewer) -> tuple[bool, bool]:
-    """(может решить, нужно подтверждение самостоятельного решения) — по правилу компании и составу держателей."""
+def _directors(holders: list) -> list:
+    """Директор — тот, чей голос решает при разногласии: держатель права подписи (`contract_remarks.DECIDE_PERMISSION`).
+
+    Нет такого среди ответственных — решающими считаются все они (иначе разногласие некому разрешить)."""
+    from crm.services import contract_remarks as remarks
+
+    sign_ids = {u.pk for u in remarks._holders(remarks.DECIDE_PERMISSION)}
+    directors = [h for h in holders if h.pk in sign_ids]
+    return directors or list(holders)
+
+
+def _needed_voters(app) -> list:
+    """Кто должен согласовать: все ответственные за договор (держатели «Права»); подготовивший — не сам себе, пока есть другие."""
+    holders = _holders()
+    requester = app.contract_approval_requested_by
+    if requester is not None and four_eyes_on():
+        others = [h for h in holders if h.pk != requester.pk]
+        if others:
+            return others
+    return holders
+
+
+def _votes(app) -> list[dict]:
+    return list(app.contract_approval_votes or [])
+
+
+def _disagreement(app) -> bool:
+    """Кто-то из ответственных, кроме директора, вернул договор: решает директор."""
+    if app.contract_approval != PartnerContractApproval.REQUESTED:
+        return False
+    director_ids = {d.pk for d in _directors(_holders())}
+    return any(v["decision"] == "return" and v["user_id"] not in director_ids for v in _votes(app))
+
+
+def _resolve(app) -> str:
+    """Итог по голосам: `approve`, `return` или пусто (ждём остальных или директора). Порядок голосов — по времени.
+
+    Все согласны — согласован. Директор вернул — возвращён. Кто-то другой вернул — разногласие: решает голос директора,
+    поданный ПОСЛЕ него (директор решает, а не складывается с остальными)."""
+    director_ids = {d.pk for d in _directors(_holders())}
+    votes = _votes(app)
+    admin_votes = [v for v in votes if v.get("admin")]
+    if admin_votes:  # администратор решает сам (как и в правиле «четырёх глаз»: его решение — «от имени»)
+        return admin_votes[-1]["decision"]
+    for v in votes:
+        if v["user_id"] in director_ids and v["decision"] == "return":
+            return "return"
+    first_other_return = next(
+        (i for i, v in enumerate(votes) if v["decision"] == "return" and v["user_id"] not in director_ids), None
+    )
+    if first_other_return is not None:
+        later = [v for v in votes[first_other_return + 1 :] if v["user_id"] in director_ids]
+        return "approve" if later else ""
+    approved = {v["user_id"] for v in votes if v["decision"] == "approve"}
+    needed = {u.pk for u in _needed_voters(app)}
+    return "approve" if needed <= approved else ""
+
+
+def _may_vote(user) -> bool:
+    """Голос у тех, кто отвечает за договор (держатели «Права» и подписи); администратор — всегда."""
     from crm.services.contract_templates import is_approver
 
-    holder = viewer is not None and is_approver(viewer)
+    return is_approver(user) or user.pk in {h.pk for h in _holders()}
+
+
+def decision_state(app, viewer) -> tuple[bool, bool]:
+    """(может решить, нужно подтверждение самостоятельного решения) — по правилу компании и составу держателей."""
+    holder = viewer is not None and _may_vote(viewer)
     if not holder or app.contract_approval != PartnerContractApproval.REQUESTED:
         return bool(holder), False
+    if _disagreement(app) and viewer.pk not in {d.pk for d in _directors(_holders())}:
+        return False, False  # разногласие: решает директор
     if not _is_requester(app, viewer) or getattr(viewer, "is_superuser", False) or not four_eyes_on():
         return True, False
     if _others(viewer):
@@ -168,7 +237,7 @@ def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
         "contract_approval_requested_by": _name(requested_by),
         "contract_approval_decided_by": _name(decided_by),
         "contract_approval_note": app.contract_approval_note,
-        "contract_blocker": send_blocker(app) if app.status == PartnerApplicationStatus.SUBMITTED else None,
+        "contract_blocker": send_blocker(app) if _awaits_sending(app) else None,
         "candidate_returned_at": app.candidate_returned_at,
         "has_signed_scan": bool(app.signed_scan),
         "signed_scan_at": app.signed_scan_at,
@@ -177,7 +246,35 @@ def contract_facts(app: PartnerApplication, *, viewer=None) -> dict:
         "contract_approvers": (
             approver_names(exclude=requested_by) if app.contract_approval == PartnerContractApproval.REQUESTED else []
         ),
+        "contract_votes": [
+            {"name": v["name"], "decision": v["decision"], "note": v.get("note", "")} for v in _votes(app)
+        ],
+        "contract_waiting_for": _waiting_for(app),
+        "contract_disagreement": _disagreement(app),
+        "has_candidate_file": bool(app.candidate_file),
+        "signed_note": app.signed_note,
+        "contract_valid_from": app.contract_valid_from,
+        "contract_valid_until": app.contract_valid_until,
+        "contract_last_notice_date": app.contract_last_notice_date,
+        "contract_renewal_mode": app.contract_renewal_mode,
     }
+
+
+def _awaits_sending(app) -> bool:
+    """Договор ждёт отправки: заявка подана либо кандидат вернул его с замечаниями (новая редакция — ответственным)."""
+    return app.status == PartnerApplicationStatus.SUBMITTED or (
+        app.status == PartnerApplicationStatus.CONTRACT_SENT and app.candidate_returned_at is not None
+    )
+
+
+def _waiting_for(app) -> list[str]:
+    """Кто ещё не высказался (имена); при разногласии — директор, который решает."""
+    if app.contract_approval != PartnerContractApproval.REQUESTED:
+        return []
+    if _disagreement(app):
+        return sorted({_name(d) or "" for d in _directors(_holders())})
+    voted = {v["user_id"] for v in _votes(app)}
+    return sorted({_name(u) or "" for u in _needed_voters(app) if u.pk not in voted})
 
 
 def _name(user) -> str | None:
@@ -264,6 +361,7 @@ def prepare_contract(pk: int, data: dict, upload, user) -> PartnerApplication:
     app.contract_approval_decided_by = None
     app.contract_approval_decided_at = None
     app.contract_approval_note = ""
+    app.contract_approval_votes = []
     # Новая версия: прежняя отправка, возврат кандидата и скан к ней не относятся
     app.status = PartnerApplicationStatus.SUBMITTED
     app.contract_draft_sent_at = None
@@ -331,10 +429,11 @@ def _notify_holders(app: PartnerApplication) -> None:
 
 @transaction.atomic
 def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
-    """Решение держателя права утверждать договоры: `approve` или `return` (с замечанием)."""
-    from crm.services.contract_templates import is_approver
+    """Голос ответственного за договор (держатель права утверждать договоры): `approve` или `return` (с замечанием).
 
-    if not is_approver(user):
+    ПК-1: договор согласован, когда согласились все ответственные; при разногласии решает директор (его голос после
+    возражения). По каждому пункту решений нет — один голос и одно слово."""
+    if not _may_vote(user):
         raise AccessError("CONTRACT_DECISION_FORBIDDEN", 403)
     app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
     if app is None:
@@ -349,59 +448,137 @@ def decide_contract(pk: int, data: dict, user) -> PartnerApplication:
             raise AccessError("SELF_APPROVAL_NOT_ALLOWED", 403)
         if not data.get("confirm_self"):
             raise AccessError("SELF_DECISION_CONFIRMATION_REQUIRED")
+    if _disagreement(app) and user.pk not in {d.pk for d in _directors(_holders())}:
+        raise AccessError("CONTRACT_DIRECTOR_DECIDES", 403)
     decision = data.get("decision")
     note = (data.get("note") or "").strip()
     if decision not in ("approve", "return"):
         raise AccessError("CONTRACT_DECISION_INVALID")
     if decision == "return" and not note:
         raise AccessError("CONTRACT_RETURN_NOTE_REQUIRED")
-    approved = decision == "approve"
-    app.contract_approval = PartnerContractApproval.APPROVED if approved else PartnerContractApproval.RETURNED
-    app.contract_approval_decided_by = user
-    app.contract_approval_decided_at = timezone.now()
-    app.contract_approval_note = note[:1000]
-    if approved and app.contract_source == PartnerContractSource.TEMPLATE and app.contract_deviation_text:
-        # Одобренное отступление входит в текст договора, как у клиентов (ДОК-10): PDF пересобирается с ним
-        pdf = _render_template_contract(
-            app,
-            app.contract_template,
-            app.contract_language or "ru",
-            app.contract_number,
-            app.contract_date or timezone.localdate(),
-            notes=app.contract_deviation_text,
-        )
-        app.contract_file.save(f"Partner_Contract_{app.contract_number}.pdf", ContentFile(pdf), save=False)
+    now = timezone.now()
+    votes = [v for v in _votes(app) if v["user_id"] != user.pk]  # новый голос того же человека заменяет прежний
+    votes.append(
+        {
+            "user_id": user.pk,
+            "name": _name(user) or "",
+            "decision": decision,
+            "note": note[:1000],
+            "at": now.isoformat(),
+            "admin": bool(getattr(user, "is_superuser", False)),
+        }
+    )
+    app.contract_approval_votes = votes
+    was_disagreement = False
+    outcome = _resolve(app)
+    if outcome:
+        approved = outcome == "approve"
+        app.contract_approval = PartnerContractApproval.APPROVED if approved else PartnerContractApproval.RETURNED
+        app.contract_approval_decided_by = user
+        app.contract_approval_decided_at = now
+        returning = [v for v in votes if v["decision"] == "return"]
+        app.contract_approval_note = ("" if approved else (returning[-1]["note"] if returning else note))[:1000]
+        if approved and app.contract_source == PartnerContractSource.TEMPLATE and app.contract_deviation_text:
+            # Одобренное отступление входит в текст договора, как у клиентов (ДОК-10): PDF пересобирается с ним
+            pdf = _render_template_contract(
+                app,
+                app.contract_template,
+                app.contract_language or "ru",
+                app.contract_number,
+                app.contract_date or timezone.localdate(),
+                notes=app.contract_deviation_text,
+            )
+            app.contract_file.save(f"Partner_Contract_{app.contract_number}.pdf", ContentFile(pdf), save=False)
+    else:
+        was_disagreement = _disagreement(app)
     app.save()
+    state = app.contract_approval
     record(
         user,
         entity="partner_application",
         instance=app,
-        event="contract_approved" if approved else "contract_returned",
-        action="Договор кандидата согласован" if approved else "Договор кандидата возвращён на доработку",
+        event=(
+            "contract_approved"
+            if outcome == "approve"
+            else "contract_returned" if outcome == "return" else "contract_vote"
+        ),
+        action=(
+            "Договор кандидата согласован"
+            if outcome == "approve"
+            else "Договор кандидата возвращён на доработку" if outcome == "return" else "Голос по договору кандидата"
+        ),
         before=None,
         after={
-            "approval": app.contract_approval,
-            "note": app.contract_approval_note,
+            "approval": state,
+            "vote": decision,
+            "note": note[:1000],
             **({"on_behalf": "решение от имени: подготовивший и решающий — одно лицо"} if self_approval else {}),
         },
         level="WARNING" if self_approval else "INFO",
         detail=app.company_name,
     )
+    if was_disagreement:
+        _notify_director(app, user, note)
     return app
+
+
+def _notify_director(app: PartnerApplication, who, note: str) -> None:
+    """Разногласие: решает директор — ему уведомление с тем, кто и что возразил."""
+    from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
+
+    info = NotificationType.objects.filter(code="INFO").first()
+    for director in _directors(_holders()):
+        if director.pk == getattr(who, "pk", None):
+            continue
+        notif = Notification.objects.create(
+            user=director,
+            type=info,
+            title="Разногласие по договору кандидата в партнёры",
+            message=f"{app.company_name}: {_name(who)} возразил(а) — {note[:160]}. Решение за вами.".strip(),
+            link="/crm/clients?kind=applications",
+            event_code="partner_contract.disagreement",
+            event_params={"application_id": app.pk},
+        )
+        push_notification_ws(notif)
 
 
 # ── Шаги кандидата (Cabinet) ───────────────────────────────────────────────────────────────────────────────────────
 
 
 @transaction.atomic
-def candidate_return(app: PartnerApplication, notes: str) -> PartnerApplication:
-    """Кандидат вернул договор с замечанием: статус остаётся «Договор отправлен», сотрудник видит замечание."""
+def candidate_return(app: PartnerApplication, notes: str, upload=None) -> PartnerApplication:
+    """«Есть замечания» (ПК-1, одно окно): комментарий и, если нужно, своя редакция договора (DOCX).
+
+    Статус остаётся «Договор отправлен», сотрудник видит замечание. Приложенный файл — вложение и точка правды: он
+    становится файлом договора на согласовании у ответственных (все согласны — уходит кандидату как новая редакция).
+    Ответственным приходит уведомление с кратким разбором."""
     notes = (notes or "").strip()
-    if not notes:
+    if not notes and upload is None:
         raise AccessError("RETURN_NOTE_REQUIRED")
+    if upload is not None:
+        try:
+            validate_contract_upload(upload)
+        except ValidationError:
+            raise AccessError("CONTRACT_FILE_INVALID") from None
+    now = timezone.now()
     app.candidate_notes = notes[:1000]
-    app.candidate_returned_at = timezone.now()
-    app.save(update_fields=["candidate_notes", "candidate_returned_at", "updated_at"])
+    app.candidate_returned_at = now
+    if upload is not None:
+        data = upload.read()
+        app.candidate_file.save(upload.name, ContentFile(data), save=False)
+        app.contract_file.save(upload.name, ContentFile(data), save=False)
+        app.contract_source = PartnerContractSource.UPLOAD
+        app.contract_template = None
+        app.contract_deviation_text = notes[:4000]
+        app.contract_approval = PartnerContractApproval.REQUESTED
+        app.contract_approval_requested_by = None
+        app.contract_approval_requested_at = now
+        app.contract_approval_decided_by = None
+        app.contract_approval_decided_at = None
+        app.contract_approval_note = ""
+        app.contract_approval_votes = []
+    app.save()
     record(
         None,
         entity="partner_application",
@@ -409,7 +586,59 @@ def candidate_return(app: PartnerApplication, notes: str) -> PartnerApplication:
         event="candidate_returned_contract",
         action="Кандидат вернул договор с замечанием",
         before=None,
-        after={"notes": app.candidate_notes},
+        after={"notes": app.candidate_notes, "with_file": upload is not None},
+        detail=app.company_name,
+    )
+    _notify_remarks(app, with_file=upload is not None)
+    return app
+
+
+def _notify_remarks(app: PartnerApplication, *, with_file: bool) -> None:
+    """Замечания контрагента: ответственным за договор и тому, кто его отправил — коротко, с отсылкой к новой редакции."""
+    from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
+
+    people = {h.pk: h for h in _holders()}
+    if app.reviewed_by_id and app.reviewed_by is not None:
+        people.setdefault(app.reviewed_by_id, app.reviewed_by)
+    info = NotificationType.objects.filter(code="INFO").first()
+    tail = " Их редакция приложена — её нужно согласовать." if with_file else ""
+    for person in people.values():
+        notif = Notification.objects.create(
+            user=person,
+            type=info,
+            title="Замечания к договору кандидата в партнёры",
+            message=f"{app.company_name}: {app.candidate_notes[:200]}{tail}".strip(),
+            link="/crm/clients?kind=applications",
+            event_code="partner_contract.remarks",
+            event_params={"application_id": app.pk, "with_file": with_file},
+        )
+        push_notification_ws(notif)
+
+
+@transaction.atomic
+def staff_attach_scan(pk: int, upload, user) -> PartnerApplication:
+    """Скан подписанного договора — по желанию (ПК-1): прикрепляет менеджер, не контрагент; заменяет прежний."""
+    app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
+    if app is None:
+        raise AccessError("NOT_FOUND", 404)
+    if app.status in (PartnerApplicationStatus.APPROVED, PartnerApplicationStatus.REJECTED):
+        raise AccessError("APPLICATION_ALREADY_DECIDED")
+    try:
+        validate_scan_upload(upload)
+    except ValidationError:
+        raise AccessError("SCAN_INVALID") from None
+    app.signed_scan.save(upload.name, upload, save=False)
+    app.signed_scan_at = timezone.now()
+    app.save()
+    record(
+        user,
+        entity="partner_application",
+        instance=app,
+        event="signed_scan_uploaded",
+        action="Прикреплён скан подписанного договора кандидата",
+        before=None,
+        after={"signed_scan_at": str(app.signed_scan_at)},
         detail=app.company_name,
     )
     return app

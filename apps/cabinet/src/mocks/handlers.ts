@@ -1617,9 +1617,12 @@ export const handlers = [
         if (!db.partnerApplication || db.partnerApplication.status !== 'contract_sent') {
           return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
         }
-        const body = ((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string };
-        if (!body.notes?.trim()) return error(400, 'RETURN_NOTE_REQUIRED');
-        db.partnerApplication.candidate_notes = body.notes;
+        const isForm = (request.headers.get('content-type') ?? '').includes('multipart/form-data');
+        const body = isForm
+          ? { notes: String((await request.formData()).get('notes') ?? '') }
+          : (((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string });
+        if (!body.notes?.trim() && !isForm) return error(400, 'RETURN_NOTE_REQUIRED');
+        db.partnerApplication.candidate_notes = body.notes ?? '';
         db.partnerApplication.candidate_returned_at = new Date().toISOString();
         return json(db.partnerApplication);
       },
