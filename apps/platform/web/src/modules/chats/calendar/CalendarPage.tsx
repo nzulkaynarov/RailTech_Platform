@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { useGetQueue } from "../../../shared/api/generated/platform-bff";
 import { usePollQuery } from "../../../shared/api/polling";
@@ -78,7 +77,6 @@ function toEvent(item: QueueItem): EventInput[] {
 /** Органайзер · Календарь: сроки из задач сотрудника на FullCalendar. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation(["modules"]);
-  const { me } = useAuth();
   const { mobile } = useViewport();
   const navigate = useNavigate();
   const queue = useGetQueue(undefined, { query: usePollQuery() });
