@@ -59,9 +59,10 @@
       "accepted": "Mijoz qabul qilgan"
     },
     "contract": {
-      "project": "Loyiha",
-      "client_agreed": "Imzolaş kutilmoqda",
-      "issued_at_operator": "Imzolaş kutilmoqda",
+      "project": "Qoralama",
+      "at_client": "Mijoz kelişuvida",
+      "client_agreed": "Imzolaşni kutmoqda",
+      "issued_at_operator": "Imzolaşni kutmoqda",
       "signed": "Imzolangan",
       "rejected": "Mijoz rad etgan",
       "cancelled": "Bekor qilingan"
@@ -75,10 +76,10 @@
       "cancelled": "Bekor qilingan"
     },
     "act": {
-      "project": "Loyiha",
-      "returned": "Sabab bilan qaytarilgan",
-      "issued": "Çiqarilgan",
-      "signed": "Imzolangan (skan)",
+      "project": "Qoralama",
+      "returned": "Eʼtirozlar bilan qaytarilgan",
+      "issued": "Rasmiylaştirilgan",
+      "signed": "Imzolangan",
       "accepted": "Mijoz qabul qilgan",
       "cancelled": "Bekor qilingan"
     }
@@ -162,13 +163,13 @@
         "eta": "Kutilmoqda"
       },
       "lineStatus": {
-        "assembling": "Komplektlanmoqda",
-        "in_transit": "Yölda",
+        "assembling": "Butlanmoqda",
+        "in_transit": "Mijozga yölda",
         "ready_to_ship": "Jönatişga tayyor",
         "shipped": "Jönatilgan",
         "delivered": "Yetkazilgan",
         "accepted": "Mijoz qabul qilgan",
-        "disputed": "Mijoz eʼtiroz bildirgan"
+        "disputed": "Mijozning eʼtirozlari bor"
       },
       "proof": "Yetkazib beriş tasdiği",
       "proofFile": "Fayl"
@@ -382,8 +383,8 @@
       "collecting": "Vizalar yiğilmoqda.",
       "askAdmin": "Administratordan rolni tayinlaşni sörang: {{roles}}.",
       "role": {
-        "visa_finance": "buxgalter",
-        "visa_legal": "yurist"
+        "visa_finance": "moliya",
+        "visa_legal": "huquq"
       }
     },
     "term": {
@@ -408,7 +409,7 @@
       "nda": "Şartnoma tugagaç sir saqlaş: {{years}} yil.",
       "ndaIndefinite": "Tijorat siri — muddatsiz.",
       "agreement": "Kelişuv raqami",
-      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Fikringiz o‘zgarsa, shu kartada «Uzaytirişni qaytariş» tugmasi bor.",
+      "declineConfirm": "Şartnoma {{until}}da tugaydi va uzaytirilmaydi. Fikringiz özgarsa, şu kartada «Uzaytirişni qaytariş» tugmasi bor.",
       "cancel": "Kerak emas",
       "action": {
         "decline_renewal": "Uzaytirişdan boş tortiş",
@@ -483,7 +484,7 @@
     },
     "fields": {
       "total": "Summa",
-      "issued": "Çiqarilgan",
+      "issued": "Rasmiylaştirilgan",
       "signed": "Imzolangan",
       "accepted": "Qabul qilingan"
     },

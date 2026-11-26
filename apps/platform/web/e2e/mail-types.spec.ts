@@ -215,7 +215,7 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/eds/mail/18");
     await expect(page).toHaveURL(/\/eds\/mail\/18$/);
     await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Счёт партнёра");
-    await page.getByRole("button", { name: "Передать бухгалтеру" }).first().click();
+    await page.getByRole("button", { name: "Передать на оплату" }).first().click();
     await page.getByRole("button", { name: "Передать", exact: true }).click();
     await expect(page.getByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
 

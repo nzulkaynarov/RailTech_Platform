@@ -116,7 +116,7 @@ describe("EDS · Создать документ: форма", () => {
     // шаг 1 «О чём» открыт: тип, тема, кому, сумма, срок, связь с проектом
     expect(screen.getByLabelText("Тип документа")).toBeInTheDocument();
     expect(screen.getByLabelText("Тема")).toBeVisible();
-    expect(screen.getByLabelText("Кому")).toHaveValue("Директор");
+    expect(screen.getByLabelText("Кому")).toHaveValue("На согласование");
     expect(screen.getByLabelText("Кому")).toHaveAttribute("readonly");
     expect(screen.getByLabelText("Сумма, сум")).toBeVisible();
     expect(screen.getByLabelText("Нужно до")).toBeVisible();
@@ -503,11 +503,11 @@ describe("EDS · Создать документ: форма", () => {
     // маршрут — в свёрнутой строке шага «Согласование» и внутри него
     step(/Согласование/);
     const route = screen.getByRole("region", { name: /Согласование/ });
-    expect(within(route).getByText("Вы → Директор")).toBeVisible();
+    expect(within(route).getByText("Вы → согласование")).toBeVisible();
 
     type("Сумма, сум", "1 500 000");
 
-    expect(within(route).getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
+    expect(within(route).getByText("Вы → согласование → оплата (есть сумма)")).toBeVisible();
   });
 
   it("служебка с суммой без счёта партнёра не уходит: в «Осталось» названо, что приложить; отметка «придёт позже» снимает требование (Б-9)", async () => {
@@ -755,7 +755,7 @@ describe("EDS · Создать документ: форма", () => {
       target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
     });
     expect(
-      await within(list).findByText("Допустимы PDF, изображения и документы Office."),
+      await within(list).findByText("Допустимы PDF, изображения и файлы Word, Excel и PowerPoint."),
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Убрать файл schet.pdf" }));

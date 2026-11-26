@@ -148,7 +148,7 @@
       "unconfirmedFinal": "Доставка не подтверждена — проверьте у клиента, получил ли он ответ"
     },
     "toRequest": "В заявку",
-    "toRequestLabel": "В заявку: {{name}} — письмом директору",
+    "toRequestLabel": "В заявку: {{name}} — письмом на согласование",
     "channelCabinet": "Кабинет",
     "channelEmail": "Почта",
     "context": {

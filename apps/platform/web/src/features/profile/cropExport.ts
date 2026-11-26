@@ -9,7 +9,7 @@ export async function renderCircle(image: CanvasImageSource, rect: SourceRect): 
   canvas.width = OUTPUT_SIZE;
   canvas.height = OUTPUT_SIZE;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas недоступен");
+  if (!ctx) throw new Error("Не удалось обработать фото");
   ctx.beginPath();
   ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
   ctx.closePath();
@@ -29,7 +29,7 @@ export async function renderSquare(image: CanvasImageSource, rect: SourceRect): 
   canvas.width = OUTPUT_SIZE;
   canvas.height = OUTPUT_SIZE;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas недоступен");
+  if (!ctx) throw new Error("Не удалось обработать фото");
   ctx.drawImage(image, rect.sx, rect.sy, rect.size, rect.size, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {

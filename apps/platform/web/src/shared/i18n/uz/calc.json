@@ -26,7 +26,7 @@
       "closedText": "Yopilgan va avvalgi arizalar şu yerda körinadi.",
       "allTitle": "Arizalar yöq",
       "allText": "Ariza yarating — u şu yerda körinadi.",
-      "filteredTitle": "Hech narsa topilmadi",
+      "filteredTitle": "Heç narsa topilmadi",
       "filteredText": "Izlaşni özgartiring yoki «Barçasi»ni oçing.",
       "filteredAction": "Izlaşni tozalaş"
     },
@@ -81,12 +81,12 @@
   "state": {
     "not_started": "Boşlanmagan",
     "in_progress": "Jarayonda",
-    "returned": "Qayta işlaşga qaytarilgan",
-    "at_director": "TK qoralamasi direktorda",
-    "rejected": "TK rad etilgan",
-    "approved": "TK maʼqullangan",
+    "returned": "Qayta işlaşda",
+    "at_director": "TT maʼqullaşda",
+    "rejected": "TT maʼqullanmagan",
+    "approved": "TT maʼqullangan",
     "rejected_client": "Mijoz rad etdi",
-    "rejected_director": "Direktor rad etdi"
+    "rejected_director": "TT maʼqullanmagan"
   },
   "groups": {
     "stock": "Ombor",
@@ -107,11 +107,11 @@
     "margin": "marja kamida {{value}} %",
     "steps": "Ariza yöli",
     "openTask": "Topşiriq va vizalar",
-    "atDirector": "{{number}} TK qoralamasi direktorda maʼqullaşda. Direktor qaror qilgunça qatorlar özgartirilmaydi.",
-    "atDirectorVersion": "{{number}} TK qoralamasi, {{version}}-versiya, direktorda maʼqullaşda. Direktor qaror qilgunça qatorlar özgartirilmaydi.",
-    "returned": "Direktor TKni qayta işlaşga qaytardi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
-    "rejected": "Direktor TKni rad etdi. Hisob-kitob yopildi.",
-    "approved": "Direktor TKni maʼqulladi. Hisob-kitob özgartiriş uçun yopiq.",
+    "atDirector": "{{number}} TT qoralamasi maʼqullaşda. Qaror qabul qilinmaguça qatorlar özgartirilmaydi.",
+    "atDirectorVersion": "{{number}} TT qoralamasi, {{version}}-versiya, maʼqullaşda. Qaror qabul qilinmaguça qatorlar özgartirilmaydi.",
+    "returned": "TT qayta işlaşga qaytarildi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
+    "rejected": "TT maʼqullanmadi. Hisob-kitob yopildi.",
+    "approved": "TT maʼqullandi. Hisob-kitob özgartiriş uçun yopiq.",
     "readOnly": "Faqat köriş.",
     "notStarted": {
       "title": "Hisob-kitob hali boşlanmagan",
@@ -126,12 +126,12 @@
     "request": "Ariza matni",
     "requestEmpty": "Ariza matni yöq.",
     "requestPrice": "Hamkordan narx söraş",
-    "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
+    "rejectedComment": "TT maʼqullanmadi: «{{comment}}». Hisob-kitob yopildi.",
     "requestFiles": "Ariza fayllari",
     "downloadFile": "{{name}} faylini yuklab oliş",
     "subtitleNoLetter": "{{client}} · hisob-kitob muddati {{due}}",
     "requestFilesPending": "Ariza fayli yuklanmoqda…",
-    "openQuote": "TK {{number}}ni oçiş",
+    "openQuote": "TT {{number}}ni oçiş",
     "openProject": "Loyihani oçiş",
     "copy": "Namuna böyiça yaratiş"
   },
@@ -287,19 +287,19 @@
       "visas_missing": "Barça qatorlar tasdiqlanganda tugma faollaşadi: vizasiz {{count}} ta.",
       "no_lines": "Kamida bitta qator qöşing.",
       "not_started": "Avval hisob-kitobni boşlang.",
-      "not_draft": "Hisob-kitob allaqaçon direktorga topşirilgan.",
+      "not_draft": "Hisob-kitob allaqaçon maʼqullaşga topşirilgan.",
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
-    "done": "TK qoralamasi direktorda",
+    "done": "TT maʼqullaşda",
     "closed": {
-      "approved": "TK maʼqullandi",
-      "rejected": "TK rad etildi",
+      "approved": "TT maʼqullandi",
+      "rejected": "TT rad etildi",
       "not_in_calculation": "Ariza hisob-kitobda emas."
     }
   },
   "task": {
-    "resolution": "Direktor rezolyutsiyasi",
+    "resolution": "Rezolyutsiya",
     "decided": "{{name}} · {{date}}",
     "letter": "{{number}} xat",
     "due": "Hisob-kitob muddati",
@@ -315,17 +315,17 @@
       "waiting": "Kutmoqda",
       "none": "Kerak emas"
     },
-    "memo": "TKdan taşqari xarid — direktorga xizmat xati bilan.",
+    "memo": "TTdan taşqari xarid — kelişuv uçun xizmat xati bilan.",
     "memoAction": "Xizmat xati yoziş",
     "open": "Hisob-kitobni oçiş",
     "requestFiles": "Ariza fayllari",
-    "noResolution": "Rezolyusiya kerak boʼlmadi — hisob-kitob darhol masʼul xodimga topshirildi.",
+    "noResolution": "Rezolyusiya kerak bölmadi — hisob-kitob darhol masʼul xodimga topşirildi.",
     "calcHeading": "Hisob-kitob",
     "assignedDirect": "tayinlangan: {{names}}"
   },
   "errors": {
     "visas_missing": "Barça qatorlar tasdiqlanmagan.",
-    "quote_not_draft": "Hisob-kitob allaqaçon direktorda — qatorlar özgartirilmaydi.",
+    "quote_not_draft": "Hisob-kitob allaqaçon maʼqullaşda — qatorlar özgartirilmaydi.",
     "line_incomplete": "Avval xarid va mijoz narxini töldiring.",
     "purchase_required": "Avval xarid narxini kiriting: ustama undan hisoblanadi.",
     "client_price_below_cost": "Mijoz narxi xarid narxidan past.",

@@ -102,9 +102,7 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
       // ЕД-7: форма резолюции — блок в центре карточки на любой ширине
-      const form: Locator = page
-        .locator(".pf-dec-center")
-        .getByRole("form", { name: "Резолюция директора" });
+      const form: Locator = page.locator(".pf-dec-center").getByRole("form", { name: "Резолюция" });
       await form.scrollIntoViewIfNeeded();
       await expect(form).toBeVisible();
       await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу.");

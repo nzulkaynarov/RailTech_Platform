@@ -109,7 +109,7 @@
     "noClient": "Mijoz aniqlanmagan",
     "byClient": "STIR {{inn}}",
     "bySystem": "Tizim tomonidan, mijoz arizasi böyiça",
-    "decision": "Direktor qarori",
+    "decision": "Xat böyiça qaror",
     "decisionFields": {
       "text": "Rezolyutsiya matni",
       "assignees": "Ijroçilar",
@@ -183,7 +183,7 @@
   },
   "panel": {
     "awaitingReadOnly": {
-      "title": "Xat direktor rezolyutsiyasini kutmoqda",
+      "title": "Xat rezolyutsiyani kutmoqda",
       "text": "Faqat köriş."
     },
     "decided": {
@@ -209,7 +209,7 @@
     "openTask": "Topşiriqning iş ekranini oçiş"
   },
   "form": {
-    "name": "Direktor rezolyutsiyasi",
+    "name": "Rezolyutsiya",
     "text": {
       "label": "Rezolyutsiya matni",
       "hint": "Ijroçilar bu matnni topşiriqda oladi."
@@ -327,7 +327,7 @@
       "label": "Qabul qiliş usuli",
       "post": "Poçta",
       "paper": "Qoğoz (şaxsan olib kelingan)",
-      "taxpayer_cabinet": "Soliq tölovçi kabineti my.soliq",
+      "taxpayer_cabinet": "Soliq tölovçisi kabineti",
       "courier": "Kuryer",
       "email": "E-mail",
       "unavailable": "Usullar maʼlumotnomasi yuklanmadi. Sahifani yangilang."
@@ -363,12 +363,13 @@
     "addressee": {
       "label": "Adresat",
       "hint": "",
-      "default": "Direktor (sukut böyiça)"
+      "default": "Sukut böyiça qabul qiluvçi",
+      "unset": "Tanlanmagan — sukut böyiça qabul qiluvçi oladi"
     },
     "urgent": "Şoşilinç",
     "files": {
       "label": "Hujjat fayli",
-      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Office hujjatlari, 25 MB gaça. Pasport va şaxsiy hujjatlarni yuklamang."
+      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Word, Excel va PowerPoint fayllari, 25 MB gaça. Pasport va şaxsiy hujjatlarni yuklamang."
     },
     "deal": {
       "label": "Ariza yoki loyiha bilan boğlaş",
@@ -430,8 +431,8 @@
       "hintScans": "Xatning PDF yoki fotosi — yordamçi maydonlarni taklif qiladi, tekşiring.",
       "chip": "SI taklifi",
       "chipRules": "Xat matnidan",
-      "hintRules": "PDF matnidagi «N kun ichida» muddati özi qöyiladi.",
-      "staleDue": "Qabul qilish sanasi özgardi — muddat eski sanadan hisoblangan.",
+      "hintRules": "PDF matnidagi «N kun içida» muddati özi qöyiladi.",
+      "staleDue": "Qabul qiliş sanasi özgardi — muddat eski sanadan hisoblangan.",
       "recompute": "Muddatni qayta hisoblaş",
       "appliedRules": "Xat matnidan qöyildi — belgilangan maydonlarni tekşiring.",
       "appliedMixed": "Fayldan töldirildi — belgilangan maydonlarni tekşiring.",
@@ -477,9 +478,9 @@
     }
   },
   "office": {
-    "name": "Direktor rezolyutsiyasi",
+    "name": "Rezolyutsiya",
     "draftName": "Rezolyutsiya loyihasi",
-    "draftIntro": "Loyihani tayyorlang: direktor uni bir bosişda tasdiqlaydi yoki tuzatadi.",
+    "draftIntro": "Loyihani tayyorlang: uni bir bosişda tasdiqlaydilar yoki tuzatadilar.",
     "kind": {
       "legend": "Rezolyutsiya turi",
       "execute": "Ijro uçun",
@@ -580,7 +581,7 @@
   },
   "instr": {
     "title": "Topşiriqlar",
-    "resolution": "Direktor rezolyutsiyasi",
+    "resolution": "Rezolyutsiya",
     "fields": {
       "kind": "Tur",
       "responsible": "Masʼul ijroçi",
@@ -672,11 +673,11 @@
       "newDue": "Yangi muddat",
       "reason": "Sabab",
       "submit": "Uzaytirişni söraş",
-      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi, direktor sörovni faqat rad etişi mumkin.",
-      "pending": "{{date}} ga uzaytiriş sörovi direktor qarorini kutmoqda.",
+      "urgent": "Xat şoşilinç: muddat uzaytirilmaydi, sörovni faqat rad etiş mumkin.",
+      "pending": "{{date}} ga uzaytiriş sörovi qarorni kutmoqda.",
       "errorDue": "Yangi muddat joriydan ({{date}}) keyin bölsin.",
       "errorReason": "Sababni yozing.",
-      "done": "Uzaytiriş sörovi direktorga yuborildi"
+      "done": "Uzaytiriş sörovi qarorga yuborildi"
     },
     "acq": {
       "title": "Tanişib çiqiş",
@@ -719,10 +720,10 @@
     },
     "empty": {
       "title": "Yangi xatlar yöq",
-      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa içida şu yerda paydo böladi.",
+      "text": "Umumiy qutidagi xatlar kelganidan bir neça daqiqa keyin şu yerda paydo böladi.",
       "new": {
         "title": "Yangi xatlar yöq",
-        "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa içida şu yerda paydo böladi."
+        "text": "Umumiy qutidagi xatlar kelganidan bir neça daqiqa keyin şu yerda paydo böladi."
       },
       "mine": {
         "title": "Sizning işingizda xat yöq",
@@ -756,7 +757,7 @@
     "status": {
       "new": "Yangi",
       "registered": "Röyxatga olingan",
-      "lead": "Lidlarga ötkazildi",
+      "lead": "Lid yaratilgan",
       "archived": "Arxivda",
       "spam": "Şubhali",
       "newReply": "Yangi · zanjirda javob",
@@ -768,7 +769,7 @@
       "register_incoming": "Kiruvçi sifatida röyxatga oliş",
       "create_lead": "Lid yaratiş",
       "supplier_price": "Narxnomani yuklaş",
-      "to_accountant": "Buxgalterga topşiriş",
+      "to_accountant": "Tölovga topşiriş",
       "archive_mailing": "Reklama sifatida arxivga",
       "reply_template": "Javob beriş",
       "suspicious": "«Şubhali»ga",
@@ -799,7 +800,7 @@
     "assist": {
       "title": "Yordamçi taklifi",
       "button": "Taklif qiliş",
-      "intro": "Yordamçi xat turi va harakatni taklif qiladi. Poçta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yaşiriladi, ilovalar yuborilmaydi. Xatni taklifsiz ham körib çiqiş mumkin.",
+      "intro": "Yordamçi xat turi va harakatni taklif qiladi; xatni usiz ham körib çiqiş mumkin. Poçta manzillari, telefonlar, STIR, JŞŞIR, pasport, karta va hisob raqamlari yaşiriladi, ilovalar yuborilmaydi.",
       "note": "Taklif özi heç narsa qilmaydi — harakatni siz tanlaysiz.",
       "unavailable": "Yordamçi hozir mavjud emas — xatni qölda körib çiqing yoki keyinroq urinib köring.",
       "retry": "Qayta uriniş",
@@ -810,7 +811,7 @@
       "title": "Nima qiliş kerak",
       "what": "Nima böladi",
       "registerWhat": "«Kiruvçini röyxatga oliş» şakli xat maʼlumotlari va ilovalari bilan oçiladi; röyxatga olingaç xat navbatdan çiqadi.",
-      "leadWhat": "«Kiruvçi»da menejersiz lid paydo böladi — uni menejer oladi. Şu manzilli lid bölsa, xat unga izoh sifatida qöşiladi. Xat navbatdan çiqadi.",
+      "leadWhat": "«Kiruvçi»da menejersiz lid paydo böladi; şu manzilli lid bölsa, xat unga izoh sifatida qöşiladi. Xat navbatdan çiqadi.",
       "leadConfirm": "Lid yaratiş",
       "archiveReason": "Sabab",
       "archiveHint": "Masalan: reklama, takror, bizga emas",
@@ -1021,7 +1022,7 @@
         "publicDomain": "Bu umumiy poçta xizmati — qoida istalgan kişining xatini uşlaydi. Aniq manzilni körsatgan maʼqul."
       },
       "senderCheck": {
-        "unverified": "Jönatuvçi tasdiqlanmagan: SPF/DKIM/DMARC tekşiruvi ötmadi, manzil soxtalaştirilgan bölişi mumkin. Qoida böyiça tur qöyilmadi.",
+        "unverified": "Jönatuvçi tasdiqlanmagan: poçta tekşiruvi ötmadi, manzil soxtalaştirilgan bölişi mumkin. Qoida böyiça tur qöyilmadi.",
         "unknown": "Jönatuvçini tekşirib bölmaydi: xatda poçta serveri belgisi yöq. Qoida böyiça tur qöyilmadi."
       }
     },
@@ -1070,10 +1071,10 @@
         "by": "Yuborgan"
       },
       "status": {
-        "sent": "Yetkazildi",
-        "queued": "Navbatda",
-        "failed": "Yetkazilmadi",
-        "skipped_no_smtp": "Poçta sozlanmagan"
+        "sent": "Yuborilgan",
+        "queued": "Yuborilmoqda",
+        "failed": "Yuborilmagan",
+        "skipped_no_smtp": "Yuborilmagan: poçta sozlanmagan"
       },
       "resend": "Qayta yuboriş",
       "resent": "{{to}} uçun xat navbatga qöyildi",
@@ -1259,7 +1260,7 @@
       },
       "policy": {
         "title": "SI uçun maʼlumotlar himoyasi",
-        "hint": "Modelga ketadigan matnda nima yaşiriladi: poçta yordamçisi va «Fayldan töldiriş». Jurnallarda doim hammasi yaşirin. SI taklif qiladi, inson tasdiqlaydi.",
+        "hint": "Yordamçi uçun matnda nima yaşiriladi (poçta va «Fayldan töldiriş»); jurnallarda hammasi yaşirin. SI taklif qiladi, inson tasdiqlaydi.",
         "legend": "Maʼlumotlar himoyasi siyosati",
         "business": "Işbilarmon (tavsiya etiladi)",
         "businessText": "Pasport, JSHSHIR, karta raqamlari va tuğilgan sanalar yaşiriladi. Kompaniya rekvizitlari, telefonlar, poçta va ismlar qoladi.",

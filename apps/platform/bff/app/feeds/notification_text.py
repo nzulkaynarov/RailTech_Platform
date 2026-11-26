@@ -46,12 +46,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "uz": "Şartnoma şablonidan çetga çiqiş sörovi",
     },
     "partner.crm_conflict": {
-        "en": "Partner “{company}”: the CRM client already belongs to another company",
-        "uz": "Hamkor «{company}»: CRMdagi mijoz boşqa kompaniyaga biriktirilgan",
+        "en": "Partner “{company}”: the client already belongs to another company",
+        "uz": "Hamkor «{company}»: mijoz boşqa kompaniyaga biriktirilgan",
     },
     "partner.crm_unverified": {
-        "en": "Partner “{company}”: client handover from CRM is held until checked",
-        "uz": "Hamkor «{company}»: CRMdan mijozni topşiriş tekşiruvgaça töxtatilgan",
+        "en": "Partner “{company}”: client handover is held until checked",
+        "uz": "Hamkor «{company}»: mijozni topşiriş tekşiruvgaça töxtatilgan",
     },
     "contract.email_failed": {
         "en": "Email with contract {number} was not delivered",
@@ -66,8 +66,8 @@ CATALOG: dict[str, dict[str, str]] = {
         "uz": "{number} dalolatnomasi bilan xat yetkazilmadi",
     },
     "invitation.email_failed": {
-        "en": "Cabinet invitation was not delivered: {number}",
-        "uz": "Kabinetga taklif yetkazilmadi: {number}",
+        "en": "Account invitation was not sent: {number}",
+        "uz": "Kabinetga taklif yuborilmadi: {number}",
     },
     "supplier_order.email_failed": {
         "en": "Email with order {number} was not delivered",

@@ -417,7 +417,7 @@ async def test_confirming_a_client_proof_links_it_and_a_repeat_is_idempotent(
     assert len(fake.invoices[145]["payments"]) == 1
     unknown = await confirm(web, 142, {**FULL_PAYMENT, "proof_id": 99})
     assert unknown.status_code == 404
-    assert unknown.json()["message"] == "Платёжка не найдена."
+    assert unknown.json()["message"] == "Платёжное поручение не найдено."
 
 
 @pytest.mark.parametrize(

@@ -352,7 +352,7 @@ class WhatsNewMark(BaseModel):
     @model_validator(mode="after")
     def _not_empty(self) -> "WhatsNewMark":
         if self.shown is None and self.read is None:
-            raise ValueError("нужно shown или read")
+            raise ValueError("нужно указать, что показано или прочитано")
         return self
 
 

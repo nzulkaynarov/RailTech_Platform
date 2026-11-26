@@ -8,7 +8,7 @@ import { StatusTag } from "./StatusTag";
 describe("StatusTag", () => {
   it("статус — слово из словаря, а не код и не один цвет", () => {
     renderUi(<StatusTag kind="invoice" status="proof_received" />);
-    const tag = screen.getByText("Платёжное поручение получено");
+    const tag = screen.getByText("Оплата на проверке");
     expect(tag).toBeVisible();
     expect(tag.closest(".ant-tag")).toHaveAttribute("data-tone", "gold");
     expect(screen.queryByText("proof_received")).toBeNull();

@@ -37,7 +37,7 @@ describe("EDS · «Это дубль ВХ-…» (EDS-DUP)", () => {
 
     expect(await screen.findByText("Дубль письма")).toBeVisible();
     expect(screen.getByRole("link", { name: "ВХ-100/26" })).toBeVisible();
-    expect(screen.getAllByText("Дубль").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Повтор").length).toBeGreaterThan(0);
     const history = await openSideTab("История");
     expect(within(history).getByText("Дубль ВХ-100/26: Пришло дважды")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Это дубль" })).toBeNull();
