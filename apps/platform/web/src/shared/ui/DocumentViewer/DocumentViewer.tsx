@@ -28,6 +28,8 @@ export interface DocumentViewerProps {
   initialPage?: number;
   /** Своё скачивание (например, с именем файла от сервера); без него файл сохраняется из уже полученных байт */
   onDownload?: () => void;
+  /** `false` — в панели нет своего «Скачать» (его уже даёт экран); на весь экран кнопка есть всегда */
+  panelDownload?: boolean;
 }
 
 function extensionOf(type: string | undefined): string {
@@ -132,6 +134,7 @@ function PdfSurface({
   mode,
   initialPage = 1,
   onDownload,
+  panelDownload,
   onPage,
   onFull,
   onClose,
@@ -168,6 +171,7 @@ function PdfSurface({
       }}
       onFull={onFull}
       onClose={onClose}
+      showDownload={mode === "full" || panelDownload !== false}
       thumbs={
         thumbsShown && pdf && api.pages > 1 ? (
           <PageThumbs pdf={pdf} pages={api.pages} page={api.page} onGo={api.goTo} />
@@ -189,7 +193,16 @@ function PdfSurface({
   );
 }
 
-function ImageSurface({ data, name, type, mode, onDownload, onFull, onClose }: SurfaceProps) {
+function ImageSurface({
+  data,
+  name,
+  type,
+  mode,
+  onDownload,
+  panelDownload,
+  onFull,
+  onClose,
+}: SurfaceProps) {
   const { t } = useTranslation("ui");
   const { phone } = useChrome(mode);
   const url = useMemo(() => URL.createObjectURL(new Blob([data], { type })), [data, type]);
@@ -240,6 +253,7 @@ function ImageSurface({ data, name, type, mode, onDownload, onFull, onClose }: S
       }}
       onFull={onFull}
       onClose={onClose}
+      showDownload={mode === "full" || panelDownload !== false}
       thumbs={null}
       onStageClick={phone && mode === "panel" ? onFull : undefined}
     >
@@ -280,6 +294,7 @@ function Frame({
   onDownload,
   onFull,
   onClose,
+  showDownload,
   thumbs,
   onStageClick,
   children,
@@ -291,6 +306,7 @@ function Frame({
   onDownload: () => void;
   onFull?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  showDownload: boolean;
   thumbs: React.ReactNode;
   onStageClick?: (() => void) | undefined;
   children: React.ReactNode;
@@ -338,6 +354,7 @@ function Frame({
         onDownload={onDownload}
         onFull={onFull}
         onClose={onClose}
+        showDownload={showDownload}
       />
       <div className="pf-dv-body">
         {thumbs}

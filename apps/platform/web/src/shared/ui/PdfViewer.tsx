@@ -9,6 +9,7 @@ export default function PdfViewer({
   name,
   type,
   onDownload,
+  panelDownload,
 }: {
   data: ArrayBuffer;
   name: string;
@@ -16,6 +17,8 @@ export default function PdfViewer({
   type?: string;
   /** Своё скачивание (имя файла от сервера); без него — из полученных байт */
   onDownload?: () => void;
+  /** `false` — в панели нет своего «Скачать» (его уже даёт экран) */
+  panelDownload?: boolean;
 }) {
   return (
     <DocumentViewer
@@ -23,6 +26,7 @@ export default function PdfViewer({
       name={name}
       {...(type ? { type } : {})}
       {...(onDownload ? { onDownload } : {})}
+      {...(panelDownload === false ? { panelDownload } : {})}
       mode="panel"
     />
   );

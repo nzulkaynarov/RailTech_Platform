@@ -220,7 +220,16 @@ export function LetterPdfPanel({
           />
         ) : bytes.data ? (
           <Suspense fallback={<Skeleton active paragraph={{ rows: 6 }} title={false} />}>
-            <PdfViewer data={bytes.data} name={name} />
+            <PdfViewer
+              data={bytes.data}
+              name={name}
+              panelDownload={false}
+              onDownload={() => {
+                void downloadFile(getDownloadEdsDocumentPdfUrl(current ?? ""), `${name}.pdf`).catch(
+                  () => undefined,
+                );
+              }}
+            />
           </Suspense>
         ) : (
           <Skeleton active paragraph={{ rows: 6 }} title={false} />
