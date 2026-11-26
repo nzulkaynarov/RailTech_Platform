@@ -657,6 +657,25 @@
         "declined": "You declined the renewal of contract {{number}}.",
         "restore": "Restore renewal",
         "restored": "Renewal of contract {{number}} restored."
+      },
+      "remarks": {
+        "open": "I have remarks",
+        "openNamed": "Remarks on contract {{number}}",
+        "title": "Remarks on contract {{number}}",
+        "text": "Say what to change. You can attach your own edition: download ours as Word, edit it and upload — we will show what changed. We will reply: accept your edition or send ours.",
+        "comment": "What to change",
+        "file": "Your edition (optional)",
+        "fileHint": "Word or Excel, up to 10 MB. The file stays attached to your remarks.",
+        "confirm": "Send remarks",
+        "sent": "Remarks on contract {{number}} sent. We will reply.",
+        "review": "Your remarks are being reviewed by us",
+        "answered": "Our reply: {{text}}",
+        "docx": "Download for edits (DOCX)",
+        "problem": {
+          "commentMissing": "Say what to change.",
+          "tooLarge": "The file is larger than 10 MB.",
+          "badType": "A Word (.docx) or Excel (.xlsx) file is needed."
+        }
       }
     },
     "invoices": {
@@ -1463,7 +1482,10 @@
     "GENERATING": "The file is still being prepared — try again in a few seconds.",
     "SCAN_NOT_EXPECTED": "The scan is not expected now.",
     "SCAN_INVALID": "The file was not accepted: a PDF or an image up to 20 MB.",
-    "RETURN_NOTE_REQUIRED": "Write a remark."
+    "RETURN_NOTE_REQUIRED": "Write a remark.",
+    "REMARK_OPEN": "Your remarks are still being reviewed — wait for the reply.",
+    "CONTRACT_REMARK_NOT_ALLOWED": "Remarks can no longer be sent for this contract.",
+    "COMMENT_REQUIRED": "Say what to change."
   },
   "widgets": {
     "actionRequired": {

@@ -60,9 +60,9 @@
     },
     "contract": {
       "project": "Draft",
-      "client_agreed": "Agreed by client",
-      "issued_at_operator": "Issued in EDI",
-      "signed": "Signed (scan)",
+      "client_agreed": "Awaiting signature",
+      "issued_at_operator": "Awaiting signature",
+      "signed": "Signed",
       "rejected": "Rejected by client",
       "cancelled": "Cancelled"
     },
@@ -212,12 +212,18 @@
       "client_agreed": "Contract wording agreed by the client",
       "rejected": "Contract rejected by the client",
       "revised": "Contract draft returned to work",
-      "issued_external": "Contract issued in EDI",
+      "issued_external": "Contract issued for signature",
       "scan_attached": "Scan of the signed contract attached",
       "signed": "Contract signed",
       "signed_client": "Client agreed to the contract",
       "signed_manager": "Contract signed by the company",
-      "cancelled": "Contract cancelled"
+      "cancelled": "Contract cancelled",
+      "marked_signed": "Contract marked as signed",
+      "remark_received": "Counterparty remarks received",
+      "remark_voted": "Answer to the counterparty remarks",
+      "remark_accepted": "Counterparty's edition accepted",
+      "remark_countered": "Reply to the counterparty: our edition",
+      "remark_dispute": "Disagreement on the counterparty remarks"
     },
     "act": {
       "issued": "Act issued",
@@ -257,25 +263,26 @@
     "toClientNo": "not sent",
     "state": {
       "project": "The draft has not been sent to the client yet.",
-      "atClient": "The draft is with the client for wording agreement.",
-      "client_agreed": "The client agreed the wording. Next, issue the contract in EDI (outside the Platform).",
-      "issued_at_operator": "The contract is issued in EDI. When both sides have signed, attach the scan.",
-      "signed": "The contract is signed by both sides, the scan is stored.",
+      "atClient": "The contract is with the counterparty. Waiting for the answer: “Accept the edition” or “I have remarks”.",
+      "client_agreed": "The edition is agreed. The contract awaits signing: mark it below once signed.",
+      "issued_at_operator": "The contract awaits signing: mark it below once signed.",
+      "signed": "The contract is signed.",
       "rejected": "The client rejected the contract. Fix the draft and send it for agreement again.",
       "cancelled": "The contract is cancelled."
     },
     "action": {
       "send_to_client": "Send to client for agreement",
       "client_agreed": "Mark: agreed by client",
-      "mark_issued": "Mark: issued in EDI",
-      "attach_scan": "Attach signed scan",
+      "mark_issued": "Issue for signature",
+      "attach_scan": "Mark as signed",
       "reject": "Client rejected the contract…",
-      "revise": "Return to draft"
+      "revise": "Return to draft",
+      "mark_signed": "Mark as signed"
     },
     "note": {
-      "label": "Operator or number in the EDI system",
+      "label": "Note",
       "hint": "Optional: goes to the log.",
-      "placeholder": "For example: EDI, No. 77"
+      "placeholder": ""
     },
     "reject": {
       "title": "The client rejected the contract",
@@ -295,14 +302,16 @@
     },
     "files": {
       "pdf": "Contract PDF",
-      "scan": "Signed scan"
+      "scan": "Signed scan",
+      "docx": "Download for edits (DOCX)",
+      "remark": "Counterparty's edition: {{name}}"
     },
     "done": {
       "create": "Contract draft created.",
       "send_to_client": "Draft sent to the client.",
       "client_agreed": "Marked: the client agreed the wording.",
-      "mark_issued": "Marked: contract issued in EDI.",
-      "attach_scan": "Scan attached, contract signed.",
+      "mark_issued": "Marked: the contract is issued for signature.",
+      "attach_scan": "The contract is signed, the scan is stored.",
       "reject": "Rejection recorded.",
       "revise": "Draft returned to work.",
       "sign_ours": "The contract is signed for the company.",
@@ -311,7 +320,10 @@
       "decline_renewal": "Renewal declined.",
       "renew": "Contract renewed.",
       "send_new_edition": "New edition sent for signature.",
-      "restore_renewal": "Renewal restored."
+      "restore_renewal": "Renewal restored.",
+      "mark_signed": "Marked: the contract is signed.",
+      "remark_vote": "Answer saved.",
+      "remark_decide": "Decision saved."
     },
     "readOnly": "View only.",
     "template": {
@@ -409,6 +421,56 @@
         "send_new_edition": "Send new edition for signature",
         "restore_renewal": "Restore renewal"
       }
+    },
+    "sign": {
+      "title": "Awaiting signature",
+      "hint": "Once both sides have signed, mark it here — a scan or a note is enough.",
+      "noteLabel": "Or a note",
+      "noteHint": "Where and when it was signed, where the original is.",
+      "term": "The contract term is counted when you mark it."
+    },
+    "remark": {
+      "title": "Counterparty remarks",
+      "counterparty": "Counterparty",
+      "from": "{{name}} · edition {{edition}} · {{date}}",
+      "noCompare": "A file is attached; it cannot be compared automatically — open it.",
+      "compare": "What changed",
+      "point": "cl.",
+      "col": {
+        "point": "Clause",
+        "ours": "Our edition",
+        "theirs": "Counterparty's edition"
+      },
+      "kind": {
+        "changed": "Changed",
+        "added": "Added",
+        "removed": "Removed"
+      },
+      "summary": {
+        "changed": "Changed cl. {{points}}",
+        "added": "Added cl. {{points}}",
+        "removed": "Removed cl. {{points}}"
+      },
+      "votes": {
+        "title": "Review: {{done}} of {{total}} answered",
+        "agree": "Agree",
+        "disagree": "Disagree",
+        "waiting": "waiting for an answer"
+      },
+      "vote": {
+        "label": "Comment",
+        "hint": "Required if you disagree.",
+        "needWords": "Say what you disagree with."
+      },
+      "decide": {
+        "who": "On disagreement decides: {{names}}",
+        "accept": "Accept the counterparty's edition",
+        "counter": "Reply with our edition",
+        "counterLabel": "What we reply to the counterparty",
+        "counterHint": "The counterparty will see the reply in the Cabinet.",
+        "send": "Send the reply"
+      },
+      "next": "When everyone has answered and agrees, the counterparty's edition is accepted and the contract becomes “Awaiting signature”."
     }
   },
   "act": {

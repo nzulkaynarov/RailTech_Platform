@@ -79,7 +79,7 @@ describe("Проект: карточка", () => {
     expect(rows[0]).toHaveTextContent("КП-2026/110");
     expect(rows[0]).toHaveTextContent("Принято клиентом");
     expect(rows[1]).toHaveTextContent("ДОГ-2026/097");
-    expect(rows[1]).toHaveTextContent("Подписан (скан)");
+    expect(rows[1]).toHaveTextContent("Подписан");
     // события документов — только во вкладке «История», в строке их пересказа нет
     expect(rows[1]).not.toHaveTextContent("Демо Бухгалтеров");
     expect(docs).toHaveTextContent("СЧ-2026/131");
@@ -226,7 +226,7 @@ describe("Проект: карточка", () => {
 });
 
 describe("Проект: договор (строка документа)", () => {
-  it("весь путь: формирование проекта → на согласование клиенту → согласован → выставлен в ЭДО → скан → Подписан", async () => {
+  it("весь путь: формирование проекта → у контрагента → согласован → ожидает подписания → отметка заметкой → Подписан", async () => {
     // проект договора готов, визы бухгалтера и юриста собраны (Х-1) — его можно отправить клиенту
     const { panel } = await openCard("accountant@demo.example", 111);
 
@@ -235,47 +235,53 @@ describe("Проект: договор (строка документа)", () =>
     expect(within(panel).queryByTestId("contract-send-blocker")).toBeNull();
     fireEvent.click(within(panel).getByRole("button", { name: "На согласование клиенту" }));
 
-    expect(
-      await within(panel).findByText("Проект у клиента на согласовании редакции."),
-    ).toBeVisible();
+    expect(await within(panel).findByText(/Договор у контрагента\./)).toBeVisible();
     await agree(panel);
 
-    expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
-    fireEvent.change(within(panel).getByLabelText(/Оператор или номер/), {
-      target: { value: "ЭДО, № 77" },
-    });
-    fireEvent.click(within(panel).getByRole("button", { name: "Отметить: выставлен в ЭДО" }));
-
     expect(
-      await within(panel).findByText(/Договор выставлен в ЭДО\. Когда обе стороны/),
+      await within(panel).findByText(/Редакция согласована\. Договор ожидает подписания/),
     ).toBeVisible();
-    expect(within(panel).getAllByText("Выставлен в ЭДО").length).toBeGreaterThan(0);
-
-    // скан: пока файла нет — кнопка неактивна, подпись говорит почему
-    const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
+    expect(within(panel).getAllByText("Ожидает подписания").length).toBeGreaterThan(0);
+    // отметка: пока нет ни скана, ни заметки — кнопка неактивна
+    const submit = within(panel).getByRole("button", { name: "Отметить: подписан" });
     expect(submit).toBeDisabled();
-    expect(within(panel).getByText("Выберите файл скана — кнопка станет доступной.")).toBeVisible();
+    fireEvent.change(within(panel).getByLabelText("Или заметка"), {
+      target: { value: "Подписан в офисе, оригинал у юриста" },
+    });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    fireEvent.click(submit);
+
+    expect(await within(panel).findByText("Договор подписан.")).toBeVisible();
+    expect(within(panel).getAllByText("Подписан").length).toBeGreaterThan(0);
+    // история — одна, во вкладке «История»: кто и когда, записи по порядку (новые первыми)
+    const side = await sideTab("История");
+    const history = await within(side).findByRole("list", { name: "История проекта" });
+    expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent(
+      "Договор отмечен подписанным",
+    );
+    expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
+    // СЦ-7: подпись записи — «Комментарий», а не «Причина»
+    expect(
+      within(history).getByText("Комментарий: Подписан в офисе, оригинал у юриста"),
+    ).toBeVisible();
+    expect(within(history).queryByText(/Причина: Подписан/)).toBeNull();
+  });
+
+  it("ДП-1: «Подписан» сканом вместо заметки — файл остаётся у договора", async () => {
+    const { panel } = await openCard("accountant@demo.example", 111);
+    await click(panel, "На согласование клиенту");
+    await agree(panel);
+    const submit = await within(panel).findByRole("button", { name: "Отметить: подписан" });
     pick(within(panel).getByLabelText("Скан подписанного договора"), PDF());
     await waitFor(() => {
       expect(submit).toBeEnabled();
     });
     fireEvent.click(submit);
 
-    expect(
-      await within(panel).findByText("Договор подписан обеими сторонами, скан сохранён."),
-    ).toBeVisible();
-    expect(within(panel).getByText("Подписан (скан)")).toBeVisible();
+    expect(await within(panel).findByText("Договор подписан.")).toBeVisible();
     expect(within(panel).getByRole("button", { name: "Скан подписанного" })).toBeVisible();
-    // история — одна, во вкладке «История»: кто и когда, записи по порядку (новые первыми)
-    const side = await sideTab("История");
-    const history = await within(side).findByRole("list", { name: "История проекта" });
-    expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent(
-      "Прикреплён скан подписанного договора",
-    );
-    expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
-    // СЦ-7: подпись записи — «Комментарий», а не «Причина»; после ЕД-7 запись живёт только в «Истории»
-    expect(within(history).getByText("Комментарий: ЭДО, № 77")).toBeVisible();
-    expect(within(history).queryByText(/Причина: ЭДО/)).toBeNull();
   });
 
   it("Х-1: новый проект договора — «На согласование клиенту» не предлагается, причина словами; «На подпись» собирает визы", async () => {
@@ -403,10 +409,10 @@ describe("Проект: договор (строка документа)", () =>
 
     expect(await within(panel).findByText("Укажите, как клиент сообщил")).toBeVisible();
     expect(within(panel).getByText("Укажите, кто подтвердил")).toBeVisible();
-    expect(within(panel).getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
+    expect(within(panel).getByText(/Договор у контрагента\./)).toBeVisible();
 
     await agree(panel, "Юсупова Н., юрист");
-    expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
+    expect(await within(panel).findByText(/Редакция согласована/)).toBeVisible();
     const side = await sideTab("История");
     const history = await within(side).findByRole("list", { name: "История проекта" });
     const last = within(history).getAllByRole("listitem")[0];
@@ -419,14 +425,13 @@ describe("Проект: договор (строка документа)", () =>
     const { panel } = await openCard("accountant@demo.example", 111);
     await click(panel, "На согласование клиенту");
     await agree(panel);
-    await click(panel, "Отметить: выставлен в ЭДО");
     const input = await within(panel).findByLabelText("Скан подписанного договора");
 
     pick(input, new File(["MZ"], "virus.exe", { type: "application/octet-stream" }));
     expect(
       await within(panel).findByText("Нужен PDF или изображение: JPG, PNG, WEBP."),
     ).toBeVisible();
-    expect(within(panel).getByRole("button", { name: "Прикрепить скан" })).toBeDisabled();
+    expect(within(panel).getByRole("button", { name: "Отметить: подписан" })).toBeDisabled();
 
     // правильное расширение, но не та сигнатура — отказ ERP словами
     // после выбора AntD Upload пересоздаёт поле файла: берём его заново
@@ -435,10 +440,10 @@ describe("Проект: договор (строка документа)", () =>
       new File(["not a pdf at all"], "fake.pdf", { type: "application/pdf" }),
     );
     await within(panel).findAllByText(/fake\.pdf/);
-    expect(within(panel).getByRole("button", { name: "Прикрепить скан" })).toBeEnabled();
-    fireEvent.click(within(panel).getByRole("button", { name: "Прикрепить скан" }));
+    expect(within(panel).getByRole("button", { name: "Отметить: подписан" })).toBeEnabled();
+    fireEvent.click(within(panel).getByRole("button", { name: "Отметить: подписан" }));
     expect(await within(panel).findByText(/Файл не похож на скан/)).toBeVisible();
-    expect(within(panel).getAllByText("Выставлен в ЭДО").length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText("Ожидает подписания").length).toBeGreaterThan(0);
   });
 
   it("отклонение клиентом: причина обязательна, потом «Вернуть в проект»", async () => {
@@ -492,7 +497,111 @@ describe("Проект: договор (строка документа)", () =>
         "Не получилось: Договор уже в другом статусе. Обновите страницу.",
       ),
     ).toBeVisible();
-    expect(within(panel).getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
+    expect(within(panel).getByText(/Договор у контрагента\./)).toBeVisible();
+  });
+});
+
+describe("Проект: договор — «Ожидает подписания» и замечания контрагента (ДП-1)", () => {
+  const person = (id: number, name: string) => ({ id, name });
+  const remark = (votes: { agree: boolean }[] = []) => ({
+    id: 1,
+    edition: 1,
+    received_at: "2026-11-26T10:02:00+05:00",
+    author_name: "Ш. Юсупов",
+    comment: "Бюджет закрыт, 50 % сразу не проведём.",
+    file_name: "редакция.docx",
+    has_file: true,
+    summary: { changed: ["2.2"], added: ["3.3"], removed: ["5.2"], total: 3, comparable: true },
+    items: [
+      {
+        point: "2.2",
+        kind: "changed" as const,
+        ours: "Предоплата 50 %",
+        theirs: "Предоплата 30 %",
+        segments: [
+          { op: "equal" as const, text: "Предоплата " },
+          { op: "del" as const, text: "50" },
+          { op: "ins" as const, text: "30" },
+          { op: "equal" as const, text: " %" },
+        ],
+      },
+    ],
+    votes: votes.map((v, i) => ({
+      user: person(10 + i, `Сотрудник ${String(i)}`),
+      agree: v.agree,
+      comment: v.agree ? "" : "Пеню оставляем",
+      at: "2026-11-26T10:40:00+05:00",
+    })),
+    deciders: [person(3, "Д. Назаров")],
+  });
+
+  it("отметка «Подписан» заметкой без скана: срок и статус «Подписан», запись в истории", async () => {
+    const project = readProjects().find((p) => p.id === 105);
+    if (!project?.contract) throw new Error("fixture");
+    writeProject({ ...project, contract: { ...project.contract, status: "client_agreed" } });
+    const view = await openCard("accountant@demo.example", 105);
+    expect(await within(view.panel).findByText("Ожидает подписания")).toBeVisible();
+    const submit = within(view.panel).getByRole("button", { name: "Отметить: подписан" });
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(view.panel).getByLabelText("Или заметка"), {
+      target: { value: "Подписан в офисе, оригинал у юриста" },
+    });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    fireEvent.click(submit);
+    expect(await within(view.panel).findByText("Договор подписан.")).toBeVisible();
+    expect(readProjects().find((p) => p.id === 105)?.contract?.status).toBe("signed");
+  });
+
+  it("замечания: разбор и сравнение видны, «Не согласен» без слов не уходит; все согласны — «Ожидает подписания»", async () => {
+    const project = readProjects().find((p) => p.id === 105);
+    if (!project?.contract) throw new Error("fixture");
+    writeProject({
+      ...project,
+      contract: { ...project.contract, remark: remark(), remark_awaiting: [person(1, "Вы")] },
+    });
+    const { panel } = await openCard("accountant@demo.example", 105);
+    const block = await within(panel).findByTestId("contract-remark");
+    expect(within(block).getByText("Бюджет закрыт, 50 % сразу не проведём.")).toBeVisible();
+    expect(within(block).getByTestId("remark-summary")).toHaveTextContent(
+      "Изменены п. 2.2; Добавлены п. 3.3; Удалены п. 5.2",
+    );
+    expect(within(block).getByText("50").tagName).toBe("DEL");
+    expect(within(block).getByText("30").tagName).toBe("INS");
+    // основная кнопка «согласован клиентом» при замечаниях не предлагается
+    expect(
+      within(panel).queryByRole("button", { name: "Отметить: согласован клиентом" }),
+    ).toBeNull();
+
+    fireEvent.click(within(block).getByRole("button", { name: "Не согласен" }));
+    expect(await within(block).findByText("Напишите, с чем не согласны.")).toBeVisible();
+    fireEvent.click(within(block).getByRole("button", { name: "Согласен" }));
+    expect(await within(panel).findByText(/Редакция согласована/)).toBeVisible();
+    expect(readProjects().find((p) => p.id === 105)?.contract?.status).toBe("client_agreed");
+  });
+
+  it("разногласие: решение за директором — принять редакцию контрагента или ответить своей", async () => {
+    const project = readProjects().find((p) => p.id === 105);
+    if (!project?.contract) throw new Error("fixture");
+    writeProject({
+      ...project,
+      contract: { ...project.contract, remark: remark([{ agree: true }, { agree: false }]) },
+    });
+    const { panel } = await openCard("director@demo.example", 105);
+    const block = await within(panel).findByTestId("contract-remark");
+    expect(within(block).getByText("При разногласии решает: Д. Назаров")).toBeVisible();
+    fireEvent.click(within(block).getByRole("button", { name: "Ответить своей редакцией" }));
+    const send = within(block).getByRole("button", { name: "Отправить ответ" });
+    expect(send).toBeDisabled();
+    fireEvent.change(within(block).getByLabelText("Что отвечаем контрагенту"), {
+      target: { value: "Предоплата 40 %" },
+    });
+    fireEvent.click(send);
+    await waitFor(() => {
+      expect(readProjects().find((p) => p.id === 105)?.contract?.remark).toBeUndefined();
+    });
+    expect(readProjects().find((p) => p.id === 105)?.contract?.status).toBe("project");
   });
 });
 

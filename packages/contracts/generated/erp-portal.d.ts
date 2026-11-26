@@ -809,9 +809,49 @@ export interface paths {
     put?: never;
     /**
      * Подписать договор со стороны клиента
-     * @description Согласие клиента с редакцией договора (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись: в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client) не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей `signed_by_client*` сохранены ради совместимости.
+     * @description Согласие клиента с редакцией договора («Принять редакцию»; пока замечания клиента на согласовании у компании — 409 `REMARK_OPEN`) (E-IMZO отложен до пилота, DECISIONS 2026-10-13). Это не подпись: в журнале договора запись «согласовано клиентом» (`contract.client_agreed`) с именем контакта, статус становится «Согласован клиентом», шина получает `contract.status_changed`, а `contract.signed` (by=client) не публикуется (DECISIONS 2026-11-22). «Подписан» ставит скан подписанного договора. Имена полей `signed_by_client*` сохранены ради совместимости.
      */
     post: operations["signContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/contracts/{id}/remarks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить замечания к редакции договора
+     * @description «Есть замечания» (ДП-1): один ответ — комментарий и, при желании, своя редакция договора (DOCX или XLSX) из `POST /uploads`; файл — вложение и точка правды. Сотрудники получают разбор «что изменилось» (DOCX сравнивается с нашей редакцией), отвечают «Согласен» / «Не согласен», при разногласии решает директор. Принята редакция — договор «Согласован клиентом» (`signed_by_client`); иначе приходит наш ответ (`remark.state = answered`). Только для договора `sent` и только контакту с правом действовать. Замечания уже на согласовании — 409 `REMARK_OPEN`, договор не у клиента — 409 `CONTRACT_REMARK_NOT_ALLOWED`, пустой комментарий — 422 `COMMENT_REQUIRED`, чужая загрузка — 422 `UPLOAD_NOT_FOUND`, не DOCX/XLSX или подделанная сигнатура — 422 `VALIDATION_ERROR`.
+     */
+    post: operations["submitContractRemarks"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/contracts/{id}/docx": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Скачать редакцию договора в DOCX для правок
+     * @description Наша редакция договора абзацами в Word (ДП-1): скачать, поправить и приложить к замечаниям — система покажет, что изменилось. Только пока договор у клиента на согласовании (`can_download_docx`); иначе 404.
+     */
+    get: operations["getContractDocx"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -3299,6 +3339,34 @@ export interface components {
       document_id?: number | null;
       /** @description Срок подписанного договора (ДС-1); `null` — договор ещё не подписан или подписан до введения срока */
       term?: components["schemas"]["ContractTerm"] | null;
+      /** @description Замечания клиента к редакции (ДП-1): на согласовании у компании или наш ответ; `null` — замечаний нет (или они приняты и договор согласован) */
+      remark?: components["schemas"]["ContractRemark"] | null;
+      /** @description Редакцию можно скачать в DOCX для правок (`GET /contracts/{id}/docx`) */
+      can_download_docx?: boolean;
+    };
+    ContractRemarksIn: {
+      /** @description Что изменить */
+      comment: string;
+      /**
+       * Format: uuid
+       * @description Своя редакция (DOCX или XLSX), загруженная через `POST /uploads`
+       */
+      upload_id?: string;
+    };
+    ContractRemark: {
+      /**
+       * @description `review` — замечания на согласовании у компании; `answered` — компания ответила своей редакцией
+       * @enum {string}
+       */
+      state: "review" | "answered";
+      comment: string;
+      /** @description Ответ компании (при `answered`) */
+      response?: string | null;
+      file_name?: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      answered_at?: string | null;
     };
     /**
      * @description Срок договора считается при подписании из правила компании и шаблона. `state`: `open` — без срока, `renews` —
@@ -5603,6 +5671,80 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  submitContractRemarks: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContractRemarksIn"];
+      };
+    };
+    responses: {
+      /** @description Замечания приняты, договор остаётся на согласовании */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Замечания уже на согласовании или договор не у клиента */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getContractDocx: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description DOCX */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       429: components["responses"]["TooManyRequests"];
     };
   };

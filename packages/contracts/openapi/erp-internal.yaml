@@ -9000,6 +9000,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -9213,6 +9214,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10082,7 +10084,7 @@ paths:
       operationId: crm_contracts_attach_scan_create
       description: PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор
         становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.
-      summary: Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)
+      summary: Прикрепить скан подписанного договора (PENDING_MANAGER или ISSUED_EXTERNAL → SIGNED)
       parameters:
       - in: path
         name: id
@@ -10109,6 +10111,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10214,6 +10217,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10342,6 +10346,36 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/download-docx/:
+    get:
+      operationId: crm_contracts_download_docx_retrieve
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: DOCX of our edition of the contract for the counterparty's edits (ДП-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
     get:
       operationId: crm_contracts_download_pdf_retrieve
@@ -10363,6 +10397,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Contract'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/download-remark/:
+    get:
+      operationId: crm_contracts_download_remark_retrieve
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: The counterparty's edition attached to its remarks (ДП-1)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
           description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
@@ -10482,6 +10546,71 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING
+            / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/mark-signed/:
+    post:
+      operationId: crm_contracts_mark_signed_create
+      description: 'Заметка обязательна: где и когда подписан, где оригинал. Срок договора считается в момент отметки; сделка
+        уходит в `CLOSED_WON`, как при скане.'
+      summary: 'Отметить: договор подписан, заметкой без скана (PENDING_MANAGER → SIGNED), ДП-1'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10544,6 +10673,135 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING
+            / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/remark-decide/:
+    post:
+      operationId: crm_contracts_remark_decide_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: 'Решение директора при разногласии по замечаниям: принять редакцию контрагента или ответить своей (ДП-1)'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkDecideInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkDecideInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkDecideInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractConflict'
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот; CONTRACT_DEVIATION_PENDING
+            / CONTRACT_NEEDS_OUR_SIGNATURE: договор по шаблону ещё нельзя отправить (ДОК-10); CONTRACT_VISAS_REQUIRED (Х-1):
+            отправка договора клиенту до сбора виз — в теле `reason` (причина словами) и `missing` (роли без визы)'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/remark-vote/:
+    post:
+      operationId: crm_contracts_remark_vote_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: 'Ответ ответственного на замечания контрагента: «Согласен» / «Не согласен» (ДП-1)'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkVoteInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkVoteInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractRemarkVoteInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10762,6 +11020,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -10927,6 +11186,7 @@ paths:
           description: ''
         '400':
           description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
+            / NOTE_REQUIRED / COMMENT_REQUIRED
           content:
             application/json:
               schema:
@@ -26807,12 +27067,23 @@ components:
           items:
             $ref: '#/components/schemas/ContractCardActionsEnum'
           description: 'Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли'
+        signing_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SigningActionsEnum'
+          description: 'ДП-1: `mark_signed` — «Отметить: подписан» заметкой, пока договор ожидает подписания и право `contract.sign`
+            есть'
         send_blocker:
           allOf:
           - $ref: '#/components/schemas/ContractSendBlocker'
           nullable: true
           description: 'Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client`
             в `actions`)'
+        remark:
+          allOf:
+          - $ref: '#/components/schemas/RemarkCard'
+          nullable: true
+          description: 'ДП-1: замечания контрагента на согласовании; `null` — их нет'
         history:
           type: array
           items:
@@ -27045,6 +27316,28 @@ components:
       - number
       - sent_to_client
       - status
+    ContractRemarkDecideInRequest:
+      type: object
+      properties:
+        accept:
+          type: boolean
+          description: '`true` — принять редакцию контрагента, `false` — ответить своей'
+        text:
+          type: string
+          description: Ответ контрагенту; обязателен при `accept=false`
+      required:
+      - accept
+    ContractRemarkVoteInRequest:
+      type: object
+      properties:
+        agree:
+          type: boolean
+          description: '`true` — «Согласен», `false` — «Не согласен»'
+        comment:
+          type: string
+          description: Обязателен при «Не согласен»
+      required:
+      - agree
     ContractRenewByAgreementRequest:
       type: object
       properties:
@@ -33756,6 +34049,16 @@ components:
       required:
       - channel
       - counterparty_person
+    OpEnum:
+      enum:
+      - equal
+      - del
+      - ins
+      type: string
+      description: |-
+        * `equal` - equal
+        * `del` - del
+        * `ins` - ins
     OrderActions:
       type: object
       properties:
@@ -40890,6 +41193,162 @@ components:
       description: |-
         * `client` - client
         * `director` - director
+    RemarkCard:
+      type: object
+      description: 'ДП-1: замечания контрагента на согласовании: комментарий, файл, что изменилось, ответы и что можно этому
+        сотруднику.'
+      properties:
+        id:
+          type: integer
+        edition:
+          type: integer
+        received_at:
+          type: string
+          format: date-time
+        author_name:
+          type: string
+        comment:
+          type: string
+        file_name:
+          type: string
+        has_file:
+          type: boolean
+        summary:
+          $ref: '#/components/schemas/RemarkSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemarkItem'
+        votes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemarkVoteCard'
+        awaiting:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+          description: Кто ещё не ответил
+        deciders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+          description: 'При разногласии решает: держатели права подписи'
+        dispute:
+          type: boolean
+          description: 'Есть ответ «Не согласен» и все ответили: решение за директором'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemarkCardActionsEnum'
+          description: Что можно этому сотруднику сейчас
+      required:
+      - actions
+      - author_name
+      - awaiting
+      - comment
+      - deciders
+      - dispute
+      - edition
+      - file_name
+      - has_file
+      - id
+      - items
+      - received_at
+      - summary
+      - votes
+    RemarkCardActionsEnum:
+      enum:
+      - vote
+      - decide
+      type: string
+      description: |-
+        * `vote` - vote
+        * `decide` - decide
+    RemarkItem:
+      type: object
+      properties:
+        point:
+          type: string
+          description: Номер пункта; пусто — у абзаца номера нет
+        kind:
+          $ref: '#/components/schemas/RemarkItemKindEnum'
+        ours:
+          type: string
+        theirs:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemarkSegment'
+      required:
+      - kind
+      - ours
+      - point
+      - segments
+      - theirs
+    RemarkItemKindEnum:
+      enum:
+      - changed
+      - added
+      - removed
+      type: string
+      description: |-
+        * `changed` - changed
+        * `added` - added
+        * `removed` - removed
+    RemarkSegment:
+      type: object
+      properties:
+        op:
+          $ref: '#/components/schemas/OpEnum'
+        text:
+          type: string
+      required:
+      - op
+      - text
+    RemarkSummary:
+      type: object
+      properties:
+        changed:
+          type: array
+          items:
+            type: string
+        added:
+          type: array
+          items:
+            type: string
+        removed:
+          type: array
+          items:
+            type: string
+        total:
+          type: integer
+        comparable:
+          type: boolean
+          description: Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет
+      required:
+      - added
+      - changed
+      - comparable
+      - removed
+      - total
+    RemarkVoteCard:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/Person'
+        agree:
+          type: boolean
+        comment:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - agree
+      - at
+      - comment
+      - user
     RemoveMemberRequest:
       type: object
       properties:
@@ -41205,6 +41664,11 @@ components:
       required:
       - detail
       - fields
+    SigningActionsEnum:
+      enum:
+      - mark_signed
+      type: string
+      description: '* `mark_signed` - mark_signed'
     SourceEnum:
       enum:
       - CABINET

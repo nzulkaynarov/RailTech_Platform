@@ -1,4 +1,6 @@
 from django.db.models import Q
+from django.http import Http404
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
@@ -10,7 +12,13 @@ from rest_framework.response import Response
 
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
+from core.permissions import (
+    ADMIN_ONLY,
+    SELF_SERVICE,
+    IsCompanyMemberOrPlatformAdmin,
+    IsPlatformAdmin,
+    RoleGatedViewMixin,
+)
 from crm import services as crm_services
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, ContractStatusCode, InvoiceStatusCode
 from crm.models import Act, ActivityLog, Contract, Fulfillment, Invoice, Payment
@@ -26,6 +34,8 @@ from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilt
 from crm.views.billing_flow import ActFlowMixin, ContractFlowMixin
 from crm.views.document_links import DocumentLinksMixin
 from crm.views.request_body import invalid_body_response, is_object_body
+
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 _PDF_DOC_TYPE = {
     "Contract": "contract",
@@ -188,6 +198,10 @@ class ContractViewSet(
         "revise": "contract.manage",
         "mark_issued": "contract.sign",
         "attach_scan": "contract.sign",
+        "mark_signed": "contract.sign",
+        # ДП-1: ответственных и директора определяет сервис (автор КП, «Право», подпись), а не одно право роли
+        "remark_vote": SELF_SERVICE,
+        "remark_decide": SELF_SERVICE,
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
@@ -237,6 +251,36 @@ class ContractViewSet(
     @action(detail=True, methods=["get"], url_path="download-signed")
     def download_signed(self, request, pk=None):
         return stream_file_field(self.get_object().signed_file)
+
+    @extend_schema(
+        summary="DOCX of our edition of the contract for the counterparty's edits (ДП-1)",
+        tags=["CRM"],
+        responses={(200, DOCX_TYPE): OpenApiTypes.BINARY},
+    )
+    @action(detail=True, methods=["get"], url_path="download-docx")
+    def download_docx(self, request, pk=None):
+        from django.http import HttpResponse
+
+        from crm.services import contract_compare
+
+        contract = self.get_object()
+        response = HttpResponse(contract_compare.contract_docx(contract), content_type=DOCX_TYPE)
+        response["Content-Disposition"] = f'attachment; filename="{contract.number}.docx"'
+        return response
+
+    @extend_schema(
+        summary="The counterparty's edition attached to its remarks (ДП-1)",
+        tags=["CRM"],
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
+    @action(detail=True, methods=["get"], url_path="download-remark")
+    def download_remark(self, request, pk=None):
+        remark = self.get_object().remarks.exclude(file="").order_by("-created_at", "-id").first()
+        if remark is None:
+            raise Http404("No file")
+        return stream_file_field(
+            remark.file, content_type="application/octet-stream", filename=remark.file_name or None
+        )
 
     @extend_schema(
         summary="Generate contract from a quote",

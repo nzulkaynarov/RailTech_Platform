@@ -45,6 +45,10 @@ ContractAction = Literal[
     "restore_renewal",
     "renew",
     "send_new_edition",
+    # ДП-1: «Подписан» заметкой; ответ ответственного на замечания контрагента и решение директора
+    "mark_signed",
+    "remark_vote",
+    "remark_decide",
 ]
 TermActionCode = Literal["decline_renewal", "restore_renewal", "renew", "send_new_edition"]
 TermState = Literal["open", "renews", "ends", "expired"]
@@ -53,15 +57,23 @@ DeviationState = Literal["none", "requested", "approved", "rejected"]
 ContractPathStepKey = Literal["assembled", "our_signature", "in_cabinet", "signed_both"]
 ContractPathStepState = Literal["done", "current", "next"]
 ContractActionCode = Literal[
-    "send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"
+    "send_to_client",
+    "client_agreed",
+    "reject",
+    "revise",
+    "mark_issued",
+    "attach_scan",
+    "mark_signed",
 ]
+RemarkActionCode = Literal["vote", "decide"]
+RemarkKind = Literal["changed", "added", "removed"]
 ActAction = Literal["issue", "return", "reissue"]
 ActActionCode = Literal["attach_scan", "return", "reissue"]
 ActBlocker = Literal["no_invoice", "act_exists", "forbidden", "not_delivered"]
 DeliveryAction = Literal["in_transit", "delivered"]
 JournalDocument = Literal["contract", "act", "invoice", "quote", "project"]
 FileKind = Literal["contract", "invoice", "act"]
-FileVariant = Literal["pdf", "scan"]
+FileVariant = Literal["pdf", "scan", "docx", "remark"]
 
 
 class DocumentClientLink(BaseModel):
@@ -253,9 +265,66 @@ class ProjectContractSendBlocker(BaseModel):
     settings_link: bool
 
 
+class RemarkSegment(BaseModel):
+    op: Literal["equal", "del", "ins"]
+    text: str
+
+
+class RemarkItem(BaseModel):
+    point: str
+    kind: RemarkKind
+    ours: str
+    theirs: str
+    segments: list[RemarkSegment]
+
+
+class RemarkSummary(BaseModel):
+    changed: list[str]
+    added: list[str]
+    removed: list[str]
+    total: int
+    comparable: bool
+
+
+class RemarkVote(BaseModel):
+    user: ProjectPerson
+    agree: bool
+    comment: str
+    at: dt.datetime
+
+
+class ProjectContractRemark(BaseModel):
+    """ДП-1: замечания контрагента на согласовании: разбор, ответы, права сотрудника; считает ERP"""
+
+    id: int
+    edition: int
+    received_at: dt.datetime
+    author_name: str
+    comment: str
+    file_name: str
+    has_file: bool
+    summary: RemarkSummary
+    items: list[RemarkItem]
+    votes: list[RemarkVote]
+    awaiting: list[ProjectPerson]
+    deciders: list[ProjectPerson]
+    dispute: bool
+    actions: list[RemarkActionCode]
+
+
 class ProjectContract(ProjectContractRef):
+    @model_validator(mode="before")
+    @classmethod
+    def _merge_signing_actions(cls, data: Any) -> Any:
+        """ДП-1: ERP отдаёт `mark_signed` отдельным списком; SPA видит один список действий."""
+        if isinstance(data, dict) and "signing_actions" in data:
+            data = {**data}
+            data["actions"] = [*data.get("actions", []), *data.pop("signing_actions")]
+        return data
+
     template: ProjectContractTemplate | None = None
     term: ProjectContractTerm | None = None
+    remark: ProjectContractRemark | None = None
     total: ProjectMoney | None
     created_at: dt.datetime
     client_agreed_at: dt.datetime | None
@@ -372,6 +441,10 @@ class ContractActionIn(BaseModel):
     def _reason_for_reject(self) -> "ContractActionIn":
         if self.action == "request_deviation" and not (self.text or "").strip():
             raise ValueError("text")
+        if self.action in ("remark_vote", "remark_decide") and self.approve is None:
+            raise ValueError("approve")
+        if self.action == "mark_signed" and not (self.note or "").strip():
+            raise ValueError("note")
         if self.action == "decide_deviation" and self.approve is None:
             raise ValueError("approve")
         if self.action == "reject" and not (self.reason or "").strip():

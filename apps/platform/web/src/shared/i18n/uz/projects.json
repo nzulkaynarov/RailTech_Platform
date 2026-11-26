@@ -60,9 +60,9 @@
     },
     "contract": {
       "project": "Loyiha",
-      "client_agreed": "Mijoz bilan kelişilgan",
-      "issued_at_operator": "EHTda rasmiylaştirilgan",
-      "signed": "Imzolangan (skan)",
+      "client_agreed": "Imzolaş kutilmoqda",
+      "issued_at_operator": "Imzolaş kutilmoqda",
+      "signed": "Imzolangan",
       "rejected": "Mijoz rad etgan",
       "cancelled": "Bekor qilingan"
     },
@@ -212,12 +212,18 @@
       "client_agreed": "Şartnoma matni mijoz bilan kelişildi",
       "rejected": "Şartnomani mijoz rad etdi",
       "revised": "Şartnoma loyihasi işga qaytarildi",
-      "issued_external": "Şartnoma EHTda rasmiylaştirildi",
+      "issued_external": "Şartnoma imzoga qöyildi",
       "scan_attached": "Imzolangan şartnoma skani biriktirildi",
       "signed": "Şartnoma imzolandi",
       "signed_client": "Mijoz şartnomani kelişdi",
       "signed_manager": "Şartnomani kompaniya imzoladi",
-      "cancelled": "Şartnoma bekor qilindi"
+      "cancelled": "Şartnoma bekor qilindi",
+      "marked_signed": "Şartnoma imzolangan deb belgilandi",
+      "remark_received": "Kontragent izohlari olindi",
+      "remark_voted": "Kontragent izohlari böyiça javob",
+      "remark_accepted": "Kontragent tahriri qabul qilindi",
+      "remark_countered": "Kontragentga javob: bizning tahrir",
+      "remark_dispute": "Kontragent izohlari böyiça kelişmovçilik"
     },
     "act": {
       "issued": "Dalolatnoma çiqarildi",
@@ -257,25 +263,26 @@
     "toClientNo": "yuborilmagan",
     "state": {
       "project": "Loyiha hali mijozga yuborilmagan.",
-      "atClient": "Loyiha mijozda matn kelişuvida.",
-      "client_agreed": "Mijoz matnni kelişdi. Keyin şartnomani EHTda (platformadan taşqarida) rasmiylaştiring.",
-      "issued_at_operator": "Şartnoma EHTda rasmiylaştirilgan. Ikki tomon imzolagaç, skanni biriktiring.",
-      "signed": "Şartnoma ikki tomon tomonidan imzolangan, skan saqlangan.",
+      "atClient": "Şartnoma kontragentda. Javob kutilmoqda: «Tahrirni qabul qiliş» yoki «Izohlarim bor».",
+      "client_agreed": "Tahrir kelişilgan. Şartnoma imzolaş kutmoqda: imzolangaç, quyida belgilang.",
+      "issued_at_operator": "Şartnoma imzolaş kutmoqda: imzolangaç, quyida belgilang.",
+      "signed": "Şartnoma imzolangan.",
       "rejected": "Mijoz şartnomani rad etdi. Loyihani töğrilab, qaytadan kelişuvga yuboring.",
       "cancelled": "Şartnoma bekor qilingan."
     },
     "action": {
       "send_to_client": "Mijozga kelişuvga yuboriş",
       "client_agreed": "Belgilaş: mijoz kelişdi",
-      "mark_issued": "Belgilaş: EHTda rasmiylaştirildi",
-      "attach_scan": "Imzolangan skanni biriktiriş",
+      "mark_issued": "Imzoga qöyiş",
+      "attach_scan": "Belgilaş: imzolandi",
       "reject": "Mijoz şartnomani rad etdi…",
-      "revise": "Loyihaga qaytariş"
+      "revise": "Loyihaga qaytariş",
+      "mark_signed": "Belgilaş: imzolandi"
     },
     "note": {
-      "label": "EHT tizimidagi operator yoki raqam",
+      "label": "Izoh",
       "hint": "Ixtiyoriy: jurnalga tuşadi.",
-      "placeholder": "Masalan: EHT, № 77"
+      "placeholder": ""
     },
     "reject": {
       "title": "Mijoz şartnomani rad etdi",
@@ -295,14 +302,16 @@
     },
     "files": {
       "pdf": "Şartnoma PDF",
-      "scan": "Imzolangan skan"
+      "scan": "Imzolangan skan",
+      "docx": "Tahrir uçun yuklab oliş (DOCX)",
+      "remark": "Kontragent tahriri: {{name}}"
     },
     "done": {
       "create": "Şartnoma loyihasi şakllantirildi.",
       "send_to_client": "Loyiha mijozga yuborildi.",
       "client_agreed": "Belgilandi: mijoz matnni kelişdi.",
-      "mark_issued": "Belgilandi: şartnoma EHTda rasmiylaştirildi.",
-      "attach_scan": "Skan biriktirildi, şartnoma imzolandi.",
+      "mark_issued": "Belgilandi: şartnoma imzoga qöyildi.",
+      "attach_scan": "Şartnoma imzolandi, skan saqlandi.",
       "reject": "Rad etiş yozildi.",
       "revise": "Loyiha işga qaytarildi.",
       "sign_ours": "Şartnoma kompaniya nomidan imzolandi.",
@@ -311,7 +320,10 @@
       "decline_renewal": "Uzaytirişdan boş tortiş yozildi.",
       "renew": "Şartnoma uzaytirildi.",
       "send_new_edition": "Yangi tahrir imzoga yuborildi.",
-      "restore_renewal": "Uzaytirişdan boş tortiş bekor qilindi."
+      "restore_renewal": "Uzaytirişdan boş tortiş bekor qilindi.",
+      "mark_signed": "Belgilandi: şartnoma imzolandi.",
+      "remark_vote": "Javob saqlandi.",
+      "remark_decide": "Qaror saqlandi."
     },
     "readOnly": "Faqat köriş.",
     "template": {
@@ -389,7 +401,7 @@
         "ends": "Muddatida tugaydi",
         "expired": "Muddat tugadi"
       },
-      "renewsHint": "Uzaytirişdan {{notice}}gaça boş tortiş mümkin.",
+      "renewsHint": "Uzaytirişdan {{notice}}gaça boş tortiş mumkin.",
       "declined": {
         "company": "Biz uzaytirişdan boş tortdik: şartnoma muddatida tugaydi.",
         "client": "Kontragent uzaytirişdan boş tortdi: şartnoma muddatida tugaydi."
@@ -409,6 +421,56 @@
         "send_new_edition": "Yangi tahrirni imzoga yuboriş",
         "restore_renewal": "Uzaytirişni qaytariş"
       }
+    },
+    "sign": {
+      "title": "Imzolaş kutilmoqda",
+      "hint": "Ikki tomon imzolagaç, bu yerda belgilang — skan yoki izoh yetarli.",
+      "noteLabel": "Yoki izoh",
+      "noteHint": "Qayerda va qaçon imzolangan, asl nusxa qayerda.",
+      "term": "Şartnoma muddati belgilaş paytida hisoblanadi."
+    },
+    "remark": {
+      "title": "Kontragent izohlari",
+      "counterparty": "Kontragent",
+      "from": "{{name}} · {{edition}}-tahrir · {{date}}",
+      "noCompare": "Fayl biriktirilgan, uni avtomatik taqqoslab bölmaydi — oçib köring.",
+      "compare": "Nima özgardi",
+      "point": "band",
+      "col": {
+        "point": "Band",
+        "ours": "Bizning tahrir",
+        "theirs": "Kontragent tahriri"
+      },
+      "kind": {
+        "changed": "Özgargan",
+        "added": "Qöşilgan",
+        "removed": "Öçirilgan"
+      },
+      "summary": {
+        "changed": "Özgargan: {{points}}-band",
+        "added": "Qöşilgan: {{points}}-band",
+        "removed": "Öçirilgan: {{points}}-band"
+      },
+      "votes": {
+        "title": "Kelişuv: {{total}} tadan {{done}} ta javob berdi",
+        "agree": "Roziman",
+        "disagree": "Rozi emasman",
+        "waiting": "javob kutilmoqda"
+      },
+      "vote": {
+        "label": "Izoh",
+        "hint": "Rozi bölmasangiz, majburiy.",
+        "needWords": "Nimaga rozi emasligingizni yozing."
+      },
+      "decide": {
+        "who": "Kelişmovçilikda hal qiladi: {{names}}",
+        "accept": "Kontragent tahririni qabul qiliş",
+        "counter": "Öz tahririmiz bilan javob beriş",
+        "counterLabel": "Kontragentga nima javob beramiz",
+        "counterHint": "Kontragent javobni Kabinetda köradi.",
+        "send": "Javobni yuboriş"
+      },
+      "next": "Hamma javob berib, rozi bölsa, kontragent tahriri qabul qilinadi va şartnoma «Imzolaş kutilmoqda» bölad."
     }
   },
   "act": {

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.126.0
+  version: 0.127.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -3605,7 +3605,7 @@ paths:
       summary: 'EDS · Проект: файл документа (PDF или скан)'
       description: >-
         Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта
-        (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается
+        (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта), `docx` — наша редакция договора в Word для правок, `remark` — редакция контрагента, приложенная к замечаниям (ДП-1, только договор); скан и вложения всегда скачиваются
         (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
       parameters:
         - $ref: '#/components/parameters/ProjectRefPath'
@@ -3620,7 +3620,7 @@ paths:
         - name: variant
           in: query
           required: false
-          schema: {type: string, enum: [pdf, scan], default: pdf}
+          schema: {type: string, enum: [pdf, scan, docx, remark], default: pdf}
       responses:
         '200':
           description: Содержимое файла
@@ -22177,7 +22177,7 @@ components:
         actions:
           description: 'Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает'
           items:
-            enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan]
+            enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan, mark_signed]
             type: string
           type: array
         template:
@@ -22190,6 +22190,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ProjectContractTerm'
             - type: 'null'
+        remark:
+          description: 'ДП-1: замечания контрагента на согласовании — комментарий, файл, что изменилось, ответы ответственных, что можно этому сотруднику; null — замечаний нет. Считает ERP'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractRemark'
+            - type: 'null'
         send_blocker:
           description: 'Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP'
           oneOf:
@@ -22201,6 +22206,70 @@ components:
           type: array
       required: [id, number, status, sent_to_client, total, created_at, client_agreed_at, signed_at, has_pdf, has_scan, actions, history]
       additionalProperties: false
+    ProjectContractRemark:
+      type: object
+      additionalProperties: false
+      description: 'ДП-1: замечания контрагента к редакции договора. Разбор DOCX («что изменилось») и права считает ERP.'
+      properties:
+        id: {type: integer}
+        edition: {type: integer}
+        received_at: {type: string, format: date-time}
+        author_name: {type: string}
+        comment: {type: string}
+        file_name: {type: string}
+        has_file: {type: boolean}
+        summary:
+          type: object
+          additionalProperties: false
+          required: [changed, added, removed, total, comparable]
+          properties:
+            changed: {type: array, items: {type: string}}
+            added: {type: array, items: {type: string}}
+            removed: {type: array, items: {type: string}}
+            total: {type: integer}
+            comparable: {type: boolean, description: 'Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет'}
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [point, kind, ours, theirs, segments]
+            properties:
+              point: {type: string}
+              kind: {type: string, enum: [changed, added, removed]}
+              ours: {type: string}
+              theirs: {type: string}
+              segments:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [op, text]
+                  properties:
+                    op: {type: string, enum: [equal, del, ins]}
+                    text: {type: string}
+        votes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [user, agree, comment, at]
+            properties:
+              user: {$ref: '#/components/schemas/ProjectPerson'}
+              agree: {type: boolean}
+              comment: {type: string}
+              at: {type: string, format: date-time}
+        awaiting:
+          type: array
+          items: {$ref: '#/components/schemas/ProjectPerson'}
+        deciders:
+          type: array
+          items: {$ref: '#/components/schemas/ProjectPerson'}
+        dispute: {type: boolean, description: 'Есть «Не согласен» и все ответили: решение за директором'}
+        actions:
+          type: array
+          items: {type: string, enum: [vote, decide]}
+      required: [id, edition, received_at, author_name, comment, file_name, has_file, summary, items, votes, awaiting, deciders, dispute, actions]
     ProjectContractTerm:
       type: object
       additionalProperties: false
@@ -22524,9 +22593,9 @@ components:
       description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
-          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition]
+          enum: [send_to_client, client_agreed, reject, revise, mark_issued, sign_ours, request_deviation, decide_deviation, decline_renewal, restore_renewal, renew, send_new_edition, mark_signed, remark_vote, remark_decide]
           type: string
-          description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись'
+          description: '`sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись; `mark_signed` (ДП-1) — «Подписан» заметкой без скана, `note` обязательна; `remark_vote`, `remark_decide` (ДП-1) — ответ «Согласен»/«Не согласен» и решение директора по замечаниям контрагента: `approve` обязательно, слова — в `text`'
         reason:
           maxLength: 1000
           type: [string, 'null']

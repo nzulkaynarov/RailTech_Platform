@@ -25,6 +25,8 @@ CLIENT_STATUSES = [
 ]
 PROBLEMS = ["no_contract", "contract_rejected", "act_returned", "invoice_overdue"]
 CONTRACT_ACTIONS = ["send_to_client", "client_agreed", "reject", "revise", "mark_issued", "attach_scan"]
+#: ДП-1: «Отметить: подписан» заметкой — отдельный список: у прежних действий схема не меняется (новое значение enum ломает ответ).
+CONTRACT_SIGNING_ACTIONS = ["mark_signed"]
 #: ДОК-10: действия договора по шаблону, доступные сейчас (отдельный список — у прежних действий схема не меняется).
 CONTRACT_TEMPLATE_ACTIONS = ["sign_ours", "request_deviation", "decide_deviation"]
 ACT_ACTIONS = ["attach_scan", "return", "reissue"]
@@ -240,6 +242,57 @@ class ContractConflictSerializer(serializers.Serializer):
     )
 
 
+class RemarkSegmentSerializer(serializers.Serializer):
+    op = serializers.ChoiceField(choices=["equal", "del", "ins"])
+    text = serializers.CharField(allow_blank=True)
+
+
+class RemarkItemSerializer(serializers.Serializer):
+    point = serializers.CharField(allow_blank=True, help_text="Номер пункта; пусто — у абзаца номера нет")
+    kind = serializers.ChoiceField(choices=["changed", "added", "removed"])
+    ours = serializers.CharField(allow_blank=True)
+    theirs = serializers.CharField(allow_blank=True)
+    segments = RemarkSegmentSerializer(many=True)
+
+
+class RemarkSummarySerializer(serializers.Serializer):
+    changed = serializers.ListField(child=serializers.CharField())
+    added = serializers.ListField(child=serializers.CharField())
+    removed = serializers.ListField(child=serializers.CharField())
+    total = serializers.IntegerField()
+    comparable = serializers.BooleanField(
+        help_text="Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет"
+    )
+
+
+class RemarkVoteCardSerializer(serializers.Serializer):
+    user = PersonSerializer()
+    agree = serializers.BooleanField()
+    comment = serializers.CharField(allow_blank=True)
+    at = serializers.DateTimeField()
+
+
+class RemarkCardSerializer(serializers.Serializer):
+    """ДП-1: замечания контрагента на согласовании: комментарий, файл, что изменилось, ответы и что можно этому сотруднику."""
+
+    id = serializers.IntegerField()
+    edition = serializers.IntegerField()
+    received_at = serializers.DateTimeField()
+    author_name = serializers.CharField(allow_blank=True)
+    comment = serializers.CharField()
+    file_name = serializers.CharField(allow_blank=True)
+    has_file = serializers.BooleanField()
+    summary = RemarkSummarySerializer()
+    items = RemarkItemSerializer(many=True)
+    votes = RemarkVoteCardSerializer(many=True)
+    awaiting = PersonSerializer(many=True, help_text="Кто ещё не ответил")
+    deciders = PersonSerializer(many=True, help_text="При разногласии решает: держатели права подписи")
+    dispute = serializers.BooleanField(help_text="Есть ответ «Не согласен» и все ответили: решение за директором")
+    actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=["vote", "decide"]), help_text="Что можно этому сотруднику сейчас"
+    )
+
+
 class ContractCardSerializer(ContractRefSerializer):
     template = ContractTemplateCardSerializer(allow_null=True)
     term = ContractTermCardSerializer(allow_null=True, required=False, help_text="Срок: только у подписанного договора")
@@ -253,10 +306,18 @@ class ContractCardSerializer(ContractRefSerializer):
         child=serializers.ChoiceField(choices=CONTRACT_ACTIONS),
         help_text="Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли",
     )
+    signing_actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=CONTRACT_SIGNING_ACTIONS),
+        required=False,
+        help_text="ДП-1: `mark_signed` — «Отметить: подписан» заметкой, пока договор ожидает подписания и право `contract.sign` есть",
+    )
     send_blocker = ContractSendBlockerSerializer(
         allow_null=True,
         required=False,
         help_text="Х-1: пока проект не ушёл клиенту — что мешает его отправить; `null` — ничего (действие `send_to_client` в `actions`)",
+    )
+    remark = RemarkCardSerializer(
+        allow_null=True, required=False, help_text="ДП-1: замечания контрагента на согласовании; `null` — их нет"
     )
     history = ProjectJournalEntrySerializer(many=True)
 
@@ -358,6 +419,18 @@ class ContractTransitionInSerializer(serializers.Serializer):
         allow_blank=True,
         max_length=200,
         help_text="Обязателен для `client-agreed`: кто со стороны клиента",
+    )
+
+
+class ContractRemarkVoteInSerializer(serializers.Serializer):
+    agree = serializers.BooleanField(help_text="`true` — «Согласен», `false` — «Не согласен»")
+    comment = serializers.CharField(required=False, allow_blank=True, help_text="Обязателен при «Не согласен»")
+
+
+class ContractRemarkDecideInSerializer(serializers.Serializer):
+    accept = serializers.BooleanField(help_text="`true` — принять редакцию контрагента, `false` — ответить своей")
+    text = serializers.CharField(
+        required=False, allow_blank=True, help_text="Ответ контрагенту; обязателен при `accept=false`"
     )
 
 

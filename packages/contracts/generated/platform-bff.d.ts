@@ -1842,7 +1842,7 @@ export interface paths {
     };
     /**
      * EDS · Проект: файл документа (PDF или скан)
-     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта), `docx` — наша редакция договора в Word для правок, `remark` — редакция контрагента, приложенная к замечаниям (ДП-1, только договор); скан и вложения всегда скачиваются (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
      */
     get: operations["downloadEdsProjectFile"];
     put?: never;
@@ -12268,14 +12268,60 @@ export interface components {
         | "revise"
         | "mark_issued"
         | "attach_scan"
+        | "mark_signed"
       )[];
       /** @description ДОК-10: договор собран из утверждённого шаблона — название и редакция, отступление, путь по фактам; null — договор прежним путём */
       template?: components["schemas"]["ProjectContractTemplate"] | null;
       /** @description ДС-1: срок подписанного договора (считает ERP при подписании); null — договор ещё не подписан или подписан до введения срока */
       term?: components["schemas"]["ProjectContractTerm"] | null;
+      /** @description ДП-1: замечания контрагента на согласовании — комментарий, файл, что изменилось, ответы ответственных, что можно этому сотруднику; null — замечаний нет. Считает ERP */
+      remark?: components["schemas"]["ProjectContractRemark"] | null;
       /** @description Х-1: пока проект договора не ушёл клиенту — что мешает его отправить (визы маршрута подписи не собраны); null — ничего, действие send_to_client в actions. Считает ERP */
       send_blocker?: components["schemas"]["ProjectContractSendBlocker"] | null;
       history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description ДП-1: замечания контрагента к редакции договора. Разбор DOCX («что изменилось») и права считает ERP. */
+    ProjectContractRemark: {
+      id: number;
+      edition: number;
+      /** Format: date-time */
+      received_at: string;
+      author_name: string;
+      comment: string;
+      file_name: string;
+      has_file: boolean;
+      summary: {
+        changed: string[];
+        added: string[];
+        removed: string[];
+        total: number;
+        /** @description Редакция контрагента сравнена с нашей (DOCX); XLSX и без файла — нет */
+        comparable: boolean;
+      };
+      items: {
+        point: string;
+        /** @enum {string} */
+        kind: "changed" | "added" | "removed";
+        ours: string;
+        theirs: string;
+        segments: {
+          /** @enum {string} */
+          op: "equal" | "del" | "ins";
+          text: string;
+        }[];
+      }[];
+      votes: {
+        user: components["schemas"]["ProjectPerson"];
+        agree: boolean;
+        comment: string;
+        /** Format: date-time */
+        at: string;
+      }[];
+      awaiting: components["schemas"]["ProjectPerson"][];
+      deciders: components["schemas"]["ProjectPerson"][];
+      /** @description Есть «Не согласен» и все ответили: решение за директором */
+      dispute: boolean;
+      actions: ("vote" | "decide")[];
     };
     /** @description Срок подписанного договора (ДС-1): правило компании и шаблона, считает ERP; вручную не вводится */
     ProjectContractTerm: {
@@ -12472,7 +12518,7 @@ export interface components {
     /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /**
-       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись
+       * @description `sign_ours`, `request_deviation`, `decide_deviation` — договор по утверждённому шаблону (ДОК-10): наша подпись до отправки, заявка на отступление, решение держателя «Право»; `decline_renewal`, `renew`, `send_new_edition` — срок договора (ДС-1): отказ от продления, продление соглашением, новая редакция шаблона на подпись; `mark_signed` (ДП-1) — «Подписан» заметкой без скана, `note` обязательна; `remark_vote`, `remark_decide` (ДП-1) — ответ «Согласен»/«Не согласен» и решение директора по замечаниям контрагента: `approve` обязательно, слова — в `text`
        * @enum {string}
        */
       action:
@@ -12487,7 +12533,10 @@ export interface components {
         | "decline_renewal"
         | "restore_renewal"
         | "renew"
-        | "send_new_edition";
+        | "send_new_edition"
+        | "mark_signed"
+        | "remark_vote"
+        | "remark_decide";
       reason?: string | null;
       note?: string | null;
       /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
@@ -23523,7 +23572,7 @@ export interface operations {
   downloadEdsProjectFile: {
     parameters: {
       query?: {
-        variant?: "pdf" | "scan";
+        variant?: "pdf" | "scan" | "docx" | "remark";
       };
       header?: never;
       path: {

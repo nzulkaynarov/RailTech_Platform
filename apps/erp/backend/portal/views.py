@@ -910,6 +910,8 @@ class ContractSignView(BasePortalView):
         if not contract:
             raise Http404
 
+        if contract.remarks.filter(resolution="").exists():
+            raise PortalConflict("REMARK_OPEN")  # ДП-1: сначала ответ компании на замечания
         # Подпись и переход статуса — только сервис ERP: двусторонняя подпись, аудит, закрытие сделки (P-5).
         _, error = sign_contract_by_client(contract.pk, portal_contact=request.portal_contact)
         if error == "CONTRACT_CLIENT_SIGN_NOT_ALLOWED":
@@ -917,6 +919,59 @@ class ContractSignView(BasePortalView):
         if error:
             raise exceptions.PermissionDenied("FORBIDDEN")
         return Response(ContractSerializer(_client_contracts(request.portal_company).get(pk=pk)).data)
+
+
+class ContractRemarksView(BasePortalView):
+    """POST /contracts/{id}/remarks — «Есть замечания»: комментарий и, при желании, своя редакция DOCX/XLSX (ДП-1)."""
+
+    required_module = "contracts"
+
+    def post(self, request, pk):
+        from crm.services import contract_remarks
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract:
+            raise Http404
+        data = request.data if isinstance(request.data, dict) else {}
+        comment, upload_id = data.get("comment"), data.get("upload_id")
+        if not isinstance(comment, str) or (upload_id is not None and not isinstance(upload_id, str)):
+            raise PortalValidationError("VALIDATION_ERROR")
+        _, error = contract_remarks.submit_remark(
+            contract.pk, contact=request.portal_contact, comment=comment, upload_id=upload_id
+        )
+        if error in ("CONTRACT_REMARK_NOT_ALLOWED", "REMARK_OPEN"):
+            raise PortalConflict(error)
+        if error in ("COMMENT_REQUIRED", "UPLOAD_NOT_FOUND", "FILE_INVALID"):
+            raise PortalValidationError(error if error != "FILE_INVALID" else "VALIDATION_ERROR")
+        if error:
+            raise exceptions.PermissionDenied("FORBIDDEN")
+        return Response(
+            ContractSerializer(
+                _client_contracts(request.portal_company).get(pk=pk),
+                context={"can_act": request.portal_contact.can_act},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ContractDocxView(BasePortalView):
+    """GET /contracts/{id}/docx — наша редакция в DOCX для правок, пока договор у клиента на согласовании (ДП-1)."""
+
+    required_module = "contracts"
+
+    def get(self, request, pk):
+        from crm.constants import ContractStatusCode
+        from crm.services import contract_compare
+
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
+        if not contract or contract.status_code != ContractStatusCode.PENDING_CLIENT:
+            raise Http404
+        response = HttpResponse(
+            contract_compare.contract_docx(contract),
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{contract.number}.docx"'
+        return response
 
 
 class ContractRestoreRenewalView(BasePortalView):
