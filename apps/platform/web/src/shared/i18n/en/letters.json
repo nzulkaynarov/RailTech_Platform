@@ -364,7 +364,7 @@
       "label": "Addressee",
       "hint": "",
       "default": "Default addressee",
-      "unset": "Not chosen"
+      "unset": "Not chosen — the default addressee will get it"
     },
     "urgent": "Urgent",
     "files": {

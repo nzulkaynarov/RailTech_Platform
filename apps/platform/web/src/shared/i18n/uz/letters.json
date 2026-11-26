@@ -364,7 +364,7 @@
       "label": "Adresat",
       "hint": "",
       "default": "Sukut böyiça qabul qiluvçi",
-      "unset": "Tanlanmagan"
+      "unset": "Tanlanmagan — sukut böyiça qabul qiluvçi oladi"
     },
     "urgent": "Şoşilinç",
     "files": {

@@ -42,7 +42,9 @@ SETTINGS_HINT = re.compile(
 MODEL_KEY = re.compile(r"^bot:(fields|hints)\.(anthropic|gemini)$")
 
 # The help names a role as the heading of its guide and in the «who» column of the path: the role itself, not a job title in a sentence.
-ROLE_NAME_KEY = re.compile(r"^help:(start\.kinds\.\w+\.title|path\.steps\[\d+\]\.who)$")
+# The «last Director» error must name the role it is about: the check is on the role, not on a right (CRM user_platform).
+ROLE_NAME_KEY = re.compile(r"^(help:(start\.kinds\.\w+\.title|path\.steps\[\d+\]\.who)|modules:admin\.org\.errors\.LAST_DIRECTOR)$")
+ROLE_NAME_PY_KEY = re.compile(r"(^|\.)LAST_DIRECTOR_MESSAGE$")
 
 
 def row(app, surface, audience, source, key, lang, text, ctx=""):
@@ -338,7 +340,7 @@ class PyVisitor(ast.NodeVisitor):
             surface, audience = "notification", "staff"
         if self.app == "erp" and surface == "status" and not re.search(r"(Status|Choices|Code|Kind|Stage|Type|State)\b", key):
             surface, audience = "admin-model", "staff"
-        if re.search(r"(platform_roles|rbac)", self.rel):
+        if re.search(r"(platform_roles|rbac)", self.rel) or ROLE_NAME_PY_KEY.search(key):
             ctx = "roles"
         self.rows.append(row(self.app, surface, audience, f"{self.rel}:{node.lineno}", key, lang, text, ctx))
 
