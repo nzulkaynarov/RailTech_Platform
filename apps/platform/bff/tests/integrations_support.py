@@ -343,6 +343,14 @@ def system_status(status: str = "ok", **over: Any) -> dict[str, Any]:
                 "expected_on_stand": False,
             },
             {
+                "key": "erp",
+                "title": "ERP",
+                "status": "ok",
+                "reason": "отвечает",
+                "checked_at": NOW,
+                "expected_on_stand": False,
+            },
+            {
                 "key": "bot",
                 "title": "Бот",
                 "status": "ok" if status == "ok" else "fail",

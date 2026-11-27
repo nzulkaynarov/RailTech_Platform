@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.schemas_crm_leads import EmailProblem
+from app.status_model import StatusFact
 
 CardKey = Literal["erp", "telegram", "mail", "services", "models", "spend", "storage", "system"]
 Level = Literal["ok", "warn", "fail", "unknown", "off"]
@@ -29,6 +30,9 @@ Note = Literal[
     "budget_near",
     "budget_over",
     "no_data",
+    "not_verified",
+    "stale",
+    "check_failed",
 ]
 AttentionKind = Literal[
     "not_configured",
@@ -41,6 +45,7 @@ AttentionKind = Literal[
     "rotation_pending",
     "paused",
     "bot_not_running",
+    "check_failed",
 ]
 Severity = Literal["fail", "warn", "setup"]
 ServiceState = Literal[
@@ -617,6 +622,7 @@ class IntegrationCard(_Out):
     count: int | None
     amount_usd: float | None
     last_activity_at: datetime | None
+    fact: StatusFact
 
 
 class AttentionItem(_Out):

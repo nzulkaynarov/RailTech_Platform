@@ -17,10 +17,12 @@ BFF не проверяет сервисы и не решает, что испр
 `access = forbidden | unavailable`, статус `unknown`.
 """
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Literal
 
+from app import status_model
 from app.clients.crm_integrations import fix_card_of
 from app.schemas_integrations import (
     Access,
@@ -42,6 +44,7 @@ from app.schemas_integrations import (
     SystemStatus,
     TelegramConnector,
 )
+from app.status_model import StatusFact, StatusSource, legacy_level, none_fact, resolve
 
 PartState = Literal["ok", "forbidden", "unavailable"]
 
@@ -87,6 +90,7 @@ class Parts:
     models: Part[AiModelList]
     backups: Part[BackupsStatus]
     spend: Part[SpendReport]
+    now: datetime = field(default_factory=lambda: status_model.now_utc())
 
     def all(self) -> tuple[Part[Any], ...]:
         return (
@@ -161,99 +165,170 @@ def _blank(key: CardKey, access: Access) -> IntegrationCard:
         key=key,
         status="unknown",
         access=access,
-        note="no_data",
+        note="no_data" if access == "forbidden" else "check_failed",
         count=None,
         amount_usd=None,
         last_activity_at=None,
+        fact=none_fact(),
     )
+
+
+def _note_for(note: Note, fact: StatusFact, complete: bool) -> Note:
+    """Пометка не говорит «всё в порядке», если слово состояния не «Работает» (аудит §6.2 п. 3)."""
+    if note != "all_ok":
+        return note
+    by_state: dict[str, Note] = {
+        "works": "all_ok",
+        "off": "not_configured",
+        "not_verified": "not_verified",
+        "stale": "stale",
+    }
+    return by_state.get(fact.state, "check_failed" if not complete else "no_data")
 
 
 def _card(
     key: CardKey,
-    status: Level,
+    level: Level,
     note: Note,
+    parts: Parts,
     *,
+    probes: Sequence[datetime | None],
+    complete: bool = True,
+    stale: bool = False,
+    source: StatusSource | None = None,
     count: int | None = None,
     amount: float | None = None,
-    last: datetime | None = None,
 ) -> IntegrationCard:
+    """Единственное место, где уровень фактов становится карточкой; слово даёт `resolve`."""
+    fact = resolve(
+        level, probes=probes, now=parts.now, complete=complete, stale=stale, source=source
+    )
     return IntegrationCard(
         key=key,
-        status=status,
+        status=legacy_level(fact.state),
         access="ok",
-        note=note,
+        note=_note_for(note, fact, complete),
         count=count,
         amount_usd=amount,
-        last_activity_at=last,
+        last_activity_at=fact.checked_at,  # одна дата проверки на карточку (Л-26)
+        fact=fact,
     )
+
+
+def _probe(service: ExternalService | None) -> datetime | None:
+    return service.checked_at if service is not None else None
+
+
+def _live(services: list[ExternalService]) -> list[datetime | None]:
+    """Живые проверки сервисов карточки: выключенные и «не подключено» в расчёт не входят."""
+    return [s.checked_at for s in services if _level(s) != "off" and not _paused(s)]
+
+
+def _any_stale(services: list[ExternalService]) -> bool:
+    return any(s.stale for s in services if _level(s) != "off")
+
+
+def _complete(*needed: Part[Any]) -> bool:
+    """Все нужные части CRM ответили. Нет права в CRM — не «не ответила»: она не положена."""
+    return all(p.ok or p.state == "forbidden" for p in needed)
 
 
 def _services_of(parts: Parts) -> list[ExternalService]:
     return parts.services.data.items if parts.services.data else []
 
 
+def _component(parts: Parts, key: str) -> Any | None:
+    data = parts.system.data
+    return next((c for c in data.components if c.key == key), None) if data else None
+
+
+def _component_level(component: Any | None) -> Level:
+    if component is None:
+        return "unknown"
+    return component.status  # type: ignore[no-any-return]
+
+
 def _erp_card(parts: Parts) -> IntegrationCard:
-    access = _access(parts.erp, parts.services)
+    needed = (parts.erp, parts.services, parts.system)
+    access = _access(*needed)
     if access != "ok":
         return _blank("erp", access)
     services = _by_key(_services_of(parts), ERP_KEYS)
     connector = parts.erp.data
-    last = _latest(
-        *(s.checked_at for s in services), connector.token_updated_at if connector else None
-    )
     if connector is not None and not connector.configured:
-        return _card("erp", "off", "not_configured", last=last)
-    status = worst([_level(s) for s in services]) if services else "unknown"
+        return _card("erp", "off", "not_configured", parts, probes=[], complete=_complete(*needed))
+    # Связь с расчётом проверяет только «Состояние системы» (живая проба ERP);
+    # счётчики сервисов — очереди в базе CRM.
+    component = _component(parts, "erp")
+    levels = [_level(s) for s in services]
+    if component is not None:
+        levels.append(_component_level(component))
+    status = worst(levels) if levels else "unknown"
     problems = _problems(services)
+    probes = [_probe_component(component)] if parts.system.ok else [None]
+    common: dict[str, Any] = {"probes": probes, "complete": _complete(*needed)}
     if problems:
-        return _card("erp", status, "problems", count=len(problems), last=last)
+        return _card("erp", status, "problems", parts, count=len(problems), **common)
     if connector is not None and connector.rotation_pending:
-        return _card("erp", status, "rotation_pending", last=last)
-    return _card("erp", status, "all_ok" if services else "no_data", last=last)
+        return _card("erp", status, "rotation_pending", parts, **common)
+    return _card("erp", status, "all_ok" if services else "no_data", parts, **common)
+
+
+def _probe_component(component: Any | None) -> datetime | None:
+    return component.checked_at if component is not None else None
 
 
 def _telegram_card(parts: Parts) -> IntegrationCard:
-    access = _access(parts.telegram, parts.services)
+    needed = (parts.telegram, parts.services)
+    access = _access(*needed)
     if access != "ok":
         return _blank("telegram", access)
     service = next((s for s in _services_of(parts) if s.key == "telegram"), None)
     connector = parts.telegram.data
-    last = _latest(
-        service.checked_at if service else None, connector.updated_at if connector else None
-    )
     status: Level = _level(service) if service else "unknown"
+    common: dict[str, Any] = {
+        "probes": [_probe(service)],
+        "complete": _complete(*needed),
+        "stale": service.stale if service else False,
+    }
     if connector is not None and not connector.configured:
-        return _card("telegram", "off", "not_configured", last=last)
+        return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if service is not None and service.status == "off":
-        return _card("telegram", "off", "not_configured", last=last)
+        return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if _paused(service):
-        return _card("telegram", status, "paused", last=last)
+        return _card("telegram", "off", "paused", parts, probes=[])
     if service is not None and service.state in ("broken", "unstable", "degraded"):
-        return _card("telegram", status, "problems", count=1, last=last)
+        return _card("telegram", status, "problems", parts, count=1, **common)
     if service is not None and service.state == "expected":
-        return _card("telegram", "off", "not_configured", last=last)
+        return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if connector is not None and connector.configured and not connector.running:
-        return _card("telegram", worst([status, "warn"]), "bot_not_running", last=last)
-    return _card("telegram", status, "all_ok" if service else "no_data", last=last)
+        return _card("telegram", worst([status, "warn"]), "bot_not_running", parts, **common)
+    return _card("telegram", status, "all_ok" if service else "no_data", parts, **common)
+
+
+MAIL_KEYS = frozenset({"mail", "mail_inbound"})
 
 
 def _mail_card(parts: Parts) -> IntegrationCard:
+    """Почта — отправка и приём вместе: ящик, который давно не опрашивался, не даёт «Работает»."""
     access = _access(parts.services)
     if access != "ok":
         return _blank("mail", access)
-    service = next((s for s in _services_of(parts) if s.key == "mail"), None)
-    if service is None:
-        return _card("mail", "unknown", "no_data")
-    last = service.checked_at
-    if service.status == "off":
-        return _card("mail", "off", "not_configured", last=last)
-    if _paused(service):
-        return _card("mail", service.status, "paused", last=last)
-    if service.state in ("broken", "unstable", "degraded"):
-        return _card("mail", service.status, "problems", count=1, last=last)
-    if service.state in ("expected", "not_configured"):
-        return _card("mail", "off", "not_configured", last=last)
-    return _card("mail", service.status, "all_ok", last=last)
+    services = _by_key(_services_of(parts), MAIL_KEYS)
+    sending = next((s for s in services if s.key == "mail"), None)
+    if sending is None:
+        return _card("mail", "unknown", "no_data", parts, probes=[None])
+    relevant = [s for s in services if _level(s) != "off"]
+    if not relevant or sending.status == "off":
+        return _card("mail", "off", "not_configured", parts, probes=[])
+    common: dict[str, Any] = {"probes": _live(relevant), "stale": _any_stale(relevant)}
+    if _paused(sending):
+        return _card("mail", "off", "paused", parts, probes=[])
+    problems = _problems(relevant)
+    status = worst([_level(s) for s in relevant])
+    if problems:
+        return _card("mail", status, "problems", parts, count=len(problems), **common)
+    return _card("mail", status, "all_ok", parts, **common)
 
 
 def _services_card(parts: Parts) -> IntegrationCard:
@@ -262,14 +337,13 @@ def _services_card(parts: Parts) -> IntegrationCard:
     data = parts.services.data
     status = worst([_level(s) for s in data.items])
     problems = _problems(data.items)
+    common: dict[str, Any] = {"probes": _live(data.items), "stale": _any_stale(data.items)}
     if problems:
-        return _card("services", status, "problems", count=len(problems), last=data.checked_at)
+        return _card("services", status, "problems", parts, count=len(problems), **common)
     if data.summary.disabled:
-        return _card(
-            "services", status, "paused", count=data.summary.disabled, last=data.checked_at
-        )
+        return _card("services", status, "paused", parts, count=data.summary.disabled, **common)
     note: Note = "all_ok" if data.items and status != "unknown" else "no_data"
-    return _card("services", status, note, last=data.checked_at)
+    return _card("services", status, note, parts, **common)
 
 
 def _model_level(health: str) -> Level:
@@ -277,7 +351,9 @@ def _model_level(health: str) -> Level:
 
 
 def _models_card(parts: Parts) -> IntegrationCard:
-    access = _access(parts.models, parts.services)
+    """«Модели ИИ» — шлюз и ключи поставщиков (проба реестра) и сбои ролей; бюджет — «Расходы»."""
+    needed = (parts.models, parts.services)
+    access = _access(*needed)
     if access != "ok":
         return _blank("models", access)
     registry = [s for s in _services_of(parts) if _is_model_service(s)]
@@ -290,10 +366,14 @@ def _models_card(parts: Parts) -> IntegrationCard:
         m for m in models if m.health == "problem" and not _provider_covered(parts, m.provider)
     ]
     count = len(broken) + len(_problems(registry))
-    last = _latest(*(s.checked_at for s in registry), *(m.checked_at for m in models))
+    common: dict[str, Any] = {
+        "probes": _live(registry),
+        "complete": _complete(*needed),
+        "stale": _any_stale(registry),
+    }
     if count:
-        return _card("models", status, "problems", count=count, last=last)
-    return _card("models", status, "all_ok" if levels else "no_data", last=last)
+        return _card("models", status, "problems", parts, count=count, **common)
+    return _card("models", status, "all_ok" if levels else "no_data", parts, **common)
 
 
 def _budget_ratio(spent: float, limit: float) -> float | None:
@@ -316,7 +396,15 @@ def _spend_card(parts: Parts) -> IntegrationCard:
     if not parts.spend.ok or parts.spend.data is None:
         return _blank("spend", _access(parts.spend))
     status, note = _spend_level(parts.spend.data)
-    return _card("spend", status, note, amount=parts.spend.data.today_usd)
+    return _card(
+        "spend",
+        status,
+        note,
+        parts,
+        probes=[parts.now],
+        source="report",
+        amount=parts.spend.data.today_usd,
+    )
 
 
 def _backup_state(backups: BackupsStatus) -> tuple[Level, Note | None]:
@@ -330,25 +418,33 @@ def _backup_state(backups: BackupsStatus) -> tuple[Level, Note | None]:
 
 
 def _storage_card(parts: Parts) -> IntegrationCard:
-    access = _access(parts.backups, parts.services)
+    needed = (parts.backups, parts.services)
+    access = _access(*needed)
     if access != "ok":
         return _blank("storage", access)
     services = _by_key(_services_of(parts), STORAGE_KEYS)
     levels: list[Level] = [_level(s) for s in services]
     backups = parts.backups.data
     note: Note | None = None
+    probes = _live(services)
     if backups is not None:
         level, note = _backup_state(backups)
         # Бэкап — ещё и сервис реестра `backup`: свод не улучшает уровень, который поставила CRM.
         levels.append(level)
+        # Список копий читается сейчас: это проверка, если каталог ответил без ошибки.
+        probes.append(parts.now if backups.available and backups.error is None else None)
     status = worst(levels) if levels else "unknown"
-    last = _latest(backups.last_success_at if backups else None, *(s.checked_at for s in services))
+    common: dict[str, Any] = {
+        "probes": probes,
+        "complete": _complete(*needed),
+        "stale": _any_stale(services),
+    }
     if note in ("no_backups", "backup_stale"):
-        return _card("storage", status, note, last=last)
+        return _card("storage", status, note, parts, **common)
     problems = _problems(services)
     if problems or note == "problems":
-        return _card("storage", status, "problems", count=max(len(problems), 1), last=last)
-    return _card("storage", status, "all_ok" if levels else "no_data", last=last)
+        return _card("storage", status, "problems", parts, count=max(len(problems), 1), **common)
+    return _card("storage", status, "all_ok" if levels else "no_data", parts, **common)
 
 
 def _system_card(parts: Parts) -> IntegrationCard:
@@ -358,11 +454,19 @@ def _system_card(parts: Parts) -> IntegrationCard:
     # СЦ-3: карточка считает тот же набор, что список «Требует внимания» — без ожидаемого на стенде
     # и без показанного своей строкой; иначе «Сбой · требуют внимания: 6» рядом с «Всё в порядке».
     bad = [c for c in data.components if _listed(c, parts)]
+    probes: list[datetime | None] = [data.checked_at]
     if bad:
         level = worst(["fail" if c.status == "fail" else "warn" for c in bad])
-        return _card("system", level, "problems", count=len(bad), last=data.checked_at)
+        return _card(
+            "system", level, "problems", parts, probes=probes, source="report", count=len(bad)
+        )
     return _card(
-        "system", "unknown" if data.status == "unknown" else "ok", "all_ok", last=data.checked_at
+        "system",
+        "unknown" if data.status == "unknown" else "ok",
+        "all_ok",
+        parts,
+        probes=probes,
+        source="report",
     )
 
 
@@ -589,6 +693,33 @@ def _spend_items(parts: Parts) -> list[AttentionItem]:
     return items
 
 
+def _needed(key: CardKey, parts: Parts) -> tuple[Part[Any], ...]:
+    """Части CRM, без любой из которых слово «Работает» у карточки не вправе стоять."""
+    return {
+        "erp": (parts.erp, parts.services, parts.system),
+        "telegram": (parts.telegram, parts.services),
+        "mail": (parts.services,),
+        "services": (parts.services,),
+        "models": (parts.models, parts.services),
+        "spend": (parts.spend,),
+        "storage": (parts.backups, parts.services),
+        "system": (parts.system,),
+    }[key]
+
+
+def _check_failed_items(cards: list[IntegrationCard], parts: Parts) -> list[AttentionItem]:
+    """«Не удалось проверить» — строка в «Требует внимания»: тихое «неизвестно» рядом
+    с пустым списком читалось как «всё в порядке». Нет права в CRM — не сбой, строки нет."""
+    items: list[AttentionItem] = []
+    for card in cards:
+        if card.fact.state != "unknown" or card.access == "forbidden":
+            continue
+        needed = _needed(card.key, parts)
+        if any(p.state == "unavailable" for p in needed) or _complete(*needed):
+            items.append(_item(f"check:{card.key}", card.key, "warn", "check_failed"))
+    return items
+
+
 def build_overview(parts: Parts, *, now: datetime | None = None) -> IntegrationsOverview:
     builders = {
         "erp": _erp_card,
@@ -609,12 +740,13 @@ def build_overview(parts: Parts, *, now: datetime | None = None) -> Integrations
         *_storage_items(parts),
         *_system_items(parts),
         *_spend_items(parts),
+        *_check_failed_items(cards, parts),
     ]
     # Одна беда может прийти из двух источников (сервис реестра и компонент состояния):
     # оставляем первую запись с этим id.
     unique = list({item.id: item for item in attention}.values())
     unique.sort(key=lambda item: _SEVERITY_ORDER[item.severity])
-    return IntegrationsOverview(checked_at=now or datetime.now(UTC), cards=cards, attention=unique)
+    return IntegrationsOverview(checked_at=now or parts.now, cards=cards, attention=unique)
 
 
 __all__ = ["Part", "Parts", "build_overview", "fix_card_of", "worst"]

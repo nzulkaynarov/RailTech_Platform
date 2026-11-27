@@ -1,12 +1,18 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.128.0
+  version: 0.129.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.129.0 (НАСТ-П1) — ломающее по oasdiff (до 1.0 допустимо): одна модель статуса `StatusFact {state, checked_at, source, live}`
+    для «Состояния», карточек «Сервисов», шагов мастера и счётчика готовности. `IntegrationCard.fact` и `BusJournal.fact` —
+    обязательные поля ответа; в `IntegrationNote` добавлены `not_verified`, `stale`, `check_failed`, в `AttentionKind` —
+    `check_failed`. «Работает» (`state: works`) — только по живой проверке не старше порога; не ответила часть данных —
+    `unknown`; `IntegrationCard.status` остаётся пятиуровневым и равен «ok» только при `works`.
 
     **0.128.0 (СОТР-2) — ломающее по oasdiff (до 1.0 допустимо): активной роли («вида») больше нет.** Удалены `Me.active_role` и
     `MeUpdate.active_role`: сотрудник всегда работает со всем, что ему делегировано (`modules`, `resources`, `restricted_fields`,
@@ -18795,12 +18801,14 @@ components:
     BusJournal:
       type: object
       additionalProperties: false
-      required: [domains, sources]
+      required: [domains, sources, fact]
       properties:
         domains:
           type: array
           items: {$ref: '#/components/schemas/BusDomainOverview'}
         sources: {$ref: '#/components/schemas/BusSources'}
+        fact:
+          $ref: '#/components/schemas/StatusFact'
     BusDelivery:
       type: object
       additionalProperties: false
@@ -19489,7 +19497,7 @@ components:
 
     IntegrationNote:
       type: string
-      enum: [all_ok, problems, not_configured, paused, rotation_pending, backup_stale, no_backups, bot_not_running, budget_near, budget_over, no_data]
+      enum: [all_ok, problems, not_configured, paused, rotation_pending, backup_stale, no_backups, bot_not_running, budget_near, budget_over, no_data, not_verified, stale, check_failed]
       description: >-
         Короткая пометка карточки — машинный код, фраза на языке сотрудника собирается в интерфейсе. `count` — сколько
         сервисов или алиасов с проблемой; `amount_usd` — расход за сегодня.
@@ -19497,9 +19505,10 @@ components:
     IntegrationCard:
       type: object
       additionalProperties: false
-      required: [key, status, access, note, count, amount_usd, last_activity_at]
+      required: [key, status, access, note, count, amount_usd, last_activity_at, fact]
       properties:
         key: {$ref: '#/components/schemas/IntegrationCardKey'}
+        fact: {$ref: '#/components/schemas/StatusFact'}
         status: {$ref: '#/components/schemas/IntegrationStatus'}
         access: {$ref: '#/components/schemas/IntegrationAccess'}
         note: {$ref: '#/components/schemas/IntegrationNote'}
@@ -19508,11 +19517,45 @@ components:
         last_activity_at:
           type: [string, 'null']
           format: date-time
-          description: Последняя проверка или событие карточки; `null` — данных нет
+          description: >-
+            Время проверки карточки, то же, что `fact.checked_at` (одна дата на карточку); `null` — проверки не было
+
+    StatusState:
+      type: string
+      enum: [works, attention, broken, not_verified, stale, unknown, 'off']
+      description: >-
+        Слово состояния (НАСТ-П1): `works` Работает — только по живой проверке не старше порога; `attention` Внимание;
+        `broken` Не работает; `not_verified` Настроено, не проверено; `stale` Нет свежих данных (проверка старше порога);
+        `unknown` Не удалось проверить (нет ответа или ответила только часть); `off` Не подключено.
+
+    StatusSource:
+      type: string
+      enum: [check, counters, report, none]
+      description: >-
+        На чём держится слово: `check` — проба сервиса, `counters` — счётчики в базе CRM (связь не проверяют), `report` —
+        отчёт, собранный в момент запроса, `none` — данных нет.
+
+    StatusFact:
+      type: object
+      additionalProperties: false
+      required: [state, checked_at, source, live]
+      description: >-
+        Одна модель статуса. Её читают «Состояние», карточки «Сервисов», шаги мастера и счётчик готовности.
+      properties:
+        state: {$ref: '#/components/schemas/StatusState'}
+        checked_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            Время самой старой проверки, на которой держится «Работает»; у проблемы — самой свежей; `null` — проверки не было
+        source: {$ref: '#/components/schemas/StatusSource'}
+        live:
+          type: boolean
+          description: Есть живая проверка не старше порога
 
     AttentionKind:
       type: string
-      enum: [not_configured, service, model_problem, backup_stale, component, budget_over, budget_near, rotation_pending, paused, bot_not_running]
+      enum: [not_configured, service, model_problem, backup_stale, component, budget_over, budget_near, rotation_pending, paused, bot_not_running, check_failed]
 
     ServiceState:
       type: string
