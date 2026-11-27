@@ -73,7 +73,7 @@ function me(): PersonRef | undefined {
 
 function access() {
   const session = readSession();
-  const built = session ? buildMe({ ...session, activeRole: null }) : undefined;
+  const built = session ? buildMe(session) : undefined;
   return {
     resolve: built?.resources["eds.inbox"] === "full",
     register: built?.resources["eds.inbox.register"] === "full",
@@ -267,7 +267,6 @@ function registrarIds(): string[] {
       !u.loginError &&
       buildMe({
         userId: u.id,
-        activeRole: null,
         language: "ru",
         mustChangePassword: false,
       })?.resources["eds.inbox.register"] === "full",

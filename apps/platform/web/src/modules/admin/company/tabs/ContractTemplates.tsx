@@ -21,12 +21,14 @@ import { useFormat } from "../../../../shared/lib/useFormat";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { FormModal, ListTable, QueryGate, TabHeader } from "../common";
+import { LanguageTabs, useTemplateWord } from "../TemplateWord";
+import type { DocumentTemplateLanguage } from "../templateWord";
 
 /** Роли базовых документов компании (ОСН-1): три фиксированных кода, текст документа — всегда шаблон. */
 const BASE_ROLES = ["partnership", "nda", "offer"] as const;
 
 /** Текст отказа словами: подкод ERP (`details.reason`), иначе общий. */
-function refusal(t: (key: string, options?: { defaultValue: string }) => string, error: unknown) {
+function refusal(t: (key: string, options?: { defaultValue?: string }) => string, error: unknown) {
   if (error instanceof ApiError) {
     const reason = error.details["reason"];
     if (typeof reason === "string") {
@@ -50,6 +52,10 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
   const format = useFormat();
   const query = useListContractTemplates();
   const [creating, setCreating] = useState(false);
+  // ШАБЛ-1: язык файла Word и образца PDF для всех строк (RU / UZ / EN)
+  const [language, setLanguage] = useState<DocumentTemplateLanguage>("ru");
+  const word = useTemplateWord(language);
+  const mayPdf = canEdit(me, "company.settings");
   const [marking, setMarking] = useState<ContractTemplate | null>(null);
   const [markRole, setMarkRole] = useState<(typeof BASE_ROLES)[number] | null>(null);
   const [form] = Form.useForm<ContractTemplateIn>();
@@ -72,7 +78,22 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
     mutation: { onSuccess: done("contractTemplates.done.edition"), onError: failed },
   });
   const submit = useSubmitContractTemplate({
-    mutation: { onSuccess: done("contractTemplates.done.submit"), onError: failed },
+    mutation: {
+      onSuccess: (next) => {
+        done("contractTemplates.done.submit")();
+        // Неизвестные поля не держат отправку: заметка рядом с результатом
+        if (next.unknown_placeholders.length > 0) {
+          void message.warning(
+            t("contractTemplates.warn.unknown", {
+              list: next.unknown_placeholders
+                .map((code) => (code.includes("{") ? code : `{{${code}}}`))
+                .join(", "),
+            }),
+          );
+        }
+      },
+      onError: failed,
+    },
   });
   const approve = useApproveContractTemplate({
     mutation: { onSuccess: done("contractTemplates.done.approve"), onError: failed },
@@ -116,6 +137,12 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
     return t("contractTemplates.draftLine", { edition: row.edition });
   };
 
+  const languageBar = (
+    <div className="pf-co-word-bar">
+      <span className="pf-co-hint">{t("contractTemplates.fileLanguage")}</span>
+      <LanguageTabs value={language} onChange={setLanguage} />
+    </div>
+  );
   const add = mayPrepare ? (
     <Button
       type="primary"
@@ -138,6 +165,7 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
         {({ items }) => (
           <>
             {items.length > 0 ? <div>{add}</div> : null}
+            {items.length > 0 ? languageBar : null}
             <ListTable<ContractTemplate>
               tableId="admin.company.contractTemplates"
               label={t("contractTemplates.title")}
@@ -206,6 +234,15 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                           · {t("contractTemplates.notOffered")}
                         </Typography.Text>
                       ) : null}
+                      {row.unknown_placeholders.length > 0 ? (
+                        <Typography.Text type="secondary">
+                          {" "}
+                          ·{" "}
+                          {t("contractTemplates.unknownRow", {
+                            count: row.unknown_placeholders.length,
+                          })}
+                        </Typography.Text>
+                      ) : null}
                       {row.languages.length < 3 ? (
                         <Typography.Text type="secondary">
                           {" "}
@@ -222,6 +259,31 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
                   width: ROW_ACTIONS_WIDTH,
                   cell: (row) => {
                     const actions = [
+                      {
+                        key: "word",
+                        label: t("templates.word.download"),
+                        onClick: () => {
+                          void word.download(row);
+                        },
+                      },
+                      mayPdf
+                        ? {
+                            key: "pdf",
+                            label: t("templates.word.downloadPdf"),
+                            onClick: () => {
+                              void word.downloadPdf(row);
+                            },
+                          }
+                        : null,
+                      mayPrepare && !row.locked
+                        ? {
+                            key: "upload",
+                            label: t("templates.word.upload"),
+                            onClick: () => {
+                              word.upload(row);
+                            },
+                          }
+                        : null,
                       row.status === "approved" && row.is_active && mayPrepare
                         ? {
                             key: "edition",
@@ -280,6 +342,7 @@ export function ContractTemplates({ titled = true }: { titled?: boolean }) {
         )}
       </QueryGate>
       <Typography.Paragraph type="secondary">{t("contractTemplates.note")}</Typography.Paragraph>
+      {word.node}
       <FormModal
         open={marking !== null}
         title={t("contractTemplates.baseRoleTitle", { name: marking?.name ?? "" })}

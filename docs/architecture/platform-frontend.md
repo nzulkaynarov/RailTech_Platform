@@ -14,7 +14,7 @@
 | UI | React 18.3, **antd ^5.29**, `@ant-design/icons` ^5.6, **`@ant-design/pro-components` ^2** (ProTable, ProForm, ProDescriptions, ProCard) | Pro Components — по SPEC-v3 §5.1; в CRM их нет, добавляются только в Платформу |
 | Маршруты | react-router ^7 (data router) | SPEC-v3 говорит «React Router 6»; берём 7, как в CRM и Cabinet, API совместим |
 | Данные | TanStack Query ^5; клиент и хуки генерирует **orval** из `packages/contracts/openapi/platform-bff.yaml` | как CRM; моки MSW генерирует тот же orval |
-| UI-состояние | Zustand ^5 (панели, активная роль, язык); сохранение в `localStorage` по пользователю и маршруту, обёрнутое в try/catch | как ERP |
+| UI-состояние | Zustand ^5 (панели, язык); сохранение в `localStorage` по пользователю и маршруту, обёрнутое в try/catch | как ERP |
 | Формы | ProForm (поверх antd Form) | валидация — по схемам OpenAPI |
 | i18n | react-i18next, ru (по умолчанию), uz (латиница), en | словарь SPEC-v3 §2 — отдельное пространство имён `dictionary` |
 | Графики | `@ant-design/plots` | только «Сводка по компании», без двойных осей и кругов |

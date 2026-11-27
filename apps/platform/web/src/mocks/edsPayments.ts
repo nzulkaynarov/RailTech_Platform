@@ -69,7 +69,7 @@ function failure(
 function held() {
   const session = readSession();
   if (!session) return null;
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   if (!me) return null;
   return { level: me.resources["eds.payments"], crmId: MOCK_USER_CRM_ID[session.userId] };
 }

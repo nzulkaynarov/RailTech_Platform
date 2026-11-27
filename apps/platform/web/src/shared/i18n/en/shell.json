@@ -5,7 +5,8 @@
   "rail": {
     "label": "Modules",
     "logo": "{{initials}} — {{name}}",
-    "tasks": "{{name}}, {{count}} tasks"
+    "tasks": "{{name}}, {{count}} tasks",
+    "needs": "{{name}}: need action — {{count}}"
   },
   "menu": {
     "nav": "Module sections",
@@ -47,37 +48,51 @@
     "now": "now",
     "minutes": "{{count}} min",
     "hours": "{{count}} h",
-    "kindChip": {
-      "lead": "L",
-      "client": "C",
-      "request": "Req",
-      "project": "Prj",
-      "letter": "In",
-      "quote": "Quo",
-      "contract": "Ctr",
-      "invoice": "Inv",
-      "act": "Act",
-      "memo": "Mem",
-      "chat": "Ch",
-      "ticket": "T",
-      "integration": "!",
-      "supplier_order": "Ord",
-      "partner_application": "Ptn",
-      "product": "Itm"
-    },
-    "tabChip": {
-      "all": "•",
-      "decisions": "D",
-      "clients": "C",
-      "system": "!"
-    },
     "scope": {
       "unread": "Unread",
       "unreadCount": "Unread ({{count}})",
-      "all": "All"
+      "all": "All",
+      "needsAction": "Need action",
+      "needsActionCount": "Need action ({{count}})"
     },
     "category": "Notification type",
-    "allTypes": "All types"
+    "allTypes": "All types",
+    "kindName": {
+      "lead": "Lead",
+      "client": "Client",
+      "request": "Request",
+      "project": "Project",
+      "letter": "Letter",
+      "quote": "Quote",
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "memo": "Memo",
+      "chat": "Chat",
+      "ticket": "Ticket",
+      "integration": "Failure",
+      "supplier_order": "Order",
+      "partner_application": "Partner",
+      "product": "Product"
+    },
+    "tabName": {
+      "all": "All",
+      "decisions": "Decision",
+      "clients": "Clients",
+      "system": "System"
+    },
+    "events_one": "{{count}} event",
+    "events_other": "{{count}} events",
+    "expand": "Show events",
+    "collapse": "Hide events",
+    "toast": {
+      "open": "Open",
+      "read": "Mark read",
+      "more": "{{count}} more new",
+      "moreAction": "All notifications"
+    },
+    "events_few": "{{count}} events",
+    "events_many": "{{count}} events"
   },
   "panel": {
     "label": "Side panel",
@@ -91,8 +106,6 @@
   "avatar": {
     "open": "{{initials}} {{role}}: profile and settings, {{name}}",
     "profile": "Profile",
-    "activeRole": "Active role",
-    "allRoles": "All roles",
     "language": "Language",
     "changePassword": "Change password",
     "logout": "Sign out",
@@ -216,9 +229,7 @@
     "title": "This section is not available for your role",
     "text": "The section is outside the rights of your roles. If you need it for work, write to the administrator.",
     "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
-    "write": "Write to the administrator",
-    "titleActiveRole": "This section is not available for the selected role",
-    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator."
+    "write": "Write to the administrator"
   },
   "notFound": {
     "heading": "Page not found",

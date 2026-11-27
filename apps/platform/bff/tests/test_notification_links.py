@@ -191,3 +191,14 @@ async def test_feed_uses_the_session_language(
     (item,) = response.json()["items"]
     assert item["title"] == "Quote approval needed"
     assert item["object"]["path"].endswith("?panel=open&tab=approve")
+
+
+def test_needs_action_follows_the_decisions_tab() -> None:
+    """УВЕД-1: «требует действия» — от вкладки «Решения»; к сведению — остальное."""
+    row = erp_row("quote.submitted_for_review", "КП на согласовании", number="КП-1")
+    decision = map_erp(row, {})
+    info = map_erp(erp_row("document.created", "Документ создан"), {})
+    assert decision is not None
+    assert decision.needs_action is True
+    assert info is not None
+    assert info.needs_action is False

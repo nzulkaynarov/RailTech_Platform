@@ -210,7 +210,7 @@ test.describe("Шапка и бар несохранённого", () => {
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
     const drawer = page.getByRole("dialog", { name: "Центр уведомлений" });
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByRole("radio", { name: /^Непрочитанные/ })).toBeChecked();
+    await expect(drawer.getByRole("radio", { name: /^Все/ })).toBeChecked();
     const overflow = await page.evaluate<number>(
       `(() => { const d = document.querySelector(".ant-drawer-content"); return d.scrollWidth - d.clientWidth; })()`,
     );

@@ -512,7 +512,7 @@ function failure(status: number, code: string, message: string, details?: Record
 
 function canRead(): boolean {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   if (!me) return false;
   const r = me.resources;
   return (
@@ -526,7 +526,7 @@ function canRead(): boolean {
 
 function isAdmin(): boolean {
   const session = readSession();
-  const me = session ? buildMe({ ...session, activeRole: null }) : null;
+  const me = session ? buildMe(session) : null;
   return Boolean(me && allows(me.resources, "admin", "full"));
 }
 

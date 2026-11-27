@@ -6,4 +6,9 @@ import type { CalcRequestRow } from "./calcRequestRow";
 
 export interface CalcRequestList {
   items: CalcRequestRow[];
+  /**
+   * ЗАЯВ-1: всего подходящих заявок (для страниц); заполнено, когда в запросе есть `state`
+   * @nullable
+   */
+  total?: number | null;
 }

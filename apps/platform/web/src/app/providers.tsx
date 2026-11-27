@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { I18nextProvider, useTranslation } from "react-i18next";
 
 import i18n from "../shared/i18n";
+import { NotifyProvider } from "../shared/notify/NotifyProvider";
 import { createQueryClient } from "./queryClient";
 import { appTheme } from "./theme";
 
@@ -35,7 +36,9 @@ function ThemedApp({ children }: { children: ReactNode }) {
   const locale = ANTD_LOCALES[instance.language] ?? ruRU;
   return (
     <ConfigProvider theme={appTheme} locale={locale}>
-      <AntApp>{children}</AntApp>
+      <AntApp notification={{ maxCount: 3, placement: "topRight", top: 64 }}>
+        <NotifyProvider>{children}</NotifyProvider>
+      </AntApp>
     </ConfigProvider>
   );
 }

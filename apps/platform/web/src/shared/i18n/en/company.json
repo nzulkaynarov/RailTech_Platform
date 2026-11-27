@@ -409,11 +409,11 @@
       "open": "Open",
       "openNamed": "Open: {{name}}",
       "body": "Template text (HTML)",
-      "bodyHint": "{{example}} placeholders are replaced with document data.",
+      "bodyHint": "Fields like {{example}} are replaced with document data.",
       "activeLabel": "Template is active",
-      "placeholders": "Available placeholders",
-      "unknownWarning": "Unknown placeholder {{token}}",
-      "placeholdersUnknown": "Unknown placeholders: {{count}}",
+      "placeholders": "Available fields",
+      "unknownWarning": "Unknown field {{token}}",
+      "placeholdersUnknown": "Unknown fields: {{count}}",
       "unknownTitle": "Not in the list — they appear in the document as is",
       "unknownMark": "not in the list",
       "previewTitle": "Sample on test data",
@@ -448,7 +448,10 @@
         "act": "Act",
         "receipt": "Payment receipt",
         "delivery_note": "Delivery note"
-      }
+      },
+      "bodyTitle": "Template text",
+      "showMarkup": "Show markup",
+      "hideMarkup": "Hide markup"
     },
     "emails": {
       "key": "Email key",
@@ -480,6 +483,75 @@
         "title": "No email templates yet",
         "text": "For now emails use the platform file templates. Create your own template to replace the text."
       }
+    },
+    "word": {
+      "download": "Download Word",
+      "downloadPdf": "Download PDF",
+      "upload": "Upload from Word",
+      "file": "Word file",
+      "language": "Text language",
+      "noText": "no text",
+      "howTo": "Download it as Word, pass it to the people responsible, upload it back after their edits: you will see what changed before anything is saved.",
+      "lockedHint": "The text is approved and cannot be edited. You can download it; create a new edition to make changes.",
+      "noTextHint": "There is no text in this language yet — the document prints in Russian. The file holds the Russian text as a base for translation.",
+      "saveFirst": "Save the template first — then you can download it as Word.",
+      "sheetTitle": "What changed · {{language}}",
+      "accept": "Accept changes",
+      "nothingChanged": "No changes: the file matches the template text.",
+      "formattingOnly": "The words are the same, only the formatting changed.",
+      "summary": "Changed: {{changed}} · added: {{added}} · removed: {{removed}}",
+      "locked": "The template is approved and its text cannot change. Create a new edition and upload the file into it.",
+      "missingBlocks": "The document cannot be built without these blocks",
+      "unknown": "Unknown fields: {{count}}",
+      "unknownHint": "They go into the document as they are until fixed: correct the code in the file or remove the field.",
+      "changesLabel": "Changes by clause",
+      "point": "Clause {{point}}",
+      "noPoint": "No number",
+      "kind": {
+        "changed": "changed",
+        "added": "added",
+        "removed": "removed"
+      },
+      "was": "Was",
+      "becomes": "Becomes",
+      "more": "And more changes: {{count}}.",
+      "applied": "Template text updated",
+      "pdfFailed": "The PDF was not built. Try again.",
+      "errors": {
+        "word_only_docx": "A Word file (.docx) is needed.",
+        "word_empty": "The file has no text.",
+        "word_hostile": "The file does not look like a Word document or is too complex. Save it in Word again.",
+        "word_unreadable": "The file cannot be read. Save it from Word as .docx.",
+        "word_too_big": "The file is over 5 MB or too long.",
+        "word_too_complex": "Too many edits to compare. Upload the file in parts.",
+        "word_base_changed": "The template text changed after the check. Upload the file again.",
+        "word_file_required": "Choose a Word file.",
+        "template_locked": "Approved text cannot be edited. Create a new edition.",
+        "word_stale": "The template changed after the download: download it again and carry your edits over.",
+        "word_file_changed": "A different file was sent than the one checked. Upload the file again.",
+        "word_other_template": "The file is from another template: download the right one and carry your edits over.",
+        "word_other_language": "The file is from another language: download the right one and carry your edits over."
+      },
+      "sameTextDropped": "The words are the same, but the file has things that are not saved.",
+      "dropped": "The file has things that are not saved",
+      "droppedKind": {
+        "images": "Pictures: {{count}}",
+        "comments": "Comments: {{count}}",
+        "notes": "Footnotes: {{count}}",
+        "colors": "Text colour: {{count}}",
+        "fonts": "Fonts: {{count}}",
+        "highlights": "Highlighting: {{count}}"
+      },
+      "loses": "Will not be kept after accepting",
+      "lostKind": {
+        "links": "Links: {{count}}",
+        "rules": "Horizontal rules: {{count}}",
+        "pictures": "Pictures: {{count}}",
+        "merged_cells": "Merged cells: {{count}}",
+        "nested_lists": "Nested lists: {{count}}",
+        "nested_tables": "Nested tables: {{count}}"
+      },
+      "fromElsewhere": "The file was not downloaded from here — compare carefully."
     }
   },
   "categories": {
@@ -804,7 +876,12 @@
     "baseRoleTitle": "Base document: {{name}}",
     "baseRoleSave": "Save",
     "doneBase": "Mark saved.",
-    "actionBase": "Base document"
+    "actionBase": "Base document",
+    "fileLanguage": "File language",
+    "warn": {
+      "unknown": "The template has unknown fields: {{list}}. A contract from it cannot be issued until they are fixed."
+    },
+    "unknownRow": "unknown fields: {{count}}"
   },
   "sample": {
     "language": "Document language",

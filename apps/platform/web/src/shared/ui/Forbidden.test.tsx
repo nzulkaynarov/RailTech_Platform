@@ -21,12 +21,6 @@ describe("Forbidden", () => {
     expect(screen.getByText(/Раздел доступен ролям: Директор, Бухгалтер\./)).toBeVisible();
   });
 
-  it("активная роль — подсказка «Все роли»", () => {
-    renderUi(<Forbidden activeRole />);
-    expect(screen.getByText("Раздел недоступен для выбранной роли")).toBeVisible();
-    expect(screen.getByText(/Выберите «Все роли»/)).toBeVisible();
-  });
-
   it("встроенный: без h1 и без смены заголовка вкладки", () => {
     document.title = "Витрина";
     renderUi(<Forbidden embedded />);

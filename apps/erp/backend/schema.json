@@ -11077,11 +11077,35 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Размер страницы (до 200); с `state`"
+                    },
+                    {
+                        "in": "query",
                         "name": "mine",
                         "schema": {
                             "type": "boolean"
                         },
                         "description": "Только где сотрудник — исполнитель резолюции"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Сколько строк пропустить; с `state`"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск: номер, клиент, тема, письмо, текст заявки"
                     },
                     {
                         "in": "query",
@@ -11094,6 +11118,19 @@
                             ]
                         },
                         "description": "open — стадии расчёта; all — все"
+                    },
+                    {
+                        "in": "query",
+                        "name": "state",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "closed",
+                                "open"
+                            ]
+                        },
+                        "description": "ЗАЯВ-1: реестр заявок — в работе, закрытые (КП ушло, проект, отказ), все; с ним приходит `count`"
                     }
                 ],
                 "tags": [
@@ -24300,6 +24337,144 @@
                             }
                         },
                         "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/word/": {
+            "get": {
+                "operationId": "crm_document_templates_word_retrieve",
+                "description": "GET `?language=ru|uz|en`: DOCX шаблона «как читают люди» (подстановки — подписанными полями), имя «<Название>, ред. <N> — проект.docx»; доступно всегда, и для утверждённого шаблона. POST (multipart `file`, `?language=`, `?mode=check|apply`): `check` ничего не пишет и отвечает, что изменилось; `apply` (с `base` из проверки) сохраняет текст этого языка и пишет в журнал. Закреплённый шаблон договора не меняется (400 TEMPLATE_LOCKED), только новая редакция.",
+                "summary": "Template text as Word (GET) / check or accept an uploaded Word file (POST)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DOCX"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "409": {
+                        "description": "WORD_BASE_CHANGED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "crm_document_templates_word_create",
+                "description": "GET `?language=ru|uz|en`: DOCX шаблона «как читают люди» (подстановки — подписанными полями), имя «<Название>, ред. <N> — проект.docx»; доступно всегда, и для утверждённого шаблона. POST (multipart `file`, `?language=`, `?mode=check|apply`): `check` ничего не пишет и отвечает, что изменилось; `apply` (с `base` из проверки) сохраняет текст этого языка и пишет в журнал. Закреплённый шаблон договора не меняется (400 TEMPLATE_LOCKED), только новая редакция.",
+                "summary": "Template text as Word (GET) / check or accept an uploaded Word file (POST)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DOCX"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplateError"
+                                }
+                            }
+                        },
+                        "description": "TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)"
+                    },
+                    "409": {
+                        "description": "WORD_BASE_CHANGED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
@@ -42781,6 +42956,11 @@
                     "text": {
                         "type": "string"
                     },
+                    "crm_client_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "ЗАЯВ-1: клиент CRM компании заявки — для «Создать по образцу»"
+                    },
                     "lines": {
                         "type": "integer"
                     },
@@ -43048,6 +43228,10 @@
                         "items": {
                             "$ref": "#/components/schemas/CalcTaskRow"
                         }
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "ЗАЯВ-1: всего подходящих заявок; только при `state`"
                     }
                 },
                 "required": [
@@ -43099,6 +43283,11 @@
                         "items": {
                             "$ref": "#/components/schemas/CalcAssignee"
                         }
+                    },
+                    "crm_client_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "ЗАЯВ-1: клиент CRM компании заявки; только при `state`"
                     }
                 },
                 "required": [
@@ -52842,6 +53031,16 @@
                         "title": "HTML-тело",
                         "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
                     },
+                    "body_html_uz": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "HTML-тело (uz)"
+                    },
+                    "body_html_en": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "HTML-тело (en)"
+                    },
                     "placeholders_used": {
                         "readOnly": true,
                         "title": "Плейсхолдеры",
@@ -52984,6 +53183,12 @@
                         "description": "Языки, на которых текст заполнен (ДОК-16 дозаполняет uz и en; пустой — русский с пометкой).",
                         "readOnly": true
                     },
+                    "unknown_placeholders": {
+                        "type": "array",
+                        "items": {},
+                        "description": "Неизвестные поля трёх текстов (коды и обрывки): заметка «исправить», работу не останавливает.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -53002,6 +53207,8 @@
                     "approved_at",
                     "approved_by_name",
                     "base_role",
+                    "body_html_en",
+                    "body_html_uz",
                     "confidentiality_years",
                     "counterparty_kind",
                     "created_at",
@@ -53023,6 +53230,7 @@
                     "submitted_at",
                     "term_rule",
                     "trade_secret_indefinite",
+                    "unknown_placeholders",
                     "updated_at"
                 ]
             },
@@ -53137,6 +53345,30 @@
                         "description": "Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас)."
                     }
                 }
+            },
+            "DocumentTemplateRequest": {
+                "type": "object",
+                "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "maxLength": 255
+                    },
+                    "body_html": {
+                        "type": "string",
+                        "title": "HTML-тело",
+                        "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
             },
             "DocumentTemplateSubjectEnum": {
                 "enum": [

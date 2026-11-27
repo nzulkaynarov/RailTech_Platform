@@ -1,12 +1,17 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.127.0
+  version: 0.128.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.128.0 (СОТР-2) — ломающее по oasdiff (до 1.0 допустимо): активной роли («вида») больше нет.** Удалены `Me.active_role` и
+    `MeUpdate.active_role`: сотрудник всегда работает со всем, что ему делегировано (`modules`, `resources`, `restricted_fields`,
+    очередь и карточки — по объединению ролей). `PATCH /me` меняет только `language`. Параметр `role` очереди и карточек остаётся
+    фильтром.
 
     **0.125.0 (ЛП-1) — ломающее по oasdiff (до 1.0 допустимо): новое значение `PartnerApplicationSource.lead`** (заявка
     партнёра заведена из карточки лида; очередь «Заявки партнёров» показывает источник «Лид»). Остальное в ЛП-1 аддитивно:
@@ -1043,7 +1048,7 @@ paths:
     patch:
       tags: [me]
       operationId: updateMe
-      summary: Язык интерфейса и активная роль
+      summary: Язык интерфейса
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -2412,7 +2417,7 @@ paths:
       operationId: getQueue
       summary: «Моя очередь» — что сделать сейчас
       description: |
-        Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+        Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли).
         Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
         его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
         действие.
@@ -2749,6 +2754,128 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /document-templates/{id}/word:
+    get:
+      tags: [templates]
+      operationId: downloadTemplateWord
+      summary: 'Шаблон: скачать Word'
+      description: >-
+        ШАБЛ-1. Текст шаблона на языке `language` как его читают люди: заголовки, абзацы, списки, таблицы, бланк компании в
+        колонтитуле; подстановки — подписанными полями вида `[Название контрагента {{counterparty.name}}]` (код в фигурных
+        скобках — главное), блоки документа — отдельной серой строкой. Язык без текста отдаёт русский (основа для перевода).
+        Имя файла — `<Название>, ред. <N> — проект.docx` (язык, кроме русского, — в названии), в `Content-Disposition`
+        (`filename*`). Доступно всегда, в том числе утверждённому шаблону. Раздел `eds.projects`, `company.settings` или
+        `eds.visa.legal` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+      responses:
+        '200':
+          description: DOCX
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /document-templates/{id}/word/check:
+    post:
+      tags: [templates]
+      operationId: checkTemplateWord
+      summary: 'Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)'
+      description: >-
+        ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не
+        разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический
+        размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив,
+        подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось
+        относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные
+        блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`,
+        `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки), `word_other_template` и `word_other_language` (в файле метка другого шаблона или другого языка). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже.
+        Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Предупреждения (неизвестные поля, что не сохранится) ничего не блокируют. Раздел `eds.projects`,
+        `company.settings` или `eds.visa.legal` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplateWordUpload'
+      responses:
+        '200':
+          description: Что изменится, если принять файл
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateWordCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /document-templates/{id}/word/apply:
+    post:
+      tags: [templates]
+      operationId: applyTemplateWord
+      summary: 'Шаблон: принять изменения из Word'
+      description: >-
+        ШАБЛ-1. Тот же файл, что в `checkTemplateWord`, и `base` из его ответа. ERP разбирает файл заново, сохраняет текст
+        этого языка и пишет в журнал, кто и что загрузил (файл, число изменённых, добавленных, удалённых пунктов). Текст
+        успели поменять после проверки — 409 `CONFLICT` (`details.reason = word_base_changed`); закреплённый шаблон договора —
+        409 (`template_locked`: сначала новая редакция); у активного шаблона счёта или акта без обязательных блоков — 422
+        `template_missing_required_blocks`. Чужой шаблон и образец платформы не принимают загрузку (403). Ответ — шаблон.
+        Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: language, in: query, required: true, schema: {type: string, enum: [ru, uz, en]}}
+        - {name: base, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток текста из `checkTemplateWord`'}
+        - {name: file_sha, in: query, required: true, schema: {type: string, pattern: '^[0-9a-f]{16}$'}, description: 'Отпечаток файла из `checkTemplateWord`: другой файл — 409'}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplateWordUpload'
+      responses:
+        '200':
+          description: Текст сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ContractTemplateConflict'
+        '413':
+          description: '413 `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /document-templates/contracts/{id}/new-edition:
     post:
       tags: [templates]
@@ -2815,7 +2942,7 @@ paths:
       operationId: submitContractTemplate
       summary: 'На утверждение'
       description: >-
-        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+        Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестные поля не блокируют — ответ несёт их список в `unknown_placeholders` (заметка «исправить»), а договор с таким полем останавливается при оформлении понятной причиной.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CompanyItemId'
@@ -13029,6 +13156,26 @@ paths:
           in: query
           required: false
           schema: {type: boolean, default: false}
+        - name: state
+          in: query
+          required: false
+          description: >-
+            ЗАЯВ-1, вкладки реестра: `open` — в работе (расчёт), `closed` — закрытые (КП ушло клиенту, стала проектом,
+            закрыта с причиной), `all` — все; скрытые «Ошибка» и «Тест» не показываются. Без параметра — прежний список «в работе».
+          schema: {type: string, enum: [open, closed, all]}
+        - name: q
+          in: query
+          required: false
+          description: 'Поиск: номер заявки, клиент, тема, номер письма, текст заявки; действует вместе с `state`'
+          schema: {type: string, maxLength: 200, default: ''}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        - name: offset
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, default: 0}
       responses:
         '200':
           description: Заявки в расчёте
@@ -20473,24 +20620,15 @@ components:
           description: Роли сотрудника (названия — данные CRM)
           items:
             $ref: '#/components/schemas/RoleRef'
-        active_role:
-          description: >-
-            Id роли, выбранной в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь»
-            и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет
-            их по объединению ролей.
-          oneOf:
-            - $ref: '#/components/schemas/RoleId'
-            - type: 'null'
         modules:
           type: array
-          description: Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей
+          description: Модули рейла в порядке показа — по объединению всего, что делегировано сотруднику
           items:
             $ref: '#/components/schemas/ModuleCode'
         resources:
           type: object
           description: >-
-            Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей) — для активной роли, если задана,
-            иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла.
+            Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей сотрудника). Видимость пункта меню — по секции `menu` того же файла.
           additionalProperties:
             $ref: '#/components/schemas/AccessLevel'
         restricted_fields:
@@ -21367,10 +21505,6 @@ components:
       properties:
         language:
           $ref: '#/components/schemas/Language'
-        active_role:
-          oneOf:
-            - $ref: '#/components/schemas/RoleId'
-            - type: 'null'
 
     InvalidationTopic:
       type: string
@@ -22001,6 +22135,11 @@ components:
           format: date-time
         read:
           type: boolean
+        needs_action:
+          type: boolean
+          description: >-
+            Требует действия сотрудника (решение, ответ); иначе — к сведению. От этого зависит всплывающее
+            уведомление: требующее действия остаётся на экране, пока его не закроют (УВЕД-1).
 
     NotificationPage:
       type: object
@@ -24594,7 +24733,7 @@ components:
           type: string
         template_id:
           type: integer
-          description: 'Шаблон своей компании, открытый в редакторе (ПК-1): название и подписи сторон образца договора берутся у него'
+          description: 'Сохранённый шаблон: вместо `body_html` — его текст на языке `language` (пусто — русский), вид берётся у шаблона; вместе с `body_html` (шаблон открыт в редакторе, ПК-1) — название и подписи сторон образца договора'
         draft:
           $ref: '#/components/schemas/BrandProfileUpdate'
           description: Несохранённые правки бланка — накладываются в памяти, ничего не сохраняя
@@ -25123,7 +25262,7 @@ components:
       type: object
       additionalProperties: false
       description: 'Шаблон договора с утверждением (ДОК-10)'
-      required: [id, name, edition, status, counterparty, subject, approved_by, approved_at, submitted_at, is_active, locked, languages, base_role, updated_at]
+      required: [id, name, edition, status, counterparty, subject, approved_by, approved_at, submitted_at, is_active, locked, languages, unknown_placeholders, base_role, updated_at]
       properties:
         id: {type: string}
         name: {type: string}
@@ -25152,6 +25291,10 @@ components:
             enum: [ru, uz, en]
             type: string
           description: 'Языки с заполненным текстом; пустой uz/en — русский с пометкой (ДОК-16 дозаполняет)'
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует'
         base_role:
           enum: [partnership, nda, offer, null]
           type: [string, 'null']
@@ -25411,6 +25554,96 @@ components:
       description: >-
         Вид шаблона документа. `letter`, `report` и `custom` устарели (ДОК-13): новые шаблоны таких видов не создаются
         (ответ 400 `TEMPLATE_KIND_INVALID`), значения остаются только у ранее созданных шаблонов компании.
+    TemplateWordUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Файл Word (`.docx`) до 5 МБ — скачанный шаблон с правками
+    WordSegment:
+      type: object
+      additionalProperties: false
+      required: [op, text]
+      properties:
+        op: {type: string, enum: [equal, del, ins]}
+        text: {type: string}
+    WordChange:
+      type: object
+      additionalProperties: false
+      required: [point, kind, ours, theirs, segments]
+      properties:
+        point: {type: string, description: 'Номер пункта в начале абзаца; пусто, если номера нет'}
+        kind: {type: string, enum: [changed, added, removed]}
+        ours: {type: string, description: 'Было (текущий текст шаблона)'}
+        theirs: {type: string, description: 'Станет (загруженный файл)'}
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordSegment'
+          description: Слова с подсветкой для изменённого пункта; для добавленного и удалённого пусто
+    WordChangeSummary:
+      type: object
+      additionalProperties: false
+      required: [changed, added, removed, total, more]
+      properties:
+        changed: {type: array, items: {type: string}, description: 'Номера изменённых пунктов'}
+        added: {type: array, items: {type: string}}
+        removed: {type: array, items: {type: string}}
+        total: {type: integer, description: 'Всего изменений, включая пункты без номера'}
+        more: {type: integer, description: 'Сколько номеров не поместилось в списки'}
+    WordMissingBlock:
+      type: object
+      additionalProperties: false
+      required: [code, label]
+      properties:
+        code: {type: string}
+        label: {type: string}
+    WordCount:
+      type: object
+      additionalProperties: false
+      required: [kind, count]
+      properties:
+        kind: {type: string}
+        count: {type: integer}
+    TemplateWordCheck:
+      type: object
+      additionalProperties: false
+      description: Что изменится, если принять загруженный Word. Ничего не сохранено.
+      required: [unchanged, formatting_only, can_apply, locked, base, file_sha, from_elsewhere, dropped, lost_markup, unknown_placeholders, missing_blocks, summary, items]
+      properties:
+        unchanged: {type: boolean, description: 'Изменений нет: текст и оформление те же и ничего не отброшено'}
+        formatting_only: {type: boolean, description: 'Текст тот же, изменилось только оформление'}
+        can_apply: {type: boolean, description: 'Принять можно: есть изменения, шаблон не закреплён, обязательные блоки на месте'}
+        locked: {type: boolean, description: 'Закреплённый шаблон договора: правки только новой редакцией'}
+        base: {type: string, description: 'Отпечаток текущего текста; отдаётся обратно в «Принять»'}
+        from_elsewhere: {type: boolean, description: 'В файле нет метки нашей выгрузки (скачан не отсюда): сравнивать внимательно'}
+        file_sha: {type: string, description: 'Отпечаток проверенного файла; «Принять» присылает его, подмена файла — 409'}
+        dropped:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordCount'
+          description: 'Что есть в файле и не сохраняется: `images`, `comments`, `notes` (сноски), `colors`, `fonts`, `highlights`'
+        lost_markup:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordCount'
+          description: 'Что есть в ТЕКУЩЕМ тексте и не сохранится после принятия: `links`, `rules`, `pictures`, `merged_cells`, `nested_lists`, `nested_tables`; панель только перечисляет, «Принять» не задерживается; прежний текст остаётся в записи журнала'
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Неизвестные поля нового текста: коды (`warehouse.name`) и обрывки с фигурными скобками (`{{counterparty.name}`, `{{контрагент.имя}}`); шаблон с ними нельзя отправить на утверждение'
+        missing_blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordMissingBlock'
+        summary:
+          $ref: '#/components/schemas/WordChangeSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WordChange'
     DocumentTemplate:
       type: object
       additionalProperties: false
@@ -25420,6 +25653,11 @@ components:
         - kind
         - kind_name
         - body_html
+        - body_html_uz
+        - body_html_en
+        - edition
+        - is_locked
+        - unknown_placeholders
         - is_sample
         - is_owned
         - is_active
@@ -25437,6 +25675,22 @@ components:
           description: Вид документа словами
         body_html:
           type: string
+        body_html_uz:
+          type: string
+          description: Текст на узбекском; пусто — в документе печатается русский
+        body_html_en:
+          type: string
+          description: Текст на английском; пусто — в документе печатается русский
+        edition:
+          type: integer
+          description: Номер редакции (у шаблонов договоров растёт, у прочих — 1); в имени скачанного файла
+        is_locked:
+          type: boolean
+          description: Закреплённый шаблон договора (утверждён или на утверждении) — правки только новой редакцией
+        unknown_placeholders:
+          type: array
+          items: {type: string}
+          description: 'Неизвестные поля текстов трёх языков (коды и обрывки): заметка «исправить», ничего не блокирует'
         is_sample:
           type: boolean
           description: 'Образец платформы: правится только копия (`/copy`)'
@@ -29194,6 +29448,7 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CalcAssignee'}
         path: {type: string, examples: ['/erp/calc/ЗВ-2026-104']}
+        crm_client_id: {type: [integer, 'null'], description: 'ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём'}
 
     CalcRequestList:
       type: object
@@ -29203,6 +29458,9 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/CalcRequestRow'}
+        total:
+          type: [integer, 'null']
+          description: 'ЗАЯВ-1: всего подходящих заявок (для страниц); заполнено, когда в запросе есть `state`'
 
     CalcTask:
       type: object
@@ -29240,6 +29498,9 @@ components:
           type: boolean
           default: false
           description: 'РЕЗ-1: расчёт без резолюции ждёт файл письма клиента — на экране «файл заявки загружается»'
+        crm_client_id:
+          type: [integer, 'null']
+          description: 'ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём; нет — форма без клиента'
 
     CalcQuote:
       type: object

@@ -218,6 +218,10 @@ test.describe("Обращения к администратору", () => {
     await loginAndWait(page, "manager@demo.example");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
     const bell = page.getByRole("dialog", { name: "Центр уведомлений" });
+    // несколько событий одного обращения — одна строка; раскрываем, если она свёрнута
+    await expect(bell.getByRole("link").first()).toBeVisible();
+    const expand = bell.getByRole("button", { name: "Показать события" });
+    if (await expand.isVisible()) await expand.click();
     await expect(bell.getByText(/Ответ на обращение TK-0001/)).toBeVisible();
     await bell.getByRole("link", { name: /Ответ на обращение TK-0001/ }).click();
     await expect(page).toHaveURL(/\/help\/requests\/.+/);

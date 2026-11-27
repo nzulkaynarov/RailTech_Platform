@@ -29,6 +29,7 @@ import type {
   AiModelList,
   AiModelTest,
   AiSpendReport,
+  ApplyTemplateWordParams,
   ApprovalConflictResponse,
   AssignLeadIn,
   AssistIn,
@@ -105,6 +106,7 @@ import type {
   ChargeTemplateList,
   ChargeTemplateUpdate,
   ChargeTypeList,
+  CheckTemplateWordParams,
   ClientCard,
   ClientInvitation,
   ClientList,
@@ -170,6 +172,7 @@ import type {
   DownloadCsvExportParams,
   DownloadEdsProjectFileParams,
   DownloadPartnerApplicationDocumentParams,
+  DownloadTemplateWordParams,
   EdsAddressee,
   EdsAddresseeIn,
   EdsAddresseeList,
@@ -591,6 +594,8 @@ import type {
   TelegramLink,
   TelegramTokenIn,
   TemplateCatalog,
+  TemplateWordCheck,
+  TemplateWordUpload,
   Ticket,
   TicketCreate,
   TicketList,
@@ -2641,7 +2646,7 @@ export const getUpdateMeUrl = () => {
 };
 
 /**
- * @summary Язык интерфейса и активная роль
+ * @summary Язык интерфейса
  */
 export const updateMe = async (
   meUpdate: MeUpdate,
@@ -2720,7 +2725,7 @@ export type UpdateMeMutationError = ErrorType<
 export type UpdateMeMutationVariables = { data: MeUpdate };
 
 /**
- * @summary Язык интерфейса и активная роль
+ * @summary Язык интерфейса
  */
 export const useUpdateMe = <
   TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | ValidationFailedResponse>,
@@ -8160,7 +8165,7 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
 };
 
 /**
- * Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+ * Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли).
  * Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
  * его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
  * действие.
@@ -9612,6 +9617,415 @@ export function useListOfferedContractTemplates<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getDownloadTemplateWordUrl = (id: string, params: DownloadTemplateWordParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/document-templates/${id}/word?${stringifiedParams}`
+    : `/api/v1/document-templates/${id}/word`;
+};
+
+/**
+ * ШАБЛ-1. Текст шаблона на языке `language` как его читают люди: заголовки, абзацы, списки, таблицы, бланк компании в колонтитуле; подстановки — подписанными полями вида `[Название контрагента {{counterparty.name}}]` (код в фигурных скобках — главное), блоки документа — отдельной серой строкой. Язык без текста отдаёт русский (основа для перевода). Имя файла — `<Название>, ред. <N> — проект.docx` (язык, кроме русского, — в названии), в `Content-Disposition` (`filename*`). Доступно всегда, в том числе утверждённому шаблону. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — чтение.
+ * @summary Шаблон: скачать Word
+ */
+export const downloadTemplateWord = async (
+  id: string,
+  params: DownloadTemplateWordParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadTemplateWordUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadTemplateWordQueryKey = (
+  id: string,
+  params?: DownloadTemplateWordParams,
+) => {
+  return [`/api/v1/document-templates/${id}/word`, ...(params ? [params] : [])] as const;
+};
+
+export const getDownloadTemplateWordQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadTemplateWord>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  params: DownloadTemplateWordParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadTemplateWordQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadTemplateWord>>> = ({ signal }) =>
+    downloadTemplateWord(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadTemplateWordQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadTemplateWord>>
+>;
+export type DownloadTemplateWordQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useDownloadTemplateWord<
+  TData = Awaited<ReturnType<typeof downloadTemplateWord>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  params: DownloadTemplateWordParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadTemplateWord>>,
+          TError,
+          Awaited<ReturnType<typeof downloadTemplateWord>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadTemplateWord<
+  TData = Awaited<ReturnType<typeof downloadTemplateWord>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  params: DownloadTemplateWordParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadTemplateWord>>,
+          TError,
+          Awaited<ReturnType<typeof downloadTemplateWord>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadTemplateWord<
+  TData = Awaited<ReturnType<typeof downloadTemplateWord>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  params: DownloadTemplateWordParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблон: скачать Word
+ */
+
+export function useDownloadTemplateWord<
+  TData = Awaited<ReturnType<typeof downloadTemplateWord>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  params: DownloadTemplateWordParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadTemplateWord>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadTemplateWordQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCheckTemplateWordUrl = (id: string, params: CheckTemplateWordParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/document-templates/${id}/word/check?${stringifiedParams}`
+    : `/api/v1/document-templates/${id}/word/check`;
+};
+
+/**
+ * ШАБЛ-1. `multipart/form-data`, поле `file` — `.docx` до 5 МБ; BFF читает тело потоком до предела и multipart не разбирает. ERP проверяет архив теми же проверками, что редакцию контрагента в договоре (число частей, фактический размер после распаковки, степень сжатия), затем разбирает: заголовки, абзацы, списки, таблицы, жирный, курсив, подчёркивание — остальное отбрасывается; подписи полей в скобках отбрасываются, остаётся код. Ответ — что изменилось относительно текущего текста этого языка (пункты рядом), неизвестные подстановки по именам, недостающие обязательные блоки, `base` для «Принять». Отказы 422 `VALIDATION_FAILED` с `details.reason`: `word_only_docx`, `word_empty`, `word_hostile` (архив-бомба, чужой файл), `word_unreadable`, `word_too_big` (файл или число абзацев, строк и ячеек), `word_too_complex` (разбор или сравнение не уложились во время), `word_file_required`, `word_stale` (файл скачан до чьей-то правки: скачайте заново и перенесите правки), `word_other_template` и `word_other_language` (в файле метка другого шаблона или другого языка). Записи исправлений читаются (вставки и переносы принимаются, удалённое — нет), элементы управления, надписи и вложенные таблицы тоже. Закреплённый шаблон договора (утверждён или на утверждении) проверяется, но `can_apply = false`. Предупреждения (неизвестные поля, что не сохранится) ничего не блокируют. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+ * @summary Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)
+ */
+export const checkTemplateWord = async (
+  id: string,
+  templateWordUpload: TemplateWordUpload,
+  params: CheckTemplateWordParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TemplateWordCheck> => {
+  const formData = new FormData();
+  formData.append(`file`, templateWordUpload.file);
+
+  return http<TemplateWordCheck>(getCheckTemplateWordUrl(id, params), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getCheckTemplateWordMutationKey = () => ["checkTemplateWord"] as const;
+
+export const getCheckTemplateWordMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkTemplateWord>>,
+    TError,
+    CheckTemplateWordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkTemplateWord>>,
+  TError,
+  CheckTemplateWordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCheckTemplateWordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkTemplateWord>>,
+    CheckTemplateWordMutationVariables
+  > = (props) => {
+    const { id, data, params } = props ?? {};
+
+    return checkTemplateWord(id, data, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckTemplateWordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkTemplateWord>>
+>;
+export type CheckTemplateWordMutationBody = TemplateWordUpload;
+export type CheckTemplateWordMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type CheckTemplateWordMutationVariables = {
+  id: string;
+  data: TemplateWordUpload;
+  params: CheckTemplateWordParams;
+};
+
+/**
+ * @summary Шаблон: проверить загруженный Word — что изменилось (ничего не сохраняется)
+ */
+export const useCheckTemplateWord = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkTemplateWord>>,
+      TError,
+      CheckTemplateWordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof checkTemplateWord>>,
+  TError,
+  CheckTemplateWordMutationVariables,
+  TContext
+> => {
+  return useMutation(getCheckTemplateWordMutationOptions(options), queryClient);
+};
+
+export const getApplyTemplateWordUrl = (id: string, params: ApplyTemplateWordParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/document-templates/${id}/word/apply?${stringifiedParams}`
+    : `/api/v1/document-templates/${id}/word/apply`;
+};
+
+/**
+ * ШАБЛ-1. Тот же файл, что в `checkTemplateWord`, и `base` из его ответа. ERP разбирает файл заново, сохраняет текст этого языка и пишет в журнал, кто и что загрузил (файл, число изменённых, добавленных, удалённых пунктов). Текст успели поменять после проверки — 409 `CONFLICT` (`details.reason = word_base_changed`); закреплённый шаблон договора — 409 (`template_locked`: сначала новая редакция); у активного шаблона счёта или акта без обязательных блоков — 422 `template_missing_required_blocks`. Чужой шаблон и образец платформы не принимают загрузку (403). Ответ — шаблон. Раздел `eds.projects`, `company.settings` или `eds.visa.legal` — полный.
+ * @summary Шаблон: принять изменения из Word
+ */
+export const applyTemplateWord = async (
+  id: string,
+  templateWordUpload: TemplateWordUpload,
+  params: ApplyTemplateWordParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentTemplate> => {
+  const formData = new FormData();
+  formData.append(`file`, templateWordUpload.file);
+
+  return http<DocumentTemplate>(getApplyTemplateWordUrl(id, params), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getApplyTemplateWordMutationKey = () => ["applyTemplateWord"] as const;
+
+export const getApplyTemplateWordMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | Error
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyTemplateWord>>,
+    TError,
+    ApplyTemplateWordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof applyTemplateWord>>,
+  TError,
+  ApplyTemplateWordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApplyTemplateWordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof applyTemplateWord>>,
+    ApplyTemplateWordMutationVariables
+  > = (props) => {
+    const { id, data, params } = props ?? {};
+
+    return applyTemplateWord(id, data, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApplyTemplateWordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof applyTemplateWord>>
+>;
+export type ApplyTemplateWordMutationBody = TemplateWordUpload;
+export type ApplyTemplateWordMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ContractTemplateConflictResponse
+  | Error
+  | ValidationFailedResponse
+>;
+export type ApplyTemplateWordMutationVariables = {
+  id: string;
+  data: TemplateWordUpload;
+  params: ApplyTemplateWordParams;
+};
+
+/**
+ * @summary Шаблон: принять изменения из Word
+ */
+export const useApplyTemplateWord = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ContractTemplateConflictResponse
+    | Error
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof applyTemplateWord>>,
+      TError,
+      ApplyTemplateWordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof applyTemplateWord>>,
+  TError,
+  ApplyTemplateWordMutationVariables,
+  TContext
+> => {
+  return useMutation(getApplyTemplateWordMutationOptions(options), queryClient);
+};
+
 export const getNewContractTemplateEditionUrl = (id: string) => {
   return `/api/v1/document-templates/contracts/${id}/new-edition`;
 };
@@ -9858,7 +10272,7 @@ export const getSubmitContractTemplateUrl = (id: string) => {
 };
 
 /**
- * Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`).
+ * Черновик уходит держателю зоны «Право»; нужны обязательные блоки договора и указанные «для кого» и предмет (422 `template_missing_required_blocks`); неизвестные поля не блокируют — ответ несёт их список в `unknown_placeholders` (заметка «исправить»), а договор с таким полем останавливается при оформлении понятной причиной.
  * @summary На утверждение
  */
 export const submitContractTemplate = async (

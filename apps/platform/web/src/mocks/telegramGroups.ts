@@ -77,7 +77,7 @@ export function resetTelegramGroups(): void {
 function allowed(need: "read" | "full", resources: readonly string[]) {
   const session = readSession();
   if (!session) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-  const me = buildMe({ ...session, activeRole: null });
+  const me = buildMe(session);
   const ok = resources.some((r) => {
     const level = me?.resources[r];
     return level === "full" || (need === "read" && level === "read");

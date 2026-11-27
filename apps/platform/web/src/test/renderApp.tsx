@@ -5,8 +5,7 @@ import { AppProviders } from "../app/providers";
 import { createQueryClient } from "../app/queryClient";
 import { routes } from "../app/router";
 import { findUser } from "../mocks/fixtures/users";
-import { startSession, updateSession } from "../mocks/mockSession";
-import { ROLE_ID, type PresetCode } from "../mocks/fixtures/roles";
+import { startSession } from "../mocks/mockSession";
 
 /** Всё приложение (каркас, маршруты, MSW-моки) по адресу: для тестов экранов, которым нужен каркас и сессия. */
 export function renderApp(path: string) {
@@ -21,10 +20,9 @@ export function renderApp(path: string) {
   return { router, queryClient };
 }
 
-/** Вход демо-сотрудника без экрана «Вход»; `activeRole` — выбранная в меню аватара роль («вид»). */
-export function signInAs(email: string, activeRole?: PresetCode): void {
+/** Вход демо-сотрудника без экрана «Вход». */
+export function signInAs(email: string): void {
   const user = findUser(email);
   if (!user) throw new Error(`нет демо-пользователя ${email}`);
   startSession(user);
-  if (activeRole) updateSession({ activeRole: ROLE_ID[activeRole] });
 }

@@ -176,5 +176,9 @@
       "invalid_email": "Poçta manzilini tekşiring",
       "VALIDATION_FAILED": "Kiritilganni tekşiring"
     }
+  },
+  "template": {
+    "note": "{{number}} ariza namunasi böyiça.",
+    "fileFailed": "Avvalgi ariza fayli köçirilmadi: {{reason}}. Uni qaytadan biriktiring."
   }
 }

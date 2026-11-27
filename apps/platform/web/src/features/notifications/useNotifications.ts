@@ -6,7 +6,10 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
 } from "../../shared/api/generated/platform-bff";
-import type { NotificationPage } from "../../shared/api/generated/model";
+import type {
+  Notification as NotificationItem,
+  NotificationPage,
+} from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
@@ -75,6 +78,10 @@ export function useReadNotifications() {
   return {
     markRead: (id: string) => {
       one.mutate({ id });
+    },
+    /** Открыли объект — все его непрочитанные уведомления прочитаны (УВЕД-1) */
+    markObjectRead: (items: readonly NotificationItem[]) => {
+      for (const item of items) if (!item.read) one.mutate({ id: item.id });
     },
     markAll: () => {
       all.mutate(undefined);

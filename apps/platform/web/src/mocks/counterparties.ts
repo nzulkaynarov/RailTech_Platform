@@ -26,7 +26,7 @@ const requisites = new Map<string, Partial<CounterpartyCard>>();
 
 function level(resource: "crm.clients" | "erp.stock" | "eds.payments"): string | undefined {
   const session = readSession();
-  return session ? buildMe({ ...session, activeRole: null })?.resources[resource] : undefined;
+  return session ? buildMe(session)?.resources[resource] : undefined;
 }
 
 function baseCardOf(id: string): CounterpartyCard | null {

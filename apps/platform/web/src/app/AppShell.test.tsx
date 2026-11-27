@@ -5,20 +5,13 @@ import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../test/server";
-import {
-  buildMe,
-  endSession,
-  readSession,
-  startSession,
-  updateSession,
-} from "../mocks/mockSession";
+import { buildMe, endSession, readSession, startSession } from "../mocks/mockSession";
 import { findUser } from "../mocks/fixtures/users";
 import i18n from "../shared/i18n";
 import { setViewportWidth } from "../test/viewport";
 import { AppProviders } from "./providers";
 import { routes } from "./router";
 import { PANELS_STORAGE_KEY, usePanelsStore } from "./shell/panelsStore";
-import { ROLE_ID, type PresetCode } from "../mocks/fixtures/roles";
 
 function renderAt(path: string) {
   const queryClient = createQueryClient({ retry: false, staleTime: 0 });
@@ -31,11 +24,10 @@ function renderAt(path: string) {
   return { router, queryClient };
 }
 
-function signIn(email: string, activeRole?: PresetCode) {
+function signIn(email: string) {
   const user = findUser(email);
   if (!user) throw new Error(`нет демо-пользователя ${email}`);
   startSession(user);
-  if (activeRole) updateSession({ activeRole: ROLE_ID[activeRole] });
 }
 
 beforeEach(() => {
@@ -130,14 +122,20 @@ describe("каркас на 1440", () => {
     renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     const rail = screen.getByRole("navigation", { name: "Модули" });
-    const home = await within(rail).findByRole("link", { name: /^Главная, задач: \d+$/ });
+    const home = await within(rail).findByRole("link", {
+      name: /^Главная: требуют действия — \d+$/,
+    });
     const count = home.querySelector("b")?.getAttribute("data-count") ?? "";
     expect(Number(count)).toBeGreaterThan(0);
     await waitFor(() => {
       expect(document.title).toMatch(new RegExp(`^\\(${count}\\) `));
     });
-    // у соседних модулей числа нет
-    expect(within(rail).getByRole("link", { name: "Контакты" }).querySelector("b")).toBeNull();
+    // одно правило для всех модулей (УВЕД-1): значок есть там, где в разделах есть что-то, требующее действия
+    expect(
+      within(rail)
+        .getByRole("link", { name: /^Операции/ })
+        .querySelector("b"),
+    ).toBeNull();
   });
 
   it("ЕВ-3б: счётчик `crm.messages` BFF входит в бейдж «Лидов», хотя раздела «Ждут ответа» в коде нет", async () => {
@@ -157,13 +155,6 @@ describe("каркас на 1440", () => {
     });
   });
 
-  it("403 при выбранной активной роли: нейтральный текст и подсказка про «Все роли»", async () => {
-    signIn("all@demo.example", "ACCOUNTANT");
-    renderAt("/admin/roles");
-    expect(await screen.findByText("Раздел недоступен для выбранной роли")).toBeVisible();
-    expect(screen.getByText(/Выберите «Все роли» в меню профиля/)).toBeVisible();
-  });
-
   it("рейл — модули роли, подменю — разделы активного модуля, главное действие ведёт к лидам", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
@@ -179,7 +170,7 @@ describe("каркас на 1440", () => {
         .getAllByRole("link")
         .map((a) => a.querySelector("span")?.textContent ?? a.textContent),
     ).toEqual(["RT", "Главная", "Контакты", "Документы", "Операции", "Органайзер"]);
-    expect(within(rail).getByRole("link", { name: "Контакты" })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: /^Контакты/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -286,22 +277,18 @@ describe("каркас на 1440", () => {
     expect(screen.queryByRole("navigation", { name: "Разделы модуля" })).not.toBeInTheDocument();
   });
 
-  it("смена активной роли в меню аватара пересчитывает рейл", async () => {
+  it("в меню аватара нет выбора роли: рейл — по всему делегированному", async () => {
     signIn("all@demo.example");
     renderAt("/dashboard/queue");
     await screen.findByRole("heading", { level: 1, name: "Задачи" });
-    const rail = () => screen.getByRole("navigation", { name: "Модули" });
-    expect(within(rail()).getAllByRole("link")).toHaveLength(7);
+    expect(
+      within(screen.getByRole("navigation", { name: "Модули" })).getAllByRole("link"),
+    ).toHaveLength(7);
 
     fireEvent.click(screen.getByRole("button", { name: /профиль и настройки/i }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Администратор" }));
-    await vi.waitFor(() => {
-      expect(
-        within(rail())
-          .getAllByRole("link")
-          .map((a) => a.querySelector("span")?.textContent ?? a.textContent),
-      ).toEqual(["RT", "Главная", "Контакты", "Документы", "Органайзер", "Настройки"]);
-    });
+    expect(await screen.findByRole("menuitem", { name: "Профиль" })).toBeInTheDocument();
+    expect(screen.queryByText("Активная роль")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Администратор" })).not.toBeInTheDocument();
   });
 
   it("Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях", async () => {

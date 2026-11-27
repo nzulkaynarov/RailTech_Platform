@@ -21,14 +21,62 @@
       "action": "Refresh",
       "mineTitle": "You have no costing tasks",
       "mineText": "Nothing here yet.",
-      "mineAction": "All requests in costing"
+      "mineAction": "All requests in costing",
+      "closedTitle": "No closed requests",
+      "closedText": "Closed and past requests will appear here.",
+      "allTitle": "No requests",
+      "allText": "Create a request — it will appear here.",
+      "filteredTitle": "Nothing found",
+      "filteredText": "Change the search or open “All”.",
+      "filteredAction": "Clear search"
     },
     "scope": {
       "label": "Whose requests",
       "all": "All",
       "mine": "Mine"
     },
-    "pickForCalc": "Pick a request — its calculation opens with the file parser"
+    "pickForCalc": "Pick a request — its calculation opens with the file parser",
+    "tabs": {
+      "label": "Which requests",
+      "open": "In progress",
+      "drafts": "Drafts",
+      "closed": "Closed",
+      "all": "All"
+    },
+    "total": "Total: {{count}}",
+    "filters": "Request filters",
+    "search": {
+      "label": "Search requests",
+      "placeholder": "Number, client or request text"
+    },
+    "pager": "Request list pages",
+    "outcome": {
+      "LOST": "Closed",
+      "QUOTE": "Quote sent",
+      "CONTRACT": "Became a project",
+      "PAYMENT": "Became a project",
+      "DONE": "Became a project"
+    },
+    "copy": "Use as template",
+    "copyLabel": "Create a request from {{number}}",
+    "drafts": {
+      "caption": "Request drafts",
+      "scroll": "Table of request drafts",
+      "client": "Client",
+      "text": "Request text",
+      "saved": "Saved",
+      "noClient": "No client chosen",
+      "noText": "No text entered",
+      "continue": "Continue",
+      "continueLabel": "Continue the draft: {{name}}",
+      "remove": "Delete draft",
+      "removeLabel": "Delete the draft: {{name}}",
+      "removed": "Draft deleted",
+      "undo": "Undo",
+      "emptyTitle": "No drafts",
+      "emptyText": "A request you started but did not send is kept here for a day in this browser tab.",
+      "emptyAction": "Create a request"
+    }
   },
   "state": {
     "not_started": "Not started",
@@ -84,7 +132,8 @@
     "subtitleNoLetter": "{{client}} · costing due {{due}}",
     "requestFilesPending": "The request file is loading…",
     "openQuote": "Open quote {{number}}",
-    "openProject": "Open project"
+    "openProject": "Open project",
+    "copy": "Create from this one"
   },
   "lines": {
     "title": "Costing lines",

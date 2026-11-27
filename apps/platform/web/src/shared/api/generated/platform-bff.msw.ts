@@ -444,6 +444,7 @@ import type {
   TelegramGroupList,
   TelegramLink,
   TemplateCatalog,
+  TemplateWordCheck,
   Ticket,
   TicketList,
   TicketPage,
@@ -483,7 +484,6 @@ export const getLoginResponseMock = (
             ]),
           }),
         ),
-        active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
         modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
         resources: {
           [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -551,7 +551,6 @@ export const getLoginEnrollResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -607,7 +606,6 @@ export const getLoginSecondFactorResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -667,7 +665,6 @@ export const getGetSessionResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -734,7 +731,6 @@ export const getCreateFirstAdminResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -854,7 +850,6 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -901,7 +896,6 @@ export const getUpdateMeResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1016,7 +1010,6 @@ export const getFinishOnboardingResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1063,7 +1056,6 @@ export const getMarkWhatsNewResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -1984,7 +1976,6 @@ export const getUploadAvatarResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -2031,7 +2022,6 @@ export const getDeleteAvatarResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -2553,6 +2543,7 @@ export const getListNotificationsResponseMock = (
     ]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     read: faker.datatype.boolean(),
+    needs_action: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   next_cursor: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2603,6 +2594,10 @@ export const getListContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     base_role: faker.helpers.arrayElement([
       faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
       null,
@@ -2642,6 +2637,10 @@ export const getCreateContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -2686,12 +2685,107 @@ export const getListOfferedContractTemplatesResponseMock = (
     is_active: faker.datatype.boolean(),
     locked: faker.datatype.boolean(),
     languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     base_role: faker.helpers.arrayElement([
       faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
       null,
     ]),
     updated_at: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
+  ...overrideResponse,
+});
+
+export const getDownloadTemplateWordResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getCheckTemplateWordResponseMock = (
+  overrideResponse: Partial<Extract<TemplateWordCheck, object>> = {},
+): TemplateWordCheck => ({
+  unchanged: faker.datatype.boolean(),
+  formatting_only: faker.datatype.boolean(),
+  can_apply: faker.datatype.boolean(),
+  locked: faker.datatype.boolean(),
+  base: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  from_elsewhere: faker.datatype.boolean(),
+  file_sha: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  dropped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      count: faker.number.int(),
+    }),
+  ),
+  lost_markup: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      count: faker.number.int(),
+    }),
+  ),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  missing_blocks: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  summary: {
+    changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    added: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    removed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    total: faker.number.int(),
+    more: faker.number.int(),
+  },
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    point: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["changed", "added", "removed"] as const),
+    ours: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    theirs: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    segments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        op: faker.helpers.arrayElement(["equal", "del", "ins"] as const),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getApplyTemplateWordResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
+): DocumentTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  is_sample: faker.datatype.boolean(),
+  is_owned: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  placeholders_used: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
 
@@ -2725,6 +2819,10 @@ export const getNewContractTemplateEditionResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -2763,6 +2861,10 @@ export const getSetContractTemplateBaseRoleResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -2801,6 +2903,10 @@ export const getSubmitContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -2839,6 +2945,10 @@ export const getApproveContractTemplateResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -2877,6 +2987,10 @@ export const getReturnContractTemplateToDraftResponseMock = (
   is_active: faker.datatype.boolean(),
   locked: faker.datatype.boolean(),
   languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   base_role: faker.helpers.arrayElement([
     faker.helpers.arrayElement(["partnership", "nda", "offer"] as const),
     null,
@@ -19337,6 +19451,14 @@ export const getListDocumentTemplatesResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
     kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    edition: faker.number.int(),
+    is_locked: faker.datatype.boolean(),
+    unknown_placeholders: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
     is_sample: faker.datatype.boolean(),
     is_owned: faker.datatype.boolean(),
     is_active: faker.datatype.boolean(),
@@ -19357,6 +19479,14 @@ export const getCreateDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19446,6 +19576,14 @@ export const getUpdateDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -19465,6 +19603,14 @@ export const getCopyDocumentTemplateResponseMock = (
   kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html_en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  edition: faker.number.int(),
+  is_locked: faker.datatype.boolean(),
+  unknown_placeholders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   is_sample: faker.datatype.boolean(),
   is_owned: faker.datatype.boolean(),
   is_active: faker.datatype.boolean(),
@@ -29212,7 +29358,9 @@ export const getListCalcRequestsResponseMock = (
       }),
     ),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   })),
+  total: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -29405,6 +29553,7 @@ export const getGetCalcSheetResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29697,6 +29846,7 @@ export const getStartCalcResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -29986,6 +30136,7 @@ export const getAddCalcLinesResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30275,6 +30426,7 @@ export const getUpdateCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30567,6 +30719,7 @@ export const getDeleteCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -30859,6 +31012,7 @@ export const getSignCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31148,6 +31302,7 @@ export const getUpdateCalcTermsResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31440,6 +31595,7 @@ export const getMarkCalcReadyResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -31729,6 +31885,7 @@ export const getNewCalcQuoteVersionResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -32024,6 +32181,7 @@ export const getLoseCalcRequestResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -32204,6 +32362,7 @@ export const getGetCalcRequestCardResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -32241,6 +32400,7 @@ export const getCloseCalcRequestResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   close: {
     allowed: faker.datatype.boolean(),
@@ -32440,6 +32600,7 @@ export const getCopyCalcLinesResponseMock = (
         undefined,
       ]),
       files_pending: faker.datatype.boolean(),
+      crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
     },
     quote: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcQuoteMock() }, null]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -33152,6 +33313,7 @@ export const getReserveCalcLineResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -33444,6 +33606,7 @@ export const getReleaseCalcLineReservationResponseMock = (
       undefined,
     ]),
     files_pending: faker.datatype.boolean(),
+    crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
   },
   quote: faker.helpers.arrayElement([
     { ...getReleaseCalcLineReservationResponseCalcQuoteMock() },
@@ -46503,6 +46666,77 @@ export const getListOfferedContractTemplatesMockHandler = (
   );
 };
 
+export const getDownloadTemplateWordMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/document-templates/:id/word",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadTemplateWordResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getCheckTemplateWordMockHandler = (
+  overrideResponse?:
+    | TemplateWordCheck
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<TemplateWordCheck> | TemplateWordCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/:id/word/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckTemplateWordResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApplyTemplateWordMockHandler = (
+  overrideResponse?:
+    | DocumentTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentTemplate> | DocumentTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/document-templates/:id/word/apply",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApplyTemplateWordResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getNewContractTemplateEditionMockHandler = (
   overrideResponse?:
     | ContractTemplate
@@ -57938,6 +58172,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListContractTemplatesMockHandler(),
   getCreateContractTemplateMockHandler(),
   getListOfferedContractTemplatesMockHandler(),
+  getDownloadTemplateWordMockHandler(),
+  getCheckTemplateWordMockHandler(),
+  getApplyTemplateWordMockHandler(),
   getNewContractTemplateEditionMockHandler(),
   getSetContractTemplateBaseRoleMockHandler(),
   getSubmitContractTemplateMockHandler(),

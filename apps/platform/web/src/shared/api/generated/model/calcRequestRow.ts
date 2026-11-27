@@ -27,4 +27,9 @@ export interface CalcRequestRow {
   responsible: string | null;
   assignees: CalcAssignee[];
   path: string;
+  /**
+   * ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём
+   * @nullable
+   */
+  crm_client_id?: number | null;
 }
