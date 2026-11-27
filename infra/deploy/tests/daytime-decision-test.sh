@@ -17,12 +17,25 @@ expect wait       "баннер ещё не наступил, тишина"     
 expect deploy-due "баннер наступил, люди работают"     deploy 0 9 $now $now
 expect deploy-due "баннер в пределах допуска 3 минуты" deploy 0 9 $((now + 150)) $now
 expect wait       "баннер дальше допуска"              deploy 0 9 $((now + 181)) $now
-expect deploy-due "баннер давно прошёл"                deploy 0 9 $((now - 4000)) $now
+# окно баннера (по умолчанию 20 минут от starts_at) прошло - баннера для людей нет, активность проверяется заново
+expect banner     "окно баннера прошло, люди работают" deploy 0 9 $((now - 4000)) $now
+expect deploy-now "окно баннера прошло, тишина"        deploy 0 0 $((now - 4000)) $now
+expect deploy-due "баннер в конце своего окна"         deploy 0 9 $((now - 1200)) $now
+expect banner     "баннер на секунду позже окна"       deploy 0 9 $((now - 1201)) $now
+expect deploy-due "окно задано явно (5 минут), идёт"   deploy 0 9 $((now - 200)) $now $((now - 200 + 300))
+expect banner     "окно задано явно (5 минут), прошло" deploy 0 9 $((now - 400)) $now $((now - 400 + 300))
 expect skip       "sha уже выложен"                    skip-same 0 0 - $now
 expect skip       "sha старше выложенного"             skip-older 0 0 - $now
 expect skip       "расходящиеся ветки"                 skip-diverged 0 0 - $now
 expect skip       "sha откачен автооткатом"            deploy 1 0 - $now
 expect skip       "откачен, даже когда баннер пришёл"  deploy 1 3 $now $now
+
+# откат: failed_tags (lib.sh mark_failed_tag), без дублей и с проверкой имени тега
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+( RT_STATE="$tmp/state"; source "$here/../lib.sh"
+  mark_failed_tag abc123; mark_failed_tag abc123; mark_failed_tag "bad tag;rm"; mark_failed_tag def456 )
+[ "$(cat "$tmp/state/failed_tags")" = "$(printf 'abc123\ndef456')" ] || { echo "FAIL: mark_failed_tag записал не то: $(cat "$tmp/state/failed_tags")"; exit 1; }
+grep -q '^mark_failed_tag "\$cur"' "$here/../rollback.sh" || { echo "FAIL: rollback.sh не помечает откаченный тег (mark_failed_tag)"; exit 1; }
 rc=0; bash "$dec" deploy 0 x - $now >/dev/null 2>&1 || rc=$?
 [ "$rc" -eq 2 ] || { echo "FAIL: мусорное число активности должно давать код 2 (rc=$rc)"; exit 1; }
 rc=0; bash "$dec" deploy 0 0 >/dev/null 2>&1 || rc=$?

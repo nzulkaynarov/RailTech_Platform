@@ -142,16 +142,23 @@ jobs:
           ssh app "grep -qxF '$cand' /opt/rt/state/failed_tags 2>/dev/null" && failed=1
           # Баннер читаем всегда (его время решает «ждать или выкладывать»); активность - только когда есть что выкладывать.
           json="$(ssh app "cat /opt/rt/maintenance/maintenance.json 2>/dev/null || true")" || { say "не удалось прочитать баннер - тик пропущен"; exit 0; }
-          banner=-
+          banner=-; banner_end=-
           if [ -n "$json" ]; then
-            banner="$(date -d "$(jq -r '.starts_at // empty' <<<"$json" 2>/dev/null)" +%s 2>/dev/null)" || banner=-
-            [ -n "$banner" ] || banner=-
+            # Пустой или нечитаемый starts_at - «баннера нет» (date -d "" вернул бы полночь и дал deploy-due). Конец окна = starts_at + minutes.
+            sa="$(jq -r '.starts_at // empty' <<<"$json" 2>/dev/null)" || sa=""
+            mins="$(jq -r '.minutes // 20' <<<"$json" 2>/dev/null)" || mins=20
+            [[ "$mins" =~ ^[0-9]+$ ]] || mins=20
+            if [ -n "$sa" ] && banner="$(date -d "$sa" +%s 2>/dev/null)" && [ -n "$banner" ]; then
+              banner_end=$((banner + mins * 60))
+            else
+              banner=-
+            fi
           fi
           activity=0
           if [ "$should" = deploy ] && [ "$failed" = 0 ]; then
             activity="$(ssh app 'bash -s' < infra/deploy/activity-check.sh)" || { say "не удалось прочитать активность - тик пропущен"; exit 0; }
           fi
-          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$(date +%s)")"
+          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$(date +%s)" "$banner_end")"
           say "кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
           case "$decision" in
             deploy-now|deploy-due) echo "go=true" >> "$GITHUB_OUTPUT" ;;
@@ -163,7 +170,7 @@ jobs:
             wait) ;;
             skip)
               # выкладывать нечего, а баннер давно отыграл (откат, ручная выкладка): не оставляем висеть
-              if [ "$banner" != - ] && [ "$(date +%s)" -gt $((banner + 1200)) ]; then
+              if [ "$banner" != - ] && [ "$(date +%s)" -gt "$banner_end" ]; then
                 ssh app "rm -f /opt/rt/maintenance/maintenance.json" && say "устаревший баннер снят"
               fi ;;
             *) echo "::error::daytime-decision.sh вернул неожиданное '$decision'"; exit 1 ;;
