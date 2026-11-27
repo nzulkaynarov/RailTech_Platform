@@ -14,7 +14,7 @@
     "generate": "pnpm gen:types && pnpm gen:crm && prettier --write generated --log-level warn",
     "check": "pnpm lint && pnpm generate && pnpm typecheck",
     "typecheck": "tsc -p tsconfig.json",
-    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml",
+    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml && ajv compile --spec=draft2020 -s client-request-statuses.schema.json && ajv validate --spec=draft2020 -s client-request-statuses.schema.json -d client-request-statuses.yaml",
     "lint:documents": "ajv compile --spec=draft2020 -s documents/body.schema.json && ajv validate --spec=draft2020 -s documents/body.schema.json -d \"documents/examples/*.json\" && ajv compile --spec=draft2020 -s documents/variables.schema.json && ajv validate --spec=draft2020 -s documents/variables.schema.json -d documents/variables.yaml"
   },
   "devDependencies": {

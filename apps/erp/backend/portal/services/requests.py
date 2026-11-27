@@ -19,21 +19,15 @@ from django.db import transaction
 from integration.models import CrmClientMapping
 from integration.services import events, partner_client
 from integration.services.client_requests import manager_for
+from integration.services.request_deal import create_request_deal, short_title  # noqa: F401
 from portal.exceptions import PortalValidationError
-from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
+from portal.models import PortalRequestLine, PortalUpload
 
 from crm.constants import DealStageCode
 from crm.models import ActivityLog, Deal, DealStage
 from sourcing.models import Attachment
 
 REQUEST_SOURCE = "cabinet"
-
-
-def short_title(summary: str) -> str:
-    """Название сделки из сути запроса: одна строка, не длиннее поля `Deal.title`."""
-    title = " ".join(summary.split())
-    max_length = Deal._meta.get_field("title").max_length
-    return title if len(title) <= max_length else title[: max_length - 1].rstrip() + "…"
 
 
 def _lock_uploads(company, refs: list[dict]) -> list[PortalUpload]:
@@ -79,17 +73,15 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
         # между проверкой сопоставления и записью отложенного события, осталась бы неопубликованной навсегда.
         partner_client.lock_if_partner(company)
         uploads = _lock_uploads(company, attachments)
-        deal = Deal(
+        deal = create_request_deal(
             company=company,
+            summary=summary,
             contact=contact,
             # «Его менеджер» — ответственный за клиента в CRM (решение владельца 2026-11-21 (4)); нет сопоставления — пусто.
             manager=_client_manager(company),
-            title=short_title(summary),
             stage=draft_stage,
             notes="Запрос создан клиентом из Cabinet",
         )
-        deal.save()
-        PortalRequestSummary.objects.create(deal=deal, text=summary)
         PortalRequestLine.objects.bulk_create(
             PortalRequestLine(
                 deal=deal,
