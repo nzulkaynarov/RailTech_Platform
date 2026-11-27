@@ -2,6 +2,8 @@
 # Тесты адаптеров идут против настоящего PostgreSQL: RT_BUS_TEST_DATABASE_URL или одноразовый postgres:17 в Docker.
 
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -50,7 +52,11 @@ migrations-check: ## Миграция Django соответствует моде
 	DJANGO_SETTINGS_MODULE=tests.django_settings uv run python -W ignore::RuntimeWarning -m django makemigrations rt_bus --check --dry-run
 
 .PHONY: check
-check: lint typecheck migrations-check test ## Всё вышеперечисленное — обязательно перед коммитом
+check: ## Всё вышеперечисленное — обязательно перед коммитом
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint typecheck migrations-check test
 
 .PHONY: clean
 clean: ## Удалить .venv и кэши

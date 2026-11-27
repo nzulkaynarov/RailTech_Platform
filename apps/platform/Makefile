@@ -2,6 +2,8 @@
 # Всё, кроме Docker-целей, работает без Docker: web (pnpm) и bff (uv).
 
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 WEB := web
@@ -87,24 +89,44 @@ kb-sync: ## docs/kb → web/src/generated/kb-docs (формат БЗ, промп
 
 .PHONY: lint
 lint: ## ruff + eslint + prettier --check
+	@$(HEAVY) $(MAKE) --no-print-directory lint-run
+
+.PHONY: lint-run
+lint-run:
 	cd $(BFF) && uv run ruff check . && uv run ruff format --check .
 	cd $(WEB) && pnpm lint && pnpm format:check
 
 .PHONY: typecheck
 typecheck: ## mypy (strict) + tsc
+	@$(HEAVY) $(MAKE) --no-print-directory typecheck-run
+
+.PHONY: typecheck-run
+typecheck-run:
 	cd $(BFF) && uv run mypy app tests
 	cd $(WEB) && pnpm typecheck
 
 .PHONY: test
 test: ## pytest (bff) и vitest (web)
+	@$(HEAVY) $(MAKE) --no-print-directory test-run
+
+.PHONY: test-run
+test-run:
 	cd $(BFF) && uv run pytest
 	cd $(WEB) && pnpm test
 
 .PHONY: check
-check: lint typecheck test api-check tokens-check rbac-check crm-models-check ## Всё вышеперечисленное — обязательно перед коммитом
+check: ## Всё вышеперечисленное — обязательно перед коммитом
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint typecheck test api-check tokens-check rbac-check crm-models-check
 
 .PHONY: e2e
 e2e: ## Playwright + axe на MSW (собирает vite build --mode mock и поднимает vite preview на :4173, порт — E2E_PORT; E2E_DEV=1 — dev-сервер); браузеры: pnpm exec playwright install chromium
+	@$(HEAVY) $(MAKE) --no-print-directory e2e-run
+
+.PHONY: e2e-run
+e2e-run:
 	cd $(WEB) && pnpm e2e
 
 # --- Образы (Docker, локальная проверка сборки) ----------------------------------------

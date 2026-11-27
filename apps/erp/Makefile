@@ -2,6 +2,8 @@
 # но без привязки к стенду: бэкенд-тесты идут на одноразовых контейнерах (scripts/test_backend_local.sh),
 # линтеры — в локальном venv версий CI. Вызывается из корня: make check-erp.
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 BACKEND  := backend
@@ -44,7 +46,11 @@ format: $(TOOLS_STAMP) ## black + isort
 	$(TOOLS_BIN)/isort $(BACKEND)/
 
 .PHONY: lint
-lint: lint-backend ## Все линтеры
+lint: ## Все линтеры
+	@$(HEAVY) $(MAKE) --no-print-directory lint-run
+
+.PHONY: lint-run
+lint-run: lint-backend
 
 .PHONY: test-backend
 test-backend: ## pytest в контейнере на одноразовых Postgres 17 + Redis (как CI B2B): make test-backend args="-k quotes"
@@ -54,7 +60,11 @@ test-backend: ## pytest в контейнере на одноразовых Post
 test: test-backend ## Все тесты
 
 .PHONY: check
-check: lint test ## Всё — обязательно перед PR (make check-erp из корня)
+check: ## Всё — обязательно перед PR (make check-erp из корня)
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint test
 
 .PHONY: openapi
 openapi: ## Экспорт OpenAPI: backend/schema.json и packages/contracts/openapi/erp-internal.yaml (срез /api/v1, FIX-40)

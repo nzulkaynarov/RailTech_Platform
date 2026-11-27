@@ -156,6 +156,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
 	@bash scripts/tests/maintenance-notice-test.sh
+	@bash scripts/tests/heavy-lock-test.sh
 	@bash $(INFRA)/deploy/tests/redis-split-test.sh
 	@bash $(INFRA)/deploy/tests/s3-keys-test.sh
 	@bash $(INFRA)/deploy/tests/eds-prod-test.sh
