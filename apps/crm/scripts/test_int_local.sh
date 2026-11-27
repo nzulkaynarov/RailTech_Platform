@@ -55,6 +55,8 @@ esac
 
 command -v docker >/dev/null || { echo "Нужен Docker (на этом компьютере — Docker Desktop)."; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
+# Предел тяжёлых проверок на машине (два слота): ждём слот, держим до выхода скрипта; под make/ci_local слот уже взят.
+. "$ROOT/../../scripts/heavy-lock.sh"
 
 if ! docker inspect "$PG_NAME" >/dev/null 2>&1; then
   docker run -d --name "$PG_NAME" -p "$PG_PUBLISH" \

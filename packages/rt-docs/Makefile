@@ -3,6 +3,8 @@
 # scripts/in_container.sh, образ docker/test.Dockerfile (базовый — по digest) — один и тот же локально и в CI (job rt-docs).
 
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -31,7 +33,11 @@ test: ## Все тесты, включая эталонные PDF — в кон�
 	./scripts/in_container.sh pytest -p no:cacheprovider $(args)
 
 .PHONY: check
-check: lint typecheck test ## Всё вышеперечисленное — обязательно перед коммитом
+check: ## Всё вышеперечисленное — обязательно перед коммитом
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint typecheck test
 
 .PHONY: image-rm
 image-rm: ## Удалить образы тестов rt-docs-test:* этой машины
