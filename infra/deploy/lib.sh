@@ -79,12 +79,37 @@ warn_placeholder_email() {
   return 0
 }
 
+# Служебные файлы долгих сервисов (BEK-1): путь монтирования обязан меняться только при смене СОДЕРЖИМОГО. Файлы из каталога релиза
+# (`../offsite/offsite-sync.sh`) меняют путь на каждой выкладке, и compose пересоздавал бы контейнер, убивая идущую копию.
+# stable_ops_file <файл-в-релизе> — кладёт копию в $RT_OPS_DIR/<имя>.<sha256:12>.<расширение> (если её ещё нет) и печатает этот путь;
+# при сбое установки печатает исходный путь (сервис тогда пересоздаётся, как раньше). Хранятся пять последних копий каждого файла.
+RT_OPS_DIR="${RT_OPS_DIR:-$RT_ROOT/ops}"
+stable_ops_file() {
+  local src="$1" name stem ext dst old
+  name="$(basename "$src")"; stem="${name%.*}"; ext="${name##*.}"
+  dst="$RT_OPS_DIR/$stem.$(sha256sum "$src" | cut -c1-12).$ext"
+  if [[ ! -f "$dst" ]]; then
+    if ! { install -d -m 755 "$RT_OPS_DIR" && install -m 644 "$src" "$dst.new.$$" && mv -f "$dst.new.$$" "$dst"; } 2>/dev/null; then
+      rm -f "$dst.new.$$" 2>/dev/null || true
+      echo "внимание: не удалось установить $name в $RT_OPS_DIR: сервис будет пересоздан при выкладке" >&2
+      echo "$src"; return 0
+    fi
+  fi
+  # shellcheck disable=SC2012  # имена — наши, без пробелов; нужна сортировка по времени
+  for old in $(ls -1t "$RT_OPS_DIR/$stem."*".$ext" 2>/dev/null | tail -n +6); do rm -f "$old" 2>/dev/null || true; done
+  echo "$dst"
+}
+
 # compose <каталог-релиза> <аргументы...>; тег образов — из окружения (RT_IMAGE_TAG), профили — из RT_PROFILES.
 compose() {
   local rel="$1"; shift
   local profiles=() p
   IFS=',' read -ra ps <<<"$(env_get RT_PROFILES)"
   for p in "${ps[@]:-}"; do [[ -n "$p" ]] && profiles+=(--profile "$p"); done
+  # offsite-backup (долгая копия, BEK-1): скрипт монтируется по пути, зависящему от содержимого, а не от каталога релиза.
+  local OFFSITE_SCRIPT_PATH
+  OFFSITE_SCRIPT_PATH="$(stable_ops_file "$rel/infra/offsite/offsite-sync.sh")"
+  export OFFSITE_SCRIPT_PATH
   docker compose -f "$rel/infra/compose/base.yml" -f "$rel/infra/compose/prod.yml" \
     --env-file "$RT_ENV_FILE" ${profiles[@]+"${profiles[@]}"} "$@"
 }

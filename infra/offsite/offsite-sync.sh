@@ -95,6 +95,12 @@ export RCLONE_CONFIG_YADISK_TYPE=webdav RCLONE_CONFIG_YADISK_VENDOR=other RCLONE
 
 # rclone с сетевыми флагами. Сеть VPS 1 наружу нестабильна: повторы операции и запросов, тайм-ауты, не больше 5 запросов в секунду
 # (лимиты Drive API и WebDAV Яндекса). --use-server-modtime: время объекта S3 — из листинга (LastModified), без HEAD на каждый объект; оно же уходит на Drive.
+# Архив WAL — десятки тысяч мелких сегментов: время уходит на накладные расходы API (≈ 1 файл за 3 с при 2 потоках и 5 запросах/с), а не
+# на полосу. Поэтому для копии архива больше потоков и запросов (BEK-1; как у файлового этапа — FILES_TPS 10); полоса $BWLIMIT прежняя.
+WAL_TRANSFERS="${OFFSITE_WAL_TRANSFERS:-8}"
+WAL_CHECKERS="${OFFSITE_WAL_CHECKERS:-8}"
+WAL_TPS="${OFFSITE_WAL_TPSLIMIT:-10}"
+PROGRESS_EVERY_S="${OFFSITE_PROGRESS_S:-300}"
 RETRIES="${OFFSITE_RETRIES:-3}"
 RETRIES_SLEEP="${OFFSITE_RETRIES_SLEEP:-30s}"
 rcl() {
@@ -148,11 +154,30 @@ split_by() { # <граница или пусто> <keep|drop> < список
 # Объекты WAL-G не меняются (то же имя — то же содержимое): сравнение по размеру. Полоса — OFFSITE_BWLIMIT; дольше OFFSITE_RUN_TIMEOUT_S
 # новые передачи не начинаются (остаток — следующей попыткой), timeout — страховка от зависания самого rclone.
 # Журнал — уровня INFO: строки «<путь>: Copied (new)» дают объём выгрузки для средней скорости (copied_stats).
+# Пока идёт копирование, раз в PROGRESS_EVERY_S пишем «скопировано N из M» (M — размер выборки; уже лежащее на Диске пропускается) и
+# публикуем статус: экран не молчит часами «устарела», а показывает ход прохода (BEK-1).
+progress_ticker() { # <журнал> <всего>
+  while sleep "$PROGRESS_EVERY_S"; do
+    printf '%s;%s;%s\n' "$(grep -c ': Copied (' "$1" 2> /dev/null || true)" "$2" "$(now)" > "$STATE/progress"
+    publish_status || true
+  done
+}
+
 copy_list() { # <файл путей> <журнал>
   [ -s "$1" ] || return 0
+  crc=0
+  progress_ticker "$2" "$(wc -l < "$1" | tr -d ' ')" &
+  ticker=$!
+  copy_rclone "$1" "$2" || crc=$?
+  kill "$ticker" 2> /dev/null || true
+  rm -f "$STATE/progress"
+  return "$crc"
+}
+
+copy_rclone() { # <файл путей> <журнал>
   timeout "$((RUN_TIMEOUT_S + 600))" rclone copy "$SRC" "$DST" --files-from-raw "$1" \
-    --retries "$RETRIES" --retries-sleep "$RETRIES_SLEEP" --low-level-retries 10 --timeout 5m --contimeout 30s --tpslimit 5 \
-    --use-server-modtime --size-only --bwlimit "$BWLIMIT" --transfers 2 --checkers 4 --drive-chunk-size 8M \
+    --retries "$RETRIES" --retries-sleep "$RETRIES_SLEEP" --low-level-retries 10 --timeout 5m --contimeout 30s --tpslimit "$WAL_TPS" \
+    --use-server-modtime --size-only --bwlimit "$BWLIMIT" --transfers "$WAL_TRANSFERS" --checkers "$WAL_CHECKERS" --drive-chunk-size 8M \
     --drive-stop-on-upload-limit --max-duration "${RUN_TIMEOUT_S}s" --log-level INFO --stats 30m --stats-one-line 2>> "$2"
 }
 
@@ -219,6 +244,7 @@ message_of() { # <причина>
     access) echo "Google Drive отказал в доступе: ключ отозван, папка не найдена или у сервисного аккаунта нет роли «Менеджер контента»" ;;
     not_shared_drive) echo "Папка не на общем диске: у сервисного аккаунта нет своего места, нужна папка общего диска (Shared Drive)" ;;
     quota) echo "Нет места: квота общего диска Google или предел $MAX_GB ГБ копии" ;;
+    interrupted) echo "Копирование прервано выкладкой обновления и продолжится автоматически с места остановки" ;;
     timeout) echo "Копирование не уложилось в $((RUN_TIMEOUT_S / 3600)) ч и продолжится следующей попыткой" ;;
     source_empty) echo "В архиве WAL нет ни одной базовой копии — копировать нечего, копия на Диске не тронута" ;;
     network) echo "Нет связи с Google Drive: сеть сервера или ограничение запросов" ;;
@@ -508,11 +534,18 @@ publish_status() {
   oldest="$(to_iso "$(echo "$stats" | cut -d';' -f4)")"; newest="$(to_iso "$(echo "$stats" | cut -d';' -f5)")"
   message=""
   [ "$result" = ok ] || message="$(message_of "$reason")"
+  progress="null"
+  if [ -s "$STATE/progress" ]; then
+    p_done="$(cut -d';' -f1 "$STATE/progress")"; p_all="$(cut -d';' -f2 "$STATE/progress")"
+    progress="$(printf '{"files_done":%s,"files_total":%s,"at":"%s"}' "$p_done" "$p_all" "$(iso "$(cut -d';' -f3 "$STATE/progress")")")"
+    # Идущий проход важнее прежнего итога: говорим, что копирование идёт, сколько сделано и когда был последний полный проход.
+    message="Идёт копирование: скопировано $p_done из $p_all файлов; последний полный проход — ${last_iso:-ещё не было}"
+  fi
   speed="$(cat "$STATE/speed" 2>/dev/null || true)"
-  body="$(printf '{"schema":1,"provider":"%s","result":"%s","reason":"%s","message":"%s","detail":"%s","attempt_at":"%s","last_success_at":%s,"duration_s":%s,"bytes":%s,"objects":%s,"base_backups":%s,"oldest_base_at":%s,"newest_base_at":%s,"quota_bytes":%s,"keep_days":%s,"speed_bps":%s,"prefix":"%s","files":%s}' \
+  body="$(printf '{"schema":1,"provider":"%s","result":"%s","reason":"%s","message":"%s","detail":"%s","attempt_at":"%s","last_success_at":%s,"duration_s":%s,"bytes":%s,"objects":%s,"base_backups":%s,"oldest_base_at":%s,"newest_base_at":%s,"quota_bytes":%s,"keep_days":%s,"speed_bps":%s,"prefix":"%s","files":%s,"progress":%s}' \
     "$PROVIDER" "$result" "$reason" "$(clean "$message")" "$detail" "$(iso "$attempt")" "$(qjson "$last_iso")" "$(njson "${DURATION:-}")" \
     "$(njson "$bytes")" "$(njson "$objects")" "$(njson "$bases")" "$(qjson "$oldest")" "$(qjson "$newest")" \
-    "$((MAX_GB * 1073741824))" "$KEEP_DAYS" "$(njson "$speed")" "$(clean "$PREFIX")" "$(files_json)")"
+    "$((MAX_GB * 1073741824))" "$KEEP_DAYS" "$(njson "$speed")" "$(clean "$PREFIX")" "$(files_json)" "$progress")"
   printf '%s\n' "$body" > "$STATE/status.json"
   if printf '%s\n' "$body" | rcl rcat "$STATUS_DST" 2> "$STATE/status-write.log"; then
     log "offsite_status_written" ",\"result\":\"$result\",\"reason\":\"$reason\""
@@ -732,6 +765,8 @@ due() {
   [ ! -e "$STATE/force" ] || return 0
   t="$(now)"; last_try="$(marker last_attempt)"; last_ok="$(marker last_success)"
   result="$(cat "$STATE/last_result" 2>/dev/null || echo none)"
+  # Прервано остановкой контейнера (выкладка): продолжаем сразу, без паузы RETRY_MIN; rclone copy докопирует недостающее.
+  [ "$(cat "$STATE/last_reason" 2>/dev/null || true)" != interrupted ] || return 0
   if [ "$result" = not_configured ]; then [ $((t - last_try)) -ge "$NOT_CONFIGURED_EVERY_S" ]; return; fi
   if [ "$result" != ok ]; then [ $((t - last_try)) -ge $((RETRY_MIN * 60)) ]; return; fi
   # Файлы не докопированы (сбой бакета, срок): повтор тем же интервалом, что и при сбое архива.
@@ -748,23 +783,63 @@ clear_stale_lock() {
   if [ -d "$STATE/lock" ]; then
     rmdir "$STATE/lock" 2>/dev/null || rm -rf "$STATE/lock"
     log "offsite_stale_lock_removed"
+    # Контейнер убит без остановки (SIGKILL по истечении grace-периода, сбой): попытка прервана — следующая стартует сразу.
+    mark last_result fail; mark last_reason interrupted; rm -f "$STATE/progress"
   fi
+}
+
+# Потомки процесса (busybox ps: PID и PPID), глубокие первыми не нужны — порядок разбирает вызывающий.
+descendants() { # <pid>
+  ps -o pid,ppid 2> /dev/null | awk -v p="$1" 'NR > 1 && $2 == p { print $1 }' | while read -r c; do echo "$c"; descendants "$c"; done
+}
+
+# Остановка контейнера (деплой пересоздаёт его) во время копирования: гасим попытку и всех её потомков (timeout, rclone), снимаем
+# блокировку и честно пишем в status.json «прервано выкладкой» — экран не должен показывать устаревшее «копия идёт» или ничего.
+# Недокопированное докопирует следующий запуск (rclone copy идемпотентен), `due` стартует его сразу.
+interrupt_run() { # <pid попытки>
+  kids="$(descendants "$1")"
+  kill -TERM "$1" 2> /dev/null || true # сначала родитель: иначе он успеет записать «сбой» по коду выхода rclone
+  # shellcheck disable=SC2086 # список PID без пробелов внутри
+  for k in $kids; do kill -TERM "$k" 2> /dev/null || true; done
+  n=0; while kill -0 "$1" 2> /dev/null && [ "$n" -lt 20 ]; do sleep 1; n=$((n + 1)); done
+  # shellcheck disable=SC2086
+  for k in $kids; do kill -KILL "$k" 2> /dev/null || true; done
+  kill -KILL "$1" 2> /dev/null || true
+  rmdir "$STATE/lock" 2> /dev/null || true
+  rm -f "$STATE/progress"
+  log "offsite_sync_interrupted"
+  # Запись статуса в RustFS — без долгих повторов: у остановки ограниченный срок (stop_grace_period).
+  RETRIES=1 RETRIES_SLEEP=1s write_status fail interrupted "" || true
+}
+
+on_stop() {
+  trap '' TERM INT
+  if [ -n "${RUN_PID:-}" ] && kill -0 "$RUN_PID" 2> /dev/null; then interrupt_run "$RUN_PID"; fi
+  rmdir "$STATE/lock" 2> /dev/null || true
+  log offsite_daemon_stopped
+  exit 0
 }
 
 daemon() {
   log "offsite_daemon_started" ",\"at_utc\":\"$AT_UTC\",\"keep_days\":$KEEP_DAYS,\"bwlimit\":\"$BWLIMIT\""
   clear_stale_lock
-  # SIGTERM (docker stop): sh как PID 1 без обработчика его игнорирует и получает SIGKILL через 10 с. Обработчик снимает блокировку
-  # и выходит; пауза — `sleep & wait`, чтобы сигнал обрабатывался сразу, а не после sleep. Во время самого копирования сигнал
-  # дождётся rclone — этот случай закрывает clear_stale_lock при следующем старте.
-  trap 'rmdir "$STATE/lock" 2>/dev/null || true; log offsite_daemon_stopped; exit 0' TERM INT
+  # SIGTERM (docker stop): sh как PID 1 без обработчика его игнорирует и получает SIGKILL через grace-период. Попытка идёт фоном
+  # (`wait` прерывается сигналом сразу, а не после rclone), обработчик on_stop останавливает её и пишет «прервано выкладкой».
+  # Пауза — тоже `sleep & wait`.
+  RUN_PID=""
+  trap on_stop TERM INT
   recover_marker
   recover_files_marker
   if [ -n "$FILE_BUCKETS" ]; then ensure_key || true; fi # ключ готов к показу сразу после деплоя
   while true; do
     mark heartbeat "$(now)"
     load_config
-    if due; then locked_run || true; fi
+    if due; then
+      locked_run &
+      RUN_PID=$!
+      wait "$RUN_PID" || true
+      RUN_PID=""
+    fi
     sleep 60 &
     wait $! || true
   done
