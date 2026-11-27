@@ -50,6 +50,7 @@ exports[`карты статусов > снимок карты: изменени
     "active": "green",
     "invited": "gold",
     "none": "default",
+    "opened": "green",
     "suspended": "red",
   },
   "catalogItem": {
