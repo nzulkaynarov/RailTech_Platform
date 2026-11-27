@@ -510,26 +510,40 @@ def sign_contract_by_client(
     return contract, None
 
 
+def _client_agreed_recipients(contract) -> list:
+    """Кому сообщить, что клиент согласовал редакцию: автор КП, ответственный по сделке и те, кто отмечает договор
+    подписанным (держатели `contract.sign`), по одному разу. Раньше — только автор КП: нет автора — не узнавал никто, и
+    договор после «Принять редакцию» стоял без хода (проход глазами 2026-11-27)."""
+    from .contract_remarks import deciders
+
+    deal = contract.deal
+    candidates = [_contract_seller_recipient(contract), deal.assigned_to, deal.manager, *deciders(contract)]
+    people, seen = [], set()
+    for user in candidates:
+        if user is not None and user.is_active and user.pk not in seen:
+            seen.add(user.pk)
+            people.append(user)
+    return people
+
+
 def _notify_client_agreed(contract, portal_contact) -> None:
-    """Клиент согласовал договор в Кабинете — автору КП в колокольчик («Решения»: дальше ход за нами — выставить
-    у оператора и приложить скан). Раньше узнавал разве что тот, кто открыл карточку договора."""
+    """Клиент согласовал договор в Кабинете — колокольчик тем, чей ход дальше: выставить у оператора и приложить скан
+    («Решения»; задача «Отметить подписанным» в очереди Платформы строится из того же статуса договора)."""
     from notifications.services import notify_user
 
-    recipient = _contract_seller_recipient(contract)
-    if recipient is None:
-        return
     who = (getattr(portal_contact, "name", "") or "").strip()
     number = contract.number or f"CT-{contract.id}"
-    notify_user(
-        user=recipient,
-        title=f"Клиент согласовал договор {number}",
-        message=(f"{who}: " if who else "") + f"договор {number} согласован в кабинете и ожидает подписания.",
-        link=f"/eds/projects/{url_quote(contract.deal.number or f'D-{contract.deal_id}', safe='')}",
-        deal=contract.deal,
-        type_code="INFO",
-        event_code="contract.signed_client",
-        event_params={"number": number, "contact_name": who},
-    )
+    for recipient in _client_agreed_recipients(contract):
+        notify_user(
+            user=recipient,
+            title=f"Клиент согласовал договор {number}",
+            message=(f"{who}: " if who else "") + f"договор {number} согласован в кабинете и ожидает подписания.",
+            link=f"/eds/projects/{url_quote(contract.deal.number or f'D-{contract.deal_id}', safe='')}",
+            deal=contract.deal,
+            type_code="INFO",
+            event_code="contract.signed_client",
+            event_params={"number": number, "contact_name": who},
+        )
 
 
 @transaction.atomic

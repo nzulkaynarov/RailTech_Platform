@@ -707,7 +707,10 @@ export const getGetSetupStateResponseMock = (
 });
 
 export const getGetOperatorLogoResponseMock = (): Blob =>
-  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+  faker.helpers.arrayElement([
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+  ]);
 
 export const getCreateFirstAdminResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
@@ -37941,6 +37944,10 @@ export const getGetCrmClientResponseMock = (
       step: faker.helpers.arrayElement(Object.values(StepCode)),
       project: faker.datatype.boolean(),
       client_sees: faker.helpers.arrayElement(Object.values(ClientSees)),
+      cabinet_status: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["new", "in_progress", "quoted", "closed"] as const),
+        null,
+      ]),
       urgency: faker.helpers.arrayElement([
         faker.helpers.arrayElement(["normal", "urgent"] as const),
         null,

@@ -797,6 +797,9 @@ def test_create_request_creates_deal_and_publishes_one_event(test_data):
     assert deal.contact == test_data["contact_a"]
     assert deal.notes == "Срочная потребность в партии рельсов"
     assert deal.stage.code == DealStageCode.DRAFT
+    # ПРАВДА-2: клиент в Кабинете видит суть, а не «Заявка: <компания>»
+    assert deal.title == "Срочная потребность в партии рельсов"
+    assert deal.portal_summary.text == "Срочная потребность в партии рельсов"
 
     req_lines = PortalRequestLine.objects.filter(deal=deal).order_by("sort_order")
     assert req_lines.count() == 2

@@ -1709,7 +1709,7 @@ export const getGetOperatorLogoUrl = () => {
 };
 
 /**
- * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+ * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
  * @summary Логотип своей компании до входа (ДВ-3)
  */
 export const getOperatorLogo = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
@@ -1725,7 +1725,7 @@ export const getGetOperatorLogoQueryKey = () => {
 
 export const getGetOperatorLogoQueryOptions = <
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -1745,11 +1745,11 @@ export const getGetOperatorLogoQueryOptions = <
 };
 
 export type GetOperatorLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getOperatorLogo>>>;
-export type GetOperatorLogoQueryError = ErrorType<NotFoundResponse>;
+export type GetOperatorLogoQueryError = ErrorType<unknown>;
 
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
@@ -1767,7 +1767,7 @@ export function useGetOperatorLogo<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
@@ -1785,7 +1785,7 @@ export function useGetOperatorLogo<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
@@ -1799,7 +1799,7 @@ export function useGetOperatorLogo<
 
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;

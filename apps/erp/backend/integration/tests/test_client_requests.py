@@ -262,3 +262,18 @@ def test_same_idempotency_key_with_a_changed_body_is_409_and_nothing_is_overwrit
     deal = Deal.objects.get(crm_request_id=318)
     assert deal.urgency == "urgent", "первая заявка не перезаписана"
     assert Deal.objects.filter(crm_request_id__isnull=False).count() == 1
+
+
+def test_request_from_crm_shows_its_substance_in_the_cabinet_like_a_cabinet_request(api):
+    """ПРАВДА-2: заявка менеджера из Платформы в Кабинете — суть, а не «Заявка: <компания>»."""
+    from portal.serializers import ClientRequestSerializer
+
+    _handoff(api)
+    summary = "Нужны 20 комплектов, срок — ноябрь"
+
+    deal = Deal.objects.get(pk=_create(api, _body()).json()["erp_request_id"])
+
+    assert deal.title == summary and "ООО Рельсы Тест" not in deal.title
+    shown = ClientRequestSerializer(deal).data
+    assert shown["summary"] == summary
+    assert shown["source"] == "crm"

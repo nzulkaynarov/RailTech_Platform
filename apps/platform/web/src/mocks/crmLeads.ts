@@ -479,6 +479,7 @@ export const crmLeadsHandlers = [
       step: "REQUEST",
       project: false,
       client_sees: "in_work",
+      cabinet_status: "new",
       urgency: body.urgency,
       transfer: erpDown ? "failed" : "done",
       transfer_error: erpDown ? "erp_unavailable" : null,

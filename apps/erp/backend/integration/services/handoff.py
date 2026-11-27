@@ -41,6 +41,7 @@ from crm.models import ActivityLog, Deal
 from ..exceptions import IntegrationConflict
 from ..models import CrmClientMapping, CrmContactMapping
 from . import events, stages
+from .request_deal import create_request_deal
 
 logger = logging.getLogger(__name__)
 
@@ -203,16 +204,15 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
     summary = data["need"]["summary"]
     from .client_requests import manager_for
 
-    deal = Deal(
+    deal = create_request_deal(
         company=company,
+        summary=summary,
         contact=contact,
         # Менеджер заявки CRM — владелец сделки ERP: отправляет одобренное КП (`quote.send`, B-008).
         manager=manager_for((data.get("owner") or {}).get("crm_user_id")),
         stage=stages.initial_fsm_stage(),
-        title=f"Заявка: {company.name}",
         notes=summary,
     )
-    deal.save()
     for idx, item_text in enumerate(data["need"].get("product_interest") or []):
         PortalRequestLine.objects.create(deal=deal, text=str(item_text).strip(), sort_order=idx + 1)
     events.publish_request_created(
