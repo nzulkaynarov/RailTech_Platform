@@ -196,6 +196,7 @@ def test_calc_registry_and_projects_carry_the_tag_only_when_shown(world):
 def test_provisioning_mirrors_the_crm_flag_for_the_delivery_gate(world):
     """Копия флага CRM приходит с провижинингом и не меняется, пока поля нет (старый CRM)."""
     from integration.services.provision import provision_crm_user
+
     from notifications.gate import sees_tests
 
     body = {
