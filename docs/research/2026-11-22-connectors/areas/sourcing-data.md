@@ -90,4 +90,4 @@
 - `apps/erp/backend/ai/services/price_list.py` — путь 2 отдаёт PDF и фото в модель целиком
 - `apps/erp/backend/ai/services/payloads.py` — Docling сейчас используется только для docx
 - `infra/compose/prod.yml` — сервис `docling`, профиль `kb-ingest`, 1536M
-- `docs/BACKLOG.md` B-CAT1-3; `docs/research/2026-11-17-risk-register.md` Ю5; `docs/DECISIONS.md` 2026-11-11 п. 1–2
+- `docs/history/BACKLOG.md` B-CAT1-3; `docs/research/2026-11-17-risk-register.md` Ю5; `docs/DECISIONS.md` 2026-11-11 п. 1–2

@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 11b — хвосты волн 8–11 и гейт этапа B (версия 0.11)
 Статус: действует · Владелец: архитектор · 2026-10-26
@@ -12,7 +12,7 @@ R3-D-2 в [`../DECISIONS.md`](../../DECISIONS.md), сброс прода 2026-10
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 11b «хвосты и гейт этапа B» по
 docs/history/runbooks/wave11b-tails.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7),
-docs/HANDOFF.md, этот runbook, docs/audits/r3_roles_report.md, docs/history/runbooks/wave11-bus-v1.md (§2, §3), docs/architecture/rt-bus.md.
+docs/history/HANDOFF.md, этот runbook, docs/audits/r3_roles_report.md, docs/history/runbooks/wave11-bus-v1.md (§2, §3), docs/architecture/rt-bus.md.
 Исполнители — субагенты (Agent tool) model "sonnet" (T1 — "opus", если правка контракта BFF и CRM на обе стороны окажется больше
 одного поля), по одному на задачу, не больше трёх одновременно и не больше одного набора тестов ERP за раз (ERP_TEST_NS=<задача>);
 worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь ты. Преамбула исполнителя — ORCHESTRATOR §4.2.

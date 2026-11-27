@@ -1,11 +1,11 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 15 — честный интерфейс, надёжность интеграций, удобство (версия 0.13)
 Статус: действует · Владелец: архитектор · 2026-10-27
 
 Основание: обратная связь владельца 2026-10-27 (DECISIONS), независимая UX-оценка
 [`../research/2026-10-27-ux-audit/README.md`](../../research/2026-10-27-ux-audit/README.md) (§5 бэклог, §6 названия). Параллельно идёт волна 16
-([`wave16-d1-work-screens.md`](../../runbooks/wave16-d1-work-screens.md) — рабочие экраны директора и менеджера): её зоны — `apps/platform/web/src/modules/{crm,eds,chats}`,
+([`wave16-d1-work-screens.md`](wave16-d1-work-screens.md) — рабочие экраны директора и менеджера): её зоны — `apps/platform/web/src/modules/{crm,eds,chats}`,
 BFF-маршруты этих модулей; здесь их не трогать (общие файлы — меню, i18n, контракт BFF — merge `origin/main` перед слиянием).
 Правила скорости волны 14 действуют (затронутое, один полный прогон, CI — финал, ревью по размеру).
 
@@ -13,7 +13,7 @@ BFF-маршруты этих модулей; здесь их не трогат�
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 15 по docs/history/runbooks/wave15-honest-ui.md. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/HANDOFF.md, этот runbook, docs/research/2026-10-27-ux-audit/README.md (§1, §5, §6),
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/history/HANDOFF.md, этот runbook, docs/research/2026-10-27-ux-audit/README.md (§1, §5, §6),
 docs/product/SPEC-v3.md (§5, §6, §7.6, §11.2), docs/systems/platform/CONVENTIONS.md. Исполнители — субагенты (Agent tool) model "sonnet"
 (H5 — "opus": меню, i18n и контракт на CRM и BFF), не больше трёх одновременно; worktree .claude/worktrees/<задача> от свежего
 origin/main; каждая git-команда — git -C <абсолютный путь>; тело PR — во временный файл с уникальным именем. DoD с UI — e2e на сборке,

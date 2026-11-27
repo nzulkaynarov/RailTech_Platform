@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 11c — дефекты шины после гейта этапа B (версия 0.11)
 Статус: действует · Владелец: архитектор · 2026-10-26
@@ -11,7 +11,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 11c «дефекты шины» по docs/history/runbooks/wave11c-bus-fixes.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/HANDOFF.md, этот runbook,
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/history/HANDOFF.md, этот runbook,
 docs/audits/wave11b_gate_b_report.md (§3–§6), docs/architecture/rt-bus.md, docs/runbooks/rt-bus-crm.md.
 Исполнители — субагенты (Agent tool) model "sonnet", по одному на задачу, не больше двух одновременно и не больше одного набора
 тестов ERP за раз (ERP_TEST_NS=<задача>); worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь ты; каждая

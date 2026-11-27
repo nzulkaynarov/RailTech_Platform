@@ -11,7 +11,7 @@
 
 | Документ | Что в нём | Когда читать |
 |---|---|---|
-| `docs/ORCHESTRATOR.md`, `docs/HANDOFF.md` | инварианты §3, роли агентов §4, протокол сессии §7; где мы | первым в каждой сессии |
+| `docs/ORCHESTRATOR.md`, `docs/history/HANDOFF.md` | инварианты §3, роли агентов §4, протокол сессии §7; где мы | первым в каждой сессии |
 | `docs/history/runbooks/wave12-eds-c1.md` | задачи E1…E6, нормативка §2 (нумерация, доступ, API, события, маршруты), «готово, когда» §3 | перед любой задачей EDS |
 | `docs/adr/0015-eds-service-and-domain-boundaries.md`, `0013-stack-and-standards.md`, `0014-integration-bus-rt-bus.md`, `0017-reliability-slo-backups.md` | границы домена, стек, шина, надёжность | перед «а давайте тут иначе» |
 | `docs/architecture/rt-bus.md`, `docs/architecture/CONTRACTS.md` | подключение шины (FastAPI/SQLAlchemy/Procrastinate), контракты | перед событием, обработчиком, миграцией шины |
@@ -41,7 +41,7 @@
 8. **Почта — только через почтовый сервис CRM** (W18A-P1, CONTRACTS §9.9): письмо — `app/services/mail_out.request_mail(bus, session, …)` в транзакции изменения (событие `uz.railtech.eds.mail.requested.v1`, тело шифртекстом ключа пары `eds → crm`, вложение — подписанной ссылкой `ObjectStorage.presign` на объект `eds-private`); SMTP в EDS нет.
 9. **Внешнего маршрута нет.** Не добавляй EDS в Caddyfile и не публикуй порт в compose; тест `infra/deploy/tests/eds-prod-test.sh` это ломает намеренно.
 10. **Тесты — часть задачи.** Поведение сначала воспроизводится тестом. База в тестах — настоящий PostgreSQL (маркер `pg`), не SQLite и не моки сессии.
-11. **Документация — только в `docs/`** (ORCHESTRATOR §3 п. 17): `apps/eds` несёт указатели `CLAUDE.md` (≤ 25 строк) и `README.md` (≤ 15). Статус — в описании PR (`docs/PROGRESS.md` ведёт лид).
+11. **Документация — только в `docs/`** (ORCHESTRATOR §3 п. 17): `apps/eds` несёт указатели `CLAUDE.md` (≤ 25 строк) и `README.md` (≤ 15). Статус — в описании PR (`docs/history/PROGRESS.md` ведёт лид).
 
 ## 3. Стек и команды
 

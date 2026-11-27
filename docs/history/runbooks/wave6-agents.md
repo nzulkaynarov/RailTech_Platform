@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волна 6 — остаток M3, шов 0.3.0, задачи M5 до пилота
 
@@ -15,8 +15,8 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 6 по docs/history/runbooks/wave6-agents.md. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «M3», «M5», §7), docs/HANDOFF.md, этот runbook целиком,
-docs/architecture/CONTRACTS.md, docs/PROGRESS.md, CLAUDE.md приложений, docs/history/runbooks/wave5-agents.md §5.0 (преамбула — общая) и §6–§7.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «M3», «M5», §7), docs/history/HANDOFF.md, этот runbook целиком,
+docs/architecture/CONTRACTS.md, docs/history/PROGRESS.md, CLAUDE.md приложений, docs/history/runbooks/wave5-agents.md §5.0 (преамбула — общая) и §6–§7.
 Работай по раундам §3: worktree от свежего origin/main (FIX-60a/b — от fix/all-60-seam-030), зависимости, исполнители
 субагентами (model sonnet, run_in_background=false — ждёшь результата в своём ходе) с промптом «преамбула wave5 §5.0 с
 подставленными значениями + раздел §4.x этого runbook'а». Ревью — свежим субагентом ≠ исполнителю, по «готово, когда»;

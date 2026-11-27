@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/runbooks/wave18a-pilot-critical.md, задача P6 (отключение старых фронтов по модулям после гейтов D1-7 и D2-6 — DECISIONS 2026-10-27, 2026-10-28). Не используется для решений.
+> **История.** Заменено: docs/history/runbooks/wave18a-pilot-critical.md, задача P6 (отключение старых фронтов по модулям после гейтов D1-7 и D2-6 — DECISIONS 2026-10-27, 2026-10-28). Не используется для решений.
 
 # Волна 13b — этап C2b «Удаление старых фронтов CRM и ERP» (версия 0.12)
 Статус: действует · Владелец: архитектор · 2026-10-26
@@ -14,7 +14,7 @@
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 13b «Удаление старых фронтов» по
 docs/history/runbooks/wave13b-remove-fronts.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7),
-docs/HANDOFF.md, этот runbook, docs/history/runbooks/wave13-c2-admin.md §4.4, docs/audits/c2a_admin_gate_report.md, docs/runbooks/deploy.md,
+docs/history/HANDOFF.md, этот runbook, docs/history/runbooks/wave13-c2-admin.md §4.4, docs/audits/c2a_admin_gate_report.md, docs/runbooks/deploy.md,
 docs/systems/infra/ci.md. Исполнители — субагенты (Agent tool) model "sonnet", не больше двух одновременно; worktree
 .claude/worktrees/<задача> от свежего origin/main; каждая git-команда — git -C <абсолютный путь worktree>; тело PR — во временный файл с
 уникальным именем. Преамбула — ORCHESTRATOR §4.2. Ревью — свежий субагент; итог — комментарием в PR до --auto. Перед автослиянием —

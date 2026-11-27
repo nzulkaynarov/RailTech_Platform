@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 10 — этап 0 «Чистый лист и надёжность» (версия 0.9)
 
@@ -10,7 +10,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 10 «Этап 0: чистый лист и надёжность» по
-docs/history/runbooks/wave10-stage0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
+docs/history/runbooks/wave10-stage0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/history/HANDOFF.md,
 docs/strategy/2026-10-23-platform-architecture-strategy.md (§1.1, §3.7, §7), ADR-0013, ADR-0017, этот runbook целиком,
 docs/research/2026-10-23-architecture/arch-audit-current.md (§1, §3, §7), docs/runbooks/deploy.md, infra/compose/*.yml, infra/caddy/*.
 Исполнители — субагенты model "sonnet", по одному на задачу, не больше трёх одновременно, worktree .claude/worktrees/<задача> от

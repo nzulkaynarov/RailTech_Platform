@@ -432,6 +432,9 @@ services:
   crm-worker:
     <<: *crm-backend
     command: ["python", "-m", "app", "worker"]
+    # Деплой: SIGTERM, воркер ждёт задачи до 25 с (SHUTDOWN_GRACE_S), потом отменяет их с записью статуса.
+    # Без этого docker убивал через 10 с, и задачи оставались в `doing` (ЗАВИС-1).
+    stop_grace_period: 40s
     # Центр внешних сервисов (M3-CRM-12) читает статус бэкапов из общего тома — только чтение.
     volumes:
       - crm_backups:/backups:ro
@@ -811,6 +814,7 @@ services:
   eds-worker:
     <<: *eds-backend
     command: ["python", "-m", "app", "worker"]
+    stop_grace_period: 40s  # воркер ждёт задачи до 25 с, потом отменяет с записью статуса (ЗАВИС-1)
     depends_on: *eds-backend-deps
     healthcheck:
       test: ["CMD", "procrastinate", "--app=app.tasks.queue.queue", "healthchecks"]

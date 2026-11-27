@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 13c — дефекты гейта C2a перед деплоем (версия 0.12)
 Статус: действует · Владелец: архитектор · 2026-10-27
@@ -12,7 +12,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 13c по docs/history/runbooks/wave13c-fixes.md. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§4.1, §4.2, §7), docs/HANDOFF.md, этот runbook, docs/audits/c2a_admin_gate_report.md,
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§4.1, §4.2, §7), docs/history/HANDOFF.md, этот runbook, docs/audits/c2a_admin_gate_report.md,
 docs/history/runbooks/wave14-speed.md §1 S3 (правила скорости — уже действуют). Исполнители — субагенты (Agent tool) model "sonnet", не больше
 трёх одновременно, не больше одного набора тестов ERP за раз; worktree .claude/worktrees/<задача> от свежего origin/main; каждая
 git-команда — git -C <абсолютный путь>; тело PR — во временный файл с уникальным именем. Параллельно идёт волна 14 (CI, тесты ERP,

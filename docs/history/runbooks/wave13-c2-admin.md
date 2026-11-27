@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 13 — этап C2a «Паритет Admin в Платформе» (версия 0.12)
 Статус: действует · Владелец: архитектор · 2026-10-26
@@ -13,7 +13,7 @@ Django admin.
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 13 «Паритет Admin» по docs/history/runbooks/wave13-c2-admin.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/HANDOFF.md, этот runbook целиком (с §4),
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/history/HANDOFF.md, этот runbook целиком (с §4),
 docs/product/SPEC-v3.md (§5, §6, §7.6, §11.2), docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md,
 docs/systems/platform/CONVENTIONS.md, docs/architecture/rt-bus.md, docs/audits/wave11c_gate_report.md (W11C-G-1).
 Исполнители — субагенты (Agent tool): A2 — model "opus" (контракты трёх сервисов и BFF), остальные — "sonnet"; не больше трёх

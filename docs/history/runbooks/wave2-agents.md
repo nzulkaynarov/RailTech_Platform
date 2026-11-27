@@ -1,9 +1,9 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волна 2 — портал и Cabinet против настоящего ERP (FIX-21…24 ∥ FIX-11b)
 
 Когда применять: контракт портала 0.2.0 (FIX-20) влит в `main`. Источник задач — `docs/audits/2026-10-18-main-e0f089e.md`
-(«Волна 2»), статусы — `docs/PROGRESS.md`, правила — `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда
+(«Волна 2»), статусы — `docs/history/PROGRESS.md`, правила — `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда
 разработки, тесты и CI»). Волну ведёт **одна сессия лида** (Claude Opus), исполнители — субагенты (Claude Sonnet),
 по одному на задачу, каждый в своём worktree. Архитектор (Fable) принимает итог волны.
 
@@ -18,12 +18,12 @@ FIX-23, FIX-24 и параллельно FIX-11b. Работаешь в корн
 субагентам-исполнителям, ревьюишь их PR и сливаешь.
 
 Прочитай по порядку: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), docs/ORCHESTRATOR.md (§3, §4, §4.1, §7),
-docs/HANDOFF.md, docs/history/runbooks/wave2-agents.md (этот runbook — целиком), docs/PROGRESS.md (раздел «Исправления по
+docs/history/HANDOFF.md, docs/history/runbooks/wave2-agents.md (этот runbook — целиком), docs/history/PROGRESS.md (раздел «Исправления по
 аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/architecture/CONTRACTS.md §4, packages/contracts/openapi/erp-portal.yaml.
 
 Порядок работы:
 1. Убедись, что worktree из §2 существуют (`git worktree list`) и зависимости в них установлены; чего нет — создай и
-   поставь сам по §2. Запиши в docs/PROGRESS.md (журнал) строку «волна 2 запущена» — отдельным docs-PR не нужно,
+   поставь сам по §2. Запиши в docs/history/PROGRESS.md (журнал) строку «волна 2 запущена» — отдельным docs-PR не нужно,
    положишь её в PR закрытия волны.
 2. Запусти субагентами (Agent tool, subagent_type general-purpose, model sonnet, run_in_background true) сразу три
    исполнителя: S1 (FIX-21), S4 (FIX-24), S5 (FIX-11b). Промпт каждого = §5.0 преамбула с подставленными
@@ -33,7 +33,7 @@ docs/HANDOFF.md, docs/history/runbooks/wave2-agents.md (этот runbook — ц�
    жди: GitHub вольёт сам при зелёном «CI ok»; красный виден в PR — исполнитель воспроизводит локально и чинит.
 4. После слияния FIX-21 запусти S2 (FIX-22) и S3 (FIX-23) — их worktree создаются от свежего main. Далее по §4.
 5. S4 (FIX-24) работает с мока сразу, а финальную проверку против стенда делает после слияния FIX-21…23: скажи ему
-   «ERP готов, проверяй на стенде» и дай адрес стенда из docs/HANDOFF.md §6.
+   «ERP готов, проверяй на стенде» и дай адрес стенда из docs/history/HANDOFF.md §6.
 6. Закрытие волны: все строки FIX-2x и FIX-11b в PROGRESS «готово» с PR; HANDOFF §3 «волна 2 закрыта, следующая —
    волна 3 ∥ волна 4»; хвосты ревью — в «Что осталось»; один docs-PR на автослиянии. Доложи архитектору: что влито,
    что осталось, что проверить глазами владельцу (скриншоты из PR FIX-24).
@@ -137,7 +137,7 @@ docs/history/runbooks/wave2-agents.md (§1 — факты кода, §4), docs/a
   (чужая компания → 404, can_act=false → 403) обязательны на каждый новый или изменённый эндпоинт.
 - Секретов нет; тестовые значения явно фейковые. Платных вызовов моделей нет. Стенд make up не трогать.
 - Тесты ERP: ERP_TEST_NS={NS} make -C apps/erp test-backend args="<путь> -x -q". Зависимости уже установлены.
-- Параллельно работают другие исполнители: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. В docs/PROGRESS.md правь только
+- Параллельно работают другие исполнители: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. В docs/history/PROGRESS.md правь только
   строку своей задачи и добавь одну строку в журнал — конфликт при слиянии разрешит лид.
 - Коммиты: Conventional Commits на русском, суффикс ({ID}), трейлер Co-Authored-By: Claude <noreply@anthropic.com>.
 - Финал: gh pr create (заголовок «{ID}: …»; тело — что, почему, как проверить, что обновлено в docs, открытые
@@ -273,7 +273,7 @@ PR: «FIX-24: Cabinet против настоящего портала — deal,
 ### 5.5. S5 — FIX-11b (CRM + ERP), `fix/all-11b-erp-sync-tails`, `ERP_TEST_NS=fix11b`
 
 ```
-Задача FIX-11b (хвосты ревью и стенда волны 1; строка FIX-11b в docs/PROGRESS.md — полный список).
+Задача FIX-11b (хвосты ревью и стенда волны 1; строка FIX-11b в docs/history/PROGRESS.md — полный список).
 
 Готово, когда:
 1. P1: задача erp_provision_user/erp_revoke_sessions в воркере CRM не отклоняет выдачу доступа из-за устаревшего

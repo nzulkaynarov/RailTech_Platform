@@ -55,6 +55,10 @@ BotProvider = Callable[[], Awaitable[Bot | None]]
 BotUsername = Callable[[], Awaitable[str | None]]
 
 
+# `email_log.ref_kind` у письма-подтверждения: `ref_id` — id сообщения клиенту.
+NOTICE_REF_KIND: Final = "client_notice"
+
+
 @dataclass(frozen=True, slots=True)
 class NoticeView:
     """Итог для карточки: статус с учётом письма в `email_log`, причина кодом и словами."""
@@ -231,6 +235,9 @@ class ClientNoticeService:
                 WEB_CONFIRMATION,
                 lead.email,
                 RenderedEmail(mail.subject, mail.body, client_texts.lang(lead.language)),
+                # Связь «сообщение клиенту → письмо» пишется вместе со строкой письма (одна
+                # транзакция): прерванная задача находит письмо по ней (ЗАВИС-1).
+                ref=(NOTICE_REF_KIND, str(notice_id)),
             )
         except ConflictError as exc:
             reason = exc.details.get("reason")

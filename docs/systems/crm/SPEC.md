@@ -730,7 +730,7 @@ Refine — оболочка: `authProvider` (cookie JWT), `accessControlProvider
 | Бэкапы | нет | ежедневно |
 | Доступ к Langfuse/консоли RustFS | открыт | IP allow-list |
 
-Переезд dev → prod отдельной CRM — история (`docs/history/runbooks/crm-promote-to-prod.md`); пилот ансамбля — `docs/runbooks/wave18a-pilot-critical.md`. Чек-лист был из `docs/history/crm/PLAN.md` фазы 9.
+Переезд dev → prod отдельной CRM — история (`docs/history/runbooks/crm-promote-to-prod.md`); пилот ансамбля — `docs/history/runbooks/wave18a-pilot-critical.md`. Чек-лист был из `docs/history/crm/PLAN.md` фазы 9.
 
 ---
 
