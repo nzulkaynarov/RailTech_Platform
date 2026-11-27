@@ -139,8 +139,7 @@ job `approve` — он запускается при ручном `deploy`/`roll
    Без environment и без секретов — только `GITHUB_TOKEN`. `rt-cabinet` собирает job `deploy`.
 3. **`deploy`** (environment `production`, секреты): собирает `rt-cabinet`, загружает релиз на VPS 1, `deploy.sh` (pg_dump-гейт, миграции,
    up), smoke четырёх доменов с раннера, снимает баннер. **Автооткат:** smoke не прошёл — `rollback.sh` на предыдущий тег + smoke, баннер
-   снимается, запуск **красный** (выкладка не считается успешной; миграции не откатываются, п. 3). Следующей ночью тот же sha снова пойдёт
-   в выкладку, если `main` не ушёл вперёд — исправление или откат решает лид утром.
+   снимается, запуск **красный** (выкладка не считается успешной; миграции не откатываются, п. 3). Откаченный sha записывается на VPS 1 в `/opt/rt/state/failed_tags`: ночная выкладка его больше не берёт (и баннер не ставит), ручной deploy — берёт.
 
 **Вручную — с одобрением.** Actions → Deploy → Run workflow, `action` = `deploy` | `rollback`: job `approve` (environment
 `production-approval`) ждёт владельца, потом идут `build`/`deploy` либо `rollback`. Очередь: concurrency `deploy-production` стоит на jobs

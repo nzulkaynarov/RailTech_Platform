@@ -339,6 +339,15 @@ jobs:
           cur="$(tr -d '[:space:]' <<<"$cur")"
           echo "previous=$cur" >> "$GITHUB_OUTPUT"
           decision="$(bash infra/deploy/should-deploy.sh "$TAG" "$cur")"
+          # sha, откаченный автооткатом (failed_tags на VPS 1), ночная выкладка не берёт; ручной deploy - берёт (решение владельца).
+          # shellcheck disable=SC2029
+          if [ "$EVENT_NAME" = schedule ] && ssh app "grep -qxF '$TAG' /opt/rt/state/failed_tags 2>/dev/null"; then
+            msg="sha $TAG ранее откачен автооткатом (state/failed_tags) - ночная выкладка пропущена; нужен новый коммит или ручной deploy"
+            echo "::warning::$msg"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение: $decision"
           if [ "$EVENT_NAME" = schedule ]; then
             case "$decision" in
@@ -433,6 +442,10 @@ jobs:
         if: failure() && steps.smoke.conclusion == 'failure'
         run: |
           echo "::error::smoke после выкладки не прошёл - автооткат на предыдущий тег"
+          # запоминаем sha: ночная выкладка его больше не возьмёт (ручной deploy - возьмёт)
+          # shellcheck disable=SC2029
+          ssh app "mkdir -p /opt/rt/state && echo '${{ needs.prepare.outputs.sha }}' >> /opt/rt/state/failed_tags" \
+            || echo "::warning::не удалось записать failed_tags"
           ssh app "bash /opt/rt/current/infra/deploy/rollback.sh" || { echo "::error::АВТООТКАТ НЕ УДАЛСЯ - прод требует ручного вмешательства (п. 3 runbook)"; exit 1; }
           domains=("$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN")
           rc=0
@@ -551,6 +564,11 @@ jobs:
           echo "HEAD main: $head; current_tag на VPS 1: ${cur:-<пусто>}"
           if [ -n "$head" ] && [ "$head" = "$cur" ]; then
             echo "main уже выложен - баннер не нужен"
+            exit 0
+          fi
+          # shellcheck disable=SC2029
+          if ssh app "grep -qxF '$head' /opt/rt/state/failed_tags 2>/dev/null"; then
+            echo "HEAD main $head ранее откачен автооткатом - ночной выкладки не будет, баннер не нужен"
             exit 0
           fi
           ssh app "bash -s set 01:00 20 planned" < scripts/maintenance-notice.sh
