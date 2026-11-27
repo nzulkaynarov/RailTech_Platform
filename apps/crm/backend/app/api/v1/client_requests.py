@@ -82,6 +82,24 @@ async def create_request_for_client(
     return _answer(created, response)
 
 
+@router.post(
+    "/clients/actions/create_request_for_company",
+    response_model=RequestCreated,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_request_for_company(
+    body: RequestCreate,
+    who: ClientWriter,
+    container: ContainerDep,
+    response: Response,
+) -> RequestCreated:
+    """«Заявка клиента» из письма компании без лида и без карточки клиента (ВХОД-1): карточку
+    находит по ИНН и названию или заводит, письмо — основание. 422 `validation_failed` по полю
+    `company` — компания не названа."""
+    created = await container.client_request_service.create_for_company(who, body)
+    return _answer(created, response)
+
+
 @router.post("/deals/{deal_id}/actions/retry_request", response_model=RequestRetried)
 async def retry_request(deal_id: int, who: ClientWriter, container: ContainerDep) -> RequestRetried:
     """«Повторить отправку в ERP» (B-082): заявка с ошибкой передачи снова уходит в ERP той же

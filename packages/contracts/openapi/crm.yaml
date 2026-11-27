@@ -12864,6 +12864,38 @@ paths:
       summary: Create Client
       tags:
       - clients
+  /api/v1/clients/actions/create_request_for_company:
+    post:
+      description: '«Заявка клиента» из письма компании без лида и без карточки клиента (ВХОД-1): карточку
+
+        находит по ИНН и названию или заводит, письмо — основание. 422 `validation_failed` по полю
+
+        `company` — компания не названа.'
+      operationId: create_request_for_company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCreated'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Request For Company
+      tags:
+      - clients
   /api/v1/clients/{client_id}:
     get:
       operationId: get_client

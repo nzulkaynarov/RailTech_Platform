@@ -127,6 +127,8 @@ export interface RequestFormProps {
   letterFrom?: LetterSource | null;
   /** Файл письма уже в EDS («Передать в работу» из входящего, план 1.9): форма получает готовое письмо */
   letterFile?: { id: string; name: string } | null;
+  /** Что известно из входящего письма (ВХОД-1): название компании ждёт в поле выбора серым, суть и почта подставлены */
+  letterHint?: { company: string; summary: string; email: string } | null;
   /** «Создать по образцу» (ЗАЯВ-1): номер прежней заявки — суть и файл берутся из неё; ничего не уходит, пока человек не сохранит */
   template?: string | null;
   /** Заявка создана — вызывающий связывает её со своим объектом (поручение по ВХ) */
@@ -200,6 +202,7 @@ export function RequestForm({
   clientId,
   letterFrom = null,
   letterFile = null,
+  letterHint = null,
   template = null,
   onCreated,
   onCancel,
@@ -213,6 +216,7 @@ export function RequestForm({
   const [requestKey, setRequestKey] = useState(newKey);
   const [state, setState] = useState<RequestFormState>(() => ({
     ...initialState(lead, clientId),
+    ...(letterHint ? { summary: letterHint.summary.slice(0, 5000), email: letterHint.email } : {}),
     ...(letterFrom && lead ? { letter: { name: "", status: "uploading" as const } } : {}),
     ...(letterFile
       ? { letter: { name: letterFile.name, status: "done" as const, id: letterFile.id } }
@@ -296,7 +300,8 @@ export function RequestForm({
   const refresh = useRefreshCrm();
   const fixedClient = clientId !== null || lead?.client != null;
   // Название из переписки лида: стоит в поле выбора серым и открывает поиск по нему
-  const suggestedCompany = lead?.facts.company ?? lead?.contacts.company ?? "";
+  const suggestedCompany =
+    lead?.facts.company ?? lead?.contacts.company ?? letterHint?.company ?? "";
   // Человек из карточки компании, выбранный для нового контакта клиента
   const [personId, setPersonId] = useState("");
 
@@ -589,9 +594,13 @@ export function RequestForm({
                     id={id("company")}
                     label={t("request:client.name")}
                     hint={
-                      // без ИНН и без клиента CRM заявка не может назвать карточку ERP: клиент заведётся по названию
-                      state.company && !state.company.inn && state.company.crmClientId == null
-                        ? t("request:client.noInnNote")
+                      // ВХОД-1: у компании ещё нет карточки клиента — заявка заведёт её; без ИНН — по названию
+                      state.company && state.company.crmClientId == null
+                        ? t(
+                            state.company.inn
+                              ? "request:client.noCardNote"
+                              : "request:client.noInnNote",
+                          )
                         : undefined
                     }
                   >

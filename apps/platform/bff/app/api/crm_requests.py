@@ -77,10 +77,13 @@ async def create_request(
         path = f"{API}/leads/{_lead_id(body.lead)}/actions/create_request"
     elif body.client_id is not None:
         path = f"{API}/clients/{body.client_id}/actions/create_request"
+    elif body.company is not None:
+        # ВХОД-1: компания без карточки клиента и без лида (письмо) — CRM находит или заводит карточку
+        path = f"{API}/clients/actions/create_request_for_company"
     else:
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Выберите клиента или лида.",
+            "Выберите клиента или компанию.",
             status_code=422,
             details={"fields": ["client_id"]},
         )

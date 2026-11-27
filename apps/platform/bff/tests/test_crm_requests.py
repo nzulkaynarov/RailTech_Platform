@@ -115,12 +115,27 @@ async def test_request_for_a_client_goes_to_the_client_action_of_crm(
     assert crm.body("POST", "clients/12/actions/create_request")["client_id"] == 12
 
 
-async def test_without_lead_and_client_it_is_422_before_crm(
+async def test_request_from_a_company_without_a_card_goes_to_the_company_action_of_crm(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """ВХОД-1: письмо компании без лида и без карточки клиента — CRM находит или заводит карточку."""
+    await web.login(["MANAGER"])
+    form = request_form(lead=None, client_id=None, consent=None)
+    response = check(await web.send("POST", BASE, json=form), "/crm/requests", "post")
+
+    assert response.status_code == 201
+    sent = crm.body("POST", "clients/actions/create_request_for_company")
+    assert sent["company"] == {"name": "ООО Демо-Логистик", "inn": None, "country": None}
+    assert sent["request_key"] == REQUEST_KEY
+    assert "lead" not in sent
+
+
+async def test_without_lead_client_and_company_it_is_422_before_crm(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
     await web.login(["MANAGER"])
     response = check(
-        await web.send("POST", BASE, json=request_form(lead=None, client_id=None)),
+        await web.send("POST", BASE, json=request_form(lead=None, client_id=None, company=None)),
         "/crm/requests",
         "post",
     )

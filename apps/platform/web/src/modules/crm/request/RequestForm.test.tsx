@@ -529,6 +529,8 @@ describe("компания и человек выбираются, а не вп�
     expect(within(remainingList(panel)).getByText(/Выберите компанию/)).toBeInTheDocument();
     // компания есть среди контрагентов, но не клиент CRM — её выбирают, заявка сделает её клиентом
     await pickCompany(company, "ГНИ", "ГНИ Мирабадского района");
+    // ВХОД-1: без карточки клиента форма говорит, что карточка заведётся с заявкой, а не падает на отправке
+    expect(within(panel).getByText(/ещё нет карточки клиента/)).toBeVisible();
 
     open(panel, "Контакт");
     const person = within(panel).getByLabelText("Человек из карточки компании");

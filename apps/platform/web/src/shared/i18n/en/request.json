@@ -6,7 +6,8 @@
     "legend": "Client",
     "picked": "Client: {{name}}",
     "name": "Company name",
-    "noInnNote": "The company has no tax ID: the request will create a client with this name."
+    "noInnNote": "The company has no tax ID: the request will create a client with this name.",
+    "noCardNote": "The company has no client card yet: it will be created with the request, and the company becomes a client."
   },
   "contact": {
     "legend": "Contact",

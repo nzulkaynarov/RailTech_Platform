@@ -177,6 +177,23 @@ def test_existing_company_without_crm_link_is_found_by_inn_and_linked(api):
     assert Deal.objects.filter(company=existing).count() == 1
 
 
+@pytest.mark.django_db
+def test_organization_from_a_letter_becomes_a_client_when_a_request_comes_from_crm(api):
+    """ВХОД-1: компания, заведённая при регистрации письма (организация, без карточки клиента CRM), — клиент после заявки."""
+    from accounts.services.clients import client_book_q
+
+    company = Company.objects.create(name="ООО Заведена письмом", inn="555000111")
+    company.types.add(CompanyType.objects.get_or_create(code="ORGANIZATION", defaults={"name": "Организация"})[0])
+    assert not Company.objects.filter(client_book_q(), pk=company.pk).exists()
+
+    resp = handoff(api, payload(crm_client_id=3101, inn="555000111"))
+
+    assert resp.status_code == 201
+    assert resp.json()["erp_company_id"] == company.pk
+    assert Company.objects.filter(client_book_q(), pk=company.pk).exists(), "после заявки компания — клиент"
+    assert Deal.objects.filter(company=company).count() == 1
+
+
 def _linked_by_inn(api, **kwargs):
     """Компания заведена сотрудником (со своей старой сделкой и контактом), клиент CRM пришёл с её ИНН."""
     existing = Company.objects.create(name="ООО Заведена в ERP", inn="555666777")

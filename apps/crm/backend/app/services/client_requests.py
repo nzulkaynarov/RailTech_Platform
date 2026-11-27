@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode
 from app.domain.client_requests import may_create_request
+from app.domain.consent import MANUAL_CONSENT_VERSION
 from app.domain.erp_handoff import PENDING
 from app.domain.errors import (
     ConflictError,
@@ -33,13 +34,14 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.lead_sources import LeadSource
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
 from app.models.leads import Lead
 from app.repositories import events
 from app.repositories import leads as leads_repo
-from app.schemas.client_requests import RequestCreate, RequestCreated
+from app.schemas.client_requests import RequestCompanyIn, RequestCreate, RequestCreated
 from app.security import audit
 from app.security.principal import Principal
 from app.services import deals as deals_service
@@ -47,6 +49,7 @@ from app.services import lead_parts, stages
 from app.services.clients import _bind_identities, _require_consent
 from app.services.lead_consent import LeadConsentService
 from app.services.leads import ChatsChanged, notify_chats
+from app.services.request_contacts import _email, _phone
 from app.services.request_contacts import request_contact as _contact
 
 logger = structlog.get_logger(__name__)
@@ -111,6 +114,36 @@ class ClientRequestService:
         except IntegrityError:
             done = await self._repeat(body.request_key, client_id=client_id)
         return await self._after_commit(done, who)
+
+    async def create_for_company(self, who: Principal, body: RequestCreate) -> RequestCreated:
+        """«Создать заявку» из письма компании, у которой нет ни лида, ни карточки клиента (ВХОД-1).
+
+        Карточка клиента находится по ИНН и названию или заводится здесь же (одна компания — одна
+        карточка); основание заявки — файл письма, поэтому согласие на обработку данных
+        отмечается за компанию способом «письмом» (лид по письму заводится сам, как «Новый лид»
+        из письма). Дальше — обычная заявка клиента: ERP свяжет компанию с карточкой по ИНН."""
+        await self._require_erp()
+        if body.company is None:
+            raise ValidationFailedError("choose a client or enter the company", field="company")
+        try:
+            async with self._sessions() as session, session.begin():
+                done = await self._for_company_tx(session, who, body, body.company)
+        except IntegrityError:
+            done = await self._repeat(body.request_key)
+        return await self._after_commit(done, who)
+
+    async def _for_company_tx(
+        self, session: AsyncSession, who: Principal, body: RequestCreate, company: RequestCompanyIn
+    ) -> _Done:
+        repeat = await _existing(session, body.request_key)
+        if repeat is not None:
+            return repeat
+        client = await _client_of_company(session, company, company.country, who)
+        if client.erp_company_id is None:
+            lead = await _latest_lead(session, client.id)
+            if lead is None or lead.consent_given_at is None:
+                await _letter_lead(session, client, body, who)
+        return await self._for_client_tx(session, who, client.id, body)
 
     async def _repeat(
         self, key: uuid.UUID, *, lead_id: int | None = None, client_id: int | None = None
@@ -292,14 +325,22 @@ async def _client_for(
         raise ValidationFailedError("choose a client or enter the company", field="company")
     # One company is one card (ЛП-1): look up by INN, then by normalised name and country first.
     country = body.company.country or country_of_phone(lead.phone_e164)
-    found = await find_client(session, body.company.name, body.company.inn, country)
+    return await _client_of_company(session, body.company, country, who)
+
+
+async def _client_of_company(
+    session: AsyncSession, company: RequestCompanyIn, country: str | None, who: Principal
+) -> Client:
+    """The one card of a company: found by INN, then by the normalised name (and country), else
+    created. Shared by the request from a lead and the request from a letter (ВХОД-1)."""
+    found = await find_client(session, company.name, company.inn, country)
     if found is not None:
         client = await session.get(Client, found.id, with_for_update=True)
         if client is not None:
             return client
     client = Client(
-        name=body.company.name.strip(),
-        inn=(body.company.inn or "").strip() or None,
+        name=company.name.strip(),
+        inn=(company.inn or "").strip() or None,
         country=country,
         owner_user_id=who.user_id,
     )
@@ -398,6 +439,45 @@ async def _same_request(
             created=False,
         )
     )
+
+
+async def _letter_lead(
+    session: AsyncSession, client: Client, body: RequestCreate, who: Principal
+) -> Lead:
+    """Лид по письму компании: заявка клиента без лида не может уйти в ERP (передаче нужны лид и
+    согласие). Письмо — основание, согласие отмечено «письмом» на время заявки."""
+    contact = body.contact
+    moment = datetime.now(UTC)
+    lead = Lead(
+        display_name=((contact.full_name or "").strip() or client.name)[:255],
+        language="ru",
+        stage=Stage.NEW.value,
+        owner_mode=OwnerMode.HUMAN.value,
+        assigned_user_id=who.user_id,
+        source=LeadSource.EMAIL.value,
+        phone_e164=_phone(contact.phone),
+        email=_email(contact.email),
+        company_name=client.name[:255],
+        need_summary=body.summary.strip()[:4000],
+        client_id=client.id,
+        consent_given_at=moment,
+        consent_version=MANUAL_CONSENT_VERSION,
+        consent_method="email",
+    )
+    session.add(lead)
+    await session.flush()
+    await bus_events.lead_created(session, lead, who.actor)
+    await _become_customer(session, lead, who)
+    await audit.record(
+        session,
+        who.actor,
+        "lead.create",
+        "lead",
+        lead.id,
+        after={"source": lead.source, "client_id": client.id, "basis": "letter"},
+    )
+    await events.publish(session, "lead.updated", lead_id=lead.id)
+    return lead
 
 
 async def _become_customer(session: AsyncSession, lead: Lead, who: Principal) -> None:

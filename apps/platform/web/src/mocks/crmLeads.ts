@@ -95,8 +95,9 @@ function nextNumber(state: LeadsMock): string {
 
 /** Отказы «Создать заявку» — в том же порядке, что в CRM. */
 function validateRequest(body: RequestFormIn, lead: LeadMockRow | undefined): Response | null {
-  if (!lead && !body.client_id) {
-    return rejected(422, "client_required", "Укажите лида или клиента.", ["client_id"]);
+  // ВХОД-1: компания без лида и без карточки клиента (письмо) — клиента заводит сама заявка
+  if (!lead && !body.client_id && !body.company) {
+    return rejected(422, "client_required", "Укажите клиента или компанию.", ["client_id"]);
   }
   if (lead?.row.status === "lost") {
     return rejected(409, "request_not_allowed", "Лид в отказе: заявку создать нельзя.");
