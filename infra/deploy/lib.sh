@@ -166,6 +166,15 @@ release_date() {
 }
 state_set() { mkdir -p "$RT_STATE"; printf '%s\n' "$2" > "$RT_STATE/$1"; }
 
+# Помечает тег «откачен»: строка в state/failed_tags. Ночная и дневная (ВЫКЛ-2) выкладки такой sha не берут; ручной deploy - берёт.
+# Зовёт и автооткат, и ручной rollback.sh: откаченный владельцем релиз не должен вернуться сам. mark_failed_tag <тег>
+mark_failed_tag() {
+  local tag="$1"
+  [[ "$tag" =~ ^[A-Za-z0-9_.-]+$ ]] || return 0
+  mkdir -p "$RT_STATE"
+  grep -qxF "$tag" "$RT_STATE/failed_tags" 2>/dev/null || printf '%s\n' "$tag" >> "$RT_STATE/failed_tags"
+}
+
 # Удаляет образы rt-* всех тегов, кроме перечисленных (текущий и предыдущий), и каталоги релизов старше пяти.
 cleanup_old() {
   local keep_a="$1" keep_b="${2:-}" img
