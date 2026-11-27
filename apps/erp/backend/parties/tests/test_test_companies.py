@@ -116,7 +116,10 @@ def test_deals_list_hides_test_companies_by_default_and_shows_them_by_filter(wor
     real, fake = _deal(world["real"], "Рабочая"), _deal(world["fake"], "Пробная")
     counterparty.set_test(world["fake"], True, actor=world["supply"])
     client = api(world["supply"])
-    ids = lambda query: {row["id"] for row in _results(client.get(f"/api/v1/crm/deals/{query}"))}  # noqa: E731
+
+    def ids(query: str) -> set:
+        return {row["id"] for row in _results(client.get(f"/api/v1/crm/deals/{query}"))}
+
     assert ids("") == {real.pk}
     assert ids("?test=only") == {fake.pk}
     assert ids("?test=all") == {real.pk, fake.pk}
@@ -128,7 +131,10 @@ def test_organizations_list_has_the_test_filter(world):
     counterparty.set_test(world["fake"], True, actor=world["supply"])
     Deal.objects.create(title="Связь", company=world["fake"], stage=DealStage.objects.get(code="DRAFT"))
     client = api(world["supply"])
-    names = lambda query: {row["name"] for row in _results(client.get(f"{URL}{query}"))}  # noqa: E731
+
+    def names(query: str) -> set:
+        return {row["name"] for row in _results(client.get(f"{URL}{query}"))}
+
     assert "ООО Пробная Компания" not in names("")
     assert names("?test=only") == {"ООО Пробная Компания"}
     assert "ООО Пробная Компания" in names("?test=all")
@@ -176,9 +182,10 @@ def test_supply_queue_and_orders_skip_test_companies(world):
         return SupplierOrder.objects.get(pk=made.json()["id"])
 
     real_order, fake_order = order(world["vendor"]), order(world["silent"])
-    ids = lambda: {
-        row["id"] for row in supply_tasks.supply_tasks(world["supply"]) if row["kind"] == "send_order"
-    }  # noqa: E731
+
+    def ids() -> set:
+        return {row["id"] for row in supply_tasks.supply_tasks(world["supply"]) if row["kind"] == "send_order"}
+
     assert ids() == {real_order.pk, fake_order.pk}
     counterparty.set_test(world["silent"], True, actor=world["supply"])
     assert ids() == {real_order.pk}
@@ -195,7 +202,10 @@ def test_the_calc_registry_skips_test_companies(world):
     for company, title in ((world["real"], "Рабочая"), (world["fake"], "Пробная")):
         deal = _deal(company, title)
         CalcTask.objects.create(deal=deal, resolution_text="Рассчитать", due=date.today(), decided_at=timezone.now())
-    total = lambda: calculation.list_tasks_page(world["supply"], state="all")[1]  # noqa: E731
+
+    def total() -> int:
+        return calculation.list_tasks_page(world["supply"], state="all")[1]
+
     assert total() == 2
     counterparty.set_test(world["fake"], True, actor=world["supply"])
     assert total() == 1
