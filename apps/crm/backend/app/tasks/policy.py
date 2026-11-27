@@ -80,6 +80,8 @@ POLICIES: Final[dict[str, JobPolicy]] = {
     "extract_document_text": _idem(1800),
     "ingest_kb_document": _idem(1800),
     "rt_bus.process_inbox": _idem(),
+    # загрузка писем за период идемпотентна (дубль ловит UNIQUE message_id)
+    "inbound_mail_history": _idem(1800),
     # повтор опасен: сообщения людям, письма, платные вызовы моделей, пользовательская загрузка
     "send_email": _once(),
     "deliver_client_notice": _once(),
@@ -92,7 +94,6 @@ POLICIES: Final[dict[str, JobPolicy]] = {
     "sync_escalation_post": _once(),
     "web_lead_sla_check": _once(),
     "qualify_lead": _once(900),
-    "inbound_mail_history": _once(1800),
 }
 
 

@@ -11,14 +11,16 @@
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
+from typing import Any, Final
 
 import structlog
 from procrastinate import jobs
 from procrastinate.manager import JobManager
 
+from app.container import get_container
 from app.tasks.policy import Kind, policy_of
 from app.tasks.queue import queue
+from app.tasks.stalled_hooks import HOOKS, Sessions
 
 logger = structlog.get_logger(__name__)
 
@@ -56,12 +58,26 @@ async def _started_at(manager: JobManager, ids: Sequence[int]) -> Mapping[int, d
     return {int(r["job_id"]): r["at"] for r in rows}
 
 
+async def _run_hook(
+    task_name: str, kwargs: dict[str, Any], job_id: int, sessions: Sessions | None
+) -> None:
+    """Строка предметной области получает правдивый статус; сбой хука не мешает снять остальные."""
+    hook = HOOKS.get(task_name)
+    if hook is None:
+        return
+    try:
+        await hook(sessions or get_container().session_factory, kwargs)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("stalled_hook_failed", task=task_name, job_id=job_id, error=type(exc).__name__)
+
+
 async def recover_stalled_jobs(
     manager: JobManager,
     *,
     now: datetime | None = None,
     started_at: StartedAt | None = None,
     heartbeat_timeout_s: float = HEARTBEAT_TIMEOUT_S,
+    sessions: Sessions | None = None,
 ) -> list[Recovered]:
     """Снять зависшие задачи; безопасно вызывать часто и из нескольких воркеров."""
     now = now or datetime.now(UTC)
@@ -83,6 +99,7 @@ async def recover_stalled_jobs(
             await manager.retry_job_by_id_async(job_id, retry_at=now)
         else:
             await manager.finish_job_by_id_async(job_id, jobs.Status.FAILED, delete_job=False)
+            await _run_hook(job.task_name, job.task_kwargs, job_id, sessions)
         began = started.get(job_id)
         age = (now - began).total_seconds() if began else None
         out.append(Recovered(job_id, job.task_name, action, age))

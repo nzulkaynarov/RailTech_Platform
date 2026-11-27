@@ -97,3 +97,42 @@ async def test_the_status_counter_returns_to_zero_after_recovery(
         await recover_stalled_jobs(queue.job_manager)
 
     assert await _stalled(sessions) == 0
+
+
+async def test_recovery_runs_the_domain_hook_of_a_non_idempotent_job(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.models.notices import ClientNotice
+    from tests.integration.crm_helpers import escalated_lead
+
+    lead_id = await escalated_lead(sessions)
+    async with sessions() as session, session.begin():
+        notice = ClientNotice(
+            kind="web_confirmation", lead_id=lead_id, channel="telegram", status="queued"
+        )
+        session.add(notice)
+        await session.flush()
+        notice_id = notice.id
+        worker = await session.execute(
+            text(
+                "INSERT INTO procrastinate_workers (last_heartbeat) "
+                "VALUES (now() - interval '1 day') RETURNING id"
+            )
+        )
+        await session.execute(
+            text(
+                "INSERT INTO procrastinate_jobs (queue_name, task_name, status, args, worker_id) "
+                "VALUES ('notify', 'deliver_client_notice', 'doing', "
+                "jsonb_build_object('notice_id', CAST(:n AS int)), :w)"
+            ),
+            {"n": notice_id, "w": worker.scalar_one()},
+        )
+
+    async with queue.open_async():
+        recovered = await recover_stalled_jobs(queue.job_manager, sessions=sessions)
+
+    assert [(r.task, r.action) for r in recovered] == [("deliver_client_notice", "failed")]
+    async with sessions() as session:
+        row = await session.get(ClientNotice, notice_id)
+    assert row is not None
+    assert (row.status, row.error) == ("failed", "interrupted")

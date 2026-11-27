@@ -69,3 +69,12 @@ async def test_a_fast_job_passes_through() -> None:
 
     context = SimpleNamespace(job=SimpleNamespace(task_name="inbound_mail_poll", id=1))
     assert await policy.enforce_timeout(fast, context, None) == "done"
+
+
+def test_every_once_task_has_a_stall_hook_or_a_reason_without_a_domain_row() -> None:
+    from app.tasks.stalled_hooks import HOOKS, NO_DOMAIN_ROW
+
+    once = {n for n, p in policy.POLICIES.items() if p.kind is policy.Kind.ONCE}
+    assert set(HOOKS) | set(NO_DOMAIN_ROW) == once
+    assert not set(HOOKS) & set(NO_DOMAIN_ROW)
+    assert all(NO_DOMAIN_ROW[n].strip() for n in NO_DOMAIN_ROW)
