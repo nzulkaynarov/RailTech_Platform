@@ -342,7 +342,8 @@
     "reason_unknown": "Röyxatdan sababni tanlang.",
     "comment_required": "Izoh kiriting.",
     "request_not_closable": "Arizani endi yopib bölmaydi: u yopilgan yoki loyihaga aylangan.",
-    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang."
+    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang.",
+    "offer_not_available": "Hamkor narxi endi amal qilmaydi: boşqasini tanlang yoki narx sörang."
   },
   "load": {
     "retry": "Qayta uriniş",
@@ -407,5 +408,18 @@
     "client": "Mijoz",
     "stage": "Qadam",
     "textRequest": "Mijoz arizasi"
+  },
+  "partner": {
+    "source": "{{name}} hamkorning narxi {{from}} dan, {{until}} gaça amal qiladi",
+    "sourceOpen": "{{name}} hamkorning narxi {{from}} dan",
+    "expiring": "tezda tugaydi",
+    "stale": "uzoq vaqt tasdiqlanmagan",
+    "pick": "Boşqa narx",
+    "pickLabel": "«{{name}}» uçun hamkor narxi",
+    "option": "{{name}} · {{price}} · {{until}} gaça",
+    "noDate": "muddatsiz",
+    "expired": "{{name}} hamkorning narxi {{until}} da tugagan.",
+    "none": "Hamkor narxi yoq.",
+    "request": "Narx söraş"
   }
 }

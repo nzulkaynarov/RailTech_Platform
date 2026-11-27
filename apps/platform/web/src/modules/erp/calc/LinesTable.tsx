@@ -313,7 +313,93 @@ function Supplier({ line }: { line: CalcLine }) {
   );
 }
 
-function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
+/** РАСЧ-1: откуда закупка — цена партнёра (от какой даты, до какой), выбор другой цены из короткого списка и «Запросить
+ *  цену», когда действующей нет (истёкшая цена молча не берётся). */
+function PartnerSource({
+  line,
+  actions,
+  onRequestPrice,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  onRequestPrice?: () => void;
+}) {
+  const { t } = useTranslation("calc");
+  const { date, money } = useFormat();
+  const part = line.partner_price;
+  if (!part || line.zone === "services") return null;
+  const source = part.source;
+  const alternatives = part.options.length > 1;
+  return (
+    <div className="pf-calc-partner-source" data-testid="partner-source">
+      {source ? (
+        <span className="pf-hint">
+          {source.valid_until
+            ? t("partner.source", {
+                name: source.supplier,
+                from: date(source.price_date),
+                until: date(source.valid_until),
+              })
+            : t("partner.sourceOpen", { name: source.supplier, from: date(source.price_date) })}
+          {source.freshness === "expiring" ? ` · ${t("partner.expiring")}` : null}
+          {source.freshness === "stale" ? ` · ${t("partner.stale")}` : null}
+        </span>
+      ) : null}
+      {alternatives && line.can_edit ? (
+        <Select
+          size="small"
+          aria-label={t("partner.pickLabel", { name: line.name })}
+          placeholder={t("partner.pick")}
+          value={source?.offer_id ?? null}
+          disabled={actions.pending}
+          popupMatchSelectWidth={false}
+          optionLabelProp="short"
+          options={part.options.map((option) => ({
+            value: option.offer_id,
+            short: option.supplier,
+            label: t("partner.option", {
+              name: option.supplier,
+              price: money(option.price, { currency: option.currency }),
+              until: option.valid_until ? date(option.valid_until) : t("partner.noDate"),
+            }),
+          }))}
+          onChange={(offerId: string) => {
+            if (offerId !== source?.offer_id) actions.patch(line, { offer_id: offerId });
+          }}
+          className="pf-calc-partner-pick"
+        />
+      ) : null}
+      {!source && part.can_request ? (
+        <span className="pf-hint">
+          {part.expired
+            ? t("partner.expired", {
+                name: part.expired.supplier,
+                until: date(part.expired.valid_until),
+              })
+            : t("partner.none")}
+          {onRequestPrice && line.can_edit ? (
+            <>
+              {" "}
+              <Button type="link" size="small" onClick={onRequestPrice}>
+                {t("partner.request")}
+              </Button>
+            </>
+          ) : null}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function Purchase({
+  line,
+  actions,
+  onRequestPrice,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  onRequestPrice?: () => void;
+}) {
   const { t, i18n } = useTranslation("calc");
   const currencies = useCurrencyCodes();
   if (line.zone === "services") {
@@ -394,6 +480,7 @@ function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
       ) : (
         <span className="pf-hint">{currencyLabel(currency, i18n.language)}</span>
       )}
+      <PartnerSource line={line} actions={actions} onRequestPrice={onRequestPrice} />
     </div>
   );
 }
@@ -589,7 +676,13 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
  * клиенту · наценка · виза. Правит строку тот, у кого право её зоны (`can_edit`): товар — снабженец, услуга —
  * гл. инженер (ставка бригады и дни). Себестоимость и наценка — только при `rights.cost`. На телефоне — карточки.
  */
-export function LinesTable({ sheet }: { sheet: CalcSheet }) {
+export function LinesTable({
+  sheet,
+  onRequestPrice,
+}: {
+  sheet: CalcSheet;
+  onRequestPrice?: () => void;
+}) {
   const { t } = useTranslation("calc");
   const { mobile } = useViewport();
   const actions = useLineActions(sheet);
@@ -638,7 +731,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <span className="pf-hint">{t("lines.columns.supplier")}</span>
                 <Supplier line={line} />
                 <span className="pf-hint">{t("lines.columns.purchase")}</span>
-                <Purchase line={line} actions={actions} />
+                <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 <span className="pf-hint">{t("lines.columns.client")}</span>
                 <ClientPrice line={line} actions={actions} />
                 {showMarkup ? (
@@ -710,7 +803,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                   <Supplier line={line} />
                 </td>
                 <td className="pf-col-num">
-                  <Purchase line={line} actions={actions} />
+                  <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 </td>
                 <td className="pf-col-num">
                   <ClientPrice line={line} actions={actions} />

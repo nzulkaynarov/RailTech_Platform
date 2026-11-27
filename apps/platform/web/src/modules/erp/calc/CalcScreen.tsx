@@ -417,7 +417,16 @@ function Content({ sheet }: { sheet: CalcSheet }) {
             }
             styles={{ body: { padding: 0 } }}
           >
-            <LinesTable sheet={sheet} />
+            <LinesTable
+              sheet={sheet}
+              onRequestPrice={
+                editable && sheet.rights.stock === true
+                  ? () => {
+                      openForm("price");
+                    }
+                  : undefined
+              }
+            />
             <Ready sheet={sheet} />
           </Card>
         )}

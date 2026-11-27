@@ -342,7 +342,8 @@
     "reason_unknown": "Pick a reason from the list.",
     "comment_required": "Enter a comment.",
     "request_not_closable": "The request can no longer be closed: it is closed or became a project.",
-    "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason."
+    "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason.",
+    "offer_not_available": "The partner price is no longer valid: pick another or request a price."
   },
   "load": {
     "retry": "Retry",
@@ -407,5 +408,18 @@
     "client": "Client",
     "stage": "Step",
     "textRequest": "Client request"
+  },
+  "partner": {
+    "source": "Partner {{name}} price from {{from}}, valid until {{until}}",
+    "sourceOpen": "Partner {{name}} price from {{from}}",
+    "expiring": "expires soon",
+    "stale": "not confirmed for a long time",
+    "pick": "Another price",
+    "pickLabel": "Partner price for “{{name}}”",
+    "option": "{{name}} · {{price}} · until {{until}}",
+    "noDate": "no end date",
+    "expired": "Partner {{name}} price expired on {{until}}.",
+    "none": "No partner price.",
+    "request": "Request a price"
   }
 }

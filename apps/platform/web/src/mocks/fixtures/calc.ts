@@ -26,6 +26,20 @@ export interface MockLine {
     offerPrice: string;
   } | null;
   leadDays: number | null;
+  /** РАСЧ-1: цены партнёров по карточке строки (мок BFF); `offerId` — по какой взята закупка (null — введена руками). */
+  partner?: {
+    offerId: number | null;
+    options: {
+      id: number;
+      supplier: string;
+      price: number;
+      currency: string;
+      priceDate: string;
+      validUntil: string | null;
+      freshness: "ok" | "expiring" | "stale";
+    }[];
+    expired?: { supplier: string; validUntil: string } | null;
+  };
   purchase: number;
   /** Валюта закупки строки; нет — сумы. */
   currency?: string;
@@ -248,6 +262,29 @@ export function seedCalcs(): MockCalc[] {
             offerPrice: "90000000.00",
           },
           leadDays: 45,
+          partner: {
+            offerId: 11,
+            options: [
+              {
+                id: 11,
+                supplier: "ООО «Вымышленная Сталь»",
+                price: 90_000_000,
+                currency: "UZS",
+                priceDate: "2026-11-20",
+                validUntil: "2026-12-31",
+                freshness: "ok",
+              },
+              {
+                id: 12,
+                supplier: "ООО «Демо Металл»",
+                price: 7_900,
+                currency: "USD",
+                priceDate: "2026-11-24",
+                validUntil: "2026-12-15",
+                freshness: "ok",
+              },
+            ],
+          },
           purchase: 90_000_000,
           crewRate: null,
           crewDays: null,

@@ -70,6 +70,7 @@ const KNOWN = new Set([
   "quote_not_draft",
   "line_incomplete",
   "purchase_required",
+  "offer_not_available",
   "client_price_below_cost",
   "markup_out_of_range",
   "zone_not_permitted",

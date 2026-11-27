@@ -233,6 +233,32 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           ...(offers ? { offer_price: line.supplier.offerPrice, offer_currency: "UZS" } : {}),
         }
       : null,
+    partner_price:
+      offers && line.partner && zone === "goods"
+        ? (() => {
+            const options = line.partner.options.map((o) => ({
+              offer_id: String(o.id),
+              supplier: o.supplier,
+              price: money(o.price),
+              currency: o.currency,
+              price_date: o.priceDate,
+              valid_until: o.validUntil,
+              freshness: o.freshness,
+              chosen: o.id === line.partner?.offerId,
+            }));
+            return {
+              source: options.find((o) => o.chosen) ?? null,
+              options,
+              expired: line.partner.expired
+                ? {
+                    supplier: line.partner.expired.supplier,
+                    valid_until: line.partner.expired.validUntil,
+                  }
+                : null,
+              can_request: options.length === 0,
+            };
+          })()
+        : null,
     lead_days: line.leadDays,
     crew_rate: zoneCost && line.crewRate !== null ? money(line.crewRate) : null,
     crew_days: zoneCost && line.crewDays !== null ? line.crewDays.toFixed(1) : null,
@@ -825,7 +851,19 @@ export const erpCalcHandlers = [
       line.unitCode = patch.unit_code;
       line.unit = unit;
     }
-    if (patch.purchase_price !== undefined) line.purchase = Number(patch.purchase_price);
+    if (patch.offer_id !== undefined) {
+      const option = line.partner?.options.find((o) => String(o.id) === patch.offer_id);
+      if (!option || !line.partner) {
+        return conflict("offer_not_available", "Цена партнёра уже не действует.");
+      }
+      line.partner.offerId = option.id;
+      line.purchase = option.price;
+      line.currency = option.currency;
+    }
+    if (patch.purchase_price !== undefined) {
+      line.purchase = Number(patch.purchase_price);
+      if (line.partner) line.partner.offerId = null;
+    }
     if (patch.purchase_currency) line.currency = patch.purchase_currency;
     if (patch.crew_rate !== undefined)
       line.crewRate = patch.crew_rate === null ? null : Number(patch.crew_rate);

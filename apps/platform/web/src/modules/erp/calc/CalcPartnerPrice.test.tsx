@@ -1,0 +1,82 @@
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { patchCalcMock } from "../../../mocks/erpCalc";
+import { seedCalcs } from "../../../mocks/fixtures/calc";
+import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
+
+setupCalcTests();
+
+const NUMBER = "ЗВ-2026-097";
+const PATH = `/erp/calc/${encodeURIComponent(NUMBER)}`;
+const RAIL = "Перевод стрелочный Р65 марки 1/11";
+
+async function openCalc(email: string) {
+  signIn(email);
+  renderAt(PATH);
+  expect(
+    await screen.findByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
+  ).toBeVisible();
+}
+
+function lineRow(name: string): HTMLElement {
+  const table = screen.getByRole("table", { name: `Строки расчёта по заявке ${NUMBER}` });
+  const tr = within(table).getAllByText(name)[0]?.closest("tr");
+  if (!tr) throw new Error(`нет строки ${name}`);
+  return tr;
+}
+
+describe("Расчёт · закупка по цене партнёра (РАСЧ-1)", () => {
+  it("снабженец видит, чья цена стоит в закупке, от какой даты и до какой она действует", async () => {
+    await openCalc("supply@demo.example");
+    const source = within(lineRow(RAIL)).getByTestId("partner-source");
+    expect(source).toHaveTextContent(
+      /Цена партнёра ООО «Вымышленная Сталь» от .*20.*действует до .*31/,
+    );
+  });
+
+  it("другую цену выбирают из короткого списка — закупка и валюта строки меняются", async () => {
+    await openCalc("supply@demo.example");
+    const row = within(lineRow(RAIL));
+    fireEvent.mouseDown(row.getByRole("combobox", { name: `Цена партнёра для «${RAIL}»` }));
+    fireEvent.click(await screen.findByText(/ООО «Демо Металл» · .*до/));
+    await waitFor(() => {
+      expect(within(lineRow(RAIL)).getByTestId("partner-source")).toHaveTextContent(
+        /Цена партнёра ООО «Демо Металл»/,
+      );
+    });
+    const purchase = within(lineRow(RAIL)).getByRole("spinbutton", {
+      name: `Закупка за единицу для «${RAIL}»`,
+    });
+    expect((purchase as HTMLInputElement).value).toMatch(/^7\s900/);
+  });
+
+  it("действующей цены нет, есть истёкшая: она не берётся молча, предлагается «Запросить цену»", async () => {
+    const calc = seedCalcs().find((c) => c.number === NUMBER);
+    if (!calc) throw new Error("нет расчёта");
+    const lines = calc.lines.map((l) =>
+      l.name === RAIL
+        ? {
+            ...l,
+            purchase: 0,
+            partner: {
+              offerId: null,
+              options: [],
+              expired: { supplier: "ООО «Вымышленная Сталь»", validUntil: "2026-11-10" },
+            },
+          }
+        : l,
+    );
+    patchCalcMock(NUMBER, { lines });
+    await openCalc("supply@demo.example");
+    const source = within(lineRow(RAIL)).getByTestId("partner-source");
+    expect(source).toHaveTextContent(/Цена партнёра ООО «Вымышленная Сталь» истекла .*10/);
+    expect(within(source).getByRole("button", { name: "Запросить цену" })).toBeVisible();
+  });
+
+  it("гл. инженер и бухгалтер цен партнёров не видят", async () => {
+    await openCalc("engineer@demo.example");
+    expect(screen.queryByTestId("partner-source")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Демо Металл/)).not.toBeInTheDocument();
+  });
+});
