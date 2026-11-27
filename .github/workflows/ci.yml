@@ -121,12 +121,14 @@ jobs:
               - 'packages/contracts/examples/pairing-bootstrap.json'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
+              - 'packages/contracts/client-request-statuses.yaml'
             # Cabinet: портальный API ERP (типы из erp-portal.yaml) и форма лида CRM (src/api/crm-form.d.ts из crm.yaml).
             cabinet:
               - 'apps/cabinet/**'
               - 'packages/ui-tokens/**'
               - 'packages/contracts/openapi/erp-portal.yaml'
               - 'packages/contracts/openapi/crm.yaml'
+              - 'packages/contracts/client-request-statuses.yaml'
             # Платформа: BFF строится по своему OpenAPI, модели CRM — из crm.yaml (app/clients/crm_models.py), клиент EDS —
             # по eds.yaml, роли — из platform-rbac.yaml (+ схема, генератор gen_rbac.py), токены — из ui-tokens. BFF — подписчик
             # шины (B5): rt-bus, схемы событий и подписки читаются тестами и входят в образ. client-statuses.yaml Платформа
@@ -141,6 +143,7 @@ jobs:
               - 'packages/contracts/platform-rbac*'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
+              - 'packages/contracts/client-request-statuses.yaml'
               # справка формата базы знаний: docs/kb копируется в web (pnpm kb:sync), тест kbDocs сверяет копию с источником
               - 'docs/kb/**'
             # EDS (волна 12): сервис — подписчик и издатель шины; контракт eds.yaml сверяется тестом, события и подписки читает
