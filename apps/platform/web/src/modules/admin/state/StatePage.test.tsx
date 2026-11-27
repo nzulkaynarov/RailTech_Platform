@@ -49,12 +49,23 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     ).toEqual(["Люди и доступ", "Компания", "Правила работы", "Каналы и подключения", "Журнал"]);
   });
 
-  it("внешняя проверка доступности — «не подключена», а не выдуманное «работает»", async () => {
+  it("постоянной строки «Внешняя проверка доступности — не подключена» нет (Л-06): служба показывает только проверенное", async () => {
     await openState("admin@demo.example");
     const services = await screen.findByRole("region", { name: "Службы" });
-    const row = within(services).getByText("Внешняя проверка доступности").closest("li");
-    expect(row).toHaveTextContent("не подключена");
-    expect(row).toHaveTextContent("сообщение владельцу при сбое не придёт");
+    expect(within(services).queryByText("Внешняя проверка доступности")).toBeNull();
+    expect(within(services).queryByText(/не придёт/)).toBeNull();
+  });
+
+  it("строка «ИИ» — про модели и ключи, а не про бюджет; «Файлы и копии» — карточка хранилища (Л-02, Л-03)", async () => {
+    await openState("admin@demo.example");
+    const services = await screen.findByRole("region", { name: "Службы" });
+    const ai = (await within(services).findByText("Модели ИИ")).closest("li") as HTMLElement;
+    expect(ai).toHaveTextContent("шлюз и ключи моделей, не бюджет");
+    const files = within(services)
+      .getByText("Файлы и резервные копии")
+      .closest("li") as HTMLElement;
+    expect(files).toHaveTextContent("файлы и резервные копии");
+    expect(within(services).queryByText("Резервные копии")).toBeNull();
   });
 
   it("строка «Требует внимания» — из факта: полномочие подписи истекает → строка; нет такого полномочия → строки нет", async () => {
@@ -117,16 +128,18 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     const text = items.map((li) => li.textContent);
     expect(text.some((t) => /Бланк компании/.test(t))).toBe(true);
     expect(text.some((t) => /Адрес поддержки/.test(t))).toBe(true);
-    // строки без проверки службы (администратор, компания) остаются «заполнено», а не «работает»
+    // строки без проверки службы (администратор, компания) — «Готово», а «Работает» не пишут: связи у них нет
     const admin = items.find((li) => /Администратор/.test(li.textContent));
-    expect(admin).toHaveTextContent("заполнено");
-    expect(admin).not.toHaveTextContent("работает");
+    expect(admin).toHaveTextContent("Готово");
+    expect(admin).not.toHaveTextContent("Работает");
+    // бланк и адрес поддержки не входят в счёт «N из M» — он тот же, что в «Первом запуске» (Л-08)
+    expect(text.find((t) => /Бланк компании/.test(t))).toContain("не входит в счёт");
   });
 
   it("директор читает состояние: сбои и службы есть; шагов первого запуска и пункта «Каналы и подключения» нет, бланк и адрес поддержки — есть", async () => {
     await openState("director@demo.example");
     expect(await attention()).toBeVisible();
-    const ready = await screen.findByRole("region", { name: /^Готовность · \d+ из \d+$/ });
+    const ready = await screen.findByRole("region", { name: "Готовность" });
     expect(within(ready).queryByRole("link", { name: "Продолжить настройку" })).toBeNull();
     expect(within(ready).queryByText("Администратор")).toBeNull();
     expect(await within(ready).findByText("Бланк компании")).toBeVisible();
@@ -181,26 +194,17 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     );
   });
 
-  it("зоны без ответственного (ЕВ-З): N > 0 → строка с кнопкой «Зоны ответственности»; N = 0 → строки нет", async () => {
-    const summary = (without: number) =>
+  it("зоны ничего не направляют — строки «Зон без ответственного … некому взять» в «Требует внимания» нет (Л-10)", async () => {
+    server.use(
       http.get("*/admin/responsibility-zones/summary", () =>
-        HttpResponse.json({ zones_total: 5, without_responsible: without, with_problems: 0 }),
-      );
-    server.use(summary(2));
-    await openState("admin@demo.example");
-    const row = (await within(await attention()).findByText("Зон без ответственного: 2")).closest(
-      "li",
-    ) as HTMLElement;
-    expect(
-      within(row).getByRole("link", { name: "Открыть «Зоны ответственности»" }),
-    ).toHaveAttribute("href", "/admin/zones");
-    cleanup();
-
-    server.use(summary(0));
+        HttpResponse.json({ zones_total: 5, without_responsible: 2, with_problems: 0 }),
+      ),
+    );
     await openState("admin@demo.example");
     await attention();
     await screen.findByRole("region", { name: "Службы" });
     expect(screen.queryByText(/Зон без ответственного/)).toBeNull();
+    expect(screen.queryByText(/некому взять/)).toBeNull();
   });
 
   it("⚙ из других модулей (`?group=`) ведёт на первую страницу группы, а не на «Состояние»", async () => {

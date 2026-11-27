@@ -23,7 +23,9 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { StatusStrip } from "../../../shared/ui/StatusStrip";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { isReady } from "../../../entities/status/facts";
 import { useGetSetupCabinet } from "../../../shared/api/generated/platform-bff";
 import { CabinetAddress } from "../integrations/CabinetAddress";
 import { CompanyStep } from "./CompanyStep";
@@ -130,6 +132,7 @@ export function SetupWizardPage() {
 
 function SetupWizard() {
   const { t } = useTranslation("modules");
+  const { t: tInt } = useTranslation("integrations");
   const { message } = App.useApp();
   const { me } = useAuth();
   const navigate = useNavigate();
@@ -212,7 +215,7 @@ function SetupWizard() {
   const rechecking = waitingErp && rechecks < ERP_RECHECK.attempts;
 
   let body: ReactNode;
-  if (checklist.isPending) {
+  if (checklist.isPending || (checklist.data && setup.overview.isPending)) {
     body = <Skeleton active paragraph={{ rows: 8 }} title={false} />;
   } else if (checklist.isError) {
     body = (
@@ -235,11 +238,12 @@ function SetupWizard() {
   } else {
     const data = checklist.data;
     const erpStep = data.steps.find((s) => s.key === "erp");
+    const erpVisible = setup.steps.find((s) => s.key === "erp");
     // Шестая карточка — свои строки и свой счётчик (СЦ-3): бот, почта, модели, первый сотрудник, права подписи.
     const otherSteps = setup.steps.filter((s) =>
       ["bot", "mail", "models", "first_employee", "signing"].includes(s.key),
     );
-    const otherDone = otherSteps.filter((s) => s.state === "done").length;
+    const otherDone = otherSteps.filter((s) => isReady(s.verdict)).length;
     body = (
       <div className="pf-setup-stack">
         <StepCard
@@ -255,9 +259,13 @@ function SetupWizard() {
         <StepCard
           title={t("admin.setup.erpTitle")}
           status={
-            <StatusTag kind="setupStep" status={erpStep?.state ?? "unknown"}>
-              {t(`admin.setup.state.${erpStep?.state ?? "unknown"}`)}
-            </StatusTag>
+            erpVisible?.fact && erpVisible.state === "done" ? (
+              <StatusStrip fact={erpVisible.fact} scope={tInt("cards.erp.scope")} />
+            ) : (
+              <StatusTag kind="setupStep" status={erpStep?.state ?? "unknown"}>
+                {t(`admin.setup.state.${erpStep?.state ?? "unknown"}`)}
+              </StatusTag>
+            )
           }
         >
           <ErpStep step={erpStep} />
@@ -305,7 +313,7 @@ function SetupWizard() {
           }
         >
           <p className="pf-hint" style={{ margin: "0 0 4px" }}>
-            {otherSteps.every((s) => s.state === "done")
+            {otherSteps.every((s) => isReady(s.verdict))
               ? t("admin.setup.allDone")
               : t("admin.setup.connectionsLead")}
           </p>

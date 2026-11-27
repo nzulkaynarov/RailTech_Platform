@@ -70,7 +70,9 @@ test.describe("ЕВ-З · Зоны ответственности", () => {
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin");
-    await expect(page.getByText(/Зон без ответственного: 9/)).toBeVisible();
+    // НАСТ-П1 (Л-10): зоны ничего не направляют — «Состояние» не пугает «некому взять», строки про зоны там нет
+    await expect(page.getByRole("heading", { level: 1, name: "Состояние" })).toBeVisible();
+    await expect(page.getByText(/Зон без ответственного/)).toHaveCount(0);
     await shoot(page, "zones-settings-signal");
 
     await spaGoto(page, "/admin/zones");

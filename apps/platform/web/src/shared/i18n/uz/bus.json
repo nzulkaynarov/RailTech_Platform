@@ -12,7 +12,8 @@
     "pending": "Yuborişni kutmoqda",
     "paused": "Pauzadagi obunaçilar",
     "inboxFailed": "Qayta işlaş xatolari",
-    "source": "CRM, ERP va EDS"
+    "source": "CRM, ERP va EDS",
+    "sourcePartial": "Faqat {{list}}: qolganlari javob bermadi"
   },
   "domains": {
     "crm": "CRM",
@@ -113,7 +114,11 @@
       "text": "Barça hodisalar obunaçilarga yetib bordi yoki şina jadvali böyiça hali takrorlanmoqda."
     },
     "more": "Yana körsatiş",
-    "line": "{{time}} · {{domain}} → {{subscriber}} · urinişlar {{attempts}}"
+    "line": "{{time}} · {{domain}} → {{subscriber}} · urinişlar {{attempts}}",
+    "partialEmpty": {
+      "title": "Tekşirib bölmadi",
+      "text": "Baʼzi tizimlar javob bermadi, şuning uçun röyxat töliq bölmasligi mümkin. «Yangilaş»ni bosing."
+    }
   },
   "inboxView": {
     "caption": "Qayta işlaş xato bilan tugagan qabul qilingan hodisalar",
@@ -132,7 +137,11 @@
       "title": "Qayta işlaş xatolari yöq",
       "text": "CRM, ERP va EDS qabul qilgan barça hodisalar qayta işlangan. Işlov beruvçi xato qilsa, hodisa şu yerda paydo böladi."
     },
-    "line": "{{time}} · {{publisher}} dan {{domain}} ga · urinişlar {{attempts}}"
+    "line": "{{time}} · {{publisher}} dan {{domain}} ga · urinişlar {{attempts}}",
+    "partialEmpty": {
+      "title": "Tekşirib bölmadi",
+      "text": "Baʼzi tizimlar javob bermadi, şuning uçun röyxat töliq bölmasligi mümkin. «Yangilaş»ni bosing."
+    }
   },
   "panel": {
     "deliveryTitle": "Yetkaziş {{id}} · {{domain}}",

@@ -9,13 +9,13 @@ import type {
 import {
   blankRows,
   busLine,
+  busRows,
+  unavailableRows,
   fxRows,
   ordered,
-  readinessState,
   serviceRows,
   signingRows,
   ticketRows,
-  zoneRows,
 } from "./model";
 
 /** «Состояние» (ЕВ-2а): строка «Требует внимания» выводится из факта — правим факт и ждём, что строка появится или уйдёт. */
@@ -166,11 +166,26 @@ describe("службы", () => {
   });
 });
 
-describe("зоны без ответственного", () => {
-  it("строка только если такие зоны есть; ведёт на «Зоны ответственности»", () => {
-    expect(zoneRows(0)).toEqual([]);
-    expect(zoneRows(2)).toMatchObject([
-      { kind: "zones", to: "/admin/zones", page: "zones", params: { count: 2 } },
+describe("не ответило — не «проблем нет»", () => {
+  it("список недоступных источников — одна строка с их названиями; пусто — строки нет", () => {
+    expect(unavailableRows([])).toEqual([]);
+    expect(unavailableRows(["службы", "курс валют"])).toMatchObject([
+      { kind: "unavailable", severity: "warn", params: { list: "службы, курс валют" } },
+    ]);
+  });
+
+  it("обмен: строка только при недоставленном; «не удалось проверить» — строка выше", () => {
+    const fact = (state: "works" | "broken" | "unknown") => ({
+      state,
+      checked_at: null,
+      source: "check" as const,
+      live: false,
+    });
+    expect(busRows(fact("works"), 0)).toEqual([]);
+    expect(busRows(fact("unknown"), 0)).toEqual([]);
+    expect(busRows(undefined, 3)).toEqual([]);
+    expect(busRows(fact("broken"), 3)).toMatchObject([
+      { kind: "busDead", severity: "fail", to: "/admin/bus?view=dlq", params: { count: 3 } },
     ]);
   });
 });
@@ -188,19 +203,5 @@ describe("обращения и обмен", () => {
         { outbox_pending: 1, dlq_size: 4 },
       ]),
     ).toEqual({ queued: 3, dead: 4 });
-  });
-});
-
-describe("готовность: «заполнено» и «работает» — разные факты", () => {
-  it.each([
-    ["done", "ok", "works"],
-    ["done", "fail", "broken"],
-    ["done", "warn", "broken"],
-    ["done", undefined, "filled"],
-    ["done", "unknown", "filled"],
-    ["todo", "ok", "todo"],
-    ["unknown", undefined, "unknown"],
-  ] as const)("шаг %s, проверка службы %s → %s", (step, card, expected) => {
-    expect(readinessState(step, card)).toBe(expected);
   });
 });

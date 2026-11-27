@@ -28,35 +28,43 @@
   "cards": {
     "erp": {
       "title": "ERP",
-      "purpose": "Requests, costing, quotes and stock: link and keys."
+      "purpose": "Requests, costing, quotes and stock: link and keys.",
+      "scope": "connection to calculations"
     },
     "telegram": {
       "title": "Telegram",
-      "purpose": "Customer bot, team channel and bot profile."
+      "purpose": "Customer bot, team channel and bot profile.",
+      "scope": "connection to the bot"
     },
     "mail": {
       "title": "Mail",
-      "purpose": "One sender for emails to staff and clients."
+      "purpose": "One sender for emails to staff and clients.",
+      "scope": "sending and receiving mail"
     },
     "services": {
       "title": "External services",
-      "purpose": "All external services: status, check, switch."
+      "purpose": "All external services: status, check, switch.",
+      "scope": "all external services"
     },
     "models": {
       "title": "AI models",
-      "purpose": "Models and keys: dialogue, search, quality check."
+      "purpose": "Models and keys: dialogue, search, quality check.",
+      "scope": "model gateway and keys, not the budget"
     },
     "spend": {
       "title": "Spend",
-      "purpose": "What AI models cost, and budgets."
+      "purpose": "What AI models cost, and budgets.",
+      "scope": "daily spend and limits"
     },
     "storage": {
       "title": "Storage and backups",
-      "purpose": "Customer files and database backups."
+      "purpose": "Customer files and database backups.",
+      "scope": "files and backups"
     },
     "system": {
       "title": "System status",
-      "purpose": "Database, queues, bot and models: is everything up."
+      "purpose": "Database, queues, bot and models: is everything up.",
+      "scope": "system state"
     }
   },
   "notes": {
@@ -70,7 +78,10 @@
     "bot_not_running": "The bot is not running",
     "budget_near": "Spend is close to the limit",
     "budget_over": "Spend limit exceeded",
-    "no_data": "No data"
+    "no_data": "No data",
+    "not_verified": "Set up, but the connection has not been checked",
+    "stale": "The check is out of date: press Check",
+    "check_failed": "Could not check: the server did not answer"
   },
   "check": {
     "result": "Checked: {{status}}",
@@ -100,7 +111,8 @@
     "botNotRunning": "The bot is not running.",
     "paused": "The service was switched off manually.",
     "budget_over": "Limit exceeded:",
-    "budget_near": "Close to the limit:"
+    "budget_near": "Close to the limit:",
+    "checkFailed": "Could not check: the server did not answer, so it is not known whether this works now."
   },
   "common": {
     "check": "Check",
@@ -709,7 +721,8 @@
       "daemon": "Backup service",
       "daemonValue": {
         "alive": "responds",
-        "down": "not responding"
+        "down": "not responding",
+        "remote": "backups are made on another server; only the result is visible here"
       },
       "error": {
         "bucket_missing": "The backup bucket was not found.",

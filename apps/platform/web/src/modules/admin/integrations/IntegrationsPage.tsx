@@ -1,5 +1,4 @@
 import { Alert, Button, Card, Skeleton } from "antd";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
@@ -10,32 +9,24 @@ import type {
   AttentionItem,
   IntegrationCard,
   IntegrationCardKey,
-  IntegrationStatus,
 } from "../../../shared/api/generated/model";
-import {
-  checkErpConnector,
-  checkExternalService,
-  checkSmtp,
-  listExternalServices,
-  useGetIntegrationsOverview,
-} from "../../../shared/api/generated/platform-bff";
+import { useGetIntegrationsOverview } from "../../../shared/api/generated/platform-bff";
 import { WIZARD_PATH } from "../../../entities/setup/steps";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { StatusStrip } from "../../../shared/ui/StatusStrip";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { AttentionGroupRow } from "./AttentionGroup";
 import { mergeSameCause } from "./attention";
 import { attentionTexts } from "./attentionTexts";
 import { CabinetAddress } from "./CabinetAddress";
-import { integrationErrorText } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
 import { ErpPanel } from "./ErpPanel";
 import { ModelsPanel } from "./ModelsPanel";
-import { LevelTag } from "./parts";
-import { useRefreshIntegrations } from "./refresh";
+import { type CheckOutcome, useCardCheck } from "./useCardCheck";
 import { ServicesPanel } from "./ServicesPanel";
 import { StoragePanel } from "./StoragePanel";
 import { SystemPanel } from "./SystemPanel";
@@ -70,96 +61,11 @@ function isCardKey(value: string | null): value is IntegrationCardKey {
   return value !== null && (CARD_KEYS as readonly string[]).includes(value);
 }
 
-const WORST_ORDER: readonly IntegrationStatus[] = ["fail", "warn", "unknown", "ok", "off"];
-
-function worstOf(levels: readonly IntegrationStatus[]): IntegrationStatus {
-  return WORST_ORDER.find((level) => levels.includes(level)) ?? "unknown";
-}
-
-interface CheckOutcome {
-  level: IntegrationStatus | "error";
-  text: string;
-}
-
-/**
- * «Проверить» на карточке: запускает проверки её сервисов в CRM (реестр внешних сервисов, ADR-0024 CRM) и сразу
- * показывает итог словами. Карточки «Расходы» и «Состояние системы» — отчёты: у них «Обновить».
- */
-function useCardCheck() {
-  const { t } = useTranslation("integrations");
-  const refresh = useRefreshIntegrations();
-  const [running, setRunning] = useState<IntegrationCardKey | null>(null);
-  const [outcomes, setOutcomes] = useState<Partial<Record<IntegrationCardKey, CheckOutcome>>>({});
-
-  const serviceKeys = async (match: (key: string) => boolean): Promise<string[]> => {
-    const list = await listExternalServices();
-    return list.items
-      .filter((service) => service.status !== "off" && match(service.key))
-      .map((service) => service.key);
-  };
-
-  const levels = async (keys: readonly string[]): Promise<IntegrationStatus[]> =>
-    Promise.all(
-      keys.map((key) => checkExternalService(key).then((detail) => detail.service.status)),
-    );
-
-  const run = async (key: IntegrationCardKey): Promise<IntegrationStatus> => {
-    switch (key) {
-      case "erp": {
-        const result = await checkErpConnector();
-        return result.status === "ok" ? "ok" : "warn";
-      }
-      case "mail": {
-        const result = await checkSmtp();
-        return result.authenticated ? "ok" : "warn";
-      }
-      case "telegram":
-        return worstOf(await levels(["telegram"]));
-      case "services":
-        return worstOf(await levels(await serviceKeys(() => true)));
-      case "models":
-        return worstOf(
-          await levels(await serviceKeys((k) => k === "litellm" || k.startsWith("vendor."))),
-        );
-      case "storage":
-        return worstOf(await levels(await serviceKeys((k) => k === "s3" || k === "backup")));
-      default:
-        return "ok";
-    }
-  };
-
-  const start = async (key: IntegrationCardKey) => {
-    setRunning(key);
-    setOutcomes((prev) => ({ ...prev, [key]: undefined }));
-    try {
-      if (key === "spend" || key === "system") {
-        refresh();
-        setOutcomes((prev) => ({ ...prev, [key]: { level: "ok", text: t("check.refreshed") } }));
-        return;
-      }
-      const level = await run(key);
-      setOutcomes((prev) => ({
-        ...prev,
-        [key]: { level, text: t("check.result", { status: t(`status.${level}`) }) },
-      }));
-      refresh();
-    } catch (error) {
-      setOutcomes((prev) => ({
-        ...prev,
-        [key]: { level: "error", text: integrationErrorText(t, error) },
-      }));
-    } finally {
-      setRunning(null);
-    }
-  };
-  return { running, outcomes, start };
-}
-
 function noteText(t: ReturnType<typeof useTranslation>["t"], card: IntegrationCard): string {
   if (card.access === "forbidden") return t("access.forbidden");
   if (card.access === "unavailable") return t("access.unavailable");
-  // «Всё в порядке» не может стоять рядом с бейджем «Нет данных»: состояние неизвестно — так и пишем (W15-G-6).
-  const note = card.note === "all_ok" && card.status === "unknown" ? "no_data" : card.note;
+  // «Всё в порядке» — только у слова «Работает» (аудит Настроек §6.2): BFF уже не шлёт его иначе, экран не доверяет слепо.
+  const note = card.note === "all_ok" && card.fact.state !== "works" ? "no_data" : card.note;
   return t(`notes.${note}`, { count: card.count ?? 0 });
 }
 
@@ -179,7 +85,7 @@ function IntegrationTile({
   onCheck: () => void;
 }) {
   const { t } = useTranslation("integrations");
-  const { date, money } = useFormat();
+  const { money } = useFormat();
   const title = t(`cards.${card.key}.title`);
   const isReport = card.key === "spend" || card.key === "system";
   const usd = (value: number) => money(value, { currency: "USD", fractionDigits: 2 });
@@ -194,25 +100,33 @@ function IntegrationTile({
         <h3 className="pf-int-card-title" id={`pf-int-${card.key}`}>
           {title}
         </h3>
-        <LevelTag level={card.status} />
       </div>
       <p className="pf-int-card-purpose">{t(`cards.${card.key}.purpose`)}</p>
       <p className="pf-int-card-note">{noteText(t, card)}</p>
       {card.key === "spend" && card.amount_usd !== null && card.access === "ok" ? (
         <p className="pf-int-card-note">{t("spendToday", { amount: usd(card.amount_usd) })}</p>
       ) : null}
-      <p className="pf-hint" style={{ margin: 0 }}>
-        {card.last_activity_at
-          ? t("lastActivity", { date: date(card.last_activity_at, "datetime") })
-          : t("noActivity")}
-      </p>
+      {card.access !== "forbidden" ? (
+        <StatusStrip
+          fact={card.fact}
+          scope={t(`cards.${card.key}.scope`)}
+          {...(editable || isReport
+            ? {
+                onCheck,
+                checking: running,
+                checkAria: t(isReport ? "refreshAria" : "checkAria", { title }),
+                ...(isReport ? { checkLabel: t("common.refresh") } : {}),
+              }
+            : {})}
+        />
+      ) : null}
       {outcome ? (
         <Alert
           type={
-            outcome.level === "error" ? "error" : outcome.level === "ok" ? "success" : "warning"
+            outcome.state === "error" ? "error" : outcome.state === "works" ? "success" : "warning"
           }
           showIcon
-          role={outcome.level === "error" ? "alert" : "status"}
+          role={outcome.state === "error" ? "alert" : "status"}
           message={outcome.text}
         />
       ) : null}
@@ -224,16 +138,6 @@ function IntegrationTile({
         >
           {t("open")}
         </LinkButton>
-        {editable || isReport ? (
-          <Button
-            loading={running}
-            aria-label={t(isReport ? "refreshAria" : "checkAria", { title })}
-            disabled={card.access === "forbidden"}
-            onClick={onCheck}
-          >
-            {t(isReport ? "common.refresh" : "common.check")}
-          </Button>
-        ) : null}
       </div>
     </article>
   );

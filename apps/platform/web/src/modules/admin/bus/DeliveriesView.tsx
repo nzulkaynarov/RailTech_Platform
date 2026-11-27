@@ -29,6 +29,7 @@ import {
   mergeSources,
   shortType,
   subscriberName,
+  troubledSources,
 } from "./format";
 import { BusSourcesNote, FilterSelect } from "./parts";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
@@ -152,7 +153,13 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
       />
     );
   } else if (items.length === 0) {
-    const empty = mode === "dlq" && !filtered ? "deliveries.dlqEmpty" : "deliveries.empty";
+    // Домен не ответил — «пусто» неправда: список неполный (НАСТ-П1, Л-37)
+    const empty =
+      troubledSources(sources).length > 0
+        ? "deliveries.partialEmpty"
+        : mode === "dlq" && !filtered
+          ? "deliveries.dlqEmpty"
+          : "deliveries.empty";
     body = (
       <EmptyState
         level={3}

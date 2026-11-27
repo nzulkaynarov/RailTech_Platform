@@ -69,9 +69,11 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(within(tile("Почта")).getByText("Внимание")).toBeVisible();
     expect(within(tile("Модели ИИ")).getByText("Сбой")).toBeVisible();
     expect(within(tile("Внешние сервисы")).getByText("Сбой")).toBeVisible();
+    // подпись равна проверенному: «Модели ИИ» — шлюз и ключи, не бюджет (Л-02)
+    expect(within(tile("Модели ИИ")).getByText(/шлюз и ключи моделей, не бюджет/)).toBeVisible();
     expect(within(tile("Состояние системы")).getByText("Внимание")).toBeVisible();
     for (const name of ["ERP", "Telegram", "Почта", "Хранилище и бэкапы"]) {
-      expect(within(tile(name)).getByText(/Последняя проверка: \d{2}\.\d{2}\.\d{4}/)).toBeVisible();
+      expect(within(tile(name)).getByText(/проверено .*назад|проверено только что/)).toBeVisible();
     }
     expect(within(tile("Расходы")).getByText(/Расход сегодня: 1,60 USD/)).toBeVisible();
     // Администратору доступны «Проверить» на карточках и нет подписи «Только просмотр».
@@ -223,7 +225,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
   });
 
-  it("бейдж «Нет данных» не стоит рядом со строкой «Всё в порядке» (W15-G-6)", async () => {
+  it("слово «Не удалось проверить» не стоит рядом со строкой «Всё в порядке» (W15-G-6, Л-27)", async () => {
     signIn("admin@demo.example");
     const original = await fetch("/api/v1/admin/integrations").then(
       (r) => r.json() as Promise<{ cards: Record<string, unknown>[] }>,
@@ -233,7 +235,14 @@ describe("Admin · Внешние интеграции: обзор", () => {
         HttpResponse.json({
           ...original,
           cards: original.cards.map((c) =>
-            c["key"] === "models" ? { ...c, status: "unknown", note: "all_ok" } : c,
+            c["key"] === "models"
+              ? {
+                  ...c,
+                  status: "unknown",
+                  note: "all_ok",
+                  fact: { state: "unknown", checked_at: null, source: "none", live: false },
+                }
+              : c,
           ),
         }),
       ),
@@ -241,9 +250,11 @@ describe("Admin · Внешние интеграции: обзор", () => {
     renderAt("/admin/integrations");
 
     const models = await waitFor(() => tile("Модели ИИ"));
-    expect(within(models).getByText("Нет данных", { selector: ".ant-tag" })).toBeVisible();
+    expect(
+      within(models).getByText("Не удалось проверить", { selector: ".ant-tag" }),
+    ).toBeVisible();
     expect(within(models).queryByText("Всё в порядке")).toBeNull();
-    expect(within(models).getAllByText("Нет данных").length).toBeGreaterThanOrEqual(2);
+    expect(within(models).queryByText("Работает")).toBeNull();
   });
 
   it("Раздел «Контакты» не ответил целиком: понятный текст и «Повторить»", async () => {

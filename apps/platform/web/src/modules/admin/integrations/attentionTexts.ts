@@ -19,6 +19,8 @@ export function attentionTexts(
         subject: card,
         detail: [t("attention.backupStale"), item.detail].filter(Boolean).join(" "),
       };
+    case "check_failed":
+      return { subject: card, detail: t("attention.checkFailed") };
     case "rotation_pending":
       return { subject: card, detail: t("attention.rotationPending") };
     case "bot_not_running":

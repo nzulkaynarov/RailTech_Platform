@@ -28,35 +28,43 @@
   "cards": {
     "erp": {
       "title": "ERP",
-      "purpose": "Arizalar, hisob-kitob, TT va ombor: aloqa va kalitlar."
+      "purpose": "Arizalar, hisob-kitob, TT va ombor: aloqa va kalitlar.",
+      "scope": "hisob-kitoblar bilan aloqa"
     },
     "telegram": {
       "title": "Telegram",
-      "purpose": "Mijozlar boti, jamoa kanali va bot profili."
+      "purpose": "Mijozlar boti, jamoa kanali va bot profili.",
+      "scope": "bot bilan aloqa"
     },
     "mail": {
       "title": "Poçta",
-      "purpose": "Xodim va mijozlarga xatlar uçun bitta jönatuvçi."
+      "purpose": "Xodim va mijozlarga xatlar uçun bitta jönatuvçi.",
+      "scope": "xat yuboriş va qabul qiliş"
     },
     "services": {
       "title": "Taşqi xizmatlar",
-      "purpose": "Barça taşqi xizmatlar: holat, tekşiruv, öçirgiç."
+      "purpose": "Barça taşqi xizmatlar: holat, tekşiruv, öçirgiç.",
+      "scope": "barça taşqi xizmatlar"
     },
     "models": {
       "title": "AI modellari",
-      "purpose": "Modellar va kalitlar: muloqot, qidiruv, sifat tekşiruvi."
+      "purpose": "Modellar va kalitlar: muloqot, qidiruv, sifat tekşiruvi.",
+      "scope": "model şlyuzi va kalitlari, byudjet emas"
     },
     "spend": {
       "title": "Xarajatlar",
-      "purpose": "AI modellari xarajati va byudjetlar."
+      "purpose": "AI modellari xarajati va byudjetlar.",
+      "scope": "kunlik xarajat va limitlar"
     },
     "storage": {
       "title": "Saqlaş va zaxira nusxalar",
-      "purpose": "Mijoz fayllari va bazalarning zaxira nusxalari."
+      "purpose": "Mijoz fayllari va bazalarning zaxira nusxalari.",
+      "scope": "fayllar va zaxira nusxalar"
     },
     "system": {
       "title": "Tizim holati",
-      "purpose": "Baza, navbatlar, bot va modellar: hammasi işlayaptimi."
+      "purpose": "Baza, navbatlar, bot va modellar: hammasi işlayaptimi.",
+      "scope": "tizim holati"
     }
   },
   "notes": {
@@ -70,7 +78,10 @@
     "bot_not_running": "Bot işga tuşirilmagan",
     "budget_near": "Xarajat limitga yaqin",
     "budget_over": "Xarajat limiti oşib ketdi",
-    "no_data": "Maʼlumot yöq"
+    "no_data": "Maʼlumot yöq",
+    "not_verified": "Sozlangan, lekin aloqa tekşirilmagan",
+    "stale": "Tekşiruv eskirgan: «Tekşiriş»ni bosing",
+    "check_failed": "Tekşirib bölmadi: server javob bermadi"
   },
   "check": {
     "result": "Tekşirildi: {{status}}",
@@ -100,7 +111,8 @@
     "botNotRunning": "Bot işga tuşirilmagan.",
     "paused": "Xizmat qölda öçirilgan.",
     "budget_over": "Limit oşib ketdi:",
-    "budget_near": "Limitga yaqin:"
+    "budget_near": "Limitga yaqin:",
+    "checkFailed": "Tekşirib bölmadi: server javob bermadi, şuning uçun hozir işlayaptimi — nomaʼlum."
   },
   "common": {
     "check": "Tekşiriş",
@@ -709,7 +721,8 @@
       "daemon": "Zaxira xizmati",
       "daemonValue": {
         "alive": "javob beryapti",
-        "down": "javob bermayapti"
+        "down": "javob bermayapti",
+        "remote": "nusxalarni boşqa server oladi, bu yerda faqat natija körinadi"
       },
       "error": {
         "bucket_missing": "Zaxira nusxalar bakeri topilmadi.",

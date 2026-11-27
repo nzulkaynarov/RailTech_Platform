@@ -881,3 +881,16 @@ tr > td.pf-col-num {
 .pf-doc-link-row > .pf-hint {
   margin: 0 0 2px;
 }
+
+/* Полоса статуса (НАСТ-П1): слово, что проверено и когда, «Проверить» */
+.pf-status-strip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.pf-status-strip-text {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--rt-color-text-secondary);
+}
