@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 9 — настраиваемые роли Платформы (ADR-0012)
 
@@ -10,7 +10,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 9 «Настраиваемые роли» по docs/history/runbooks/wave9-roles.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/adr/0012-configurable-platform-roles.md,
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/history/HANDOFF.md, docs/adr/0012-configurable-platform-roles.md,
 этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md §6, docs/architecture/integration-map.md §4, docs/architecture/CONTRACTS.md §8,
 packages/contracts/platform-rbac.yaml (v1), packages/contracts/openapi/platform-bff.yaml (0.2.4), docs/systems/crm/CONVENTIONS.md.
 Порядок: R-1 → R-2 → R-3 (§2). Исполнители — субагенты, worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь ты;

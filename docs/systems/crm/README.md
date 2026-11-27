@@ -19,7 +19,7 @@
 | [`../../history/crm/`](../../history/crm/) | План фаз 0–10 и журналы CRM до монорепозитория (история) |
 
 При противоречиях: `docs/product/SPEC-v3.md` и стратегия > `BUSINESS.md` > `SPEC.md` > код. Процесс и статусы — общие:
-`docs/ORCHESTRATOR.md`, `docs/PROGRESS.md`, `docs/QUESTIONS.md`.
+`docs/ORCHESTRATOR.md`, `docs/history/PROGRESS.md`, `docs/QUESTIONS.md`.
 
 ## Отдельный dev-стенд CRM
 

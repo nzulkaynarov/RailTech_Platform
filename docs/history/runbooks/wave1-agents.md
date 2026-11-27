@@ -1,10 +1,10 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волна 1 исправлений параллельными агентами Claude Code (Sonnet) в терминале
 
 Когда применять: оркестратор запускает волну 1 (FIX-10…15) после закрытой волны 0. Источник задач —
-`docs/audits/2026-10-18-main-e0f089e.md` («Волна 1»), статусы — `docs/PROGRESS.md` «Исправления по аудиту»,
-правила — `docs/ORCHESTRATOR.md` §4, §7 и `docs/HANDOFF.md` §4. Этот runbook — как разложить волну по сессиям,
+`docs/audits/2026-10-18-main-e0f089e.md` («Волна 1»), статусы — `docs/history/PROGRESS.md` «Исправления по аудиту»,
+правила — `docs/ORCHESTRATOR.md` §4, §7 и `docs/history/HANDOFF.md` §4. Этот runbook — как разложить волну по сессиям,
 в каком порядке сливать и что вставить в каждую сессию как первое сообщение.
 
 ## 1. Исходное состояние (проверено 2026-10-18 вечером)
@@ -104,7 +104,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
 
 ```
 Ты — агент {РОЛЬ} RailTech Platform. Работаешь в worktree {ПУТЬ}, ветка {ВЕТКА}, только эта задача: {ID}.
-Прочитай по порядку: docs/ORCHESTRATOR.md (§3, §4, §7), docs/HANDOFF.md, docs/PROGRESS.md (раздел «Исправления по
+Прочитай по порядку: docs/ORCHESTRATOR.md (§3, §4, §7), docs/history/HANDOFF.md, docs/history/PROGRESS.md (раздел «Исправления по
 аудиту»), docs/DECISIONS.md (строки 2026-10-18), docs/audits/2026-10-18-main-e0f089e.md (раздел «Волна 1» и
 находки {НАХОДКИ} в реестре), CLAUDE.md приложения, которое правишь, docs/architecture/CONTRACTS.md и файл контракта задачи.
 
@@ -124,7 +124,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
   docs/QUESTIONS.md (контекст → варианты → рекомендация), продолжай по рекомендации.
 - Коммиты: Conventional Commits на русском, суффикс `({ID})`, трейлер `Co-Authored-By: Claude <noreply@anthropic.com>`.
 - Финал: PR через `gh pr create` (заголовок `{ID}: …`; тело — что, почему, как проверить, что обновлено в docs,
-  открытые вопросы), строка в docs/PROGRESS.md (таблица FIX и журнал сессий) в том же PR, ссылка на PR в ответе.
+  открытые вопросы), строка в docs/history/PROGRESS.md (таблица FIX и журнал сессий) в том же PR, ссылка на PR в ответе.
   Перед push — `make ci-local` по затронутым заданиям. После открытия PR — остановись и доложи: CI не запускай
   вручную, не опрашивай (`gh run …`, `gh pr checks`) и не жди; упал — скажет владелец, воспроизведи и чини
   локально (CLAUDE.md корня, «Среда разработки, тесты и CI»).
@@ -274,7 +274,7 @@ PR: «FIX-13: покупательских аккаунтов в ERP нет — 
    `USER_NOT_PROVISIONED` (сейчас `ForbiddenError("user not provisioned")` без `reason`, `app/services/sso.py`),
    регенерировать OpenAPI CRM; ERP `CookieTokenRefreshView` не продлевает refresh-токен пользователя, который больше
    не сотрудник (`accounts.services.auth.assert_staff_login`, FIX-13) — тест.
-7. После зелёного CI — строка в docs/PROGRESS.md: M3-CRM-06 «готово», владельцу: можно включить
+7. После зелёного CI — строка в docs/history/PROGRESS.md: M3-CRM-06 «готово», владельцу: можно включить
    `PLATFORM_SSO_ENABLED=true` на стенде и проверить переход глазами (сценарий в описании PR).
 PR: «FIX-11: platform_access в CRM, провижининг и отзыв через очередь, кнопка только при доступе, карта прав по каталогу ERP».
 ```

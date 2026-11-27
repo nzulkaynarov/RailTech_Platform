@@ -9,7 +9,7 @@
 **Доказательства:** снимки — [`docs/screens/w17-d2-6/`](../screens/w17-d2-6/) (254 файла, 1440 и 390, вымышленные данные, без паролей, токенов и
 ссылок входа), сценарии — [`qa/d26-gate/`](qa/d26-gate/) (`run.mjs` + `sc-base`, `sc-path`, `sc-cab`, `sc-extra`; помощники — из гейта C2a).
 
-Основание: runbook 17 [`wave17-d2-costing-accounting.md`](../runbooks/wave17-d2-costing-accounting.md) строка D2-6 и D2-8; [план 2026-11-01](../strategy/2026-11-01-plan-refresh.md)
+Основание: runbook 17 [`wave17-d2-costing-accounting.md`](../history/runbooks/wave17-d2-costing-accounting.md) строка D2-6 и D2-8; [план 2026-11-01](../strategy/2026-11-01-plan-refresh.md)
 §2.1 шаги 4–13, §6 п. 4, §7 п. 16; SPEC-v3 §3.1 ш. 4–9, §3.2a, §3.3. Формат — [`d1_gate_report.md`](d1_gate_report.md).
 
 ## 1. Итог

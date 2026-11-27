@@ -27,7 +27,7 @@ description: Ревью PR исполнителя RailTech Platform свежим
 5. **Процесс**:
    - миграции по `db-migration`;
    - трейлер в каждом коммите: `git log origin/main..origin/<ветка> --format='%h %s%n%b' | grep -c Co-Authored-By`;
-   - `docs/PROGRESS.md` исполнитель не правил; в диффе нет чужих зон и посторонних файлов
+   - `docs/history/PROGRESS.md` исполнитель не правил; в диффе нет чужих зон и посторонних файлов
      (`git diff --name-only origin/main...origin/<ветка>`) — лишнее убирается по `pre-pr` п. 7;
    - контракт: ломающее — версия ровно на минор выше `origin/main` (`git show origin/main:packages/contracts/openapi/<файл>.yaml
      | grep -m1 '^  version:'`), клиенты **всех** потребителей перегенерированы (`contract-change` п. 4), новые поля — в моках;

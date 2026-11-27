@@ -13,7 +13,7 @@ Checkout: ``, main at a87c49a92. All paths below are relative to it. I read code
 - **The report's verdict «должность не делит меню» stands, made more precise** (§4). The owner himself says one person often holds several roles and the system must not be hard-coded. A menu split by role is exactly that kind of hard-coding.
   - The verdict should be completed: **a role decides what you see; a zone of responsibility decides what you are accountable for and what is signalled to you.**
 - **Name collision to fix before any screen.** In the system, «заместитель» means a temporary substitute during absence (W15-H6; DECISIONS 2026-11-21 (2), `docs/DECISIONS.md:359`). The owner's «заместители директора» are permanent heads of a zone. They are different objects (§1.4).
-- **Launch date.** The zones register and zone routing fit ADR-0031 phase 2 ("время, назначение, замещение, поле «руководитель»", January; plan `docs/runbooks/plan-2026-11-12.md:267`). DECISIONS 2026-11-21 (3) (`DECISIONS.md:360`) put the whole processes programme after launch. Before launch only the cheap de-hard-coding fits (§6).
+- **Launch date.** The zones register and zone routing fit ADR-0031 phase 2 ("время, назначение, замещение, поле «руководитель»", January; plan `docs/history/runbooks/plan-2026-11-12.md:267`). DECISIONS 2026-11-21 (3) (`DECISIONS.md:360`) put the whole processes programme after launch. Before launch only the cheap de-hard-coding fits (§6).
 
 ## 1. The role model today
 

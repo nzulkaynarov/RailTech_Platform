@@ -27,7 +27,7 @@
 
 ## Документация (в том же PR, ORCHESTRATOR §3.8)
 
-- [ ] Статус и хвосты — в этом описании (`docs/PROGRESS.md` ведёт лид после раунда, ORCHESTRATOR §4.1)
+- [ ] Статус и хвосты — в этом описании (`docs/history/PROGRESS.md` ведёт лид после раунда, ORCHESTRATOR §4.1)
 - [ ] ADR / CONTRACTS / runbook / OpenAPI — обновлены или «не требуется»
 - [ ] Экран или поведение изменились — статья помощи экрана в `docs/kb/help` поправлена (`make -C apps/platform kb-sync`) и строка «Для пользователей» выше заполнена (ORCHESTRATOR §7 п. 4)
 - [ ] Новые вопросы — в `docs/QUESTIONS.md` (контекст → варианты → рекомендация)
