@@ -118,7 +118,7 @@ async def test_request_for_a_client_goes_to_the_client_action_of_crm(
 async def test_request_from_a_company_without_a_card_goes_to_the_company_action_of_crm(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
-    """ВХОД-1: письмо компании без лида и без карточки клиента — CRM находит или заводит карточку."""
+    """ВХОД-1: письмо компании без лида и без карточки клиента — карточку ведёт CRM."""
     await web.login(["MANAGER"])
     form = request_form(lead=None, client_id=None, consent=None)
     response = check(await web.send("POST", BASE, json=form), "/crm/requests", "post")

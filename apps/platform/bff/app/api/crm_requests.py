@@ -78,7 +78,7 @@ async def create_request(
     elif body.client_id is not None:
         path = f"{API}/clients/{body.client_id}/actions/create_request"
     elif body.company is not None:
-        # ВХОД-1: компания без карточки клиента и без лида (письмо) — CRM находит или заводит карточку
+        # ВХОД-1: компания без лида и без карточки клиента (письмо): CRM находит или заводит карточку
         path = f"{API}/clients/actions/create_request_for_company"
     else:
         raise PlatformError(
