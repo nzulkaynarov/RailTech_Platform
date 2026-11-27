@@ -63,7 +63,7 @@
       "responsible": "Nima uçun masul",
       "lacks": "Nimani qila olmaydi"
     },
-    "nothing": "Hozircha heç nima",
+    "nothing": "Hozirça heç nima",
     "rows": "Bitim bosqiçlari böyiça imkoniyatlar",
     "from": "Roldan: {{roles}}",
     "others": "Yana kim qila oladi",
@@ -79,10 +79,9 @@
       "curator": "kurator"
     },
     "responsibleEmpty": "Hec bir soha uçun tayinlanmagan",
-    "responsibleNote": "Soha hozircha faqat yozib qöyilgan: vazifalarni yönaltirmaydi.",
+    "responsibleNote": "Soha hozirça faqat yozib qöyilgan: vazifalarni yönaltirmaydi.",
     "signingTitle": "Imzolaydi",
     "signingEmpty": "Imzo huquqi yöq",
-    "signingLine": "{{kinds}}",
     "signingUntil": "{{date}} gaçha",
     "signingPower": "işonçnoma böyiça",
     "deputyTitle": "Almaştiriş",

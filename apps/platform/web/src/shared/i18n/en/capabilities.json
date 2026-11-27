@@ -82,7 +82,6 @@
     "responsibleNote": "An area is only recorded for now: it does not route tasks.",
     "signingTitle": "Signs",
     "signingEmpty": "No signing authority",
-    "signingLine": "{{kinds}}",
     "signingUntil": "until {{date}}",
     "signingPower": "by power of attorney",
     "deputyTitle": "Deputy",
