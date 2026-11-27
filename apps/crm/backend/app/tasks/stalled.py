@@ -59,14 +59,18 @@ async def _started_at(manager: JobManager, ids: Sequence[int]) -> Mapping[int, d
 
 
 async def _run_hook(
-    task_name: str, kwargs: dict[str, Any], job_id: int, sessions: Sessions | None
+    task_name: str,
+    kwargs: dict[str, Any],
+    job_id: int,
+    sessions: Sessions | None,
+    started_at: datetime | None,
 ) -> None:
     """Строка предметной области получает правдивый статус; сбой хука не мешает снять остальные."""
     hook = HOOKS.get(task_name)
     if hook is None:
         return
     try:
-        await hook(sessions or get_container().session_factory, kwargs)
+        await hook(sessions or get_container().session_factory, kwargs, started_at)
     except Exception as exc:  # noqa: BLE001
         logger.error("stalled_hook_failed", task=task_name, job_id=job_id, error=type(exc).__name__)
 
@@ -99,7 +103,7 @@ async def recover_stalled_jobs(
             await manager.retry_job_by_id_async(job_id, retry_at=now)
         else:
             await manager.finish_job_by_id_async(job_id, jobs.Status.FAILED, delete_job=False)
-            await _run_hook(job.task_name, job.task_kwargs, job_id, sessions)
+            await _run_hook(job.task_name, job.task_kwargs, job_id, sessions, started.get(job_id))
         began = started.get(job_id)
         age = (now - began).total_seconds() if began else None
         out.append(Recovered(job_id, job.task_name, action, age))

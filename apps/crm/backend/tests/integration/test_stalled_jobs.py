@@ -108,7 +108,7 @@ async def test_recovery_runs_the_domain_hook_of_a_non_idempotent_job(
     lead_id = await escalated_lead(sessions)
     async with sessions() as session, session.begin():
         notice = ClientNotice(
-            kind="web_confirmation", lead_id=lead_id, channel="telegram", status="queued"
+            kind="web_confirmation", lead_id=lead_id, channel="email", status="queued"
         )
         session.add(notice)
         await session.flush()
