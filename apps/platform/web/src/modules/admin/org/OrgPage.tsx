@@ -1,4 +1,4 @@
-import { Button, Input, Select, Skeleton } from "antd";
+import { Button, Input, Segmented, Select, Skeleton } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
@@ -8,6 +8,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { anyErpPending, EMPLOYEE_STATUSES } from "../../../entities/employee/status";
 import { isSystemAdmin } from "../../../entities/role/roles";
+import { CapabilityMatrixView } from "../../../features/capabilities/CapabilityMatrixView";
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
 import type { EmployeeStatus } from "../../../shared/api/generated/model";
 import { useListEmployees } from "../../../shared/api/generated/platform-bff";
@@ -32,7 +33,7 @@ const TABLE_MIN_WIDTH = 700;
  * (`?employee=<id>`, `?invite=open`). Выдача ролей — ADMIN; DIRECTOR видит список и карточки только для чтения.
  */
 export function OrgPage({ objectId }: { objectId?: string }) {
-  const { t } = useTranslation(["modules", "shell"]);
+  const { t } = useTranslation(["modules", "shell", "capabilities"]);
   const { me } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,9 +72,19 @@ export function OrgPage({ objectId }: { objectId?: string }) {
     );
   }, [items, query, status]);
 
+  // «Кто что может» (ДОСТ-1) — вид по умолчанию; `?view=list` — прежний список.
+  const view: "matrix" | "list" = params.get("view") === "list" ? "list" : "matrix";
+  const setView = (next: "matrix" | "list") => {
+    const query = new URLSearchParams(params);
+    if (next === "list") query.set("view", "list");
+    else query.delete("view");
+    void navigate(`${PATH}?${query.toString()}`, { replace: true });
+  };
+
   const keep = (next: URLSearchParams) => {
     const tab = params.get("tab");
     if (tab) next.set("tab", tab);
+    if (view === "list") next.set("view", "list");
     return `${PATH}?${next.toString()}`;
   };
   const employeeHref = (id: string) => keep(new URLSearchParams({ employee: id, panel: "open" }));
@@ -181,62 +192,78 @@ export function OrgPage({ objectId }: { objectId?: string }) {
         title={title}
         readOnly={!editable}
         extra={
-          editable ? (
-            <Button type="primary" onClick={() => void navigate(inviteHref)}>
-              {t("modules:admin.action")}
-            </Button>
-          ) : undefined
+          <>
+            <Segmented<"matrix" | "list">
+              aria-label={t("capabilities:view.label")}
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "matrix", label: t("capabilities:view.matrix") },
+                { value: "list", label: t("capabilities:view.list") },
+              ]}
+            />
+            {editable ? (
+              <Button type="primary" onClick={() => void navigate(inviteHref)}>
+                {t("modules:admin.action")}
+              </Button>
+            ) : null}
+          </>
         }
       />
-      <div ref={blockRef}>
-        <EmployeeList
-          items={filtered}
-          selectedId={selected?.id ?? null}
-          hrefOf={employeeHref}
-          compact={compact}
-          loading={list.isPending}
-          error={error}
-          empty={empty}
-          toolbar={
-            <FilterBar
-              inset
-              actions={
-                list.data ? (
-                  <span className="pf-hint" aria-live="polite">
-                    {t("modules:admin.org.count", { count: filtered.length })}
-                  </span>
-                ) : undefined
-              }
-            >
-              <FilterField id="pf-org-q" label={t("modules:admin.org.search.label")} grow>
-                <Input.Search
-                  id="pf-org-q"
-                  allowClear
-                  value={query}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                  }}
-                  placeholder={t("modules:admin.org.search.placeholder")}
-                />
-              </FilterField>
-              <FilterField id="pf-org-status" label={t("modules:admin.org.statusFilter.label")}>
-                <Select<EmployeeStatus | "all">
-                  id="pf-org-status"
-                  value={status}
-                  onChange={setStatus}
-                  options={[
-                    { value: "all", label: t("modules:admin.org.statusFilter.all") },
-                    ...EMPLOYEE_STATUSES.map((value) => ({
-                      value,
-                      label: t(`modules:admin.org.status.${value}`),
-                    })),
-                  ]}
-                />
-              </FilterField>
-            </FilterBar>
-          }
-        />
-      </div>
+      {view === "matrix" ? (
+        <CapabilityMatrixView hrefOf={employeeHref} selectedId={selected?.id ?? null} />
+      ) : null}
+      {view === "list" ? (
+        <div ref={blockRef}>
+          <EmployeeList
+            items={filtered}
+            selectedId={selected?.id ?? null}
+            hrefOf={employeeHref}
+            compact={compact}
+            loading={list.isPending}
+            error={error}
+            empty={empty}
+            toolbar={
+              <FilterBar
+                inset
+                actions={
+                  list.data ? (
+                    <span className="pf-hint" aria-live="polite">
+                      {t("modules:admin.org.count", { count: filtered.length })}
+                    </span>
+                  ) : undefined
+                }
+              >
+                <FilterField id="pf-org-q" label={t("modules:admin.org.search.label")} grow>
+                  <Input.Search
+                    id="pf-org-q"
+                    allowClear
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                    }}
+                    placeholder={t("modules:admin.org.search.placeholder")}
+                  />
+                </FilterField>
+                <FilterField id="pf-org-status" label={t("modules:admin.org.statusFilter.label")}>
+                  <Select<EmployeeStatus | "all">
+                    id="pf-org-status"
+                    value={status}
+                    onChange={setStatus}
+                    options={[
+                      { value: "all", label: t("modules:admin.org.statusFilter.all") },
+                      ...EMPLOYEE_STATUSES.map((value) => ({
+                        value,
+                        label: t(`modules:admin.org.status.${value}`),
+                      })),
+                    ]}
+                  />
+                </FilterField>
+              </FilterBar>
+            }
+          />
+        </div>
+      ) : null}
       {panel ? <PanelPortal tab="card">{panel}</PanelPortal> : null}
     </PageFrame>
   );

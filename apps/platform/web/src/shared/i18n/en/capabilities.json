@@ -1,0 +1,127 @@
+{
+  "view": {
+    "matrix": "Who can do what",
+    "list": "List",
+    "label": "Employee list view"
+  },
+  "level": {
+    "none": "None",
+    "view": "View",
+    "work": "Work",
+    "decide": "Decide"
+  },
+  "levelVerb": {
+    "none": "none",
+    "view": "view",
+    "work": "work",
+    "decide": "decide"
+  },
+  "partial": "not all",
+  "partialHint": "Some actions of this row are switched off",
+  "legend": {
+    "label": "Legend",
+    "partial": "“not all” — some actions are switched off",
+    "only": "the only one who decides"
+  },
+  "matrix": {
+    "label": "What each employee can do",
+    "hint": "Click a name to open the person.",
+    "readOnly": "The table shows what employees can do today. Rights are granted through roles — in the person card.",
+    "capability": "Capability",
+    "unavailable": "Could not load the table. Refresh the page.",
+    "retry": "Retry",
+    "empty": {
+      "title": "No employees",
+      "text": "Invite an employee — their capabilities will appear here."
+    },
+    "apart": "Apart from capabilities",
+    "signs": "Signs",
+    "responsible": "Responsible for",
+    "deputy": "Covers for",
+    "unknownSigning": "no data",
+    "unknownSigningHint": "The signing register is read by those who keep it.",
+    "unknownZones": "no data",
+    "noSigning": "—",
+    "noZones": "—",
+    "unlimited": "no limit",
+    "upTo": "up to {{amount}}",
+    "open": "Open: {{name}}",
+    "cell": "{{capability}}: {{level}}",
+    "cellPartial": "{{capability}}: {{level}}, not all",
+    "onlyMark": "the only one who decides"
+  },
+  "warnings": {
+    "title": "Worth a look",
+    "only_decider": "“{{capability}}”: only {{person}} decides, no deputy.",
+    "only_decider_deputy": "“{{capability}}”: only {{person}} decides; a deputy is set for absences.",
+    "nobody_decides": "“{{capability}}”: nobody decides.",
+    "visa_without_signing": "{{person}} signs off contracts but has no signing authority."
+  },
+  "card": {
+    "heading": "What this person can do",
+    "positionNote": "The position is a label; it does not affect capabilities.",
+    "summary": {
+      "does": "Does",
+      "decides": "Decides",
+      "responsible": "Responsible for",
+      "lacks": "Cannot"
+    },
+    "nothing": "Nothing yet",
+    "rows": "Capabilities along the deal",
+    "from": "From role: {{roles}}",
+    "others": "Who else can",
+    "noOthers": "Nobody else",
+    "othersMore": "and {{count}} more",
+    "actions": "What is included",
+    "actionOn": "yes",
+    "actionOff": "no",
+    "responsibleTitle": "Responsible for",
+    "responsibleRole": {
+      "responsible": "responsible",
+      "deputy": "deputy",
+      "curator": "curator"
+    },
+    "responsibleEmpty": "Not assigned to any area",
+    "responsibleUnknown": "Responsibility areas are visible to administrators.",
+    "responsibleNote": "An area is only recorded for now: it does not route tasks.",
+    "signingTitle": "Signs",
+    "signingEmpty": "No signing authority",
+    "signingUnknown": "The signing register is read by those who keep it — no data here.",
+    "signingLine": "{{kinds}}",
+    "signingUntil": "until {{date}}",
+    "signingPower": "by power of attorney",
+    "deputyTitle": "Deputy",
+    "deputyNone": "No deputy",
+    "deputyLine": "{{name}} · {{from}} — {{to}}",
+    "deputyPasses": "Approvals, resolutions and quote approval pass over. Signing and payment confirmation do not.",
+    "change": "Change through roles (until the next step)",
+    "changeHint": "Rights are granted as before — through roles. Separate switches will come in the next step.",
+    "unavailable": "Could not load capabilities. Refresh the page.",
+    "retry": "Retry",
+    "free": "Everyone, without granting: {{text}}"
+  },
+  "mine": {
+    "title": "My capabilities",
+    "lead": "What you can do in the Platform today. Rights are granted by the administrator.",
+    "ask": "Ask for a capability",
+    "askBody": "I need the capability “{{name}}”: “{{level}}”.",
+    "summary": {
+      "does": "What I do",
+      "decides": "What I decide",
+      "responsible": "What I am responsible for",
+      "lacks": "What I cannot do"
+    },
+    "signingTitle": "I sign",
+    "responsibleTitle": "I am responsible for",
+    "deputyTitle": "My deputy",
+    "deputyNone": "No deputy",
+    "openTasks": "Open my tasks"
+  },
+  "denied": {
+    "title": "“{{name}}” is not granted to you",
+    "need": "To open this section you need the capability “{{name}}”: {{level}}. Now you have “{{current}}”.",
+    "who": "Capabilities are granted by the administrator.",
+    "ask": "Ask for a capability",
+    "askBody": "I need the capability “{{name}}”: {{level}}."
+  }
+}

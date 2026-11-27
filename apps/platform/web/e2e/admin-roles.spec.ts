@@ -85,7 +85,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(leads).toBeVisible();
 
     // Выдать роль сотруднику в Оргструктуре.
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     await page.getByRole("link", { name: "Открыть карточку: Демо Инженеров" }).click();
     await expect(panel.getByRole("heading", { level: 3, name: "Демо Инженеров" })).toBeVisible();
     await panel.getByRole("checkbox", { name: /^Гл\. инженер/ }).uncheck();

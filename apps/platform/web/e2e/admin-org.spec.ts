@@ -27,7 +27,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 }
 
 async function openOrg(page: Page): Promise<void> {
-  await spaGoto(page, "/admin/org");
+  await spaGoto(page, "/admin/org?view=list");
   await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Открыть карточку: Демо Менеджеров" })).toBeVisible();
 }
@@ -228,7 +228,7 @@ test.describe("Оргструктура: директор", () => {
 
   test("сотрудник без раздела Admin получает «Нет доступа»", async ({ page }) => {
     await loginAndWait(page, "supply@demo.example");
-    await page.goto("/admin/org");
+    await page.goto("/admin/org?view=list");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
 });

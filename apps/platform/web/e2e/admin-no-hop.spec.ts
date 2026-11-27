@@ -58,7 +58,7 @@ test.describe("Настройки без переброса", () => {
       await loginAndWait(page, "admin@demo.example");
 
       // Баннер: «Скрыть до завтра»
-      await spaGoto(page, "/admin/org");
+      await spaGoto(page, "/admin/org?view=list");
       const banner = page.getByRole("region", { name: "Настройка Платформы" });
       await expect(
         banner.getByRole("button", { name: "Скрыть до завтра: баннер настройки" }),

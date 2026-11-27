@@ -1,0 +1,240 @@
+/* «Что может человек» (ДОСТ-1): уровни, строки карточки, таблица «Кто что может». Только токены --rt-*. */
+.pf-cap-levelwrap {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.pf-cap-level {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--rt-color-neutral-border);
+  border-radius: 4px;
+  background: var(--rt-color-neutral-bg);
+  color: var(--rt-color-neutral-text);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.pf-cap-level-none {
+  background: transparent;
+  color: var(--rt-color-text-secondary);
+}
+.pf-cap-level-work {
+  border-color: var(--rt-color-primary-border);
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
+}
+.pf-cap-level-decide {
+  border-color: var(--rt-color-primary-default);
+  background: var(--rt-color-primary-default);
+  color: var(--rt-color-primary-foreground);
+}
+.pf-cap-partial {
+  color: var(--rt-color-warning-text);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.pf-cap-only {
+  color: var(--rt-color-warning-text);
+}
+
+/* Карточка человека */
+.pf-cap-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.pf-cap-summary dt {
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.pf-cap-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pf-cap-group {
+  margin: 0;
+}
+.pf-cap-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 16px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-cap-group-step {
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+.pf-cap-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rt-color-surface-split);
+}
+.pf-cap-row {
+  border-bottom: 1px solid var(--rt-color-surface-split);
+}
+.pf-cap-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pf-cap-row-head:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+.pf-cap-row-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf-cap-row-body {
+  padding: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+.pf-cap-actions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+.pf-cap-actions li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.pf-cap-action-off {
+  color: var(--rt-color-text-secondary);
+  text-decoration: line-through;
+}
+.pf-cap-action-mark {
+  flex: none;
+  min-width: 28px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+}
+.pf-cap-block {
+  margin-top: 16px;
+}
+.pf-cap-block h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-cap-block ul {
+  margin: 0;
+  padding: 0 0 0 16px;
+}
+
+/* Таблица «Кто что может»: сетка с ролями ARIA (это сетка, а не список), первый столбец и шапка закреплены */
+.pf-cap-matrix-wrap {
+  overflow: auto;
+  max-height: 70vh;
+  border: 1px solid var(--rt-color-surface-split);
+  border-radius: 8px;
+  background: var(--rt-color-surface-card);
+}
+.pf-cap-matrix {
+  --pf-cap-first: 220px;
+  --pf-cap-col: 148px;
+  width: max-content;
+  min-width: 100%;
+  font-size: 13px;
+}
+.pf-cap-line {
+  display: grid;
+  grid-template-columns: var(--pf-cap-first) repeat(var(--pf-cap-cols, 1), var(--pf-cap-col));
+}
+.pf-cap-cell {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rt-color-surface-split);
+  background: var(--rt-color-surface-card);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf-cap-matrix [role="columnheader"].pf-cap-cell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-weight: 600;
+}
+.pf-cap-corner,
+.pf-cap-rowhead,
+.pf-cap-groupcell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: 1px 0 0 var(--rt-color-surface-split);
+}
+.pf-cap-matrix [role="columnheader"].pf-cap-corner {
+  z-index: 3;
+}
+.pf-cap-grouprow {
+  display: block;
+}
+.pf-cap-grouprow .pf-cap-groupcell {
+  width: 100%;
+  box-shadow: none;
+  background: var(--rt-color-surface-subtle);
+  font-weight: 600;
+}
+.pf-cap-grouprow .pf-cap-group-step {
+  margin-left: 8px;
+}
+.pf-cap-rowhead {
+  font-weight: 400;
+}
+.pf-cap-person {
+  display: block;
+  font-weight: 600;
+  color: var(--rt-color-primary-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.pf-cap-person:hover {
+  text-decoration: underline;
+}
+.pf-cap-person:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+.pf-cap-person-roles {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--rt-color-text-secondary);
+}
+.pf-cap-only-mark {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--rt-color-warning-text);
+}
+.pf-cap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 0 0 12px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+}

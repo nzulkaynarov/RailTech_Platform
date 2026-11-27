@@ -166,7 +166,7 @@ test.describe("Обращения к администратору", () => {
   }) => {
     // 1. Менеджер открывает раздел, которого у него нет.
     await loginAndWait(page, "manager@demo.example");
-    await page.goto("/admin/org");
+    await page.goto("/admin/org?view=list");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     await page.getByRole("button", { name: "Написать администратору" }).click();
     const dialog = page.getByRole("dialog", { name: "Написать администратору" });

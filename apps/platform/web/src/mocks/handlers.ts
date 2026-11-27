@@ -59,6 +59,7 @@ import { contractTemplatesHandlers } from "./contractTemplates";
 import { templateCatalogHandlers } from "./templateCatalog";
 import { signingHandlers } from "./signing";
 import { zonesHandlers } from "./zones";
+import { capabilitiesHandlers } from "./capabilities";
 import { edsSigningHandlers } from "./edsSigning";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
@@ -279,6 +280,7 @@ export const handlers = [
   ...edsTemplatesHandlers,
   ...signingHandlers,
   ...zonesHandlers, // ЕВ-З: реестр зон ответственности
+  ...capabilitiesHandlers, // ДОСТ-1: «Что может человек», только чтение
   ...edsSigningHandlers,
   ...letterIntakeHandlers,
   ...edsApprovalsHandlers,
