@@ -329,3 +329,49 @@ async def test_every_attention_row_points_at_a_card_that_is_not_green(
     for attention in body["attention"]:
         state = cards(body)[attention["card"]]["fact"]["state"]
         assert state not in ("works", "off"), (attention["id"], state)
+
+
+# --- «ещё не использовался» — не «сервер не ответил» ---------------------------------------
+
+
+def never_used(key: str, fix_path: str) -> dict[str, Any]:
+    row = service(key, "unknown", fix_path=fix_path, switch=None)
+    row.update(
+        state="not_checked", summary="Данных пока нет — сервис ещё не использовался", error=None
+    )
+    return row
+
+
+async def test_never_used_service_does_not_lower_the_tile_or_add_a_row(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    rows = [
+        *healthy_services()["services"],
+        never_used("erp.rates", "/integrations?tab=erp"),
+        never_used("erp.banks", "/integrations?tab=erp"),
+    ]
+    crm.answer("GET", "admin/external-services", 200, services_out(rows))
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    by_key = cards(body)
+    for key in ("erp", "services"):
+        assert by_key[key]["fact"]["state"] == "works", key
+        assert by_key[key]["note"] == "all_ok", key
+    assert not [a for a in body["attention"] if a["kind"] == "check_failed"]
+
+
+async def test_real_silence_of_a_service_is_unknown_with_a_row(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    silent = service("erp.rates", "unknown", fix_path="/integrations?tab=erp", switch=None)
+    silent.update(state="ok", checked_at=None)
+    rows = [*healthy_services()["services"], silent]
+    crm.answer("GET", "admin/external-services", 200, services_out(rows))
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    assert cards(body)["erp"]["fact"]["state"] == "unknown"
+    assert "check:erp" in [a["id"] for a in body["attention"]]

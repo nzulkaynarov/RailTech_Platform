@@ -155,6 +155,10 @@ def _level(service: ExternalService) -> Level:
     """Уровень сервиса для карточек: «ожидаемо на стенде» и «не настроено» — не сбой."""
     if service.state in ("expected", "not_configured"):
         return "off"
+    if service.state == "not_checked" and service.status == "unknown":
+        # «Сервис ещё не использовался» (данных пока нет) — не сбой и не молчание сервера:
+        # плитку не опускает и строки «Не удалось проверить» не рождает.
+        return "off"
     if service.state == "unstable":
         return "warn"
     return service.status
