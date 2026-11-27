@@ -1,0 +1,2320 @@
+"""Каталог «что может человек» (ДОСТ-1). ГЕНЕРИРУЕТСЯ — не править руками.
+
+Источник: packages/contracts/platform-capabilities.yaml (version 1) и platform-rbac.yaml.
+Пересоздание: `make -C apps/platform rbac`; `make check-platform` сверяет файл с контрактом.
+Логика — `app/capabilities.py`.
+"""
+
+import json
+from typing import Any, Final
+
+DATA: Final[dict[str, Any]] = json.loads(
+    """{
+ "version": 1,
+ "free_for_all": {
+  "ru": "Свои задачи, чаты с коллегами, служебная записка, профиль и помощь",
+  "uz": "Öz vazifalari, hamkasblar bilan çatlar, xizmat xati, profil va yordam",
+  "en": "Own tasks, chats with colleagues, an internal memo, profile and help"
+ },
+ "groups": [
+  {
+   "key": "leads_clients",
+   "step": {
+    "ru": "шаг 1",
+    "uz": "1-qadam",
+    "en": "step 1"
+   },
+   "name": {
+    "ru": "Лиды и клиенты",
+    "uz": "Lidlar va mijozlar",
+    "en": "Leads and clients"
+   }
+  },
+  {
+   "key": "requests_calc",
+   "step": {
+    "ru": "шаги 2–3",
+    "uz": "2–3-qadamlar",
+    "en": "steps 2–3"
+   },
+   "name": {
+    "ru": "Заявки и расчёт",
+    "uz": "Arizalar va hisob-kitob",
+    "en": "Requests and costing"
+   }
+  },
+  {
+   "key": "quote_contract",
+   "step": {
+    "ru": "шаги 4–5",
+    "uz": "4–5-qadamlar",
+    "en": "steps 4–5"
+   },
+   "name": {
+    "ru": "КП и договор",
+    "uz": "TT va şartnoma",
+    "en": "Quote and contract"
+   }
+  },
+  {
+   "key": "payment_documents",
+   "step": {
+    "ru": "шаги 6–9",
+    "uz": "6–9-qadamlar",
+    "en": "steps 6–9"
+   },
+   "name": {
+    "ru": "Оплата и документы",
+    "uz": "Tölov va hujjatlar",
+    "en": "Payment and documents"
+   }
+  },
+  {
+   "key": "settings",
+   "step": {
+    "ru": "настройки",
+    "uz": "sozlamalar",
+    "en": "settings"
+   },
+   "name": {
+    "ru": "Настройки",
+    "uz": "Sozlamalar",
+    "en": "Settings"
+   }
+  }
+ ],
+ "capabilities": [
+  {
+   "key": "leads",
+   "group": "leads_clients",
+   "name": {
+    "ru": "Лиды",
+    "uz": "Lidlar",
+    "en": "Leads"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "funnel",
+       "text": {
+        "ru": "смотреть воронку и очередь лидов",
+        "uz": "lidlar voronkasi va navbatini köriş",
+        "en": "see the funnel and the lead queue"
+       },
+       "gates": [
+        "crm.leads:read|crm.leads.triage:full"
+       ],
+       "crm": [
+        "leads:read",
+        "stream:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "take_reply",
+       "text": {
+        "ru": "забирать лида в работу, отвечать клиенту, вести заметки",
+        "uz": "lidni işga oliş, mijozga javob beriş, qaydlar yuritiş",
+        "en": "take a lead, reply to the client, keep notes"
+       },
+       "gates": [
+        "crm.leads:full"
+       ],
+       "crm": [
+        "leads:take",
+        "leads:work",
+        "leads:reply",
+        "leads:note",
+        "leads:assist"
+       ]
+      },
+      {
+       "key": "create",
+       "text": {
+        "ru": "создавать лида вручную",
+        "uz": "lidni qölda yaratiş",
+        "en": "create a lead by hand"
+       },
+       "gates": [
+        "crm.leads:full"
+       ],
+       "crm": [
+        "leads:create"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "lead_triage",
+   "group": "leads_clients",
+   "name": {
+    "ru": "Разбор и передача лидов",
+    "uz": "Lidlarni saralaş va topşiriş",
+    "en": "Lead triage and handover"
+   },
+   "levels": [
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "triage",
+       "text": {
+        "ru": "разбирать лида и передавать менеджеру с запиской, не забирая его",
+        "uz": "lidni saralaş va menejerga qayd bilan topşiriş, özi olmasdan",
+        "en": "triage a lead and hand it to a manager with a note, without taking it"
+       },
+       "gates": [
+        "crm.leads.triage:full"
+       ],
+       "crm": [
+        "leads:triage"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mail",
+   "group": "leads_clients",
+   "name": {
+    "ru": "Общая почта",
+    "uz": "Umumiy poçta",
+    "en": "Shared mailbox"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "queue",
+       "text": {
+        "ru": "видеть очередь писем общего ящика",
+        "uz": "umumiy qutidagi xatlar navbatini köriş",
+        "en": "see the shared mailbox queue"
+       },
+       "gates": [
+        "crm.mail:read|crm.leads.triage:full"
+       ],
+       "crm": [
+        "mail_inbox:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "process",
+       "text": {
+        "ru": "разбирать письма: создать лида, отправить в архив, ответить",
+        "uz": "xatlarni saralaş: lid yaratiş, arxivga jönatiş, javob beriş",
+        "en": "process mail: make a lead, archive, reply"
+       },
+       "gates": [
+        "crm.leads.triage:full"
+       ],
+       "crm": [
+        "mail_inbox:read",
+        "mail_inbox:work"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "chats_external",
+   "group": "leads_clients",
+   "name": {
+    "ru": "Переписка с клиентами",
+    "uz": "Mijozlar bilan yozişma",
+    "en": "Client conversations"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "читать переписку, где участвуешь или которая назначена твоей области",
+        "uz": "öz ishtirokingdagi yoki sohangizga biriktirilgan yozişmani oqiş",
+        "en": "read conversations you take part in or that belong to your area"
+       },
+       "gates": [
+        "chats.external:read|crm.leads:read"
+       ],
+       "crm": [
+        "chats:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "reply",
+       "text": {
+        "ru": "отвечать клиенту, оставлять заметки команды, просить помощь ассистента",
+        "uz": "mijozga javob beriş, jamoa qaydlarini qoldiriş, yordamçidan yordam söraş",
+        "en": "reply to the client, leave team notes, ask the assistant"
+       },
+       "gates": [
+        "chats.external:full"
+       ],
+       "crm": [
+        "chats:reply",
+        "chats:note",
+        "chats:assist"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "clients",
+   "group": "leads_clients",
+   "name": {
+    "ru": "Контрагенты",
+    "uz": "Kontragentlar",
+    "en": "Counterparties"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть карточки контрагентов, их заявки и документы",
+        "uz": "kontragent kartoçkalari, arizalari va hujjatlarini köriş",
+        "en": "see counterparty cards, their requests and documents"
+       },
+       "gates": [
+        "crm.clients:read"
+       ],
+       "crm": [
+        "clients:read",
+        "deals:read",
+        "documents:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "write",
+       "text": {
+        "ru": "вести карточки контрагентов, заявки и документы в карточке",
+        "uz": "kontragent kartoçkalari, arizalar va kartoçkadagi hujjatlarni yuritiş",
+        "en": "maintain counterparty cards, requests and card documents"
+       },
+       "gates": [
+        "crm.clients:full"
+       ],
+       "crm": [
+        "clients:write",
+        "deals:write",
+        "documents:write"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "requests",
+   "group": "requests_calc",
+   "name": {
+    "ru": "Заявки",
+    "uz": "Arizalar",
+    "en": "Requests"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть заявки и расчёты",
+        "uz": "arizalar va hisob-kitoblarni köriş",
+        "en": "see requests and costings"
+       },
+       "gates": [
+        "erp.calc:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "create",
+       "text": {
+        "ru": "создавать заявку из карточки контрагента и прикладывать письмо клиента",
+        "uz": "kontragent kartoçkasidan ariza yaratiş va mijoz xatini biriktiriş",
+        "en": "create a request from a counterparty card and attach the client letter"
+       },
+       "gates": [
+        "crm.clients:full"
+       ],
+       "erp": [
+        "deal.manage"
+       ],
+       "eds": [
+        "files.upload"
+       ]
+      },
+      {
+       "key": "manage",
+       "text": {
+        "ru": "вести заявку",
+        "uz": "arizani yuritiş",
+        "en": "run a request"
+       },
+       "gates": [
+        "erp.calc:full"
+       ],
+       "erp": [
+        "deal.manage"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "assign",
+       "text": {
+        "ru": "назначать ответственного по заявке",
+        "uz": "ariza böyiça masʼulni tayinlaş",
+        "en": "assign the person responsible for a request"
+       },
+       "gates": [
+        "eds.inbox:full"
+       ],
+       "erp": [
+        "deal.assign"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "calc",
+   "group": "requests_calc",
+   "name": {
+    "ru": "Расчёт",
+    "uz": "Hisob-kitob",
+    "en": "Costing"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть расчёт заявки",
+        "uz": "ariza hisob-kitobini köriş",
+        "en": "see a request costing"
+       },
+       "gates": [
+        "erp.calc:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "build",
+       "text": {
+        "ru": "считать: строки, цены, скидки, статьи расходов",
+        "uz": "hisoblaş: satrlar, narxlar, çegirmalar, xarajat maqolalari",
+        "en": "calculate: lines, prices, discounts, cost items"
+       },
+       "gates": [
+        "erp.calc:full"
+       ],
+       "erp": [
+        "quote.build",
+        "quote.edit_pricing"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "visa_goods",
+       "text": {
+        "ru": "визировать товары и склад",
+        "uz": "tovarlar va ombor böyiça viza qoyiş",
+        "en": "sign off goods and stock"
+       },
+       "gates": [
+        "erp.calc.goods:full"
+       ],
+       "erp": [
+        "quote.visa_goods"
+       ]
+      },
+      {
+       "key": "visa_services",
+       "text": {
+        "ru": "визировать услуги",
+        "uz": "xizmatlar böyiça viza qoyiş",
+        "en": "sign off services"
+       },
+       "gates": [
+        "erp.calc.services:full"
+       ],
+       "erp": [
+        "quote.visa_services"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "cost_margin",
+   "group": "requests_calc",
+   "name": {
+    "ru": "Себестоимость и маржа",
+    "uz": "Tannarx va marja",
+    "en": "Cost and margin"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "see",
+       "text": {
+        "ru": "видеть себестоимость и маржу в расчёте",
+        "uz": "hisob-kitobda tannarx va marjani köriş",
+        "en": "see cost and margin in costings"
+       },
+       "gates": [
+        "erp.calc:read"
+       ],
+       "fields": [
+        "cost_margin"
+       ],
+       "erp": [
+        "quote.view_cost_margin"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "partner_prices",
+   "group": "requests_calc",
+   "name": {
+    "ru": "Цены партнёров",
+    "uz": "Hamkor narxlari",
+    "en": "Partner prices"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "see",
+       "text": {
+        "ru": "видеть закупочные цены партнёров в расчёте",
+        "uz": "hisob-kitobda hamkorlarning xarid narxlarini köriş",
+        "en": "see partners' purchase prices in costings"
+       },
+       "gates": [
+        "erp.calc:read"
+       ],
+       "fields": [
+        "supplier_prices"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "quote",
+   "group": "quote_contract",
+   "name": {
+    "ru": "Коммерческое предложение",
+    "uz": "Tijorat taklifi",
+    "en": "Quote"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть КП на одобрении и их историю",
+        "uz": "tasdiqlanayotgan TTlarni va tarixini köriş",
+        "en": "see quotes awaiting approval and their history"
+       },
+       "gates": [
+        "eds.drafts:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "send",
+       "text": {
+        "ru": "отправлять одобренное КП клиенту",
+        "uz": "tasdiqlangan TTni mijozga jönatiş",
+        "en": "send an approved quote to the client"
+       },
+       "gates": [
+        "crm.clients:full"
+       ],
+       "erp": [
+        "quote.send"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "approve",
+       "text": {
+        "ru": "одобрять КП",
+        "uz": "TTni tasdiqlaş",
+        "en": "approve a quote"
+       },
+       "gates": [
+        "eds.drafts:full"
+       ],
+       "eds": [
+        "approvals.decide"
+       ]
+      },
+      {
+       "key": "review",
+       "text": {
+        "ru": "согласовывать КП в учётной системе",
+        "uz": "TTni hisob tizimida kelişiş",
+        "en": "review a quote in the accounting system"
+       },
+       "gates": [
+        "eds.drafts:full"
+       ],
+       "erp": [
+        "quote.review"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "contract",
+   "group": "quote_contract",
+   "name": {
+    "ru": "Договор",
+    "uz": "Şartnoma",
+    "en": "Contract"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть проекты, договоры и сканы",
+        "uz": "loyihalar, şartnomalar va skanlarni köriş",
+        "en": "see projects, contracts and scans"
+       },
+       "gates": [
+        "eds.projects:read"
+       ],
+       "eds": [
+        "registry.read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "prepare",
+       "text": {
+        "ru": "готовить договор по шаблону и отправлять клиенту",
+        "uz": "şartnomani şablon böyiça tayyorlaş va mijozga jönatiş",
+        "en": "prepare a contract from a template and send it to the client"
+       },
+       "gates": [
+        "eds.projects:full"
+       ],
+       "erp": [
+        "contract.manage"
+       ]
+      },
+      {
+       "key": "attach_scan",
+       "text": {
+        "ru": "прикладывать скан подписанного",
+        "uz": "imzolangan skanni biriktiriş",
+        "en": "attach the scan of the signed contract"
+       },
+       "gates": [
+        "eds.projects:full"
+       ],
+       "erp": [
+        "contract.sign"
+       ]
+      },
+      {
+       "key": "mark_signed",
+       "text": {
+        "ru": "отмечать «подписан»",
+        "uz": "«imzolandi» deb belgilaş",
+        "en": "mark as signed"
+       },
+       "gates": [
+        "eds.projects:full"
+       ],
+       "erp": [
+        "contract.sign"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "visa_finance",
+       "text": {
+        "ru": "визировать как финансы",
+        "uz": "moliya nomidan viza qoyiş",
+        "en": "sign off as finance"
+       },
+       "gates": [
+        "eds.visa.finance:full"
+       ],
+       "eds": [
+        "approvals.visa_finance"
+       ]
+      },
+      {
+       "key": "visa_legal",
+       "text": {
+        "ru": "визировать как право",
+        "uz": "huquq nomidan viza qoyiş",
+        "en": "sign off as legal"
+       },
+       "gates": [
+        "eds.visa.legal:full"
+       ],
+       "eds": [
+        "approvals.visa_legal"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "contract_templates",
+   "group": "quote_contract",
+   "name": {
+    "ru": "Шаблоны договоров",
+    "uz": "Şartnoma şablonlari",
+    "en": "Contract templates"
+   },
+   "levels": [
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "edit",
+       "text": {
+        "ru": "менять реквизиты, шаблоны документов и нумерацию",
+        "uz": "rekvizitlar, hujjat şablonlari va raqamlaşni özgartiriş",
+        "en": "change details, document templates and numbering"
+       },
+       "gates": [
+        "company.settings:full"
+       ],
+       "erp": [
+        "settings.edit"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "approve",
+       "text": {
+        "ru": "утверждать шаблоны и решать по отступлениям от них",
+        "uz": "şablonlarni tasdiqlaş va ulardan çetlaşlar böyiça qaror qiliş",
+        "en": "approve templates and decide on deviations from them"
+       },
+       "gates": [
+        "eds.visa.legal:full|admin:full"
+       ],
+       "erp": [
+        "contract.approve_template"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "invoices",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Счета",
+    "uz": "Hisoblar",
+    "en": "Invoices"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть счета и доску оплат",
+        "uz": "hisoblar va tölovlar taxtasini köriş",
+        "en": "see invoices and the payments board"
+       },
+       "gates": [
+        "eds.payments:read"
+       ],
+       "erp": [
+        "finance.view"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "issue",
+       "text": {
+        "ru": "выставлять счета клиентам",
+        "uz": "mijozlarga hisob taqdim etiş",
+        "en": "issue invoices to clients"
+       },
+       "gates": [
+        "eds.payments:full"
+       ],
+       "erp": [
+        "finance.invoice"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "visa",
+       "text": {
+        "ru": "визировать счёт как финансы",
+        "uz": "hisobni moliya nomidan vizalaş",
+        "en": "sign off an invoice as finance"
+       },
+       "gates": [
+        "eds.visa.finance:full"
+       ],
+       "eds": [
+        "approvals.visa_finance"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "payments",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Оплаты",
+    "uz": "Tölovlar",
+    "en": "Payments"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть оплаты и переписку по счетам",
+        "uz": "tölovlar va hisoblar böyiça yozişmani köriş",
+        "en": "see payments and invoice conversations"
+       },
+       "gates": [
+        "eds.payments:read"
+       ],
+       "erp": [
+        "finance.view"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "record",
+       "text": {
+        "ru": "фиксировать оплаты и запрашивать платёжку",
+        "uz": "tölovlarni qayd etiş va tölov topşiriqnomasini söraş",
+        "en": "record payments and request a payment order"
+       },
+       "gates": [
+        "eds.payments:full"
+       ],
+       "erp": [
+        "finance.payment"
+       ],
+       "crm": [
+        "chats:invoiced"
+       ]
+      },
+      {
+       "key": "rates",
+       "text": {
+        "ru": "менять курс КП и вносить факт закупки",
+        "uz": "TT kursini özgartiriş va xarid faktini kiritiş",
+        "en": "change the quote rate and enter the actual purchase"
+       },
+       "gates": [
+        "eds.payments:full"
+       ],
+       "erp": [
+        "finance.rates"
+       ]
+      },
+      {
+       "key": "bank_changes",
+       "text": {
+        "ru": "подтверждать смену банковских реквизитов контрагента",
+        "uz": "kontragent bank rekvizitlari özgarişini tasdiqlaş",
+        "en": "confirm a change of a counterparty's bank details"
+       },
+       "gates": [
+        "eds.payments:full"
+       ]
+      },
+      {
+       "key": "export",
+       "text": {
+        "ru": "выгружать данные счетов и оплат",
+        "uz": "hisob va tölovlar maʼlumotlarini yuklaş",
+        "en": "export invoice and payment data"
+       },
+       "gates": [
+        "eds.payments:full"
+       ],
+       "erp": [
+        "data.export"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "confirm",
+       "text": {
+        "ru": "подтверждать оплату",
+        "uz": "tölovni tasdiqlaş",
+        "en": "confirm a payment"
+       },
+       "gates": [
+        "eds.payments:full"
+       ],
+       "eds": [
+        "payments.confirm"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "acts",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Акты",
+    "uz": "Dalolatnomalar",
+    "en": "Acts"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть акты",
+        "uz": "dalolatnomalarni köriş",
+        "en": "see acts"
+       },
+       "gates": [
+        "eds.projects:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "issue",
+       "text": {
+        "ru": "оформлять акт",
+        "uz": "dalolatnomani rasmiylaştiriş",
+        "en": "issue an act"
+       },
+       "gates": [
+        "eds.projects:full"
+       ],
+       "erp": [
+        "fulfillment.act"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "visa",
+       "text": {
+        "ru": "визировать акт как финансы",
+        "uz": "dalolatnomani moliya nomidan vizalaş",
+        "en": "sign off an act as finance"
+       },
+       "gates": [
+        "eds.visa.finance:full"
+       ],
+       "eds": [
+        "approvals.visa_finance"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "catalog",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Каталог",
+    "uz": "Katalog",
+    "en": "Catalog"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть каталог, цены и карточки партнёров",
+        "uz": "katalog, narxlar va hamkor kartoçkalarini köriş",
+        "en": "see the catalog, prices and partner cards"
+       },
+       "gates": [
+        "erp.stock:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "manage",
+       "text": {
+        "ru": "вести карточки каталога",
+        "uz": "katalog kartoçkalarini yuritiş",
+        "en": "maintain catalog cards"
+       },
+       "gates": [
+        "erp.stock:full"
+       ],
+       "erp": [
+        "catalog.manage"
+       ]
+      },
+      {
+       "key": "publish",
+       "text": {
+        "ru": "публиковать карточки",
+        "uz": "kartoçkalarni elon qiliş",
+        "en": "publish cards"
+       },
+       "gates": [
+        "erp.stock:full"
+       ],
+       "erp": [
+        "catalog.publish"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "purchases",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Закупки и поставщики",
+    "uz": "Xaridlar va yetkazib beruvçilar",
+    "en": "Purchases and suppliers"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть заказы и поставщиков",
+        "uz": "buyurtmalar va yetkazib beruvçilarni köriş",
+        "en": "see orders and suppliers"
+       },
+       "gates": [
+        "erp.stock:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "manage",
+       "text": {
+        "ru": "вести заказы поставщикам и их предложения",
+        "uz": "yetkazib beruvçilarga buyurtmalar va ularning taklifların yuritiş",
+        "en": "run supplier orders and their offers"
+       },
+       "gates": [
+        "erp.stock:full"
+       ],
+       "erp": [
+        "supply.manage"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "applications",
+       "text": {
+        "ru": "решать по заявкам партнёров",
+        "uz": "hamkorlar arizalari böyiça qaror qiliş",
+        "en": "decide on partner applications"
+       },
+       "gates": [
+        "eds.visa.legal:full|admin:full"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "warehouse",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Склад и отгрузки",
+    "uz": "Ombor va jönatmalar",
+    "en": "Warehouse and shipments"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть склад и отгрузки",
+        "uz": "ombor va jönatmalarni köriş",
+        "en": "see stock and shipments"
+       },
+       "gates": [
+        "erp.stock:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "manage",
+       "text": {
+        "ru": "принимать и отгружать, вести накладные",
+        "uz": "qabul qiliş va jönatiş, yuk xatlarini yuritiş",
+        "en": "receive and ship, maintain waybills"
+       },
+       "gates": [
+        "erp.stock:full"
+       ],
+       "erp": [
+        "fulfillment.manage"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "letters",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Письма: входящие и исходящие",
+    "uz": "Xatlar: kiruvçi va çiquvçi",
+    "en": "Letters: incoming and outgoing"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть входящие и исходящие письма",
+        "uz": "kiruvçi va çiquvçi xatlarni köriş",
+        "en": "see incoming and outgoing letters"
+       },
+       "gates": [
+        "eds.inbox:read|eds.inbox.register:full"
+       ],
+       "eds": [
+        "letters.read",
+        "registry.read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "register",
+       "text": {
+        "ru": "регистрировать входящие и исходящие письма",
+        "uz": "kiruvçi va çiquvçi xatlarni röyxatga oliş",
+        "en": "register incoming and outgoing letters"
+       },
+       "gates": [
+        "eds.inbox.register:full"
+       ],
+       "eds": [
+        "letters.register"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "resolve",
+       "text": {
+        "ru": "накладывать резолюцию, возвращать и отказывать",
+        "uz": "rezolyutsiya qoyiş, qaytariş va rad etiş",
+        "en": "give a resolution, return or reject"
+       },
+       "gates": [
+        "eds.inbox:full"
+       ],
+       "eds": [
+        "letters.resolve"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "memos",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Внутренние документы",
+    "uz": "Içki hujjatlar",
+    "en": "Internal documents"
+   },
+   "levels": [
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "create",
+       "text": {
+        "ru": "создавать служебные записки, заявления и отчёты",
+        "uz": "xizmat xatlari, arizalar va hisobotlarni yaratiş",
+        "en": "create memos, applications and reports"
+       },
+       "gates": [
+        "eds.memo.create:full"
+       ],
+       "eds": [
+        "memos.create"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "approve",
+       "text": {
+        "ru": "согласовывать внутренние документы",
+        "uz": "içki hujjatlarni kelişiş",
+        "en": "approve internal documents"
+       },
+       "gates": [
+        "eds.memo.approve:full"
+       ],
+       "eds": [
+        "memos.approve"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "registry",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Реестр документов",
+    "uz": "Hujjatlar reyestri",
+    "en": "Document registry"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "видеть реестр «Все документы»",
+        "uz": "«Barça hujjatlar» reyestrini köriş",
+        "en": "see the “All documents” registry"
+       },
+       "gates": [
+        "eds.inbox:read|eds.inbox.register:full|eds.projects:read|eds.payments:read"
+       ],
+       "eds": [
+        "registry.read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "export",
+       "text": {
+        "ru": "выгружать реестр",
+        "uz": "reyestrni yuklaş",
+        "en": "export the registry"
+       },
+       "gates": [
+        "eds.projects:full"
+       ],
+       "eds": [
+        "registry.export"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "summary",
+   "group": "payment_documents",
+   "name": {
+    "ru": "Сводка по компании",
+    "uz": "Kompaniya xulosasi",
+    "en": "Company summary"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть сводку, показатели и расходы на ИИ",
+        "uz": "xulosa, körsatkiçlar va SI xarajatlarini köriş",
+        "en": "see the summary, indicators and AI spend"
+       },
+       "gates": [
+        "dashboard.summary:read"
+       ],
+       "crm": [
+        "dashboard:read",
+        "spend:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "export",
+       "text": {
+        "ru": "выгружать данные сводки",
+        "uz": "xulosa maʼlumotlarini yuklaş",
+        "en": "export summary data"
+       },
+       "gates": [
+        "dashboard.summary:full"
+       ],
+       "erp": [
+        "data.export"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "staff",
+   "group": "settings",
+   "name": {
+    "ru": "Сотрудники и возможности",
+    "uz": "Xodimlar va imkoniyatlar",
+    "en": "Staff and capabilities"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть сотрудников, их роли и возможности",
+        "uz": "xodimlar, ularning rollari va imkoniyatlarini köriş",
+        "en": "see employees, their roles and capabilities"
+       },
+       "gates": [
+        "admin:read"
+       ],
+       "crm": [
+        "users:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "manage",
+       "text": {
+        "ru": "приглашать, отключать, менять роли и замещение сотрудников",
+        "uz": "xodimlarni taklif qiliş, öçiriş, rollar va almaştiriş özgartiriş",
+        "en": "invite, disable, change roles and deputies"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "users:write"
+       ]
+      },
+      {
+       "key": "team",
+       "text": {
+        "ru": "управлять командой в учётной системе",
+        "uz": "hisob tizimida jamoani boşqariş",
+        "en": "manage the team in the accounting system"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "erp": [
+        "team.manage"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "company",
+   "group": "settings",
+   "name": {
+    "ru": "Компания: реквизиты, шаблоны",
+    "uz": "Kompaniya: rekvizitlar, şablonlar",
+    "en": "Company: details, templates"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть реквизиты, нумерацию, налоги и шаблоны",
+        "uz": "rekvizitlar, raqamlaş, soliqlar va şablonlarni köriş",
+        "en": "see details, numbering, taxes and templates"
+       },
+       "gates": [
+        "company.settings:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "details",
+       "text": {
+        "ru": "менять реквизиты, нумерацию, налоги и шаблоны документов",
+        "uz": "rekvizitlar, raqamlaş, soliqlar va hujjat şablonlarini özgartiriş",
+        "en": "change details, numbering, taxes and document templates"
+       },
+       "gates": [
+        "company.settings:full"
+       ],
+       "erp": [
+        "settings.edit"
+       ]
+      },
+      {
+       "key": "charge_templates",
+       "text": {
+        "ru": "вести шаблоны статей расходов КП",
+        "uz": "TT xarajat maqolalari şablonlarini yuritiş",
+        "en": "maintain quote cost-item templates"
+       },
+       "gates": [
+        "company.settings:full"
+       ],
+       "erp": [
+        "settings.charge_templates"
+       ]
+      },
+      {
+       "key": "ticket_label",
+       "text": {
+        "ru": "менять обозначение номера обращений",
+        "uz": "murojaat raqami belgisini özgartiriş",
+        "en": "change the staff-request number label"
+       },
+       "gates": [
+        "company.settings:full"
+       ],
+       "crm": [
+        "ticket_label:read",
+        "ticket_label:write"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "channels",
+   "group": "settings",
+   "name": {
+    "ru": "Каналы, подключения, ИИ",
+    "uz": "Kanallar, ulanişlar, SI",
+    "en": "Channels, connections, AI"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "смотреть подключения, модели ИИ, состояние систем и копии",
+        "uz": "ulanişlar, SI modellari, tizimlar holati va nusxalarni köriş",
+        "en": "see connections, AI models, system state and backups"
+       },
+       "gates": [
+        "admin:read"
+       ],
+       "crm": [
+        "integrations:read",
+        "models:read",
+        "system:read",
+        "external_services:read",
+        "backups:read",
+        "settings:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "connections",
+       "text": {
+        "ru": "менять подключения и каналы",
+        "uz": "ulanişlar va kanallarni özgartiriş",
+        "en": "change connections and channels"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "integrations:write",
+        "settings:write"
+       ]
+      },
+      {
+       "key": "models",
+       "text": {
+        "ru": "настраивать и проверять модели ИИ",
+        "uz": "SI modellarini sozlaş va tekşiriş",
+        "en": "configure and test AI models"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "models:write",
+        "models:test"
+       ]
+      },
+      {
+       "key": "external",
+       "text": {
+        "ru": "подключать внешние сервисы",
+        "uz": "taşqi servislarni ulaş",
+        "en": "connect external services"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "external_services:write"
+       ]
+      },
+      {
+       "key": "backups",
+       "text": {
+        "ru": "запускать копии и выгружать данные компании",
+        "uz": "nusxalarni işga tüşiriş va kompaniya maʼlumotlarini yuklaş",
+        "en": "run backups and export company data"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "backups:write",
+        "export:read"
+       ]
+      },
+      {
+       "key": "bus",
+       "text": {
+        "ru": "повторять обмен между системами",
+        "uz": "tizimlar arasidagi almaşuvni takrorlaş",
+        "en": "retry exchange between systems"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "eds": [
+        "bus.manage"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "bot",
+   "group": "settings",
+   "name": {
+    "ru": "Знания и ответы бота",
+    "uz": "Bot bilimlari va javoblari",
+    "en": "Bot knowledge and replies"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "читать базу знаний и шаблоны ответов",
+        "uz": "bilimlar bazasi va javob şablonlarini oqiş",
+        "en": "read the knowledge base and reply templates"
+       },
+       "gates": [
+        "crm.leads:read|admin:read"
+       ],
+       "crm": [
+        "kb:read",
+        "reply_templates:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "write",
+       "text": {
+        "ru": "править базу знаний, шаблоны ответов и проверять бота в песочнице",
+        "uz": "bilimlar bazasi, javob şablonlarini tahrirlaş va botni qum maydonida tekşiriş",
+        "en": "edit the knowledge base, reply templates and test the bot in the sandbox"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "kb:write",
+        "reply_templates:write",
+        "sandbox:use"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "articles",
+   "group": "settings",
+   "name": {
+    "ru": "Статьи компании",
+    "uz": "Kompaniya maqolalari",
+    "en": "Company articles"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "читать черновики статей компании",
+        "uz": "kompaniya maqolalari qoralamalarını oqiş",
+        "en": "read company article drafts"
+       },
+       "gates": [
+        "admin:read"
+       ],
+       "crm": [
+        "company_articles:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "write",
+       "text": {
+        "ru": "писать, публиковать и удалять статьи компании",
+        "uz": "kompaniya maqolalarini yoziş, elon qiliş va öçiriş",
+        "en": "write, publish and delete company articles"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "company_articles:write"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "audit",
+   "group": "settings",
+   "name": {
+    "ru": "Журнал",
+    "uz": "Jurnal",
+    "en": "Audit log"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "читать журнал действий",
+        "uz": "harakatlar jurnalini oqiş",
+        "en": "read the action log"
+       },
+       "gates": [
+        "admin:read"
+       ],
+       "crm": [
+        "audit:read"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "tickets",
+   "group": "settings",
+   "name": {
+    "ru": "Обращения сотрудников",
+    "uz": "Xodimlar murojaatlari",
+    "en": "Staff requests"
+   },
+   "levels": [
+    {
+     "level": "view",
+     "actions": [
+      {
+       "key": "read",
+       "text": {
+        "ru": "читать обращения сотрудников",
+        "uz": "xodimlar murojaatlarini oqiş",
+        "en": "read staff requests"
+       },
+       "gates": [
+        "admin:read"
+       ],
+       "crm": [
+        "tickets:read"
+       ]
+      }
+     ]
+    },
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "answer",
+       "text": {
+        "ru": "отвечать на обращения и менять их статус",
+        "uz": "murojaatlarga javob beriş va holatini özgartiriş",
+        "en": "answer requests and change their status"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "crm": [
+        "tickets:write"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "signing_registry",
+   "group": "settings",
+   "name": {
+    "ru": "Права подписи",
+    "uz": "Imzo huquqlari",
+    "en": "Signing authority"
+   },
+   "levels": [
+    {
+     "level": "work",
+     "actions": [
+      {
+       "key": "keep",
+       "text": {
+        "ru": "вести реестр прав подписи: кто, какие документы, до какой суммы",
+        "uz": "imzo huquqlari reyestrini yuritiş: kim, qaysi hujjatlar, qançagaçha",
+        "en": "keep the signing authority register: who, which documents, up to what amount"
+       },
+       "gates": [
+        "eds.signing.manage:full"
+       ],
+       "eds": [
+        "signing.manage"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "exceptional",
+   "group": "settings",
+   "name": {
+    "ru": "Исключительные действия",
+    "uz": "Istisno harakatlar",
+    "en": "Exceptional actions"
+   },
+   "levels": [
+    {
+     "level": "decide",
+     "actions": [
+      {
+       "key": "force",
+       "text": {
+        "ru": "принудительно одобрить КП, отменить счёт, сменить стадию, войти в служебную панель учётной системы",
+        "uz": "TTni majburan tasdiqlaş, hisobni bekor qiliş, bosqiçni almaştiriş, hisob tizimining xizmat paneliga kiriş",
+        "en": "force-approve a quote, cancel an invoice, change a stage, open the accounting system service panel"
+       },
+       "gates": [
+        "admin:full"
+       ],
+       "erp_superuser": true
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "section_codes": {
+  "dashboard.queue": {},
+  "dashboard.summary": {
+   "crm": {
+    "read": [
+     "dashboard:read",
+     "spend:read"
+    ],
+    "full": [
+     "dashboard:read",
+     "spend:read"
+    ]
+   },
+   "erp": {
+    "read": [],
+    "full": [
+     "data.export"
+    ]
+   }
+  },
+  "crm.leads": {
+   "crm": {
+    "read": [
+     "leads:read",
+     "stream:read",
+     "dashboard:read",
+     "kb:read"
+    ],
+    "full": [
+     "leads:read",
+     "stream:read",
+     "dashboard:read",
+     "kb:read",
+     "leads:take",
+     "leads:work",
+     "leads:reply",
+     "leads:note",
+     "leads:assist",
+     "leads:create",
+     "reply_templates:read"
+    ]
+   }
+  },
+  "crm.leads.triage": {
+   "crm": {
+    "read": [],
+    "full": [
+     "leads:read",
+     "leads:triage",
+     "stream:read",
+     "dashboard:read",
+     "kb:read",
+     "mail_inbox:read",
+     "mail_inbox:work"
+    ]
+   }
+  },
+  "crm.mail": {
+   "crm": {
+    "read": [
+     "mail_inbox:read"
+    ],
+    "full": [
+     "mail_inbox:read"
+    ]
+   }
+  },
+  "crm.clients": {
+   "crm": {
+    "read": [
+     "clients:read",
+     "deals:read",
+     "documents:read"
+    ],
+    "full": [
+     "clients:read",
+     "deals:read",
+     "documents:read",
+     "clients:write",
+     "deals:write",
+     "documents:write"
+    ]
+   },
+   "erp": {
+    "read": [],
+    "full": [
+     "deal.manage",
+     "quote.send"
+    ]
+   },
+   "eds": {
+    "read": [],
+    "full": [
+     "files.upload"
+    ]
+   }
+  },
+  "eds.inbox": {
+   "erp": {
+    "read": [],
+    "full": [
+     "deal.assign"
+    ]
+   },
+   "eds": {
+    "read": [
+     "letters.read",
+     "registry.read"
+    ],
+    "full": [
+     "letters.read",
+     "registry.read",
+     "letters.resolve"
+    ]
+   }
+  },
+  "eds.inbox.register": {
+   "eds": {
+    "read": [],
+    "full": [
+     "letters.read",
+     "registry.read",
+     "letters.register"
+    ]
+   }
+  },
+  "eds.drafts": {
+   "erp": {
+    "read": [],
+    "full": [
+     "quote.review"
+    ]
+   },
+   "eds": {
+    "read": [],
+    "full": [
+     "approvals.decide"
+    ]
+   }
+  },
+  "eds.projects": {
+   "erp": {
+    "read": [],
+    "full": [
+     "contract.manage",
+     "contract.sign",
+     "fulfillment.act"
+    ]
+   },
+   "eds": {
+    "read": [
+     "registry.read"
+    ],
+    "full": [
+     "registry.read",
+     "registry.export"
+    ]
+   }
+  },
+  "eds.payments": {
+   "crm": {
+    "read": [],
+    "full": [
+     "chats:invoiced"
+    ]
+   },
+   "erp": {
+    "read": [
+     "finance.view"
+    ],
+    "full": [
+     "finance.view",
+     "finance.invoice",
+     "finance.payment",
+     "finance.rates",
+     "data.export"
+    ]
+   },
+   "eds": {
+    "read": [
+     "registry.read"
+    ],
+    "full": [
+     "registry.read",
+     "payments.confirm"
+    ]
+   }
+  },
+  "eds.memo.create": {
+   "eds": {
+    "read": [],
+    "full": [
+     "memos.create"
+    ]
+   }
+  },
+  "eds.memo.approve": {
+   "eds": {
+    "read": [],
+    "full": [
+     "memos.approve"
+    ]
+   }
+  },
+  "eds.signing.manage": {
+   "eds": {
+    "read": [],
+    "full": [
+     "signing.manage"
+    ]
+   }
+  },
+  "eds.visa.finance": {
+   "eds": {
+    "read": [],
+    "full": [
+     "approvals.visa_finance"
+    ]
+   }
+  },
+  "eds.visa.legal": {
+   "erp": {
+    "read": [],
+    "full": [
+     "contract.approve_template"
+    ]
+   },
+   "eds": {
+    "read": [],
+    "full": [
+     "approvals.visa_legal"
+    ]
+   }
+  },
+  "erp.calc": {
+   "erp": {
+    "read": [],
+    "full": [
+     "deal.manage",
+     "quote.build",
+     "quote.edit_pricing"
+    ]
+   }
+  },
+  "erp.calc.goods": {
+   "erp": {
+    "read": [],
+    "full": [
+     "quote.build",
+     "quote.edit_pricing",
+     "quote.visa_goods"
+    ]
+   }
+  },
+  "erp.calc.services": {
+   "erp": {
+    "read": [],
+    "full": [
+     "quote.build",
+     "quote.visa_services"
+    ]
+   }
+  },
+  "erp.stock": {
+   "erp": {
+    "read": [],
+    "full": [
+     "catalog.manage",
+     "catalog.publish",
+     "supply.manage",
+     "fulfillment.manage"
+    ]
+   }
+  },
+  "chats.internal": {},
+  "chats.external": {
+   "crm": {
+    "read": [
+     "chats:read"
+    ],
+    "full": [
+     "chats:read",
+     "chats:reply",
+     "chats:note",
+     "chats:assist"
+    ]
+   }
+  },
+  "admin": {
+   "crm": {
+    "read": [
+     "users:read",
+     "integrations:read",
+     "models:read",
+     "system:read",
+     "external_services:read",
+     "backups:read",
+     "audit:read",
+     "settings:read",
+     "reply_templates:read",
+     "kb:read",
+     "tickets:read",
+     "company_articles:read"
+    ],
+    "full": [
+     "users:read",
+     "integrations:read",
+     "models:read",
+     "system:read",
+     "external_services:read",
+     "backups:read",
+     "audit:read",
+     "settings:read",
+     "reply_templates:read",
+     "kb:read",
+     "tickets:read",
+     "company_articles:read",
+     "users:write",
+     "settings:write",
+     "integrations:write",
+     "models:test",
+     "models:write",
+     "external_services:write",
+     "backups:write",
+     "spend:read",
+     "kb:write",
+     "reply_templates:write",
+     "sandbox:use",
+     "export:read",
+     "tickets:write",
+     "company_articles:write"
+    ]
+   },
+   "erp": {
+    "read": [],
+    "full": [
+     "team.manage"
+    ]
+   },
+   "eds": {
+    "read": [],
+    "full": [
+     "bus.manage"
+    ]
+   }
+  },
+  "admin.system": {},
+  "company.settings": {
+   "crm": {
+    "read": [],
+    "full": [
+     "ticket_label:read",
+     "ticket_label:write"
+    ]
+   },
+   "erp": {
+    "read": [],
+    "full": [
+     "settings.edit",
+     "settings.charge_templates"
+    ]
+   }
+  }
+ },
+ "field_erp": {
+  "cost_margin": [
+   "quote.view_cost_margin"
+  ],
+  "supplier_prices": [],
+  "totals_only": []
+ },
+ "erp_all": [
+  "deal.manage",
+  "deal.assign",
+  "quote.build",
+  "quote.edit_pricing",
+  "quote.view_cost_margin",
+  "quote.send",
+  "quote.review",
+  "quote.visa_goods",
+  "quote.visa_services",
+  "contract.manage",
+  "contract.sign",
+  "contract.approve_template",
+  "catalog.manage",
+  "catalog.publish",
+  "supply.manage",
+  "fulfillment.manage",
+  "fulfillment.act",
+  "finance.view",
+  "finance.invoice",
+  "finance.payment",
+  "finance.rates",
+  "settings.edit",
+  "settings.charge_templates",
+  "team.manage",
+  "data.export"
+ ]
+}
+"""
+)
