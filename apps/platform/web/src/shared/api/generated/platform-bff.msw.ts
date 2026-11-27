@@ -37300,6 +37300,10 @@ export const getGetCrmClientResponseMock = (
       step: faker.helpers.arrayElement(Object.values(StepCode)),
       project: faker.datatype.boolean(),
       client_sees: faker.helpers.arrayElement(Object.values(ClientSees)),
+      cabinet_status: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["new", "in_progress", "quoted", "closed"] as const),
+        null,
+      ]),
       urgency: faker.helpers.arrayElement([
         faker.helpers.arrayElement(["normal", "urgent"] as const),
         null,
@@ -45407,7 +45411,9 @@ export const getGetSetupStateMockHandler = (
 
 export const getGetOperatorLogoMockHandler = (
   overrideResponse?:
-    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+    | Blob
+    | void
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob | void> | Blob | void),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(

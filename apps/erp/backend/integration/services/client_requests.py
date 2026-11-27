@@ -18,7 +18,7 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 from django.db import transaction
-from portal.models import PortalRequestLine
+from portal.models import PortalRequestLine, PortalRequestSummary
 
 from crm.models import Deal
 
@@ -68,18 +68,22 @@ def create_client_request(crm_client_id: int, data: Dict[str, Any]) -> Tuple[Dic
         company = mapping.company
         owner = data["owner"]
         summary = data["need"]["summary"].strip()
+        # Название и суть — как у заявки из Кабинета: клиент видит в списке суть, а не «Заявка: <компания>» (ПРАВДА-2).
+        from portal.services.requests import short_title  # локально: `portal.services.requests` импортирует этот модуль
+
         deal = Deal(
             company=company,
             contact=_contact(company, data),
             manager=manager_for(owner.get("crm_user_id")),
             stage=stages.initial_fsm_stage(),
-            title=f"Заявка: {company.name}",
+            title=short_title(summary) or f"Заявка: {company.name}",
             notes=summary,
             process="v3",
             urgency=data["urgency"],
             crm_request_id=data["crm_request_id"],
         )
         deal.save()
+        PortalRequestSummary.objects.create(deal=deal, text=summary)
         for idx, text in enumerate(data["need"].get("product_interest") or []):
             PortalRequestLine.objects.create(deal=deal, text=str(text).strip(), sort_order=idx + 1)
         letter_file_id = data.get("letter_file_id")

@@ -119,6 +119,12 @@
     "rejected": "Declined",
     "quote_expired": "Quote has expired"
   },
+  "requestStatus": {
+    "new": "New",
+    "in_progress": "In progress",
+    "quoted": "Quote ready",
+    "closed": "Closed"
+  },
   "transferErrors": {
     "erp_unavailable": "no response",
     "erp_request_conflict": "the request data changed after sending — create the request again",

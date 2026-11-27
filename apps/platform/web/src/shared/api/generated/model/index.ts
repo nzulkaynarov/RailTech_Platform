@@ -248,6 +248,7 @@ export * from "./clientPartnerRequest";
 export * from "./clientPartnerRequestContactsItem";
 export * from "./clientPartnerRequestMatchedBy";
 export * from "./clientRequestRow";
+export * from "./clientRequestRowCabinetStatus";
 export * from "./clientRequestRowTransfer";
 export * from "./clientRequestRowUrgency";
 export * from "./clientRow";

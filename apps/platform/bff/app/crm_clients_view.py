@@ -29,6 +29,7 @@ from app.schemas_crm_leads import (
     ClientSources,
     ContactChannel,
     DocumentType,
+    RequestStatus,
 )
 from app.schemas_do_not_work import DoNotWork
 
@@ -213,6 +214,25 @@ _SEES_STEP: dict[StepCode, ClientSees] = {
 }
 
 
+# Статус заявки в списке «Заявки» Кабинета — до проекта. Таблица зеркалит `by_external_stage` из
+# `packages/contracts/client-request-statuses.yaml` (тест сверяет с файлом); у проекта слово берётся из `client_sees`.
+_CABINET_STATUS: dict[str | None, RequestStatus] = {
+    None: "new",
+    "request": "new",
+    "quoting": "in_progress",
+    "quote_sent": "quoted",
+    "lost": "closed",
+}
+
+
+def cabinet_status_of(deal: CrmDeal) -> RequestStatus | None:
+    """Что клиент видит в Кабинете у заявки; `None` — заявка стала проектом, там слова проекта (`client_sees`)."""
+    if step_of(deal) in _PROJECT:
+        return None
+    stage = "lost" if deal.stage == "lost" else deal.external_stage
+    return _CABINET_STATUS.get(stage, "in_progress")
+
+
 def step_of(deal: CrmDeal) -> StepCode:
     if deal.stage == "lost":
         return "LOST"
@@ -232,6 +252,7 @@ def request_row(deal: CrmDeal) -> ClientRequestRow:
         step=step,
         project=step in _PROJECT,
         client_sees=sees or _SEES_STEP[step],
+        cabinet_status=cabinet_status_of(deal),
         urgency=deal.request_urgency,
         transfer=deal.erp_request_status,
         transfer_error=deal.erp_request_error,

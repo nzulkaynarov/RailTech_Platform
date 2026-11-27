@@ -141,6 +141,7 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
         "step": "QUOTE",
         "project": False,
         "client_sees": "awaiting_decision",
+        "cabinet_status": "quoted",
         "urgency": "urgent",
         "transfer": "done",
         "transfer_error": None,
@@ -149,8 +150,10 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
     }
     assert (failed["number"], failed["step"], failed["client_sees"]) == (None, "REQUEST", "in_work")
     assert (failed["transfer"], failed["transfer_error"]) == ("failed", "erp_unreachable")
+    assert failed["cabinet_status"] == "new"
     assert (paid["step"], paid["project"], paid["client_sees"]) == ("PAYMENT", True, "fulfilling")
-    assert (lost["step"], lost["client_sees"]) == ("LOST", "rejected")
+    assert paid["cabinet_status"] is None  # проект: слова проекта, не заявки
+    assert (lost["step"], lost["client_sees"], lost["cabinet_status"]) == ("LOST", "rejected", "closed")
     assert card["documents"] == [
         {
             "id": 61,

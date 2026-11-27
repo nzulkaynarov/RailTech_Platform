@@ -217,7 +217,7 @@ export interface paths {
     };
     /**
      * Логотип своей компании до входа (ДВ-3)
-     * @description Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+     * @description Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
      */
     get: operations["getOperatorLogo"];
     put?: never;
@@ -18690,6 +18690,11 @@ export interface components {
       /** @description Заявка стала проектом (КП принято) */
       project: boolean;
       client_sees: components["schemas"]["ClientSees"];
+      /**
+       * @description Слово статуса заявки в списке «Заявки» Кабинета (`packages/contracts/client-request-statuses.yaml`); `null` — заявка стала проектом, тогда слова проекта — `client_sees`. Карточка компании пишет «В кабинете клиента» именно им.
+       * @enum {string|null}
+       */
+      cabinet_status: "new" | "in_progress" | "quoted" | "closed" | null;
       /** @enum {string|null} */
       urgency: "normal" | "urgent" | null;
       /**
@@ -21308,7 +21313,13 @@ export interface operations {
           "image/*": string;
         };
       };
-      404: components["responses"]["NotFound"];
+      /** @description Логотипа нет — Платформа рисует буквы названия компании */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
   };
   createFirstAdmin: {
