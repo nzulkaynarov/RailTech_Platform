@@ -20,6 +20,7 @@ const PEOPLE: CounterpartyPerson[] = [
     is_primary: true,
     company: { id: "7", name: "АО «Демо-Путь»" },
     kind: "client",
+    roles: ["client"],
   },
   {
     id: "42",
@@ -30,6 +31,7 @@ const PEOPLE: CounterpartyPerson[] = [
     is_primary: true,
     company: { id: "9", name: "ООО «Поставщик Север»" },
     kind: "partner",
+    roles: ["partner"],
   },
 ];
 

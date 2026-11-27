@@ -270,6 +270,20 @@ class Company(models.Model):
     do_not_work_reason = models.TextField(blank=True, default="", verbose_name=_("Причина «Не работать»"))
     do_not_work_until = models.DateField(null=True, blank=True, verbose_name=_("«Не работать» до"))
 
+    # ── «Не клиент» (КОНТР-1б) ──────────────────────────────────────────────────────────────────
+    # Роль клиента снята сотрудником, потому что компанию завели клиентом по ошибке. Факты, а не флаг: когда и кто.
+    # Сделки, созданные ПОСЛЕ этого момента, снова делают компанию клиентом (`accounts.services.clients.client_book_q`);
+    # прежние сделки роль не возвращают. Тип `CLIENT` вернёт любой процесс, который его ставит (принятое КП).
+    client_role_removed_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Роль клиента снята"))
+    client_role_removed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто снял роль клиента"),
+    )
+
     objects = models.Manager.from_queryset(CompanyQuerySet)()
 
     class Meta:

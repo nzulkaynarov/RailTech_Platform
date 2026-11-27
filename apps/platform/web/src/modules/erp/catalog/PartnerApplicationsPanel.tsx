@@ -717,7 +717,9 @@ function SendContractModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation("catalog");
-  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(
+    item.company_match_pending === "inn" ? "match" : undefined,
+  );
   const needsChoice = Boolean(item.company_match_pending);
 
   const sendContract = useSendContractPartnerApplication({
@@ -779,7 +781,9 @@ function FromArchiveModal({
   const [note, setNote] = useState("");
   const [roleDates, setRoleDates] = useState<Record<string, string>>({});
   const [scans, setScans] = useState<Record<string, File | null>>({});
-  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(
+    item.company_match_pending === "inn" ? "match" : undefined,
+  );
   const needsChoice = Boolean(item.company_match_pending);
   const today = new Date().toISOString().slice(0, 10);
   const dateOk =
@@ -913,7 +917,9 @@ function ApproveModal({
     item.contract_date || new Date().toISOString().slice(0, 10),
   );
   const [kind, setKind] = useState<PartnerApplicationKind>(item.kind || "supplier");
-  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(
+    item.company_match_pending === "inn" ? "match" : undefined,
+  );
   const [overrideReason, setOverrideReason] = useState("");
   const [signedNote, setSignedNote] = useState("");
   const [scan, setScan] = useState<File | null>(null);

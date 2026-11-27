@@ -383,6 +383,8 @@ import type {
   MenuCounters,
   MessageInbox,
   MessagesConflictResponse,
+  NotClientPlan,
+  NotClientResult,
   NotFoundResponse,
   NotificationPage,
   NotificationSettings,
@@ -64786,6 +64788,251 @@ export const useClearCounterpartyDoNotWork = <
   TContext
 > => {
   return useMutation(getClearCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
+
+export const getGetCounterpartyNotClientPlanUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/not-client`;
+};
+
+/**
+ * ERP `GET parties/organizations/{id}/not-client/` (КОНТР-1б): открытые заявки, которые закроются как заведённые по ошибке, заявки с отправленным КП (остаются), настоящая история (КП, договоры, счета, проекты) и контакты. Ничего не меняет; персональных данных нет. Раздел `crm.clients` или `erp.stock` — чтение.
+ * @summary Карточка контрагента: что сделает «Не клиент»
+ */
+export const getCounterpartyNotClientPlan = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<NotClientPlan> => {
+  return http<NotClientPlan>(getGetCounterpartyNotClientPlanUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCounterpartyNotClientPlanQueryKey = (id: CompanyItemRef) => {
+  return [`/api/v1/people/counterparties/${id}/not-client`] as const;
+};
+
+export const getGetCounterpartyNotClientPlanQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCounterpartyNotClientPlanQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>> = ({
+    signal,
+  }) => getCounterpartyNotClientPlan(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCounterpartyNotClientPlanQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>
+>;
+export type GetCounterpartyNotClientPlanQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCounterpartyNotClientPlan<
+  TData = Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyNotClientPlan<
+  TData = Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyNotClientPlan<
+  TData = Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Карточка контрагента: что сделает «Не клиент»
+ */
+
+export function useGetCounterpartyNotClientPlan<
+  TData = Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyNotClientPlan>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCounterpartyNotClientPlanQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetCounterpartyNotClientUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/not-client`;
+};
+
+/**
+ * ERP `POST parties/organizations/{id}/not-client/` (КОНТР-1б). Открытые заявки без отправленного клиенту КП закрываются причиной «Оформлена по ошибке» (остаются в журнале, из открытых списков и очереди уходят), снимается тип клиента, компания выходит из «Клиентов»; контакты остаются, их кабинет следует оставшимся ролям (идёт заявка на подключение партнёром — они видят «заявка рассматривается»). Настоящая история не блокирует — решает сотрудник (предупреждение строит `getCounterpartyNotClientPlan`). Повтор безопасен; кто и когда — в журнале ERP. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+ * @summary Карточка контрагента: «Не клиент» — снять роль клиента, поставленную по ошибке
+ */
+export const setCounterpartyNotClient = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<NotClientResult> => {
+  return http<NotClientResult>(getSetCounterpartyNotClientUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSetCounterpartyNotClientMutationKey = () => ["setCounterpartyNotClient"] as const;
+
+export const getSetCounterpartyNotClientMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCounterpartyNotClient>>,
+    TError,
+    SetCounterpartyNotClientMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCounterpartyNotClient>>,
+  TError,
+  SetCounterpartyNotClientMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCounterpartyNotClientMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCounterpartyNotClient>>,
+    SetCounterpartyNotClientMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return setCounterpartyNotClient(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCounterpartyNotClientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCounterpartyNotClient>>
+>;
+
+export type SetCounterpartyNotClientMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type SetCounterpartyNotClientMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: «Не клиент» — снять роль клиента, поставленную по ошибке
+ */
+export const useSetCounterpartyNotClient = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setCounterpartyNotClient>>,
+      TError,
+      SetCounterpartyNotClientMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setCounterpartyNotClient>>,
+  TError,
+  SetCounterpartyNotClientMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCounterpartyNotClientMutationOptions(options), queryClient);
 };
 
 export const getSetCounterpartyRoleUrl = (id: CompanyItemRef) => {

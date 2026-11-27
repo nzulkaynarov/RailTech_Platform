@@ -51,6 +51,7 @@ def test_clients_and_partners_without_own_and_strangers(world):
         "is_primary": False,
         "company": {"id": world["client_company"].pk, "name": "ООО Клиент Юг"},
         "kind": "client",
+        "roles": ["client"],
         "photo_version": None,
     }
     assert {row["name"]: row["kind"] for row in body["results"]}["Дильшод Поставщиков"] == "partner"

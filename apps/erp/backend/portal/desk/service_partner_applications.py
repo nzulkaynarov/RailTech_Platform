@@ -38,6 +38,7 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
+from portal.desk import company_roles
 from portal.desk import service_partner_contract as contract_step
 from portal.desk.service import LANGUAGES, AccessError, _person
 from portal.services.invitation import invite_contact
@@ -131,6 +132,15 @@ def _applicant_contact(app: PartnerApplication, company: Company, user) -> Conta
         if app.email.strip()
         else None
     )
+    if contact is None:
+        # КОНТР-1б: контакт, заведённый по тому же письму, мог получить другую почту или только телефон — тот же человек по
+        # телефону (цифры) не заводится второй раз
+        digits = "".join(ch for ch in (app.phone or "") if ch.isdigit())
+        if len(digits) >= 9:
+            for candidate in Contact.objects.filter(active_contact_q(), company=company).exclude(phone=""):
+                if "".join(ch for ch in candidate.phone if ch.isdigit()).endswith(digits[-9:]):
+                    contact = candidate
+                    break
     if contact is None:
         contact = Contact.objects.create(
             company=company,
@@ -394,6 +404,10 @@ def send_contract(pk: int, data: dict, user) -> dict:
                     rel.contract_number = app.contract_number
                     rel.contract_date = app.contract_date
                     rel.save(update_fields=["contract_number", "contract_date"])
+            else:
+                # КОНТР-1б: компания уже была (заведена клиентом по письму или найдена) — вход кандидата тоже нужен: если
+                # клиентская роль снята или её не было, без отношения человек остался бы без кабинета и без заявки.
+                company_roles.ensure_candidate_entry(app.company, app, user)
             invited_contact = app.applicant_contact if (app.email or "").strip() else None
 
         app.status = PartnerApplicationStatus.CONTRACT_SENT
@@ -526,11 +540,12 @@ def approve_application(pk: int, data: dict, user, *, archive: bool = False, sig
                     contract_date=contract_date,
                     status=(
                         RelationshipStatus.ACTIVE
-                        if app.source == PartnerApplicationSource.CLIENT_CABINET
+                        if app.source == PartnerApplicationSource.CLIENT_CABINET or contact.last_login_at
                         else RelationshipStatus.INVITED
                     ),
                 )
-                if app.source == PartnerApplicationSource.CLIENT_CABINET:
+                # Кто уже входил в кабинет (как клиент), второго «первого входа» не ждёт: партнёрский раздел открыт сразу
+                if app.source == PartnerApplicationSource.CLIENT_CABINET or contact.last_login_at:
                     rel.activated_at = now
                 rel.save()
             else:

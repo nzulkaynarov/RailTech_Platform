@@ -1,4 +1,5 @@
 import { fireEvent, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,6 +11,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { server } from "../../../test/server";
 
 setupCatalogTests();
 
@@ -187,6 +189,53 @@ describe("Партнёр: блок «Доступ в кабинет»", () => {
     expect(await within(section).findByText("Активен")).toBeVisible();
     expect(within(section).getByText("В кабинете: Клиент · Партнёр")).toBeVisible();
     expect(within(section).getByRole("switch", { name: /Каталог и заявки/ })).not.toBeChecked();
+  });
+
+  it("КОНТР-1б: вошёл клиентом, партнёрского отношения нет — «Открыт», последний вход и что видит; не «Не открыт»", async () => {
+    server.use(
+      http.get("*/erp/catalog/suppliers/1/cabinet-access", () =>
+        HttpResponse.json({
+          company_id: "1",
+          company_name: "ООО «Поставщик Север»",
+          crm_client: { status: "none", crm_client_id: null },
+          relationship: null,
+          contacts: [
+            {
+              id: "501",
+              name: "Азиз Тошматов",
+              email: "aziz@sever-supply.example",
+              phone: "",
+              language: "ru",
+              can_act: true,
+              invited_at: "2026-11-25T07:00:00+05:00",
+              last_login_at: "2026-11-25T13:22:00+05:00",
+            },
+          ],
+          partner_modules: {
+            allowed: ["my_products", "catalog_requests"],
+            default: ["my_products"],
+          },
+          cabinet_roles: ["client"],
+          cabinet_modules: ["quotes"],
+          cabinet: {
+            opened: true,
+            roles: ["client"],
+            sees: "client",
+            last_login_at: "2026-11-25T13:22:00+05:00",
+            logged_in_contacts: 1,
+          },
+          can_manage: true,
+        }),
+      ),
+    );
+    const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
+    const section = await block(drawer);
+    expect(await within(section).findByText("Открыт")).toBeVisible();
+    expect(within(section).queryByText("Не открыт")).toBeNull();
+    expect(within(section).queryByText(/ещё не открывали/)).toBeNull();
+    expect(within(section).getByText("Раздел клиента")).toBeVisible();
+    expect(within(section).getByText("Последний вход")).toBeVisible();
+    expect(within(section).getByText("В кабинете: Клиент")).toBeVisible();
   });
 
   it("приостановить: подтверждение «Что произойдёт», затем статус «Приостановлен» и закрытый кабинет", async () => {

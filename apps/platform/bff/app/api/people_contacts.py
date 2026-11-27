@@ -19,6 +19,12 @@ from app.errors import PlatformError, from_backend
 from app.schemas_do_not_work import DoNotWork
 from app.schemas_erp_catalog import page_meta, rows_of
 from app.schemas_pictures import company_logo_url, contact_photo_url
+from app.schemas_supplier_access import (
+    CabinetTruth,
+    CounterpartyRoleState,
+    cabinet_truth_of,
+    role_states_of,
+)
 
 router = APIRouter(tags=["chats"])
 
@@ -42,6 +48,8 @@ class CounterpartyPerson(BaseModel):
     is_primary: bool
     company: CounterpartyRef
     kind: Kind
+    # КОНТР-1б: роли компании человека: «Кто это» идёт по ним, держит обе — он на обеих вкладках
+    roles: list[Kind]
     # СУЩ-3: фото контакта только через BFF, `?v=` — версия; `None` — инициалы
     photo_url: str | None = None
     # ЕД-3: логотип компании человека (пакетно, как в реестрах); `None` — буквы названия
@@ -79,6 +87,7 @@ def to_person(row: dict[str, Any]) -> CounterpartyPerson:
         is_primary=bool(row.get("is_primary")),
         company=CounterpartyRef(id=str(company.get("id", "")), name=str(company.get("name") or "")),
         kind="client" if row.get("kind") == "client" else "partner",
+        roles=[r for r in (row.get("roles") or []) if r in ("client", "partner")],
         photo_url=contact_photo_url(row.get("id"), row.get("photo_version")),
     )
 
@@ -169,7 +178,7 @@ CardReader = Annotated[Authed, Depends(require_any(("crm.clients", "read"), ("er
 # Роли «поставщик» и «изготовитель» отмечает тот, кто ведёт поставщиков (ERP `supply.manage`)
 CardWriter = Annotated[Authed, Depends(require("erp.stock", "full"))]
 CompanyId = Annotated[str, Path(pattern=r"^[0-9]+$")]
-RoleCode = Literal["supplier", "manufacturer"]
+RoleCode = Literal["supplier", "manufacturer", "client"]
 
 
 class CounterpartyRoles(BaseModel):
@@ -228,6 +237,9 @@ class CounterpartyCard(BaseModel):
     legal_address: str | None
     crm_client_id: int | None
     roles: CounterpartyRoles
+    # КОНТР-1б: роли списком с состоянием каждой; карточка, список и «Люди» читают их
+    role_states: list[CounterpartyRoleState]
+    cabinet: CabinetTruth
     people: list[CounterpartyCardPerson]
     bank_accounts: list[CounterpartyAccount]
     accounts_masked: bool
@@ -289,6 +301,8 @@ def to_card(raw: Any) -> CounterpartyCard:
             partner=bool(roles.get("partner")),
             organization=bool(roles.get("organization")),
         ),
+        role_states=role_states_of(row.get("role_states")),
+        cabinet=cabinet_truth_of(row.get("cabinet")),
         people=[
             CounterpartyCardPerson(
                 id=str(person.get("id", "")),
@@ -357,6 +371,98 @@ async def set_counterparty_role(
         "POST", f"parties/organizations/{id}/roles/", json={"role": body.role, "on": body.on}
     )
     return to_card(data)
+
+
+NotClientWriter = Annotated[
+    Authed, Depends(require_any(("crm.clients", "full"), ("erp.stock", "full")))
+]
+
+
+class NotClientHistory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quotes_sent: int
+    contracts: int
+    invoices: int
+    projects: int
+
+
+class NotClientPlan(BaseModel):
+    """«Не клиент» (КОНТР-1б): что изменится или изменилось; числа и номера заявок, без ПД."""
+
+    model_config = ConfigDict(extra="forbid")
+    company_id: str
+    dry_run: bool
+    is_client: bool
+    requests_to_close: list[str]
+    requests_kept: list[str]
+    history: NotClientHistory
+    has_history: bool
+    contacts: int
+    contacts_with_cabinet: int
+    remaining_roles: list[CounterpartyRoleState]
+    requests_closed: list[str] = Field(default_factory=list)
+    candidate_entry: bool = False
+
+
+class NotClientResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    result: NotClientPlan
+    card: CounterpartyCard
+
+
+def to_not_client_plan(raw: Any) -> NotClientPlan:
+    row: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    history: dict[str, Any] = row["history"] if isinstance(row.get("history"), dict) else {}
+
+    def numbers(key: str) -> list[str]:
+        value = row.get(key)
+        return [str(v) for v in value] if isinstance(value, list) else []
+
+    return NotClientPlan(
+        company_id=str(row.get("company_id", "")),
+        dry_run=bool(row.get("dry_run")),
+        is_client=bool(row.get("is_client")),
+        requests_to_close=numbers("requests_to_close"),
+        requests_kept=numbers("requests_kept"),
+        history=NotClientHistory(
+            quotes_sent=int(history.get("quotes_sent") or 0),
+            contracts=int(history.get("contracts") or 0),
+            invoices=int(history.get("invoices") or 0),
+            projects=int(history.get("projects") or 0),
+        ),
+        has_history=bool(row.get("has_history")),
+        contacts=int(row.get("contacts") or 0),
+        contacts_with_cabinet=int(row.get("contacts_with_cabinet") or 0),
+        remaining_roles=role_states_of(row.get("remaining_roles")),
+        requests_closed=numbers("requests_closed"),
+        candidate_entry=bool(row.get("candidate_entry")),
+    )
+
+
+@router.get(
+    "/people/counterparties/{id}/not-client",
+    response_model=NotClientPlan,
+    operation_id="getCounterpartyNotClientPlan",
+)
+async def get_not_client_plan(id: CompanyId, authed: CardReader) -> NotClientPlan:
+    """«Не клиент»: что сделает действие и что в компании настоящее (КП, договоры, счета)."""
+    data = await ErpCompany(authed.call).data("GET", f"parties/organizations/{id}/not-client/")
+    return to_not_client_plan(data)
+
+
+@router.post(
+    "/people/counterparties/{id}/not-client",
+    response_model=NotClientResult,
+    operation_id="setCounterpartyNotClient",
+)
+async def set_counterparty_not_client(id: CompanyId, authed: NotClientWriter) -> NotClientResult:
+    """Снять роль клиента, поставленную по ошибке: заявки закрываются «заведена по ошибке»,
+    компания выходит из «Клиентов»; история не блокирует. Право — как на реквизиты."""
+    data = await ErpCompany(authed.call).data("POST", f"parties/organizations/{id}/not-client/")
+    row: dict[str, Any] = data if isinstance(data, dict) else {}
+    return NotClientResult(
+        result=to_not_client_plan(row.get("result")), card=to_card(row.get("card"))
+    )
 
 
 class CounterpartyRequisitesIn(BaseModel):

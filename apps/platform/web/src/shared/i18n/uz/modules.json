@@ -370,6 +370,10 @@
         "ru": "Rusça",
         "en": "Inglizça",
         "uz": "Özbekça"
+      },
+      "roleNames": {
+        "client": "Mijoz",
+        "partner": "Hamkor"
       }
     }
   },

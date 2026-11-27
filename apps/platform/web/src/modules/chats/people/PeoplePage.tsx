@@ -57,6 +57,10 @@ interface Person {
   key: string;
   name: string;
   kind: Exclude<Kind, "all">;
+  /** Вкладки, где человека видно: компания держит обе роли — человек на обеих (КОНТР-1б) */
+  tabs: readonly Exclude<Kind, "all">[];
+  /** «Кто это» словами: роли компании, а не откуда человек пришёл */
+  kindText: string | null;
   position: string | null;
   /** Ответственный за лид: сотрудник со справочником (фото или инициалы) */
   owner: Pick<PersonRef, "id" | "name"> | null;
@@ -106,6 +110,8 @@ export function PeoplePage() {
           key: `employee-${row.id}`,
           name: row.name,
           kind: "employees" as const,
+          tabs: ["employees"] as const,
+          kindText: null,
           position: row.position,
           owner: null,
           company: null,
@@ -115,23 +121,32 @@ export function PeoplePage() {
           roles: row.roles ?? [],
           photoUrl: row.avatar_url,
         })),
-      ...(contacts.data?.items ?? []).map((row) => ({
-        key: `contact-${row.id}`,
-        name: row.name,
-        kind: row.kind === "client" ? ("clients" as const) : ("partners" as const),
-        position: row.position,
-        owner: null,
-        company: { name: row.company.name, logoUrl: row.company_logo_url ?? null },
-        revealId: row.has_phone || row.has_email ? row.id : null,
-        revealFrom: "counterparty" as const,
-        lead: null,
-        roles: [],
-        photoUrl: row.photo_url ?? null,
-      })),
+      ...(contacts.data?.items ?? []).map((row) => {
+        const held = row.roles.length > 0 ? row.roles : [row.kind];
+        return {
+          key: `contact-${row.id}`,
+          name: row.name,
+          kind: held[0] === "client" ? ("clients" as const) : ("partners" as const),
+          tabs: held.map((role) =>
+            role === "client" ? ("clients" as const) : ("partners" as const),
+          ),
+          kindText: held.map((role) => t(`modules:chats.people.roleNames.${role}`)).join(" · "),
+          position: row.position,
+          owner: null,
+          company: { name: row.company.name, logoUrl: row.company_logo_url ?? null },
+          revealId: row.has_phone || row.has_email ? row.id : null,
+          revealFrom: "counterparty" as const,
+          lead: null,
+          roles: [],
+          photoUrl: row.photo_url ?? null,
+        };
+      }),
       ...(leads.data?.items ?? []).map((row) => ({
         key: `lead-${row.lead}`,
         name: row.name,
         kind: "leads" as const,
+        tabs: ["leads"] as const,
+        kindText: null,
         position: null,
         owner: row.assigned,
         company: row.company ? { name: row.company, logoUrl: null } : null,
@@ -149,7 +164,7 @@ export function PeoplePage() {
         photoUrl: null,
       })),
     ],
-    [staff.data, contacts.data, leads.data],
+    [staff.data, contacts.data, leads.data, t],
   );
 
   const needle = search.trim().toLocaleLowerCase();
@@ -162,7 +177,7 @@ export function PeoplePage() {
   };
   const rows = people.filter(
     (person) =>
-      (kind === "all" || person.kind === kind) &&
+      (kind === "all" || person.tabs.includes(kind)) &&
       (needle === "" ||
         person.name.toLocaleLowerCase().includes(needle) ||
         (person.company?.name ?? "").toLocaleLowerCase().includes(needle)),
@@ -258,7 +273,7 @@ export function PeoplePage() {
       cell: (row) =>
         row.lead?.closed
           ? `${kindLabel(row.kind)} · ${t("modules:chats.people.closedLead")}`
-          : kindLabel(row.kind),
+          : (row.kindText ?? kindLabel(row.kind)),
     },
     {
       id: "owner",
@@ -399,7 +414,7 @@ export function PeoplePage() {
                 {
                   key: "kind",
                   label: t("modules:chats.people.columns.kind"),
-                  children: kindLabel(selected.kind),
+                  children: selected.kindText ?? kindLabel(selected.kind),
                 },
                 ...(selected.lead
                   ? [

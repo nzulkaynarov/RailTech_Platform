@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
+import { markNotClient, resetNotClient } from "../../../mocks/notClient";
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -12,6 +13,7 @@ setupBotTests();
 beforeEach(() => {
   resetLeads();
   resetMarks();
+  resetNotClient();
 });
 
 async function open(email: string, path = "/crm/clients") {
@@ -263,6 +265,29 @@ describe("Контрагенты: тип отношения", () => {
       expect(screen.queryByRole("link", { name: /Клиент Один/ })).toBeNull();
     });
     expect(screen.getByRole("link", { name: /Партнёр Семь/ })).toBeInTheDocument();
+  });
+
+  it("КОНТР-1б: тип в списке — роли компании: у снявшей роль клиента компании нет типа «Клиент» и её нет во вкладке «Клиенты»", async () => {
+    markNotClient("1003");
+    await open("manager@demo.example");
+    const table = await screen.findByRole("table", { name: "Клиенты" });
+    const row = within(table)
+      .getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" })
+      .closest("tr") as HTMLElement;
+    expect(within(row).queryByText("Клиент")).toBeNull();
+    // другие клиенты остались клиентами
+    const other = within(table)
+      .getByRole("link", { name: "Открыть карточку ООО Демо-Вагон" })
+      .closest("tr") as HTMLElement;
+    expect(within(other).getByText("Клиент")).toBeVisible();
+
+    fireEvent.click(screen.getByText("Клиенты", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
+      ).toBeNull();
+    });
+    expect(screen.getByRole("link", { name: "Открыть карточку ООО Демо-Вагон" })).toBeVisible();
   });
 
   it("Х-8: компания с отметкой «Не работать» помечена в списке, фильтр «Не работаем» оставляет только такие", async () => {

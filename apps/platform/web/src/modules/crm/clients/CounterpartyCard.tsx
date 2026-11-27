@@ -10,14 +10,19 @@ import { ApiError } from "../../../shared/api/errors";
 import type {
   CounterpartyCard as Card,
   CounterpartyRoleInRole,
+  NotClientPlan,
 } from "../../../shared/api/generated/model";
 import {
   getGetCounterpartyByClientQueryKey,
   getGetCounterpartyQueryKey,
+  getGetSupplierCabinetAccessQueryKey,
   getListCatalogSuppliersQueryKey,
+  getListCounterpartyPeopleQueryKey,
   getListCrmClientsQueryKey,
   useGetCounterparty,
   useGetCounterpartyByClient,
+  useGetCounterpartyNotClientPlan,
+  useSetCounterpartyNotClient,
   useClearCounterpartyDoNotWork,
   useDeleteContactPhoto,
   useDeleteCounterpartyLogo,
@@ -44,6 +49,8 @@ import "./counterparty.css";
 
 type Part = "overview" | "client" | "supplier";
 const EDITABLE: readonly CounterpartyRoleInRole[] = ["supplier", "manufacturer"];
+// «+ Клиент»: роль клиента можно только дать; снять ошибочную — «Не клиент»
+const GRANTABLE: readonly CounterpartyRoleInRole[] = ["client"];
 const ROLE_ORDER = ["client", "supplier", "manufacturer", "partner", "organization"] as const;
 
 /**
@@ -107,7 +114,8 @@ function Loaded({
   const requisitesEditable = canEdit(me, "crm.clients") || editable;
   const [editing, setEditing] = useState(false);
   const [marking, setMarking] = useState(false);
-  const hasClient = seesClients && clientId !== null;
+  // КОНТР-1б: раздел клиента — только пока компания клиент (роль ERP), а не пока в CRM есть строка
+  const hasClient = seesClients && clientId !== null && card.roles.client;
   const hasSupplier = seesStock && (card.roles.supplier || card.roles.manufacturer);
   const first: Part =
     entry === "client" && hasClient
@@ -158,6 +166,45 @@ function Loaded({
     },
   });
   const conflict = setRole.error instanceof ApiError && setRole.error.status === 409;
+  // КОНТР-1б: «Не клиент» — одно действие на месте; предупреждение показывается только когда в компании есть настоящая
+  // история (КП, договоры, счета): тогда решает сотрудник, действие не блокируется
+  const [warn, setWarn] = useState<NotClientPlan | null>(null);
+  const notClientPlan = useGetCounterpartyNotClientPlan(card.id, {
+    query: { enabled: false, retry: false },
+  });
+  const notClient = useSetCounterpartyNotClient({
+    mutation: {
+      onSuccess: (done) => {
+        store(done.card);
+        setWarn(null);
+        setPart("overview");
+        refreshLists();
+        void queryClient.invalidateQueries({ queryKey: getListCounterpartyPeopleQueryKey() });
+        void queryClient.invalidateQueries({
+          queryKey: getGetSupplierCabinetAccessQueryKey(card.id),
+        });
+        void message.success(
+          t("counterparty.notClient.done", { count: done.result.requests_closed.length }),
+        );
+      },
+    },
+  });
+  const startNotClient = () => {
+    void notClientPlan.refetch().then((plan) => {
+      if (plan.data?.has_history || (plan.data?.requests_to_close.length ?? 0) > 0)
+        setWarn(plan.data ?? null);
+      else notClient.mutate({ id: card.id });
+    });
+  };
+  const roleText = (role: (typeof ROLE_ORDER)[number]): string => {
+    const state = card.role_states.find((r) => r.role === role);
+    if (role === "client") return t("counterparty.roleState.client.active");
+    if (role === "partner" && state) {
+      const kind = state.kind ? `, ${t(`counterparty.partnerKind.${state.kind}`)}` : "";
+      return `${t("counterparty.roleState.partner.label")}${kind} — ${t(`counterparty.roleState.partner.${state.state}`)}`;
+    }
+    return t(`counterparty.roles.${role}`);
+  };
 
   const items = [
     {
@@ -209,6 +256,16 @@ function Loaded({
               }}
             >
               {t("counterparty.requisites.edit")}
+            </Button>
+          ) : null}
+          {requisitesEditable && card.roles.client ? (
+            <Button
+              size="small"
+              loading={notClientPlan.isFetching || notClient.isPending}
+              title={t("counterparty.notClient.hint")}
+              onClick={startNotClient}
+            >
+              {t("counterparty.notClient.action")}
             </Button>
           ) : null}
           {requisitesEditable ? (
@@ -274,10 +331,14 @@ function Loaded({
       ) : null}
       <ul className="pf-cp-roles" aria-label={t("counterparty.roles.label")}>
         {ROLE_ORDER.map((role) => {
-          const on = card.roles[role];
-          const togglable = editable && EDITABLE.some((code) => code === role);
+          const on =
+            role === "partner"
+              ? card.role_states.some((r) => r.role === "partner")
+              : card.roles[role];
+          const grantable = editable && !on && GRANTABLE.some((code) => code === role);
+          const togglable = (editable && EDITABLE.some((code) => code === role)) || grantable;
           if (!on && !togglable) return null;
-          const name = t(`counterparty.roles.${role}`);
+          const name = roleText(role);
           return (
             <li key={role}>
               {togglable ? (
@@ -304,6 +365,46 @@ function Loaded({
           );
         })}
       </ul>
+      {notClientPlan.isError || notClient.isError ? (
+        <Alert type="warning" showIcon role="alert" message={t("counterparty.notClient.failed")} />
+      ) : null}
+      {warn ? (
+        <Dialog
+          title={t("counterparty.notClient.title")}
+          okLabel={t(
+            warn.has_history ? "counterparty.notClient.confirm" : "counterparty.notClient.apply",
+          )}
+          cancelLabel={t("counterparty.notClient.cancel")}
+          danger
+          loading={notClient.isPending}
+          onOk={() => {
+            notClient.mutate({ id: card.id });
+          }}
+          onCancel={() => {
+            setWarn(null);
+          }}
+        >
+          <p>
+            {t(warn.has_history ? "counterparty.notClient.ask" : "counterparty.notClient.text")}
+          </p>
+          {warn.has_history ? (
+            <p>
+              {t("counterparty.notClient.history", {
+                quotes: warn.history.quotes_sent,
+                contracts: warn.history.contracts,
+                invoices: warn.history.invoices,
+                projects: warn.history.projects,
+              })}
+            </p>
+          ) : null}
+          {warn.requests_kept.length > 0 ? (
+            <p>{t("counterparty.notClient.kept", { list: warn.requests_kept.join(", ") })}</p>
+          ) : null}
+          {warn.requests_to_close.length > 0 ? (
+            <p>{t("counterparty.notClient.close", { list: warn.requests_to_close.join(", ") })}</p>
+          ) : null}
+        </Dialog>
+      ) : null}
       {setRole.isError ? (
         <Alert
           type="warning"

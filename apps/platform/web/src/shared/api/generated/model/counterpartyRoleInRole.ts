@@ -9,4 +9,5 @@ export type CounterpartyRoleInRole =
 export const CounterpartyRoleInRole = {
   supplier: "supplier",
   manufacturer: "manufacturer",
+  client: "client",
 } as const;

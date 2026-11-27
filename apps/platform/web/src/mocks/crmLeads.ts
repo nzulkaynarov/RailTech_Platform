@@ -36,6 +36,7 @@ import {
 import { buildMe, currentActor, readSession } from "./mockSession";
 import { initialsOf } from "./profileStore";
 import { logoUrlOf } from "./pictures";
+import { roleStatesOf } from "./notClient";
 import { markOf } from "./doNotWorkMarks";
 
 /**
@@ -284,6 +285,8 @@ export const crmLeadsHandlers = [
         ...clientRow(c),
         do_not_work: markOf(String(1000 + c.id)) !== null,
         logo_url: c.in_erp ? logoUrlOf(String(1000 + c.id)) : null,
+        company_id: c.in_erp ? String(1000 + c.id) : null,
+        roles: c.in_erp ? roleStatesOf(String(1000 + c.id)) : null,
       }));
     return HttpResponse.json({ items });
   }),

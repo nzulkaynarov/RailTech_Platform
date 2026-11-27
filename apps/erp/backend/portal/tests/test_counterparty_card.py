@@ -103,7 +103,7 @@ def test_roles_are_marks_not_new_cards(world):
         client.post(url, {"role": "manufacturer", "on": False}, format="json").json()["roles"]["manufacturer"] is False
     )
 
-    assert client.post(url, {"role": "client", "on": True}, format="json").status_code == 400
+    assert client.post(url, {"role": "partner", "on": True}, format="json").status_code == 400
     assert world["clients"]["manager"].post(url, {"role": "manufacturer", "on": True}, format="json").status_code == 403
 
 

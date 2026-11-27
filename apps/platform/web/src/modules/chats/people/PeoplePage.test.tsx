@@ -209,6 +209,59 @@ describe("Органайзер · Люди", () => {
     );
   });
 
+  it("КОНТР-1б: «Кто это» идёт по ролям компании; держит обе — человек на обеих вкладках", async () => {
+    server.use(
+      http.get("*/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/people/leads", () => HttpResponse.json({ items: [], total: 0 })),
+      http.get("*/people/contacts", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "51",
+              name: "Демо Обоюдов",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: true,
+              company: { id: "5", name: "ООО «Демо-Оба»" },
+              kind: "client",
+              roles: ["client", "partner"],
+            },
+            {
+              id: "52",
+              name: "Демо Заявкин",
+              position: null,
+              has_email: false,
+              has_phone: false,
+              is_primary: true,
+              company: { id: "6", name: "ООО «Демо-Заявка»" },
+              kind: "partner",
+              roles: ["partner"],
+            },
+          ],
+          total: 2,
+          page: 1,
+          page_size: 100,
+        }),
+      ),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    expect(await screen.findByRole("button", { name: "Демо Обоюдов" })).toBeVisible();
+    expect(screen.getByText("Клиент · Партнёр")).toBeVisible();
+
+    fireEvent.click(screen.getByText("Люди клиентов", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Демо Заявкин" })).toBeNull();
+    });
+    expect(screen.getByRole("button", { name: "Демо Обоюдов" })).toBeVisible();
+
+    fireEvent.click(screen.getByText("Люди партнёров", { selector: ".ant-segmented-item-label" }));
+    expect(await screen.findByRole("button", { name: "Демо Заявкин" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Демо Обоюдов" })).toBeVisible();
+  });
+
   it("фото контакта (СУЩ-3): в строке — круг с фото, без фото — инициалы; адрес на BFF с версией", async () => {
     server.use(
       http.get("*/staff", () => HttpResponse.json({ items: [] })),
@@ -225,6 +278,7 @@ describe("Органайзер · Люди", () => {
               is_primary: true,
               company: { id: "7", name: "АО «Демо-Путь»" },
               kind: "client",
+              roles: ["client"],
               photo_url: "/api/v1/people/contacts/41/photo?v=abc",
             },
             {
@@ -236,6 +290,7 @@ describe("Органайзер · Люди", () => {
               is_primary: false,
               company: { id: "9", name: "ООО «Поставщик Север»" },
               kind: "partner",
+              roles: ["partner"],
               photo_url: null,
             },
           ],
@@ -297,6 +352,7 @@ describe("Органайзер · Люди", () => {
               is_primary: true,
               company: { id: "7", name: "АО «Демо-Путь»" },
               kind: "client",
+              roles: ["client"],
               photo_url: null,
               company_logo_url: "/api/v1/people/counterparties/7/logo?v=v7",
             },
@@ -309,6 +365,7 @@ describe("Органайзер · Люди", () => {
               is_primary: false,
               company: { id: "9", name: "ООО «Поставщик Север»" },
               kind: "partner",
+              roles: ["partner"],
               photo_url: null,
               company_logo_url: null,
             },

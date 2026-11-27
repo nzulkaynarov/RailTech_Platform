@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { ClientRowHandoffStatus } from "./clientRowHandoffStatus";
+import type { CounterpartyRoleState } from "./counterpartyRoleState";
 
 export interface ClientRow {
   id: number;
@@ -24,4 +25,14 @@ export interface ClientRow {
    * @nullable
    */
   logo_url?: string | null;
+  /**
+   * КОНТР-1б: компания ERP (null — клиент ещё не передан)
+   * @nullable
+   */
+  company_id?: string | null;
+  /**
+   * КОНТР-1б: роли компании ERP с состояниями — «Клиент» и «Партнёр» в списке говорит ERP; null — ERP не ответил или компании нет
+   * @nullable
+   */
+  roles?: CounterpartyRoleState[] | null;
 }

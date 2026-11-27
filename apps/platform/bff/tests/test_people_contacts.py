@@ -30,6 +30,7 @@ PAGE = {
             "is_primary": True,
             "company": {"id": 7, "name": "ООО Клиент Юг"},
             "kind": "client",
+            "roles": ["client"],
         },
         {
             "id": 32,
@@ -40,6 +41,7 @@ PAGE = {
             "is_primary": False,
             "company": {"id": 9, "name": "ООО Поставщик Север"},
             "kind": "partner",
+            "roles": ["client", "partner"],
         },
     ],
 }
@@ -64,10 +66,13 @@ async def test_people_of_clients_and_partners(web: Web, be: Any, check: Contract
         "is_primary": True,
         "company": {"id": "7", "name": "ООО Клиент Юг"},
         "kind": "client",
+        "roles": ["client"],
         "photo_url": None,
         "company_logo_url": None,
     }
     assert (second["position"], second["kind"]) == (None, "partner")
+    # КОНТР-1б: компания держит обе роли — человек идёт по обеим, а не по одной
+    assert second["roles"] == ["client", "partner"]
     assert dict(route.calls.last.request.url.params) == {"page": "1", "page_size": "100"}
 
 
@@ -296,6 +301,17 @@ CARD = {
     ],
     "accounts_masked": True,
     "brands": [{"id": 3, "name": "PL-Rail"}],
+    "role_states": [
+        {"role": "client", "state": "active", "kind": None},
+        {"role": "partner", "state": "application", "kind": "supplier"},
+    ],
+    "cabinet": {
+        "opened": True,
+        "roles": ["client"],
+        "sees": "client",
+        "last_login_at": "2026-11-25T08:22:00Z",
+        "logged_in_contacts": 1,
+    },
 }
 
 
@@ -325,6 +341,13 @@ async def test_counterparty_card_by_company_and_by_client(
         "organization": False,
     }
     assert body["bank_accounts"][0]["account"] == "…4567"
+    # КОНТР-1б: роли списком с состоянием каждой и правда о кабинете — как их отдаёт ERP
+    assert body["role_states"] == [
+        {"role": "client", "state": "active", "kind": None},
+        {"role": "partner", "state": "application", "kind": "supplier"},
+    ]
+    assert body["cabinet"]["sees"] == "client"
+    assert body["cabinet"]["last_login_at"]
     by_client = await web.client.get("/api/v1/people/clients/42/counterparty")
     check(by_client, "/people/clients/{id}/counterparty", "get")
     assert by_client.json()["id"] == "9"
@@ -577,3 +600,74 @@ async def test_erp_refusal_for_a_marked_company_names_the_reason_and_who(web: We
     assert details["reason"] == "company_do_not_work"
     assert details["do_not_work"]["reason"] == "Дважды не оплатил отгрузку"
     assert details["do_not_work"]["set_by"] == "Менеджер Демо"
+
+
+# --- «Не клиент» (КОНТР-1б) -----------------------------------------------------------------------
+
+PLAN = {
+    "company_id": 9,
+    "dry_run": True,
+    "is_client": True,
+    "has_client_type": True,
+    "has_crm_link": True,
+    "requests_to_close": ["RQ-2026-009"],
+    "requests_kept": [],
+    "history": {"quotes_sent": 0, "contracts": 0, "invoices": 0, "projects": 0},
+    "has_history": False,
+    "contacts": 1,
+    "contacts_with_cabinet": 1,
+    "remaining_roles": [{"role": "partner", "state": "application", "kind": "supplier"}],
+}
+
+
+async def test_not_client_shows_the_plan_then_removes_the_role(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    url = f"{API}/parties/organizations/9/not-client/"
+    router.get(url).mock(return_value=httpx.Response(200, json=PLAN))
+    done = {**PLAN, "dry_run": False, "is_client": False, "requests_closed": ["RQ-2026-009"]}
+    card = {
+        **CARD,
+        "roles": {
+            "client": False,
+            "supplier": True,
+            "manufacturer": False,
+            "partner": True,
+            "organization": False,
+        },
+        "role_states": [{"role": "partner", "state": "application", "kind": "supplier"}],
+    }
+    post = router.post(url).mock(
+        return_value=httpx.Response(200, json={"result": done, "card": card})
+    )
+
+    plan = await web.client.get("/api/v1/people/counterparties/9/not-client")
+    assert plan.status_code == 200, plan.text
+    check(plan, "/people/counterparties/{id}/not-client", "get")
+    assert plan.json()["requests_to_close"] == ["RQ-2026-009"]
+    assert plan.json()["company_id"] == "9"
+    assert not post.called  # план ничего не меняет
+
+    result = await web.client.post(
+        "/api/v1/people/counterparties/9/not-client", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert result.status_code == 200, result.text
+    check(result, "/people/counterparties/{id}/not-client", "post")
+    body = result.json()
+    assert body["result"]["requests_closed"] == ["RQ-2026-009"]
+    assert [r["role"] for r in body["card"]["role_states"]] == ["partner"]
+    assert body["card"]["roles"]["client"] is False
+
+
+async def test_not_client_needs_the_full_section_and_a_csrf_token(web: Web) -> None:
+    await web.login(["ACCOUNTANT"])
+    denied = await web.client.post(
+        "/api/v1/people/counterparties/9/not-client", headers={"X-CSRF-Token": web.csrf}
+    )
+    assert denied.status_code == 403
+    no_csrf = await web.client.post("/api/v1/people/counterparties/9/not-client")
+    assert no_csrf.status_code in (401, 403)
+    wrong_id = await web.client.get("/api/v1/people/counterparties/x/not-client")
+    assert wrong_id.status_code == 422

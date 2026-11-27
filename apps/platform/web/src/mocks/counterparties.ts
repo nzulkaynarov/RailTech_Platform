@@ -7,6 +7,7 @@ import type {
   DoNotWorkIn,
 } from "../shared/api/generated/model";
 import { clearMark, markOf, setMark } from "./doNotWorkMarks";
+import { cabinetOf, isNotClient, markNotClient, planOf, roleStatesOf } from "./notClient";
 import { failure } from "./adminUsers";
 import { readErpCatalog } from "./fixtures/erpCatalog";
 import { readLeads } from "./fixtures/leads";
@@ -53,6 +54,14 @@ function baseCardOf(id: string): CounterpartyCard | null {
         partner: false,
         organization: false,
       },
+      role_states: [],
+      cabinet: {
+        opened: false,
+        roles: [],
+        sees: "none",
+        last_login_at: null,
+        logged_in_contacts: 0,
+      },
       people: supplier.contact_person
         ? [
             {
@@ -93,12 +102,14 @@ function baseCardOf(id: string): CounterpartyCard | null {
     legal_address: null,
     crm_client_id: client.id,
     roles: {
-      client: true,
+      client: !isNotClient(id),
       supplier: mark.supplier ?? false,
       manufacturer: mark.manufacturer ?? false,
       partner: false,
       organization: false,
     },
+    role_states: roleStatesOf(id),
+    cabinet: cabinetOf(id),
     people: client.contacts.map((contact, index) => ({
       id: String(contact.id),
       name: contact.name,
@@ -216,6 +227,25 @@ export const counterpartyHandlers = [
     if (!cardOf(id)) return notFound();
     clearMark(id);
     return HttpResponse.json(cardOf(id));
+  }),
+  // КОНТР-1б: «Не клиент» — что изменится и само действие (право — как у реквизитов)
+  http.get("*/people/counterparties/:id/not-client", ({ params }) => {
+    const denied = guard();
+    if (denied) return denied;
+    const id = String(params["id"]);
+    return cardOf(id) ? HttpResponse.json(planOf(id, true)) : notFound();
+  }),
+  http.post("*/people/counterparties/:id/not-client", ({ params }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    if (!cardOf(id)) return notFound();
+    const result = planOf(id, false);
+    markNotClient(id);
+    return HttpResponse.json({ result, card: cardOf(id) });
   }),
   http.get("*/people/clients/:id/counterparty", ({ params }) => {
     const denied = guard();

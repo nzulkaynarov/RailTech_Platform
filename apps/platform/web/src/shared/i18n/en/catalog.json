@@ -326,7 +326,7 @@
     "noOffers": "No offers.",
     "edit": "Edit",
     "maker": "Manufacturer",
-    "dealer": "Partner"
+    "dealer": "Supplier"
   },
   "brigades": {
     "search": "Search by name and specialisation",
@@ -671,6 +671,7 @@
     "title": "Account access",
     "status": {
       "none": "Not opened",
+      "opened": "Open",
       "invited": "Invited",
       "active": "Active",
       "suspended": "Suspended"
@@ -680,6 +681,16 @@
       "partner": "Partner"
     },
     "rolesLine": "In the account: {{roles}}",
+    "seesLabel": "What they see",
+    "sees": {
+      "client": "Client section",
+      "partner": "Partner section",
+      "both": "Client and partner sections",
+      "application": "Connection request under review",
+      "none": "Account closed"
+    },
+    "lastLogin": "Last sign-in",
+    "neverLoggedIn": "never signed in",
     "closed": "Account closed: the partner cannot sign in.",
     "notOpened": "The account has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
     "invitedBy": "Invited by",

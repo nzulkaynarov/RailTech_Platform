@@ -7,10 +7,13 @@ Docs/old/specs/client-base-design-2026-06-24.md.
 """
 
 import logging
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from typing import Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Value
+from django.db.models.functions import Coalesce
 from parties.company_admin import ensure_company_admin
 from parties.models import active_company_q
 
@@ -35,15 +38,26 @@ def client_book_q() -> Q:
     Who created a contact is not a signal: a supplier's contact made by staff does not make a client,
     and CRM clients arrive with contacts that have no author. Subqueries, not JOINs — rows are not
     multiplied (as in `portal.services.access`).
+
+    КОНТР-1б: once an employee removed the client role («Не клиент», `Company.client_role_removed_at`), the CRM
+    mapping stops counting and only deals created AFTER that moment do; requests hidden as «created by mistake»
+    never count. The CLIENT type is read as is — whoever sets it again makes the company a client again.
     """
     from integration.models import CrmClientMapping
     from sales.models import Deal
 
     pk = OuterRef("pk")
+    never = Value(datetime(1970, 1, 1, tzinfo=dt_timezone.utc))
     return (
         Q(Exists(Company.types.through.objects.filter(company_id=pk, companytype__code=CompanyTypeCode.CLIENT)))
-        | Q(Exists(CrmClientMapping.objects.filter(company_id=pk)))
-        | Q(Exists(Deal.objects.filter(company_id=pk)))
+        | (Q(Exists(CrmClientMapping.objects.filter(company_id=pk))) & Q(client_role_removed_at__isnull=True))
+        | Q(
+            Exists(
+                Deal.objects.filter(company_id=pk, hidden_in_lists=False).filter(
+                    created_at__gt=Coalesce(OuterRef("client_role_removed_at"), never)
+                )
+            )
+        )
     )
 
 

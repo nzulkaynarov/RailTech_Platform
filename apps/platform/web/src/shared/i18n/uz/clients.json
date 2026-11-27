@@ -140,7 +140,8 @@
     "both": "Mijoz va hamkor",
     "applications": "Ulaniş arizalari",
     "bank_changes": "Rekvizitlarni özgartiriş",
-    "do_not_work": "Işlamaymiz"
+    "do_not_work": "Işlamaymiz",
+    "none": "Rol körsatilmagan"
   },
   "addPartner": "Hamkor qöşiş",
   "counterparty": {
@@ -159,6 +160,39 @@
       "organization": "Taşkilot",
       "inUse": "Rol band: kompaniyada takliflar yoki brendlar bor.",
       "failed": "Rolni özgartirib bölmadi. Qayta urinib köring."
+    },
+    "roleState": {
+      "client": {
+        "active": "Mijoz"
+      },
+      "partner": {
+        "label": "Hamkor",
+        "application": "ulaniş arizasi körib çiqilmoqda",
+        "invited": "taklif qilingan",
+        "active": "faol",
+        "suspended": "töxtatilgan"
+      }
+    },
+    "partnerKind": {
+      "manufacturer": "işlab çiqaruvçi",
+      "supplier": "yetkazib beruvçi",
+      "principal": "prinsipal",
+      "other": "boşqa"
+    },
+    "notClient": {
+      "action": "Mijoz emas",
+      "hint": "Kompaniya xato bilan mijoz qilib kiritilgan",
+      "title": "Mijoz roli olib taşlansinmi?",
+      "text": "Kompaniya «Mijozlar»dan çiqadi, kontaktlar qoladi.",
+      "close": "Xato bilan kiritilgan deb yopiladi: {{list}}.",
+      "kept": "Qoladi (mijozga TT allaqaçon yuborilgan): {{list}}.",
+      "history": "Haqiqiy tarix: yuborilgan TT — {{quotes}}, şartnomalar — {{contracts}}, hisoblar — {{invoices}}, loyihalar — {{projects}}.",
+      "ask": "Kompaniya haqiqiy mijozga öxşaydi. Rolni baribir olib taşlaymizmi?",
+      "confirm": "Baribir olib taşlaş",
+      "cancel": "Bekor qiliş",
+      "done": "Mijoz roli olib taşlandi. Yopilgan arizalar: {{count}}.",
+      "failed": "Rolni olib taşlab bölmadi. Qayta urinib köring.",
+      "apply": "Rolni olib taşlaş"
     },
     "people": {
       "title": "Odamlar",

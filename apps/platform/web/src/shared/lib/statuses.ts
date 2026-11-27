@@ -197,7 +197,7 @@ export const STATUS_TONE = {
   /** Срок действия цены поставщика */
   validity: { ok: OK, expiring: W, expired: NO },
   /** Доступ партнёра в кабинет (PART-1): не открыт, приглашён, активен, приостановлен — слово даёт модуль */
-  cabinetAccess: { none: NONE, invited: W, active: OK, suspended: NO },
+  cabinetAccess: { none: NONE, opened: OK, invited: W, active: OK, suspended: NO },
   /** Клиент партнёра в CRM (PART-CRM): ждём ответ CRM, заведён и сопоставлен, конфликт сопоставления */
   crmClient: {
     requested: W,

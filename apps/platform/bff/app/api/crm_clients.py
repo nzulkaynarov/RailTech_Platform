@@ -29,6 +29,7 @@ from app.crm_clients_view import (
 from app.crm_leads_view import invitation_of
 from app.deps import Authed, require
 from app.errors import PlatformError
+from app.row_roles import company_role_states
 from app.schemas_crm_leads import (
     ClientCard,
     ClientInvitation,
@@ -52,8 +53,15 @@ async def list_clients(
     params = {"q": q.strip()} if q and q.strip() else None
     rows = await CrmProxy(authed.call).get_list(CrmClientItem, f"{API}/clients", params=params)
     logos = await logo_urls(authed, [r.erp_company_id for r in rows if r.erp_company_id])
+    roles = await company_role_states(authed, [r.erp_company_id for r in rows if r.erp_company_id])
     items = [
-        client_row(r).model_copy(update={"logo_url": logos.get(r.erp_company_id or 0)})
+        client_row(r).model_copy(
+            update={
+                "logo_url": logos.get(r.erp_company_id or 0),
+                "company_id": str(r.erp_company_id) if r.erp_company_id else None,
+                "roles": roles.get(r.erp_company_id or 0),
+            }
+        )
         for r in rows
     ]
     return ClientList(items=recent_first(items))

@@ -326,7 +326,7 @@
     "noOffers": "Takliflar yöq.",
     "edit": "Özgartiriş",
     "maker": "Işlab çiqaruvçi",
-    "dealer": "Hamkor"
+    "dealer": "Yetkazib beruvçi"
   },
   "brigades": {
     "search": "Nomi va ixtisosligi böyiça qidiruv",
@@ -671,6 +671,7 @@
     "title": "Kabinetga kiriş",
     "status": {
       "none": "Oçilmagan",
+      "opened": "Oçiq",
       "invited": "Taklif qilingan",
       "active": "Faol",
       "suspended": "Töxtatilgan"
@@ -680,6 +681,16 @@
       "partner": "Hamkor"
     },
     "rolesLine": "Kabinetda: {{roles}}",
+    "seesLabel": "Nimani köradi",
+    "sees": {
+      "client": "Mijoz bölimi",
+      "partner": "Hamkor bölimi",
+      "both": "Mijoz va hamkor bölimlari",
+      "application": "Ulaniş arizasi körib çiqilmoqda",
+      "none": "Kabinet yopiq"
+    },
+    "lastLogin": "Oxirgi kiriş",
+    "neverLoggedIn": "hali kirmagan",
     "closed": "Kabinet yopiq: hamkor kira olmaydi.",
     "notOpened": "Bu hamkor uçun kabinet hali oçilmagan. Kontakt qöşing va taklif qiling: e-poçtaga kiriş kodi keladi.",
     "invitedBy": "Taklif qildi",

@@ -170,6 +170,13 @@ const isResponse = (value: Caller | Response): value is Response => value instan
 function view(id: string, entry: Entry, canManage = true): SupplierCabinetAccess {
   const relationship = entry.relationship;
   const open = relationship !== null && relationship.status !== "suspended";
+  const roles = [
+    ...(entry.client ? (["client"] as const) : []),
+    ...(open ? (["partner"] as const) : []),
+  ];
+  const lastLogin = entry.contacts
+    .map((c) => c.last_login_at)
+    .filter((v): v is string => Boolean(v));
   return {
     company_id: id,
     company_name: entry.name,
@@ -182,6 +189,14 @@ function view(id: string, entry: Entry, canManage = true): SupplierCabinetAccess
       ...(open ? (["partner"] as const) : []),
     ],
     crm_client: entry.crm,
+    // КОНТР-1б: правда о кабинете — открыт ли, когда входили, что видят
+    cabinet: {
+      opened: roles.length > 0,
+      roles: [...roles],
+      sees: entry.client ? (open ? "both" : "client") : open ? "partner" : "none",
+      last_login_at: lastLogin.sort().at(-1) ?? null,
+      logged_in_contacts: lastLogin.length,
+    },
     cabinet_modules: [
       ...(entry.client
         ? [

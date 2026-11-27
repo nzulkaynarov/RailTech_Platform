@@ -12,6 +12,7 @@ import {
   useListCatalogSuppliers,
   useListCrmClients,
   useListPartnerApplications,
+  useSearchCounterparties,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -52,7 +53,7 @@ const KINDS = [
   "bank_changes",
 ] as const;
 type KindFilter = (typeof KINDS)[number];
-type RelationKind = "client" | "partner" | "both";
+type RelationKind = "client" | "partner" | "both" | "none";
 
 /** Партнёр без клиента: строка той же формы, отрицательный id отличает её от клиента CRM. */
 function isPartnerOnly(row: ClientRow): boolean {
@@ -61,6 +62,7 @@ function isPartnerOnly(row: ClientRow): boolean {
 
 function RelationTag({ kind }: { kind: RelationKind }) {
   const { t } = useTranslation("clients");
+  // Ролей у компании нет (роль клиента сняли, партнёрской не было): тип не выдумываем, одно действие в карточке
   return <Tag>{t(`kinds.${kind}`)}</Tag>;
 }
 
@@ -200,6 +202,11 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     queryKey: suppliers.queryKey,
   };
   const termsOf = new Map((suppliers.data?.items ?? []).map((row) => [row.id, row]));
+  // КОНТР-1б: компании без роли (завели письмом или мастером как «организацию») тоже в списке — «Роль не указана»
+  const orgs = useSearchCounterparties(
+    { ...(q ? { q } : {}), role: "organization", limit: 20 },
+    { query: { enabled: seesClients || seesPartners } },
+  );
   const applications = useListPartnerApplications(
     { status: "submitted" },
     { query: { enabled: seesApplications } },
@@ -231,14 +238,23 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const markedPartners = new Set(
     (suppliers.data?.items ?? []).filter((s) => s.do_not_work).map((s) => s.id),
   );
+  // КОНТР-1б: тип в списке говорит ERP — роли компании, а не то, откуда пришла строка (клиент CRM, список поставщиков)
   const relationOf = (row: ClientRow): RelationKind => {
+    if (isPartnerOnly(row) && row.roles?.length === 0) return "none";
     if (isPartnerOnly(row)) return "partner";
+    if (row.roles) {
+      const client = row.roles.some((r) => r.role === "client");
+      const partner = row.roles.some((r) => r.role === "partner");
+      if (client && partner) return "both";
+      return client ? "client" : partner ? "partner" : "none";
+    }
     return row.inn && partnerInns.has(row.inn) ? "both" : "client";
   };
   const rowsOf = (clients: readonly ClientRow[]): ClientRow[] => {
     const clientInns = new Set(clients.flatMap((c) => c.inn ?? []));
+    const clientCompanies = new Set(clients.flatMap((c) => c.company_id ?? []));
     const partners = (suppliers.data?.items ?? [])
-      .filter((s) => !s.tin || !clientInns.has(s.tin))
+      .filter((s) => !clientCompanies.has(s.id) && (!s.tin || !clientInns.has(s.tin)))
       .map((s): ClientRow => ({
         id: -Number(s.id),
         name: s.name,
@@ -249,9 +265,29 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         handoff_status: null,
         do_not_work: markedPartners.has(s.id),
       }));
-    const all = [...clients, ...partners];
-    if (kind === "clients") return all.filter((row) => relationOf(row) !== "partner");
-    if (kind === "partners") return all.filter((row) => relationOf(row) !== "client");
+    const known = new Set([...clientCompanies, ...(suppliers.data?.items ?? []).map((s) => s.id)]);
+    const roleless = (orgs.data?.items ?? [])
+      .filter(
+        (o) =>
+          !known.has(o.id) &&
+          !(o.roles.client || o.roles.partner || o.roles.supplier || o.roles.manufacturer),
+      )
+      .map((o): ClientRow => ({
+        id: -Number(o.id),
+        name: o.name,
+        inn: o.inn,
+        in_erp: true,
+        open_requests: 0,
+        last_activity_at: null,
+        handoff_status: null,
+        do_not_work: false,
+        roles: [],
+      }));
+    const all = [...clients, ...partners, ...roleless];
+    if (kind === "clients")
+      return all.filter((row) => ["client", "both"].includes(relationOf(row)));
+    if (kind === "partners")
+      return all.filter((row) => ["partner", "both"].includes(relationOf(row)));
     if (kind === "do_not_work") return all.filter((row) => row.do_not_work === true);
     return all;
   };
