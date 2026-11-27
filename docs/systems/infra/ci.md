@@ -29,7 +29,7 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
 | `pull_request` (не черновик) | Задания по путям изменённых файлов (таблица ниже), включая тяжёлые. Новый коммит отменяет устаревший прогон этого PR |
 | `push` в `main` (после слияния) | Только **быстрые** задания по файлам с прошлого коммита `main`: lint и unit (CRM, Platform check, Cabinet, EDS, rt-bus, ERP lint), миграции и дрейф схемы ERP, `contracts` (совместимость — с коммитом `main` до push), `infra`, gitleaks, `CPU qemu64` при правке Dockerfile/зависимостей/infra. **Не идут:** CRM integration, build и аудит зависимостей, ERP pytest, Platform e2e — они уже прошли на PR, а полностью проходят ночью. `CI ok` есть. Группа concurrency — на каждый sha, прогон не отменяется следующим слиянием |
 | `merge_group` (очередь слияния, DECISIONS 2026-11-24; пока не срабатывает: очередь доступна только репозиториям организаций) | Те же **быстрые** задания, что на push в `main`, по файлам «вершина `main` + PR» (и PR, стоящие впереди в очереди): столкновения миграций ERP и CRM (одна голова Alembic — `crm/backend/tests/test_alembic_single_head.py`), контрактов и общих проверок ловятся до слияния. «CI ok» обязателен и здесь |
-| `schedule` (ежесуточно, 01:17 UTC) | **Полный** прогон всех заданий без фильтров, включая тяжёлые и 11 образов под qemu64. Отдельная группа concurrency: не теряется из-за слияний |
+| `schedule` (ежесуточно, 18:30 UTC = 23:30 Ташкент, до выкладки в 01:00) | **Полный** прогон всех заданий без фильтров, включая тяжёлые и 11 образов под qemu64. Отдельная группа concurrency: не теряется из-за слияний |
 | `workflow_dispatch` | То же, что ночной: полный прогон, вручную |
 
 Красный ночной прогон — задача на починку в тот же день: тяжёлые проверки на `main` иначе не ловятся (на push их нет).
@@ -47,7 +47,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `apps/crm/**` | CRM: lint, unit, integration\*, build\*, аудит зависимостей\* |
 | `apps/erp/**` | ERP: lint, миграции и схема, pytest\* |
 | `apps/cabinet/**` | Cabinet |
-| `apps/platform/**` | Platform check, e2e\* (3 шарда) |
+| `apps/platform/**` | Platform: lint, types, pytest bff, vitest (3 шарда), контракты и генерация; e2e\* (8 шардов) |
 | `apps/platform/web/src/modules/*/module.ts`, `…/modules/*/settingsRegistry.ts` | + CRM (реестр маршрутов и настроек Платформы читает `test_platform_links`) |
 | `apps/eds/**` | EDS |
 | `packages/rt-bus/**` | rt-bus, contracts, CRM, ERP, EDS, Platform (библиотека вшита в образы) |
@@ -83,8 +83,12 @@ compose). Задание `packages · contracts` идёт на любую пра
 - CRM: lint, unit, integration, build и аудит стартуют сразу после `changes`; раньше integration/build ждали lint и unit (+3–5 минут
   к каждому PR ради экономии минут runner'а при красном lint — цель волны другая: время ответа).
 - ERP: три параллельных задания вместо одного `make check-erp` — «lint» (`make -C apps/erp lint`), «pytest»
-  (`make -C apps/erp test-backend`), «миграции и схема» (`--migration-check`, `openapi-check`). Критический путь — pytest.
-- Platform: e2e не ждёт `Platform · check` (BFF не нужен).
+  (`make -C apps/erp test-backend`, **4 шарда** `--shard=i/4` — `apps/erp/backend/core/pytest_shard.py`, у каждого свои Postgres и Redis;
+  «ERP · шарды = весь набор» сверяет отчёты шардов: без пересечений, объединение = полный набор), «миграции и схема» (`--migration-check`, `openapi-check`).
+- Platform (CI-1): вместо одного `make check-platform` (~30 мин) — параллельно lint, types, pytest bff, vitest (3 шарда `--shard=i/3`),
+  контракты и генерация (api-check, tokens-check, rbac-check, crm-models-check); локально `make check-platform` прежний. e2e не ждёт их (BFF не нужен).
+- infra: помимо compose и Caddy идёт `make deploy-check` — shell-тесты `infra/deploy/tests`, shellcheck, actionlint `deploy.yml`.
+- Сторонние actions (dorny/paths-filter, docker/*, pnpm/action-setup, astral-sh/setup-uv) закреплены полным SHA с версией в комментарии; `actions/*` — на мажорных тегах.
 - rt-docs (D-DOC1, подключено с разрешения владельца 2026-10-28): ruff и mypy на раннере, pytest — в одноразовом контейнере
   `packages/rt-docs/docker/test.Dockerfile` (pango, harfbuzz; базовый образ по digest; сеть выключена), тот же образ, что локально, —
   число страниц эталонов совпадает. Тяжёлое: на push в `main` не идёт (сборка образа ≈ 1–2 мин), только на PR, ночью и вручную.
@@ -96,7 +100,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 - Сервер — **сборка**, а не dev-сервер: `vite build --mode mock` (≈1 с, `NODE_ENV=development`, чтобы оставались мокирование MSW и витрина
   `/dev/ui`) и `vite preview`; воркер MSW кладёт в сборку `vite.config.ts` только в режиме `mock`, боевая сборка не меняется.
   `E2E_DEV=1` возвращает dev-сервер (отладка с HMR).
-- **Три шарда** (`playwright test --shard=i/3`, matrix в `ci.yml`), по два воркера на шард; отчёт упавшего шарда — артефакт
+- **Восемь шардов** (`playwright test --shard=i/8`, matrix в `ci.yml`), по два воркера на шард; отчёт упавшего шарда — артефакт
   `platform-playwright-report-<i>`.
 - Проект `mobile` (390) гоняет **только** сценарии с тегом `@mobile` — экраны с адаптивной логикой (нижняя панель и Drawer, центр
   уведомлений, поиск). Остальное — на десктопе (ширины в сценариях задаёт `setViewportSize`). Новый сценарий на узкий экран — `test(…, { tag: "@mobile" }, …)`.
