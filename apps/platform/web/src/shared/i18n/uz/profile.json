@@ -225,7 +225,7 @@
   "showTest": {
     "title": "Sinov kompaniyalari",
     "label": "Sinov kompaniyalari va ularning hujjatlarini körsatiş",
-    "hint": "Sinov kompaniyalari va ularning sörovlari, tijorat takliflari, şartnomalar, hisoblar va xatlar sizga «Sinov» belgisi bilan körinadi. Boşqalardan yaşirilgan. Öçirilgan bölsa — hamma kabi.",
+    "hint": "Sinov kompaniyalari va ularning hujjatlari sizga «Sinov» belgisi bilan körinadi.",
     "saved": "Sozlama saqlandi"
   }
 }

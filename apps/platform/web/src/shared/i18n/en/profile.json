@@ -225,7 +225,7 @@
   "showTest": {
     "title": "Test companies",
     "label": "Show test companies and their documents",
-    "hint": "Test companies and their requests, quotes, contracts, invoices and letters appear in your work with a “Test” tag. Everyone else does not see them. Off means the same as for everyone.",
+    "hint": "Test companies and their documents are shown to you with a “Test” tag.",
     "saved": "Setting saved"
   }
 }
