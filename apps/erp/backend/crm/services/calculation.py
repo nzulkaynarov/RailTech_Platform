@@ -1564,6 +1564,7 @@ def _notify_all_signed(deal: Deal, task: CalcTask, actor) -> None:
             title="Все строки расчёта подтверждены",
             message=f"Расчёт по {task.label}: все визы собраны, можно нажать «Расчёт готов».",
             link=f"#deal/{deal.id}",
+            deal=deal,
             event_code="calc.all_signed",
             event_params={"deal_id": deal.id, "letter_number": task.label},
         )

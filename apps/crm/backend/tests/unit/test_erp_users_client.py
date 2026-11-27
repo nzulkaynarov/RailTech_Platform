@@ -229,3 +229,16 @@ async def test_connector_saved_just_now_is_visible_despite_warm_settings_cache()
         db.rows = []  # адрес убрали снова: следующий вызов видит и это, а не кэш
         with pytest.raises(ConflictError):
             await client.revoke_sessions(42)
+
+
+def test_provision_payload_carries_show_test_only_when_set() -> None:
+    """ТЕСТ-2: флаг «Показывать тестовые» идёт в ERP с провижинингом; не задан — поля нет."""
+    from dataclasses import replace
+
+    from app.integrations.erp_users import ProvisionPayload
+
+    base = ProvisionPayload(
+        crm_user_id=1, email="a@x.uz", name="А", role="backoffice", permissions=()
+    )
+    assert "show_test" not in base.as_json()
+    assert replace(base, show_test=True).as_json()["show_test"] is True

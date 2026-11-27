@@ -109,19 +109,13 @@ def notify_user(
     return notification
 
 
-def of_test_company(notification: Notification) -> bool:
-    """ТЕСТ-2: уведомление по сделке тестовой компании."""
-    deal = notification.deal if notification.deal_id else None
-    return bool(deal is not None and deal.company_id and deal.company.is_test)
-
-
 def push_notification_ws(notification: Notification):
     """Push a notification to the user via WebSocket channel layer.
 
-    Единственная точка живой доставки (ТЕСТ-2, шлюз): уведомление по сделке тестовой компании живым пушем не идёт никому — в
-    колокольчике оно хранится и видно только при «Показывать тестовые» (`?test=all` от BFF), опрос BFF подхватывает его за
-    секунды. Все места, что шлют уведомления, обязаны идти через эту функцию (охранный тест `test_delivery_guard`)."""
-    if not notification.user_id or of_test_company(notification):
+    Единственная точка живой доставки (ТЕСТ-2). Несохранённая строка — её не пропустил шлюз `Notification.objects` (запись
+    тестовой компании у сотрудника без «Показывать тестовые») — не отправляется. Прямой `group_send` вне этой функции
+    ловит охранный тест."""
+    if not notification.user_id or notification.pk is None:
         return
     try:
         channel_layer = get_channel_layer()

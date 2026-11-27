@@ -269,6 +269,7 @@ def notify_unsent(quote, lines: list[tuple[str, str, str]], *, error: str = "") 
         f"{why}. Отчёт по каналам и отправка — в карточке КП.",
         type_code="WARNING",
         link=_link(quote),
+        deal=quote.deal,
         event_code="quote.auto_send_failed",
         event_params={
             "number": number,

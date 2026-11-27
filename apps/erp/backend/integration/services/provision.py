@@ -244,6 +244,10 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         user.is_superuser = False
         user.is_staff = False
 
+    if "show_test" in data:  # ТЕСТ-2: копия флага CRM — по ней ERP решает, кому слать записи тестовых компаний
+        user.preferences = {**(user.preferences or {}), "show_test": bool(data["show_test"])}
+        update_fields.append("preferences")
+
     # update_fields: полная запись затёрла бы `token_version`, выросший при параллельном отзыве доступа.
     user.save(update_fields=update_fields)
 

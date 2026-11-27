@@ -78,16 +78,25 @@ class _Layer:
         self.groups.append(group)
 
 
-def test_notifications_of_test_companies_need_the_switch_and_do_not_push_live(world, monkeypatch):
+def _show_test(user, on: bool = True):
+    user.preferences = {**(user.preferences or {}), "show_test": on}
+    user.save(update_fields=["preferences"])
+
+
+def test_notification_of_a_test_company_is_created_and_pushed_only_for_who_shows_test(world, monkeypatch):
+    """Шлюз `Notification.objects`: переключатель выключен — строки нет и пуша нет; включён — есть и то и другое."""
     layer = _Layer()
     monkeypatch.setattr("notifications.services.get_channel_layer", lambda: layer)
     real, fake = _deal(world["real"], "Рабочая"), _deal(world["fake"], "Пробная")
     user = world["supply"]
     notify_user(user=user, title="Рабочая", message="m", deal=real)
-    test_one = notify_user(user=user, title="Пробная", message="m", deal=fake)
-    assert test_one is not None and Notification.objects.filter(user=user).count() == 2
-    assert layer.groups == [f"notifications_{user.pk}"]  # живой пуш только по рабочей сделке
+    notify_user(user=user, title="Пробная", message="m", deal=fake)
+    assert list(Notification.objects.filter(user=user).values_list("title", flat=True)) == ["Рабочая"]
+    assert layer.groups == [f"notifications_{user.pk}"]
 
+    _show_test(user)
+    notify_user(user=user, title="Пробная", message="m", deal=fake)
+    assert layer.groups == [f"notifications_{user.pk}"] * 2
     client = api(user)
     assert [row["title"] for row in _rows(client.get("/api/v1/notifications/"))] == ["Рабочая"]
     shown = {row["title"]: row["is_test"] for row in _rows(client.get("/api/v1/notifications/?test=all"))}
@@ -100,8 +109,18 @@ def test_notifications_of_test_companies_need_the_switch_and_do_not_push_live(wo
     assert Notification.objects.get(title="Пробная").is_read is True
 
 
-def test_every_push_goes_through_the_one_gate_even_without_notify_user(world, monkeypatch):
-    """Места, что создают уведомление сами (задание на расчёт и др.), проходят тот же шлюз: тестовая сделка — без пуша."""
+def test_staff_emails_about_a_test_deal_go_only_to_who_shows_test(world):
+    from notifications.gate import staff_recipients
+
+    fake, real = _deal(world["fake"], "Пробная"), _deal(world["real"], "Рабочая")
+    a, b = world["supply"], world["reader"]
+    _show_test(a)
+    assert staff_recipients([a.pk, b.pk], fake) == [a.pk]
+    assert staff_recipients([a.pk, b.pk], real) == [a.pk, b.pk]  # рабочая запись — всем
+
+
+def test_calc_assignment_notice_follows_the_gate(world, monkeypatch):
+    """Путь прохода: задание на расчёт и «все визы собраны» создаются с `deal=` и идут через шлюз."""
     from django.utils import timezone
 
     from crm.models import CalcTask
@@ -109,16 +128,15 @@ def test_every_push_goes_through_the_one_gate_even_without_notify_user(world, mo
 
     layer = _Layer()
     monkeypatch.setattr("notifications.services.get_channel_layer", lambda: layer)
-    for company in (world["real"], world["fake"]):
-        deal = _deal(company, "Сделка")
-        task = CalcTask.objects.create(
-            deal=deal, resolution_text="Рассчитать", due=timezone.now().date(), decided_at=timezone.now()
-        )
-        calc_tasks._notify_assignee(world["supply"].pk, deal, task)
+    deal = _deal(world["fake"], "Сделка")
+    task = CalcTask.objects.create(
+        deal=deal, resolution_text="Рассчитать", due=timezone.now().date(), decided_at=timezone.now()
+    )
+    calc_tasks._notify_assignee(world["supply"].pk, deal, task)
+    assert layer.groups == [] and Notification.objects.count() == 0
+    _show_test(world["supply"])
+    calc_tasks._notify_assignee(world["supply"].pk, deal, task)
     assert layer.groups == [f"notifications_{world['supply'].pk}"]
-    hidden = api(world["supply"]).get("/api/v1/notifications/")
-    assert len(_rows(hidden)) == 1  # уведомление по тестовой сделке скрыто без переключателя
-    assert len(_rows(api(world["supply"]).get("/api/v1/notifications/?test=all"))) == 2
 
 
 def test_live_push_is_sent_only_from_the_central_function():
@@ -173,3 +191,23 @@ def test_calc_registry_and_projects_carry_the_tag_only_when_shown(world):
     finally:
         test_companies._show_all.reset(token)
     assert "is_test" not in projects.project_row(Deal.objects.get(title="Пробная"))
+
+
+def test_provisioning_mirrors_the_crm_flag_for_the_delivery_gate(world):
+    """Копия флага CRM приходит с провижинингом и не меняется, пока поля нет (старый CRM)."""
+    from integration.services.provision import provision_crm_user
+    from notifications.gate import sees_tests
+
+    body = {
+        "crm_user_id": 7001,
+        "email": "mirror@example.org",
+        "name": "Зеркало Флага",
+        "role": "backoffice",
+        "permissions": [],
+    }
+    result, _ = provision_crm_user({**body, "show_test": True})
+    assert sees_tests(result["erp_user_id"]) is True
+    result, _ = provision_crm_user(body)  # поля нет — прежнее значение
+    assert sees_tests(result["erp_user_id"]) is True
+    result, _ = provision_crm_user({**body, "show_test": False})
+    assert sees_tests(result["erp_user_id"]) is False

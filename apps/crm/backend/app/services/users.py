@@ -351,6 +351,7 @@ class UserService:
             user = await repo.get(session, user_id, for_update=True)
             if user is None:
                 raise NotFoundError("user not found")
+            changed = False
             if user.show_test != show:
                 before = {"show_test": user.show_test}
                 user.show_test = show
@@ -358,7 +359,14 @@ class UserService:
                     session, actor, "user.update", "user", user_id,
                     before=before, after={"show_test": show},
                 )  # fmt: skip
-            return await _loaded_view(session, user)
+                changed = True
+            view = await _loaded_view(session, user)
+            has_erp = "erp" in (user.platform_access or [])
+        if changed and has_erp:
+            await self._sync_erp(
+                "provision", user_id
+            )  # ERP узнаёт флаг: по нему шлёт записи тестовых компаний
+        return view
 
     async def set_language(self, actor: Actor, user_id: int, language: str) -> UserView:
         """Язык интерфейса (CRM-01b): сотрудник меняет сам себе, значение проверено схемой."""

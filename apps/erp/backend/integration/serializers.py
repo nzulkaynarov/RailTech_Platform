@@ -297,6 +297,8 @@ class ProvisionUserRequestSerializer(serializers.Serializer):
         child=serializers.ChoiceField(choices=BackofficeRoleCode.values), required=False, allow_empty=True
     )
     is_active = serializers.BooleanField(default=True, required=False)
+    # ТЕСТ-2: «Показывать тестовые» из профиля CRM; поля нет — не трогаем (старый CRM)
+    show_test = serializers.BooleanField(required=False)
 
 
 class ProvisionUserResponseSerializer(serializers.Serializer):

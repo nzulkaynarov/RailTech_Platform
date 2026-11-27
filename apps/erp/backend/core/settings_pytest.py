@@ -64,3 +64,4 @@ if not MINIO_ENDPOINT:  # noqa: F405
 if os.environ.get("ERP_TEST_DB_TEMPLATE"):
     for _db in DATABASES.values():  # noqa: F405
         _db["TEST"] = {**_db.get("TEST", {}), "TEMPLATE": os.environ["ERP_TEST_DB_TEMPLATE"]}
+NOTIFICATION_SUBJECT_STRICT = True  # ТЕСТ-2: уведомление о сделке без deal= — ошибка в тестах
