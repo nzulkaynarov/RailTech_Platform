@@ -84,9 +84,7 @@ class ExternalChecks:
         if run == "cheap" and self._reconcile is not None:
             await self._safe_reconcile()
         async with self._sessions() as session:
-            previous = {
-                k: dict(r.metrics) for k, r in (await repo.latest_checks(session, "heavy")).items()
-            }
+            previous = {k: dict(r.metrics) for k, r in (await repo.latest_probes(session)).items()}
         if run == "cheap" and not explicit:
             keys = await self._skip_backing_off(keys, now)
         disabled = await self._board.disabled_keys()

@@ -35,6 +35,16 @@ LATEST_SQL = text(
     ORDER BY service_key, checked_at DESC, id DESC
     """
 )
+# Последняя проба с настоящим обращением к сервису: тяжёлый проход или «Проверить сейчас»
+# (`manual` — тот же тяжёлый набор проб). Минутный проход берёт из неё итог дорогих проб
+# и не затирает ручную проверку (НАСТ-П1, Л-14).
+LATEST_PROBES_SQL = text(
+    """
+    SELECT DISTINCT ON (service_key) id FROM external_service_checks
+    WHERE tier IN ('heavy', 'manual')
+    ORDER BY service_key, checked_at DESC, id DESC
+    """
+)
 P95_SQL = text(
     """
     SELECT service_key,
@@ -128,6 +138,17 @@ async def latest_checks(
     session: AsyncSession, tier: str | None = None
 ) -> dict[str, ExternalServiceCheck]:
     ids = [row.id for row in (await session.execute(LATEST_SQL, {"tier": tier})).all()]
+    if not ids:
+        return {}
+    rows = await session.scalars(
+        select(ExternalServiceCheck).where(ExternalServiceCheck.id.in_(ids))
+    )
+    return {r.service_key: r for r in rows}
+
+
+async def latest_probes(session: AsyncSession) -> dict[str, ExternalServiceCheck]:
+    """Последняя тяжёлая проверка сервиса — плановая или ручная, что новее."""
+    ids = [row.id for row in (await session.execute(LATEST_PROBES_SQL)).all()]
     if not ids:
         return {}
     rows = await session.scalars(
