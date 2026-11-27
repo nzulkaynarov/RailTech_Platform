@@ -12,10 +12,9 @@ const WIDTHS = [390, 1440] as const;
 /** Таблица шире окна и прокручивается внутри: для снимка двигаем её к колонке закупки. */
 async function showPurchaseColumn(page: Page): Promise<void> {
   await page.getByTestId("partner-source").first().scrollIntoViewIfNeeded();
-  await page.evaluate(() => {
-    for (const region of document.querySelectorAll(".pf-fp-scroll"))
-      region.scrollLeft = region.scrollWidth;
-  });
+  await page.evaluate(
+    `document.querySelectorAll(".pf-fp-scroll").forEach((region) => { region.scrollLeft = region.scrollWidth; })`,
+  );
 }
 
 test("закупка берёт цену партнёра, другую цену выбирают из списка", async ({ page }) => {
