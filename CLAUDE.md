@@ -46,6 +46,7 @@ docs/                вся документация: COURSE, LIST, LATER, ORCHE
 | Один спек e2e Платформы | `cd apps/platform/web && pnpm exec playwright test e2e/<спек>.spec.ts` |
 | Приложение целиком (линтер, типы, все тесты) | `make check-crm\|erp\|cabinet\|platform\|eds`; контракт и OpenAPI — `make contracts`. Всё это уже внутри `ci-local` |
 | Всё, что делает CI | `make ci-local` (по умолчанию — всё, кроме e2e и audit; `args="--quick"` — весь быстрый набор, без `crm-integration`, `crm-build` и `rt-docs`; `args="--full"` — с e2e и audit; `args="--force"` — не пропускать зелёные; только названные задания — `scripts/ci_local.sh crm erp` или `make ci-local args="crm erp"`; `--quick` с именами не сочетать — он заменяет список целиком) |
+| Предел тяжёлых проверок (решение владельца 2026-11-26: не больше двух на машине) | встроен: `make`, `ci_local.sh`, `test_backend_local.sh`, `test_int_local.sh` и `pnpm`/`npm run` lint, typecheck, test, e2e берут один из двух слотов сами и ждут свободного (`scripts/heavy-lock.sh`); вызывай их напрямую, не оборачивай во внешние скрипты. `CI=true` и `RT_HEAVY_LOCK=0` — без слота; vitest `--maxWorkers=2`, playwright `--workers=1` |
 | Стенд ансамбля (для проверки глазами, не для тестов) | `make env && make up`, `make smoke` |
 
 Рабочий цикл (меньше прогонов, не больше проверок):

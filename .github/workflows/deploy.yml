@@ -310,6 +310,8 @@ jobs:
   build:
     name: Образ ${{ matrix.image }}
     needs: prepare
+    # Явное условие: без него GitHub пропускает сборку, если пропущен `gate` выше по цепочке (ручной запуск и ночная выкладка).
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Без environment production: образы не требуют ни секретов, ни одобрения. Нужны только push в GHCR (при deploy) и GITHUB_TOKEN.
@@ -606,7 +608,7 @@ jobs:
   release-notes:
     name: «Что нового» — черновик записи
     needs: [prepare, deploy]
-    if: needs.prepare.outputs.action == 'deploy' && needs.deploy.result == 'success' && needs.deploy.outputs.skip != 'true' && needs.deploy.outputs.previous != ''
+    if: ${{ !cancelled() && needs.prepare.outputs.action == 'deploy' && needs.deploy.result == 'success' && needs.deploy.outputs.skip != 'true' && needs.deploy.outputs.previous != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true

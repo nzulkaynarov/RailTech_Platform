@@ -1,6 +1,8 @@
 # apps/cabinet — Cabinet (кабинет клиента): SPA без бэкенда, ходит в ERP /api/portal/v1 (ADR-0004).
 # Из корня: make check-cabinet → make -C apps/cabinet check. Зависимости — npm ci по package-lock.json.
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 TOKENS_DST := src/styles/tokens.generated.css
@@ -15,10 +17,18 @@ install: ## Зависимости (npm ci)
 
 .PHONY: lint
 lint: ## eslint (семантические токены, правила React Compiler)
+	@$(HEAVY) $(MAKE) --no-print-directory lint-run
+
+.PHONY: lint-run
+lint-run:
 	npm run lint -- --max-warnings=0
 
 .PHONY: typecheck
 typecheck: ## tsc -b
+	@$(HEAVY) $(MAKE) --no-print-directory typecheck-run
+
+.PHONY: typecheck-run
+typecheck-run:
 	npm run typecheck
 
 .PHONY: i18n-check
@@ -42,10 +52,18 @@ api-types-check: ## Типы совпадают с генерацией: пор�
 
 .PHONY: test
 test: ## Vitest + Testing Library + axe (мок портального API на msw/node)
+	@$(HEAVY) $(MAKE) --no-print-directory test-run
+
+.PHONY: test-run
+test-run:
 	npm run test
 
 .PHONY: check
-check: lint typecheck i18n-check tokens-check api-types-check test ## Всё — обязательно перед PR (make check-cabinet из корня)
+check: ## Всё — обязательно перед PR (make check-cabinet из корня)
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint typecheck i18n-check tokens-check api-types-check test
 
 .PHONY: dev
 dev: ## Vite dev-сервер на :5175 с моком портального API (VITE_PORTAL_MOCK=1)
