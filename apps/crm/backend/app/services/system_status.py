@@ -46,12 +46,22 @@ REQUIRED_SECRETS = (
     "jwt_secret",
     "agent_context_key",
 )
+# «Зависла» — в `doing` дольше порога ИЛИ у воркера без сердцебиения (ЗАВИС-1: остановленный воркер
+# оставляет задачу сразу, не через 15 минут). Снятые восстановлением задачи сюда не попадают.
 STALLED = text(
     """
     SELECT count(*) FROM procrastinate_jobs j
     WHERE j.status = 'doing' AND (
-        SELECT max(e.at) FROM procrastinate_events e WHERE e.job_id = j.id AND e.type = 'started'
-    ) < :before
+        j.worker_id IS NULL
+        OR NOT EXISTS (
+            SELECT 1 FROM procrastinate_workers w
+            WHERE w.id = j.worker_id AND w.last_heartbeat > :heartbeat_after
+        )
+        OR (
+            SELECT max(e.at) FROM procrastinate_events e
+            WHERE e.job_id = j.id AND e.type = 'started'
+        ) < :before
+    )
     """
 )
 
@@ -161,7 +171,14 @@ class SystemStatusService:
         async with self._sessions() as session:
             rows = (await session.scalars(select(SystemAlert))).all()
             stalled_before = now - timedelta(minutes=rules.STALLED_MINUTES)
-            stalled = int((await session.execute(STALLED, {"before": stalled_before})).scalar_one())
+            stalled = int(
+                (
+                    await session.execute(
+                        STALLED,
+                        {"before": stalled_before, "heartbeat_after": now - timedelta(seconds=90)},
+                    )
+                ).scalar_one()
+            )
             failed = await repo.failed_tasks(session, now - timedelta(hours=1))
             facts = QueueFacts(
                 waiting=await repo.queue_size(session),

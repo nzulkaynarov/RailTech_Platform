@@ -16,6 +16,7 @@
 | [backup-restore.md](backup-restore.md) | Бэкапы, восстановление, проверка на dev |
 | [key-rotation.md](key-rotation.md) | Ротация ключей и секретов |
 | [integration-health.md](integration-health.md) | «Сломано» в Подключениях, оповещение, самовосстановление |
+| [stalled-jobs.md](stalled-jobs.md) | Зависшие задачи очереди: как видно и как снять вручную |
 
 
 ## Шаблон

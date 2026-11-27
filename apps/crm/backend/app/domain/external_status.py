@@ -17,6 +17,7 @@ from app.domain.system_status import (
     Component,
     backup_hint,
     hosting_hint,
+    stuck_hint,
 )
 from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 
@@ -307,6 +308,7 @@ class MailFacts:
     probe_detail: str | None = None
     probe_latency_ms: int | None = None
     paused: bool = False
+    worker_alive: bool | None = None
 
 
 _SMTP_HINTS: Final = {
@@ -351,12 +353,14 @@ def mail(f: MailFacts, now: datetime) -> CheckResult:
             key,
             "warn",
             f"{f.queued} писем ждут отправки дольше 10 минут",
-            hint=hosting_hint(
-                "Письма стоят в очереди: фоновый обработчик (воркер CRM) не запущен",
+            hint=stuck_hint(
+                "Письма стоят в очереди",
                 "Запустить crm-worker вместе с ансамблем",
+                f.worker_alive,
+                stalled_note="отправка не двигается",
             ),
             metrics=metrics,
-            cause="queue_stuck",
+            cause="job_stalled" if f.worker_alive else "queue_stuck",
         )
     if _last_failed(f):
         return CheckResult(
@@ -573,14 +577,17 @@ def stale(
     return now - checked_at > limit
 
 
-def stale_summary(checked_at: datetime, now: datetime) -> tuple[str, str]:
+def stale_summary(
+    checked_at: datetime, now: datetime, worker_alive: bool | None = None
+) -> tuple[str, str]:
     minutes = int((now - checked_at).total_seconds() // 60)
     return (
         f"Последняя проверка {minutes} мин назад — фоновые проверки не идут",
-        hosting_hint(
-            "Фоновые проверки остановились: воркер CRM не запущен "
-            "или не выполняет периодические задачи",
-            "Запустить crm-worker вместе с ансамблем; если он работает — посмотреть его журнал",
+        stuck_hint(
+            "Фоновые проверки остановились",
+            "Запустить crm-worker вместе с ансамблем; посмотреть его журнал",
+            worker_alive,
+            stalled_note="периодическая задача проверок не выполняется",
         ),
     )
 

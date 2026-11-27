@@ -30,19 +30,30 @@ def _run_api(args: argparse.Namespace) -> None:
     )
 
 
+# Остановка воркера (SIGTERM при деплое): дать задачам дойти, потом отменить их с записью статуса.
+# Меньше `stop_grace_period` у eds-worker в compose, иначе docker убьёт процесс раньше.
+SHUTDOWN_GRACE_S = 25.0
+
+
 async def _run_worker() -> None:
     from rt_bus.contrib.procrastinate import WORKER_OPTIONS
 
     from app.container import get_container
     from app.tasks.queue import queue
+    from app.tasks.stalled import recover_on_worker_start
 
     try:
         async with queue.open_async():
+            # Задачи, оставшиеся в `doing` после остановки воркера, снимаются до начала работы.
+            await recover_on_worker_start()
             # Периодические задачи создают по заданию на тик (pump каждые 5 с): выполненные удаляются сразу.
             try:
                 # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины
                 await queue.run_worker_async(
-                    concurrency=get_settings().worker_concurrency, delete_jobs="successful", **WORKER_OPTIONS
+                    concurrency=get_settings().worker_concurrency,
+                    delete_jobs="successful",
+                    shutdown_graceful_timeout=SHUTDOWN_GRACE_S,
+                    **WORKER_OPTIONS,
                 )
             finally:
                 await get_container().drain_bus()  # пробуждения шины — пока очередь открыта
