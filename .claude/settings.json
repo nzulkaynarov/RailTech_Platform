@@ -32,7 +32,6 @@
       "Bash(scp *)",
       "Bash(rsync *)",
       "Bash(make up-prod*)",
-      "Bash(*infra/deploy/*.sh*)",
       "Bash(make *eval*)",
       "Bash(make *promptfoo*)",
       "Bash(make *load-test*)",
