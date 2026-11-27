@@ -437,7 +437,13 @@ jobs:
         if: failure() && (steps.deployvps.conclusion == 'failure' || steps.smoke.conclusion == 'failure')
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
+          PREVIOUS_ON_SERVER: ${{ steps.already.outputs.previous }}
         run: |
+          # ручной повтор sha, уже стоявшего на сервере до запуска: сбой до переключения не должен откатывать прод на прежний релиз
+          if [ "$PREVIOUS_ON_SERVER" = "$TAG" ]; then
+            echo "::error::sha $TAG уже был выложен до этого запуска - автооткат не выполняется"
+            exit 1
+          fi
           # shellcheck disable=SC2029
           cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""
           # shellcheck disable=SC2029
