@@ -15,6 +15,7 @@ import {
   startFreshSetup,
 } from "../../mocks/setupState";
 import { ERP_RECHECK } from "../../entities/setup/recheck";
+import { overviewWith } from "../../mocks/statusScenarios";
 import i18n from "../../shared/i18n";
 import { hideBanner, resetBannerHidden, startOfTomorrow } from "./hidden";
 import { renderApp, signInAs } from "../../test/renderApp";
@@ -288,7 +289,9 @@ describe("Баннер настройки и мастер", () => {
         done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
       }),
     );
+    // службы подтверждены проверкой: «Готово» шага службы — «Работает» из обзора «Сервисов», а не просто сохранённые настройки
     server.use(
+      http.get("*/admin/integrations", () => HttpResponse.json(overviewWith())),
       http.get("*/eds/signing/setup-hint", () =>
         HttpResponse.json({
           has_authorities: false,

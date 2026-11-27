@@ -288,5 +288,19 @@
       "rejected": "qabul qiluvçining serveri xatni rad etdi",
       "other": "poçta serveri xatni qaytardi"
     }
+  },
+  "statusStrip": {
+    "state": {
+      "works": "Işlayapti",
+      "attention": "Diqqat",
+      "broken": "Nosozlik",
+      "not_verified": "Sozlangan, tekşirilmagan",
+      "stale": "Yangi maʼlumot yöq",
+      "unknown": "Tekşirib bölmadi",
+      "off": "Ulanmagan"
+    },
+    "checkedAgo": "tekşirilgan: {{when}}",
+    "never": "hali tekşirilmagan",
+    "check": "Tekşiriş"
   }
 }

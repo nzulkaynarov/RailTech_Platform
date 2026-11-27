@@ -19,7 +19,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { JournalFilter } from "../journal/JournalFilter";
 import { DeliveryPanel, InboxPanel, RetryDeadPanel } from "./BusPanels";
 import { DeliveriesView } from "./DeliveriesView";
-import { deliveryKey, inboxKey } from "./format";
+import { DOMAINS, deliveryKey, domainName, inboxKey } from "./format";
 import { InboxView } from "./InboxView";
 import { BusSourcesNote } from "./parts";
 import { SubscribersView } from "./SubscribersView";
@@ -121,11 +121,22 @@ export function BusJournalPage() {
     );
   }
 
+  // Подпись под счётчиком не обещает «CRM, ERP и EDS», когда ответили не все (НАСТ-П1, Х-36)
+  const answered = DOMAINS.filter((d) => journal.data?.sources[d] === "ok");
+  const countersSource =
+    journal.data && answered.length < DOMAINS.length && answered.length > 0
+      ? t("bus:counters.sourcePartial", { list: answered.map((d) => domainName(t, d)).join(", ") })
+      : t("bus:counters.source");
   const counter = (key: "dlq" | "pending" | "paused" | "inboxFailed", target: View) => (
     <CounterCard
       label={t(`bus:counters.${key}`)}
-      value={journal.data ? sums[key] : "—"}
-      source={t("bus:counters.source")}
+      // Домен не ответил — ноль здесь не «нет», а «не знаем» (НАСТ-П1, Л-34)
+      value={
+        journal.data && !(sums[key] === 0 && journal.data.fact.state === "unknown")
+          ? sums[key]
+          : "—"
+      }
+      source={countersSource}
       to={`${PATH}?view=${target}`}
     />
   );

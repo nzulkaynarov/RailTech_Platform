@@ -3,10 +3,9 @@ import type {
   BrandProfile,
   FxRateOverview,
   IntegrationCardKey,
-  IntegrationStatus,
   ServiceOwner,
-  SetupStep,
   SigningAuthority,
+  StatusFact,
 } from "../../../shared/api/generated/model";
 import { mergeSameCause } from "../integrations/attention";
 
@@ -23,7 +22,7 @@ export const SIGNING_WARN_DAYS = 14;
 export type StateOwner = ServiceOwner | "director" | "accountant";
 
 export type AttentionKind =
-  "service" | "signing" | "signingExpired" | "fx" | "blank" | "tickets" | "zones";
+  "service" | "signing" | "signingExpired" | "fx" | "blank" | "tickets" | "unavailable" | "busDead";
 
 export interface AttentionRow {
   id: string;
@@ -175,18 +174,37 @@ export function ticketRows(count: number): AttentionRow[] {
   ];
 }
 
-/** Зоны без ответственного (ЕВ-З): сигнал реестра зон; зон без ответственного нет — строки нет. Кнопка — на «Зоны ответственности». */
-export function zoneRows(without: number): AttentionRow[] {
-  if (without <= 0) return [];
+/**
+ * Часть данных не пришла (сервер не ответил или отказал): «Состояние» не вправе молчать и не пишет «проблем нет» — строка
+ * называет, что не удалось проверить (аудит Настроек §6.2 п. 3). `names` — названия источников словами.
+ */
+export function unavailableRows(names: readonly string[]): AttentionRow[] {
+  if (names.length === 0) return [];
   return [
     {
-      id: "zones:without-responsible",
-      kind: "zones",
+      id: "unavailable",
+      kind: "unavailable",
       severity: "warn",
-      owner: "director",
-      to: "/admin/zones",
-      page: "zones",
-      params: { count: without },
+      owner: "admin",
+      to: null,
+      page: null,
+      params: { list: names.join(", ") },
+    },
+  ];
+}
+
+/** Обмен между системами: недоставленные события — сбой; «не удалось проверить» строкой «Не удалось проверить» выше. */
+export function busRows(fact: StatusFact | undefined, dead: number): AttentionRow[] {
+  if (!fact || fact.state !== "broken" || dead <= 0) return [];
+  return [
+    {
+      id: "bus:dead",
+      kind: "busDead",
+      severity: "fail",
+      owner: "admin",
+      to: "/admin/bus?view=dlq",
+      page: "bus",
+      params: { count: dead },
     },
   ];
 }
@@ -198,24 +216,6 @@ export function ordered(rows: readonly AttentionRow[]): AttentionRow[] {
     .map((row, index) => ({ row, index }))
     .sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
     .map(({ row }) => row);
-}
-
-/**
- * Состояние строки готовности. «Заполнено» и «работает» — разные факты: шаг сделан (`done`), а проверка карточки службы
- * показывает, что она отвечает (`ok`). Нет проверки (`card === undefined`) — остаётся «заполнено».
- */
-export type ReadinessState = "works" | "filled" | "broken" | "todo" | "unknown";
-
-export function readinessState(
-  step: SetupStep["state"],
-  card: IntegrationStatus | undefined,
-): ReadinessState {
-  if (step === "todo") return "todo";
-  if (step === "unknown") return "unknown";
-  if (card === undefined) return "filled";
-  if (card === "ok") return "works";
-  if (card === "fail" || card === "warn") return "broken";
-  return "filled";
 }
 
 /** Очередь обмена между системами: сколько событий ждёт доставки и сколько не доставлено (по всем доменам). */

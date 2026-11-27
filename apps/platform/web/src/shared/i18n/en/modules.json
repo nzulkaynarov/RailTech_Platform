@@ -881,7 +881,7 @@
     },
     "state": {
       "attention": "Needs attention · {{count}}",
-      "none": "Everything works: no failures or overdue settings.",
+      "none": "No problems found.",
       "fixer": "fixed by {{who}}",
       "handOver": "pass it to whoever manages the settings",
       "open": "Open “{{page}}”",
@@ -916,9 +916,15 @@
           "title": "Staff requests: {{count}}",
           "ifNot": "staff are waiting for an answer"
         },
-        "zones": {
-          "title": "Zones without a responsible person: {{count}}",
-          "ifNot": "nobody takes the requests and tasks of the zone"
+        "unavailable": {
+          "title": "Could not check: {{list}}",
+          "what": "the server did not answer",
+          "ifNot": "what is going on there is unknown"
+        },
+        "busDead": {
+          "title": "System exchange: {{count}} not delivered",
+          "what": "events did not reach the receiver",
+          "ifNot": "requests and documents may not reach the other system"
         }
       },
       "services": "Services",
@@ -926,8 +932,8 @@
         "mail": "Mail",
         "bot": "Telegram",
         "erp": "Requests and quotes",
-        "backups": "Backups",
-        "ai": "AI",
+        "backups": "Files and backups",
+        "ai": "AI models",
         "bus": "System exchange"
       },
       "bus": {
@@ -935,23 +941,33 @@
         "queued": "queued: {{count}}",
         "dead": "not delivered: {{count}}"
       },
-      "external": {
-        "title": "External availability check",
-        "off": "not connected",
-        "text": "the owner will not be told about an outage"
-      },
       "readiness": "Readiness · {{done}} of {{total}}",
       "ready": {
-        "works": "works",
-        "filled": "filled in",
-        "broken": "not working",
-        "todo": "not done",
-        "unknown": "no data"
+        "works": "Working",
+        "done": "Done",
+        "todo": "Not done",
+        "not_verified": "Set up, not checked",
+        "stale": "No recent data",
+        "unknown": "Could not check",
+        "attention": "Attention",
+        "broken": "Failure"
       },
       "extra": {
         "blank": "Company letterhead",
         "support": "Support address"
-      }
+      },
+      "noneUnverified": "No problems found, but some services have not been checked: press Check.",
+      "lists": {
+        "overview": "services",
+        "signing": "signing rights",
+        "fx": "exchange rate",
+        "brand": "letterhead",
+        "bus": "system exchange",
+        "setup": "first launch"
+      },
+      "notCounted": "not counted",
+      "busScope": "queue and undelivered events",
+      "readinessPlain": "Readiness"
     },
     "templatesLink": "Document templates"
   },

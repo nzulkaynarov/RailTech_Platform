@@ -113,7 +113,18 @@ export const adminBusHandlers = [
     const denied = guard("full");
     if (denied) return denied;
     const state = readBus();
-    const body: BusJournal = { domains: DOMAINS.map((d) => overview(state, d)), sources: ALL_OK };
+    const domains = DOMAINS.map((d) => overview(state, d));
+    const dead = domains.reduce((sum, d) => sum + d.dlq_size, 0);
+    const body: BusJournal = {
+      domains,
+      sources: ALL_OK,
+      fact: {
+        state: dead > 0 ? "broken" : "works",
+        checked_at: new Date(Date.now() - 60 * 1000).toISOString(),
+        source: "check",
+        live: true,
+      },
+    };
     return HttpResponse.json(body);
   }),
 

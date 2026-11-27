@@ -881,7 +881,7 @@
     },
     "state": {
       "attention": "Eʼtibor talab qiladi · {{count}}",
-      "none": "Hammasi işlayapti: nosozlik va muddati ötgan sozlama yöq.",
+      "none": "Muammo topilmadi.",
       "fixer": "tuzatadi: {{who}}",
       "handOver": "sozlamalarni yurituvçiga uzating",
       "open": "«{{page}}»ni oçiş",
@@ -916,9 +916,15 @@
           "title": "Xodimlar murojaatlari: {{count}}",
           "ifNot": "xodimlar javob kutmoqda"
         },
-        "zones": {
-          "title": "Masʼuli yöq zonalar: {{count}}",
-          "ifNot": "zona böyiça arizalar va vazifalarni olişga heç kim yöq"
+        "unavailable": {
+          "title": "Tekşirib bölmadi: {{list}}",
+          "what": "server javob bermadi",
+          "ifNot": "hozir qanday ekani nomaʼlum"
+        },
+        "busDead": {
+          "title": "Tizimlararo almaşinuv: yetkazilmagan {{count}}",
+          "what": "hodisalar qabul qiluvçiga yetmagan",
+          "ifNot": "arizalar va hujjatlar boşqa tizimga yetmasligi mümkin"
         }
       },
       "services": "Xizmatlar",
@@ -926,8 +932,8 @@
         "mail": "Poçta",
         "bot": "Telegram",
         "erp": "Arizalar va hisob-kitoblar",
-        "backups": "Zaxira nusxalar",
-        "ai": "SI",
+        "backups": "Fayllar va zaxira nusxalar",
+        "ai": "SI modellari",
         "bus": "Tizimlararo almaşinuv"
       },
       "bus": {
@@ -935,23 +941,33 @@
         "queued": "navbatda: {{count}}",
         "dead": "yetkazilmagan: {{count}}"
       },
-      "external": {
-        "title": "Taşqi işlaş tekşiruvi",
-        "off": "ulanmagan",
-        "text": "nosozlik haqida egaga xabar bormaydi"
-      },
       "readiness": "Tayyorlik · {{done}} / {{total}}",
       "ready": {
-        "works": "işlayapti",
-        "filled": "töldirilgan",
-        "broken": "işlamayapti",
-        "todo": "bajarilmagan",
-        "unknown": "maʼlumot yöq"
+        "works": "Işlayapti",
+        "done": "Tayyor",
+        "todo": "Bajarilmagan",
+        "not_verified": "Sozlangan, tekşirilmagan",
+        "stale": "Yangi maʼlumot yöq",
+        "unknown": "Tekşirib bölmadi",
+        "attention": "Diqqat",
+        "broken": "Nosozlik"
       },
       "extra": {
         "blank": "Kompaniya blankasi",
         "support": "Yordam manzili"
-      }
+      },
+      "noneUnverified": "Muammo topilmadi, lekin baʼzi xizmatlar tekşirilmagan: «Tekşiriş»ni bosing.",
+      "lists": {
+        "overview": "xizmatlar",
+        "signing": "imzo huquqlari",
+        "fx": "valyuta kursi",
+        "brand": "blank",
+        "bus": "tizimlararo almaşinuv",
+        "setup": "birinçi işga tuşiriş"
+      },
+      "notCounted": "hisobga kirmaydi",
+      "busScope": "navbat va yetkazilmagan hodisalar",
+      "readinessPlain": "Tayyorlik"
     },
     "templatesLink": "Hujjat şablonlari"
   },

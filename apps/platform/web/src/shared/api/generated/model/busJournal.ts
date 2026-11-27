@@ -4,8 +4,10 @@
  */
 import type { BusDomainOverview } from "./busDomainOverview";
 import type { BusSources } from "./busSources";
+import type { StatusFact } from "./statusFact";
 
 export interface BusJournal {
   domains: BusDomainOverview[];
   sources: BusSources;
+  fact: StatusFact;
 }

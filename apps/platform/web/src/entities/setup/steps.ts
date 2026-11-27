@@ -1,4 +1,11 @@
-import type { SetupChecklist, SetupStep, SetupStepKey } from "../../shared/api/generated/model";
+import type {
+  SetupChecklist,
+  SetupStep,
+  SetupStepKey,
+  StatusFact,
+  IntegrationCardKey,
+} from "../../shared/api/generated/model";
+import { STEP_CARD, type StepVerdict, UNKNOWN_FACT, isReady, stepVerdict } from "../status/facts";
 
 export const WIZARD_PATH = "/admin/setup";
 
@@ -117,6 +124,10 @@ export const VISIBLE_ORDER: readonly VisibleKey[] = [
 export interface VisibleStep {
   key: VisibleKey;
   state: SetupStep["state"];
+  /** Слово шага: сделан, работает (по проверке службы) или слово проверки — один ответ для мастера, «Состояния» и баннера */
+  verdict: StepVerdict;
+  /** Проверка службы, на которой держится `verdict` (шаги бота, почты, ERP и моделей); у остальных шагов — `undefined` */
+  fact?: StatusFact;
   /** Куда ведёт «Дальше» и строка шага: сам шаг, а не начало мастера */
   to: string;
 }
@@ -129,13 +140,26 @@ export const SIGNING_PATH = "/admin/signing";
  */
 export function visibleSteps(
   c: SetupChecklist,
-  extra: { cabinetUrl?: string | null; signing?: boolean },
+  extra: {
+    cabinetUrl?: string | null;
+    signing?: boolean;
+    /** Проверки служб из обзора «Сервисов» по карточкам: без них шаг службы не «Работает», а «Не удалось проверить» */
+    facts?: Partial<Record<IntegrationCardKey, StatusFact>>;
+  },
 ): VisibleStep[] {
-  const fromChecklist = (key: SetupStepKey): VisibleStep => ({
-    key,
-    state: c.steps.find((s) => s.key === key)?.state ?? "unknown",
-    to: STEP_TARGET[key],
-  });
+  const step = (key: VisibleKey, state: SetupStep["state"], to: string): VisibleStep => {
+    const card = (STEP_CARD as Partial<Record<VisibleKey, IntegrationCardKey>>)[key];
+    const fact = card ? (extra.facts?.[card] ?? UNKNOWN_FACT) : undefined;
+    return {
+      key,
+      state,
+      to,
+      verdict: stepVerdict(state, fact, card !== undefined),
+      ...(fact ? { fact } : {}),
+    };
+  };
+  const fromChecklist = (key: SetupStepKey): VisibleStep =>
+    step(key, c.steps.find((s) => s.key === key)?.state ?? "unknown", STEP_TARGET[key]);
   const company: VisibleStep["state"] =
     c.company === null ? "unknown" : c.company.required ? "todo" : "done";
   const bank: VisibleStep["state"] =
@@ -147,18 +171,18 @@ export function visibleSteps(
   const cabinet: VisibleStep["state"] =
     extra.cabinetUrl === undefined ? "unknown" : extra.cabinetUrl ? "done" : "todo";
   const steps: VisibleStep[] = [
-    { key: "admin", state: "done", to: WIZARD_PATH },
+    step("admin", "done", WIZARD_PATH),
     fromChecklist("erp"),
-    { key: "company", state: company, to: WIZARD_PATH },
-    { key: "bank", state: bank, to: BANK_DETAILS_PATH },
-    { key: "cabinet", state: cabinet, to: WIZARD_PATH },
+    step("company", company, WIZARD_PATH),
+    step("bank", bank, BANK_DETAILS_PATH),
+    step("cabinet", cabinet, WIZARD_PATH),
     fromChecklist("bot"),
     fromChecklist("mail"),
     fromChecklist("models"),
     fromChecklist("first_employee"),
   ];
   if (extra.signing !== undefined) {
-    steps.push({ key: "signing", state: extra.signing ? "done" : "todo", to: SIGNING_PATH });
+    steps.push(step("signing", extra.signing ? "done" : "todo", SIGNING_PATH));
   }
   return steps;
 }
@@ -169,7 +193,7 @@ export function progress(steps: readonly VisibleStep[]): {
   next: VisibleStep | undefined;
 } {
   return {
-    done: steps.filter((s) => s.state === "done").length,
+    done: steps.filter((s) => isReady(s.verdict)).length,
     total: steps.length,
     next: steps.find((s) => s.state === "todo"),
   };

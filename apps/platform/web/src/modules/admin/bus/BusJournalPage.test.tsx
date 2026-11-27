@@ -181,6 +181,7 @@ describe("Admin · Журнал интеграций: доставки, DLQ и �
             },
           ],
           sources: { crm: "ok", erp: "unavailable", eds: "forbidden" },
+          fact: { state: "unknown", checked_at: null, source: "check", live: false },
         }),
       ),
     );
@@ -189,6 +190,11 @@ describe("Admin · Журнал интеграций: доставки, DLQ и �
     const note = await screen.findByText(/ERP не отвечает — данные журнала неполные\./);
     expect(note).toHaveTextContent(/EDS не дал доступ к журналу/);
     expect(screen.getByText(/У CRM пока нет подписчиков/)).toBeVisible();
+    // Л-34: ноль при не ответившем домене — не «нет», а «не знаем»: счётчики показывают «—»
+    const dlq = screen.getByRole("link", { name: /Недоставлено/ });
+    expect(dlq).toHaveTextContent("—");
+    expect(dlq).not.toHaveTextContent(/\b0\b/);
+    expect(dlq).toHaveTextContent("Только CRM: остальные не ответили");
   });
 });
 

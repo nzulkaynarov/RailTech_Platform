@@ -94,6 +94,8 @@ import {
   SigningAuthorityStatus,
   SigningBasis,
   SourceState,
+  StatusSource,
+  StatusState,
   StepCode,
   SupplierOrderStatus,
   TechDocReviewState,
@@ -15188,6 +15190,15 @@ export const getGetIntegrationsOverviewResponseMock = (
   checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   cards: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     key: faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    fact: {
+      state: faker.helpers.arrayElement(Object.values(StatusState)),
+      checked_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      source: faker.helpers.arrayElement(Object.values(StatusSource)),
+      live: faker.datatype.boolean(),
+    },
     status: faker.helpers.arrayElement(Object.values(IntegrationStatus)),
     access: faker.helpers.arrayElement(Object.values(IntegrationAccess)),
     note: faker.helpers.arrayElement(Object.values(IntegrationNote)),
@@ -17572,6 +17583,15 @@ export const getGetBusJournalResponseMock = (
     crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
     erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
     eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  fact: {
+    state: faker.helpers.arrayElement(Object.values(StatusState)),
+    checked_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    source: faker.helpers.arrayElement(Object.values(StatusSource)),
+    live: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });

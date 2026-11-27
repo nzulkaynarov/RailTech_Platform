@@ -20,4 +20,7 @@ export const IntegrationNote = {
   budget_near: "budget_near",
   budget_over: "budget_over",
   no_data: "no_data",
+  not_verified: "not_verified",
+  stale: "stale",
+  check_failed: "check_failed",
 } as const;
