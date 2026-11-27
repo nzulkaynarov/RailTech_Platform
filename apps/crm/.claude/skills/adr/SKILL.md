@@ -17,5 +17,5 @@ description: Создать архитектурное решение (ADR, фо
    - строка в `docs/adr/crm/README.md` (индекс);
    - если решение закрывает пункт `SPEC §16` — укажи номер ADR там;
    - если меняет SPEC — правка SPEC в том же PR (только после одобрения), версия SPEC в шапке;
-   - упоминание в описании PR (`docs/history/PROGRESS.md` ведёт лид, ORCHESTRATOR §4.1; `docs/history/HANDOFF.md` — архитектор).
+   - упоминание в описании PR (состояния `docs/LIST.md` ведёт лид, ORCHESTRATOR §4.1).
 6. Проверь: `make check` (docs prettier не проверяет, но ссылки и таблицы должны открываться в GitHub).
