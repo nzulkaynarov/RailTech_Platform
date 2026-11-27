@@ -1,22 +1,35 @@
-# Деплой прода (M5-INF-01, W14-S4). Запуск:
-#   - автоматически после зелёного CI на push в main (workflow_run по workflow «CI»): сборка образов, затем job deploy ждёт
-#     одобрения владельца в environment `production` (required reviewers) и выкладывает тот же sha;
-#   - вручную (workflow_dispatch): action = deploy | rollback | build. На PR и push сам по себе не запускается.
-# Автозапуск не выкладывает sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
-# Красный CI, ночной прогон (schedule) и ручной прогон CI (workflow_dispatch) деплой не запускают. ci.yml не трогает.
+# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1, DECISIONS 2026-11-27). Запуск:
+#   - ночью САМ, по расписанию (schedule, время UTC; сервер и владелец живут в UTC+5):
+#       30 19 * * *  (00:30 по Ташкенту) job notice: если HEAD main отличается от current_tag на VPS 1 - баннер «обновление в 01:00,
+#                    20 минут, planned» (scripts/maintenance-notice.sh);
+#       0 20 * * *   (01:00 по Ташкенту) prepare берёт HEAD main, а если его «CI ok» не зелёная - новейший коммит main с зелёной «CI ok»;
+#                    равен current_tag - ничего не выкладывается, баннер снимается; иначе build и deploy БЕЗ одобрения человека;
+#   - вручную (workflow_dispatch): action = deploy | rollback | build. deploy и rollback ждут одобрения владельца в job approve
+#     (environment `production-approval`); на PR, push и после CI сам по себе деплой не запускается (workflow_run убран).
+# Выкладка по расписанию не берёт sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
+# ci.yml не трогает.
 #
-# prepare:  без environment и секретов — sha, «sha входит в main» (deploy), зелёная проверка «CI ok» на этом sha (deploy), матрица образов.
+# Одобрение без дублирования секретов: секреты и variables лежат только в environment `production` (его используют deploy, rollback и
+# notice; после ВЫКЛ-1 в нём НЕТ required reviewers, а ветки деплоя ограничены main). Ожидание человека - отдельный job approve в
+# environment `production-approval` БЕЗ секретов: в нём ОБЯЗАТЕЛЕН required reviewer = владелец. approve запускается только при ручном
+# deploy/rollback; deploy и rollback идут после него (успех approve; пропуск approve допустим только для schedule). Отклонённое или
+# упавшее одобрение выкладку блокирует.
+# Очередь: concurrency `deploy-production` стоит на jobs deploy и rollback, а не на всём запуске, - запуск, забытый в ожидании
+# одобрения, группу не держит. Первый шаг prepare отменяет (actions: write) более старые запуски Deploy в статусах waiting/queued/pending.
+#
+# prepare:  без environment и секретов - sha (для schedule - новейший зелёный коммит main), «sha входит в main» (deploy), зелёная проверка
+#           «CI ok» на этом sha (deploy), матрица образов.
 # build:    семь образов параллельно (matrix, по job'у на образ), каждый со своим кэшем type=gha,scope=<образ>; push в GHCR с тегом =
 #           полный git sha (только при deploy). Без environment: нужны лишь packages: write и GITHUB_TOKEN.
 #           Образ rt-cabinet в режиме deploy собирает job deploy (build-args берутся из variables environment production, а в job
-#           без environment они недоступны), поэтому в матрице deploy — шесть образов.
-# deploy:   environment production (одобрение владельца) -> образ rt-cabinet -> загрузка infra/ на VPS 1 по SSH -> deploy.sh на сервере
+#           без environment они недоступны), поэтому в матрице deploy - шесть образов.
+# approve:  (только ручной deploy/rollback) environment production-approval - ждёт владельца; секретов нет.
+# deploy:   environment production -> образ rt-cabinet -> загрузка infra/ на VPS 1 по SSH -> deploy.sh на сервере
 #           (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера -> снятие предупреждения о
-#           плановом обновлении (/opt/rt/maintenance/maintenance.json, DECISIONS 2026-11-23).
+#           плановом обновлении (/opt/rt/maintenance/maintenance.json, DECISIONS 2026-11-23). Неуспешный smoke -> АВТООТКАТ:
+#           rollback.sh на предыдущий тег + smoke, затем запуск падает (красный) - выкладка не считается успешной.
 # build:    (action = build) только сборка без выкладки: любой ref (ветка задачи), push в GHCR НЕТ (push: false), SSH и production не
-#           используются — режим проверки скорости и целостности сборки.
-# rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере), затем smoke с раннера: те же четыре домена, если в релизе
-#           отката есть Платформа. Миграции БД не откатываются.
+#           используются - режим проверки скорости и целостности сборки.
 #
 # Секреты environment `production` (значений здесь нет): DEPLOY_SSH_KEY (приватный ключ деплоя),
 # DEPLOY_KNOWN_HOSTS (строка(и) known_hosts VPS 1: `ssh-keyscan -t ed25519 <host>`, сверенные владельцем).
@@ -24,14 +37,13 @@
 # CABINET_DOMAIN, PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
 # smoke с раннера — сам домен читают Caddy и deploy.sh из /opt/rt/.env.prod на сервере). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
 #
-# workflow_run берёт этот файл из ветки по умолчанию (main): автозапуск начинает работать после слияния изменения.
+# schedule берёт этот файл из ветки по умолчанию (main): ночная выкладка начинает работать после слияния изменения.
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  schedule:
+    - cron: '30 19 * * *'  # 00:30 Asia/Tashkent: баннер на 01:00
+    - cron: '0 20 * * *'   # 01:00 Asia/Tashkent: выкладка
   workflow_dispatch:
     inputs:
       ref:
@@ -46,12 +58,8 @@ on:
         type: choice
         options: [deploy, rollback, build]
 
-# Одна выкладка за раз, идущая не отменяется (cancel-in-progress: false). Из ожидающих в группе остаётся только самый новый:
-# GitHub отменяет более старый ожидающий запуск, когда приходит следующий. Запуски, которые ничего не деплоят (CI не успешен,
-# событие не push, режим build), получают собственную группу — иначе они вытесняли бы настоящий ожидающий деплой.
-concurrency:
-  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.action != 'build') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)) && 'deploy-production' || format('deploy-aux-{0}', github.run_id) }}
-  cancel-in-progress: false
+# Одна выкладка за раз: concurrency `deploy-production` стоит на jobs deploy и rollback (cancel-in-progress: false). Workflow-уровня нет:
+# запуск, ожидающий одобрения (approve), группу не держит и свежий запуск не блокирует.
 
 permissions:
   contents: read
@@ -59,17 +67,16 @@ permissions:
 jobs:
   prepare:
     name: Проверка и матрица образов
-    # workflow_run: только успешный CI, только push (не schedule и не dispatch CI), только main. Ручной запуск: deploy и build.
+    # schedule 0 20 * * *: ночная выкладка. Ручной запуск: deploy и build. Крон 30 19 * * * (баннер) - отдельный job notice.
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
-      || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
-          && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
-          && github.event.workflow_run.head_repository.full_name == github.repository)
+      || (github.event_name == 'schedule' && github.event.schedule == '0 20 * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       checks: read  # проверка «CI ok» на sha (check-runs)
+      actions: write  # только здесь: отмена устаревших ожидающих запусков Deploy
     outputs:
       sha: ${{ steps.ver.outputs.sha }}
       date: ${{ steps.ver.outputs.date }}
@@ -82,16 +89,55 @@ jobs:
       EVENT_NAME: ${{ github.event_name }}
       INPUT_ACTION: ${{ inputs.action }}
     steps:
+      # Запуск, забытый в ожидании одобрения (или застрявший в очереди), не должен ничего держать: отменяем более старые запуски
+      # этого workflow в статусах waiting/queued/pending (кроме себя). Идущие (in_progress) не трогаем.
+      - name: Отмена устаревших ожидающих запусков Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mine="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)"
+          for st in waiting queued pending; do
+            gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/deploy.yml/runs" -f status="$st" -f per_page=100 \
+              --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID and .created_at < \"$mine\") | .id" |
+            while read -r id; do
+              [ -n "$id" ] || continue
+              echo "отмена устаревшего запуска $id (статус $st)"
+              gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/cancel" >/dev/null \
+                || echo "::warning::не удалось отменить запуск $id"
+            done
+          done
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.ref }}
+          ref: ${{ inputs.ref || 'main' }}
           fetch-depth: 0
           persist-credentials: false
+
+      # schedule: HEAD main, а если его «CI ok» не зелёная (нет проверки, идёт, красная) - новейший коммит main с зелёной «CI ok»
+      # (просмотр последних 40 коммитов первого родителя). Дальше всё как у ручного deploy на этом sha.
+      - name: Ночь - новейший зелёный коммит main
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git rev-parse --verify -q origin/main >/dev/null || { echo "::error::нет origin/main"; exit 1; }
+          for c in $(git rev-list --first-parent --max-count=40 origin/main); do
+            n="$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$c/check-runs" -f check_name='CI ok' -f filter=latest -f per_page=100 \
+              --jq '[.check_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
+            if [ "$n" -ge 1 ]; then
+              echo "выкладываем $c (HEAD main: $(git rev-parse origin/main))"
+              git checkout -q --detach "$c"
+              exit 0
+            fi
+            echo "«CI ok» на $c не зелёная - смотрим предыдущий коммит main"
+          done
+          echo "::error::в последних 40 коммитах main нет зелёной «CI ok» - ночная выкладка не идёт"
+          exit 1
 
       - name: Режим, sha и тег
         id: ver
         run: |
-          if [ "$EVENT_NAME" = "workflow_run" ]; then action=deploy; else action="$INPUT_ACTION"; fi
+          if [ "$EVENT_NAME" = "schedule" ]; then action=deploy; else action="$INPUT_ACTION"; fi
           sha="$(git rev-parse HEAD)"
           # push в GHCR — только при deploy: образы ветки задачи (режим build) в реестр не попадают
           if [ "$action" = "deploy" ]; then push=true; else push=false; fi
@@ -198,13 +244,33 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
 
+  # Одобрение владельца для РУЧНОГО deploy/rollback. Environment production-approval: required reviewer = владелец, секретов нет.
+  # Для schedule не запускается (result = skipped): ночная выкладка человека не ждёт.
+  approve:
+    name: Одобрение владельца
+    needs: prepare
+    if: >-
+      !cancelled() && github.event_name == 'workflow_dispatch' && (inputs.action == 'deploy' || inputs.action == 'rollback')
+      && (inputs.action == 'rollback' || needs.prepare.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 720  # ожидание решения человека; потом запуск отменит prepare следующего
+    environment: production-approval
+    steps:
+      - run: echo "Одобрено - действие ${{ inputs.action }}"
+
   deploy:
     name: Выкладка на VPS 1
-    needs: [prepare, build]
-    if: needs.prepare.outputs.action == 'deploy'
+    needs: [prepare, build, approve]
+    # approve: success (ручной запуск) либо skipped у schedule. Отклонённое/упавшее одобрение, упавшие prepare и build блокируют.
+    if: >-
+      !cancelled() && needs.prepare.outputs.action == 'deploy' && needs.prepare.result == 'success' && needs.build.result == 'success'
+      && (needs.approve.result == 'success' || (needs.approve.result == 'skipped' && github.event_name == 'schedule'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -261,7 +327,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.sha }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Автозапуск (workflow_run) не должен выкладывать тот же sha повторно и, главное, более СТАРЫЙ коммит поверх нового
+          # Ночной запуск (schedule) не должен выкладывать тот же sha повторно и, главное, более СТАРЫЙ коммит поверх нового
           # (инцидент 2026-10-28: два слияния подряд дали два автодеплоя, CI старшего коммита закончился позже, и его деплой
           # выложил старый релиз поверх нового). concurrency выстраивает запуски в очередь целиком (prepare, build, deploy),
           # поэтому второй запуск доходит сюда уже после первого и читает его current_tag. Решение - infra/deploy/should-deploy.sh
@@ -274,7 +340,7 @@ jobs:
           echo "previous=$cur" >> "$GITHUB_OUTPUT"
           decision="$(bash infra/deploy/should-deploy.sh "$TAG" "$cur")"
           echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение: $decision"
-          if [ "$EVENT_NAME" = workflow_run ]; then
+          if [ "$EVENT_NAME" = schedule ]; then
             case "$decision" in
               deploy) ;;
               skip-same)
@@ -282,17 +348,17 @@ jobs:
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0 ;;
               skip-older)
-                echo "sha $TAG старше или равен выложенному $cur - пропуск (автодеплой не откатывает; откат - только ручным запуском)"
+                echo "sha $TAG старше или равен выложенному $cur - пропуск (ночная выкладка не откатывает; откат - только ручным запуском)"
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0 ;;
               skip-diverged)
-                echo "::warning::sha $TAG и выложенный $cur не в отношении предок/потомок (или $cur не разобрать) - автодеплой пропущен; выкладка только ручным запуском"
+                echo "::warning::sha $TAG и выложенный $cur не в отношении предок/потомок (или $cur не разобрать) - ночная выкладка пропущена; выкладка только ручным запуском"
                 echo "skip=true" >> "$GITHUB_OUTPUT"
                 exit 0 ;;
               *) echo "::error::should-deploy.sh вернул неожиданное '$decision'"; exit 1 ;;
             esac
           elif [ "$decision" != deploy ]; then
-            echo "::notice::ручной запуск: решение автодеплоя было бы $decision - выкладываем по явному запросу владельца"
+            echo "::notice::ручной запуск: решение ночной выкладки было бы $decision - выкладываем по явному запросу владельца"
           fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
@@ -355,14 +421,38 @@ jobs:
           ssh app "bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
 
       - name: Smoke четырёх доменов (с раннера)
+        id: smoke
         if: steps.already.outputs.skip != 'true'
         run: |
           bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" "$PLATFORM_DOMAIN" --retries 12
 
+      # Автооткат (ВЫКЛ-1): smoke не прошёл -> rollback.sh на предыдущий тег (state/previous_tag, его выставил deploy.sh) + smoke
+        # с раннера, баннер снимается, запуск падает. Миграции не откатываются (docs/runbooks/deploy.md, п. 3).
+      - name: Автооткат после неуспешного smoke
+        id: autorollback
+        if: failure() && steps.smoke.conclusion == 'failure'
+        run: |
+          echo "::error::smoke после выкладки не прошёл - автооткат на предыдущий тег"
+          ssh app "bash /opt/rt/current/infra/deploy/rollback.sh" || { echo "::error::АВТООТКАТ НЕ УДАЛСЯ - прод требует ручного вмешательства (п. 3 runbook)"; exit 1; }
+          domains=("$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN")
+          rc=0
+          ssh app "grep -q '^  platform-bff:' /opt/rt/current/infra/compose/base.yml" || rc=$?
+          case "$rc" in
+            0) domains+=("$PLATFORM_DOMAIN") ;;
+            1) ;;
+            *) echo "::error::не удалось определить, есть ли Платформа в релизе отката (код $rc)"; exit 1 ;;
+          esac
+          bash infra/deploy/smoke.sh --domains "${domains[@]}" --retries 12 \
+            || { echo "::error::smoke после автоотката не прошёл - прод требует ручного вмешательства"; exit 1; }
+          ssh app "rm -f /opt/rt/maintenance/maintenance.json" || true
+          echo "::error::выкладка ${{ needs.prepare.outputs.sha }} откатена автоматически: smoke не прошёл. Прод работает на предыдущем теге."
+          exit 1
+
       - name: Снять предупреждение о плановом обновлении
         # Баннер «Обновление в ЧЧ:ММ» (DECISIONS 2026-11-23) показывается, пока на VPS 1 лежит /opt/rt/maintenance/maintenance.json
         # (scripts/maintenance-notice.sh). После успешной выкладки и smoke файл удаляется; сбой удаления выкладку не отменяет.
-        if: steps.already.outputs.skip != 'true'
+        # Ночью баннер снимается и когда выкладывать нечего (skip: sha уже на проде, старше выложенного).
+        if: success()
         run: ssh app "rm -f /opt/rt/maintenance/maintenance.json" || echo "::warning::не удалось снять предупреждение о плановом обновлении - scripts/maintenance-notice.sh clear на VPS 1"
 
       - name: Выход из GHCR на сервере
@@ -414,11 +504,66 @@ jobs:
           name: release-notes-${{ steps.notes.outputs.day }}
           path: ${{ steps.notes.outputs.file }}
 
+  # Крон 30 19 * * * (00:30 Ташкент): баннер на 01:00, 20 минут, planned - только если HEAD main отличается от выложенного на VPS 1.
+  # Если HEAD main не зелёный, выкладка в 01:00 может взять более старый коммит или ничего; баннер при этом снимет deploy/prepare.
+  notice:
+    name: Баннер о ночном обновлении
+    if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: SSH к VPS 1
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ] || [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ]; then
+            echo "::error::нет секретов или переменных environment production"; exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host app"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Баннер, если на main есть что выкладывать
+        run: |
+          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""
+          cur="$(tr -d '[:space:]' <<<"$cur")"
+          echo "HEAD main: $head; current_tag на VPS 1: ${cur:-<пусто>}"
+          if [ -n "$head" ] && [ "$head" = "$cur" ]; then
+            echo "main уже выложен - баннер не нужен"
+            exit 0
+          fi
+          ssh app "bash -s set 01:00 20 planned" < scripts/maintenance-notice.sh
+
   rollback:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
+    needs: approve
+    if: "!cancelled() && github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && needs.approve.result == 'success'"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     env:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
       DEPLOY_USER: ${{ vars.DEPLOY_USER }}
