@@ -1325,6 +1325,10 @@ components:
         is_active:
           title: Is Active
           type: boolean
+        is_test:
+          default: false
+          title: Is Test
+          type: boolean
         leads:
           items:
             $ref: '#/components/schemas/LeadBrief'
@@ -1414,6 +1418,10 @@ components:
           title: Inn
         is_active:
           title: Is Active
+          type: boolean
+        is_test:
+          default: false
+          title: Is Test
           type: boolean
         last_activity_at:
           anyOf:
@@ -12796,6 +12804,19 @@ paths:
             type: string
           - type: 'null'
           title: Q
+      - description: 'ТЕСТ-1: без параметра тестовых компаний нет; only — только они; all — все'
+        in: query
+        name: test
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - only
+            - all
+            type: string
+          - type: 'null'
+          description: 'ТЕСТ-1: без параметра тестовых компаний нет; only — только они; all — все'
+          title: Test
       responses:
         '200':
           content:

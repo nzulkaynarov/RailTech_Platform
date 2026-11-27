@@ -23,6 +23,7 @@ from django.db.models import Q
 from django.utils import timezone
 from integration.models import CrmContactMapping
 from integration.services.partner_client import lock_company, request_client_in_crm
+from parties import test_companies
 from parties.company_admin import ensure_company_admin
 from parties.models import (
     Company,
@@ -233,11 +234,15 @@ def list_applications(status_filter: str | None = None, viewer=None) -> dict:
         .prefetch_related("package_documents")
         .order_by("-created_at")
     )
+    qs = test_companies.hide(qs, "company")  # ТЕСТ-1: очередь заявок без тестовых компаний
     if status_filter:
         qs = qs.filter(status=status_filter)
     # Ждут сотрудника: новые и согласованные кандидатом
-    pending_count = PartnerApplication.objects.filter(
-        status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CANDIDATE_AGREED]
+    pending_count = test_companies.hide(
+        PartnerApplication.objects.filter(
+            status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CANDIDATE_AGREED]
+        ),
+        "company",
     ).count()
     apps = list(qs)
     deliveries = _invite_deliveries(apps)

@@ -10,7 +10,7 @@ requests`, `master-data/hs-codes`, `catalog/manufacturers`, `exchange-rates`) и
 
 import asyncio
 import re
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import structlog
 from fastapi import APIRouter, Depends, Path, Query, status
@@ -99,6 +99,10 @@ ItemId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 Page = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
 Search = Annotated[str | None, Query(max_length=200)]
+TestScope = Annotated[
+    Literal["only", "all"] | None,
+    Query(description="ТЕСТ-1: без параметра тестовых компаний нет; only — только они; all — все"),
+]
 ItemKindQuery = Annotated[
     str | None,
     Query(pattern=r"^(stock|on_order|service_fixed|service_milestones|service_time)$"),
@@ -323,10 +327,14 @@ def _prices_forbidden() -> PlatformError:
     "/erp/catalog/suppliers", response_model=SupplierPage, operation_id="listCatalogSuppliers"
 )
 async def list_suppliers(
-    authed: Reader, q: Search = None, page: Page = 1, page_size: PageSize = 25
+    authed: Reader,
+    q: Search = None,
+    page: Page = 1,
+    page_size: PageSize = 25,
+    test: TestScope = None,
 ) -> SupplierPage:
     data = await _erp(authed).data(
-        "GET", "catalog/suppliers/", params=_params(q=q, page=page, page_size=page_size)
+        "GET", "catalog/suppliers/", params=_params(q=q, page=page, page_size=page_size, test=test)
     )
     return to_supplier_page(data, page, page_size)
 

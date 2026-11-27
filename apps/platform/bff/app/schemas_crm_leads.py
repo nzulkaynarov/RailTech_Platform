@@ -184,6 +184,8 @@ class ClientRow(BaseModel):
     handoff_status: Transfer | None
     # Х-8: с компанией не работаем (действующая отметка «Не работать»)
     do_not_work: bool = False
+    # ТЕСТ-1: тестовая компания — в рабочем списке её нет, видна на вкладке «Тестовые»
+    is_test: bool = False
     # ЕД-5: логотип компании ERP (адрес на BFF с версией); `None` — буквы названия
     logo_url: str | None = None
     # КОНТР-1б: компания ERP и её роли с состояниями: тип в списке говорит ERP; `None` — ERP молчит
@@ -288,6 +290,8 @@ class ClientCard(BaseModel):
     sources: ClientSources
     # Х-8: отметка «Не работать» из ERP — полоса «С компанией не работаем» в карточке
     do_not_work: DoNotWork | None = None
+    # ТЕСТ-1: тестовая компания (отметка ERP) — нейтральная метка «Тестовая» в карточке
+    is_test: bool = False
 
 
 class InvitationResendIn(BaseModel):

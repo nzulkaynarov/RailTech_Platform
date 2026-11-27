@@ -14,6 +14,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from parties.test_companies import ListScopeMixin
 from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -652,6 +653,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
 
 class GeneratedDocumentViewSet(
+    ListScopeMixin,
     RoleGatedViewMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -688,6 +690,8 @@ class GeneratedDocumentViewSet(
         # endpoint, never for every row of the (unpaginated) list.
         context["include_document_html"] = self.action == "retrieve"
         return context
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

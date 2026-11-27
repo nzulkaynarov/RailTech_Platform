@@ -33,4 +33,6 @@ export interface ClientCard {
   sources: ClientCardSources;
   /** Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем */
   do_not_work?: DoNotWork | null;
+  /** ТЕСТ-1: тестовая компания (отметка ERP снимком `company.updated`) — метка «Тестовая» в карточке */
+  is_test?: boolean;
 }

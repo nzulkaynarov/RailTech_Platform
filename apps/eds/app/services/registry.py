@@ -42,7 +42,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, 
 from app.schemas.common import ErpLinks, LetterSender, Money, PersonRef
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
-from app.services import access, delivery, paging, signing_resolve, signing_state, status_rank
+from app.services import access, delivery, paging, signing_resolve, signing_state, status_rank, test_companies
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -74,6 +74,7 @@ class Filters:
     crm_client_id: int | None = None
     number: str | None = None
     q: str | None = None
+    test: str | None = None  # ТЕСТ-1: `only` / `all`; без параметра — без тестовых компаний
 
 
 def _text_null() -> Any:
@@ -222,6 +223,10 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
         stmt = stmt.where(c.crm_client_id == filters.crm_client_id)
     if filters.number:
         stmt = stmt.where((c.number == filters.number) | (c.previous_number == filters.number))
+    if filters.crm_client_id is None and not filters.number:  # по клиенту и по номеру тестовая открывается
+        wanted = test_companies.scope(c.erp_company_id, filters.test)
+        if wanted is not None:
+            stmt = stmt.where(wanted)
     if filters.q and filters.q.strip():
         like = f"%{escape_like(filters.q.strip())}%"
         stmt = stmt.where(

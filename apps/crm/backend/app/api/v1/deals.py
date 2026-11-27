@@ -5,7 +5,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
@@ -63,6 +63,8 @@ def filtered(
         stmt = stmt.where(Deal.owner_user_id == owner_user_id)
     if client_id is not None:
         stmt = stmt.where(Deal.client_id == client_id)
+    else:  # ТЕСТ-1: общий список без сделок тестовых компаний; карточка клиента показывает свои
+        stmt = stmt.where(or_(Deal.client_id.is_(None), Client.is_test.is_(False)))
     zone = ZoneInfo(tz)
     if closed_from:
         stmt = stmt.where(Deal.closed_at >= datetime.combine(closed_from, time(), zone))

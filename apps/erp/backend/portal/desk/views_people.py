@@ -12,7 +12,7 @@ from django.db.models import Case, IntegerField, Q, When
 from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from integration.models import CrmClientMapping
-from parties import pictures
+from parties import pictures, test_companies
 from parties.models import Company, Contact
 from parties.models.contacts import active_contact_q
 from parties.models.relationships import RelationshipRole, RelationshipStatus
@@ -68,12 +68,14 @@ def counterparty_ids(user) -> tuple[set, set]:
     return client_ids, partner_ids
 
 
-def people_queryset(user, kind: str | None, q: str):
+def people_queryset(user, kind: str | None, q: str, params=None):
     client_ids, partner_ids = counterparty_ids(user)
     wanted = {"client": client_ids, "partner": partner_ids}.get(kind or "", client_ids | partner_ids)
     queryset = Contact.objects.select_related("company").filter(active_contact_q(), company_id__in=wanted)
     if q:
         queryset = queryset.filter(Q(name__icontains=q) | Q(company__name__icontains=q) | Q(position__icontains=q))
+    if params is not None:  # список «Люди»: без людей тестовых компаний (ТЕСТ-1); открытие по номеру не сужается
+        queryset = test_companies.scope(queryset, params, "company")
     return queryset.order_by("name", "pk"), (client_ids, partner_ids)
 
 
@@ -145,7 +147,7 @@ class PeopleDeskViewSet(DeskViewSet):
         if kind not in KINDS:
             kind = None
         q = (request.query_params.get("q") or "").strip()[:100]
-        queryset, (client_ids, partner_ids) = people_queryset(request.user, kind, q)
+        queryset, (client_ids, partner_ids) = people_queryset(request.user, kind, q, request.query_params)
         return self.page_of(queryset, lambda rows: [person_row(row, client_ids, partner_ids) for row in rows])
 
     @extend_schema(
@@ -310,6 +312,13 @@ class OrganizationsDeskViewSet(DeskViewSet):
                 required=False,
                 description="Поле выбора: первые N строк (до 20) одним списком, без страниц",
             ),
+            OpenApiParameter(
+                "test",
+                str,
+                required=False,
+                enum=["only", "all"],
+                description="ТЕСТ-1: без параметра тестовые компании не входят; `only` — только они; `all` — все вместе",
+            ),
             OpenApiParameter("page", int, required=False),
             OpenApiParameter("page_size", int, required=False),
         ],
@@ -318,7 +327,9 @@ class OrganizationsDeskViewSet(DeskViewSet):
     )
     def list(self, request):
         client_ids, partner_ids = counterparty_ids(request.user)
-        queryset = Company.objects.filter(pk__in=client_ids | partner_ids)
+        queryset = test_companies.scope(
+            Company.objects.filter(pk__in=client_ids | partner_ids), request.query_params, ""
+        )
         q = (request.query_params.get("q") or "").strip()[:100]
         if q:
             queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q) | Q(stated_inn__icontains=q))
@@ -344,6 +355,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
         "logo": PICTURE_EDITORS,
         # Х-8: «Не работать» ставит и снимает тот же, кто правит реквизиты контрагента
         "do_not_work": ("deal.manage", "supply.manage"),
+        # ТЕСТ-1: «Тестовая» — тот же, кто правит реквизиты контрагента
+        "test_mark": ("deal.manage", "supply.manage"),
         # КОНТР-1б: «Не клиент» — тот же, кто правит реквизиты и ведёт заявки
         "not_client": ("deal.manage", "supply.manage"),
     }
@@ -637,6 +650,35 @@ class OrganizationsDeskViewSet(DeskViewSet):
                 counterparty.set_do_not_work(company, body.validated_data, actor=request.user)
             except ItemError as error:
                 return refuse(error)
+        company.refresh_from_db()
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        methods=["POST"],
+        operation_id="parties_organizations_test_set",
+        summary="Mark a counterparty as test",
+        description=(
+            "ТЕСТ-1. Отметить компанию «Тестовая»: она уходит из рабочих списков, счётчиков, панелей и отчётов, видна по "
+            "фильтру `?test=only`; ничего не удаляется, письма, уведомления и вход в кабинет работают как прежде. Право "
+            "`deal.manage` или `supply.manage`; повтор безопасен; действие пишется в журнал. Ответ — карточка контрагента."
+        ),
+        request=None,
+        responses={200: DeskCounterparty, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        operation_id="parties_organizations_test_clear",
+        summary="Remove the test mark",
+        description="ТЕСТ-1. Снять отметку «Тестовая»: компания возвращается в рабочие списки. Тот же доступ.",
+        request=None,
+        responses={200: DeskCounterparty, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["post", "delete"], url_path="test", url_name="test")
+    def test_mark(self, request, pk=None):
+        company, client_ids = self._company(request, pk)
+        counterparty.set_test(company, request.method == "POST", actor=request.user)
         company.refresh_from_db()
         return Response(counterparty.card(company, client_ids, request.user))
 

@@ -6,6 +6,7 @@ service (Rule 8: search-before-create de-dup, reachability guard).
 """
 
 from drf_spectacular.utils import extend_schema, inline_serializer
+from parties import test_companies
 from portal.services.invitation import invite_contact_to_portal
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -92,6 +93,8 @@ class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Contact.objects.none()
         user = self.request.user
         queryset = Contact.objects.select_related("company")
+        if self.action == "list":  # ТЕСТ-1: клиентская база без тестовых компаний; `?test=only` — только они
+            queryset = test_companies.scope(queryset, self.request.query_params, "company")
         if getattr(user, "is_superuser", False):
             return queryset
         return queryset.filter(company__in=seller_clients(user))

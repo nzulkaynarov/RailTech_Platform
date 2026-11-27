@@ -1,7 +1,7 @@
 """Входящие письма и резолюции: `/api/v1/letters…` (eds.yaml, тег `letters`); правила — `services/letters.py`."""
 
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Header, Query, Response
 from rt_bus.sqlalchemy import AsyncBus
@@ -119,6 +119,7 @@ async def list_letters(
     on_control: Annotated[bool | None, Query()] = None,
     overdue: Annotated[bool | None, Query()] = None,
     kind: Annotated[str | None, Query(pattern=r"^[a-z][a-z_]{0,31}$")] = None,
+    test: Annotated[Literal["only", "all"] | None, Query()] = None,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> LetterPage:
@@ -131,6 +132,7 @@ async def list_letters(
         on_control=on_control,
         overdue=overdue,
         kind=kind,
+        test=test,
     )
 
 

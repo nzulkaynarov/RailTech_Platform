@@ -8132,7 +8132,7 @@ export interface paths {
     };
     /**
      * Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
-     * @description CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+     * @description CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные. Тестовые компании (ТЕСТ-1) в списке не показываются; `test=only` — вкладка «Тестовые».
      */
     get: operations["listCrmClients"];
     put?: never;
@@ -9062,6 +9062,30 @@ export interface paths {
      * @description ERP `DELETE parties/organizations/{id}/do-not-work/` (Х-8): снять отметку; повтор безопасен. Тот же доступ, что у «Не работать». Запись в журнале и снимок в CRM — как при установке.
      */
     delete: operations["clearCounterpartyDoNotWork"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/counterparties/{id}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Карточка контрагента: «Отметить как тестовую»
+     * @description ERP `POST parties/organizations/{id}/test/` (ТЕСТ-1). Компания уходит из рабочих списков, счётчиков, панелей и отчётов и видна на вкладке «Тестовые»; ничего не удаляется, письма, уведомления и вход в кабинет работают как прежде. Повтор безопасен; действие пишется в журнал, CRM получает отметку снимком `company.updated`. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+     */
+    post: operations["setCounterpartyTest"];
+    /**
+     * Карточка контрагента: «Снять отметку»
+     * @description ERP `DELETE parties/organizations/{id}/test/` (ТЕСТ-1): компания возвращается в рабочие списки; повтор безопасен. Тот же доступ, что у «Отметить как тестовую».
+     */
+    delete: operations["clearCounterpartyTest"];
     options?: never;
     head?: never;
     patch?: never;
@@ -18758,6 +18782,8 @@ export interface components {
       handoff_status: "pending" | "done" | "failed" | null;
       /** @description Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем») */
       do_not_work?: boolean;
+      /** @description ТЕСТ-1: тестовая компания (в рабочем списке её нет, видна на вкладке «Тестовые») */
+      is_test?: boolean;
       /** @description Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия */
       logo_url?: string | null;
       /** @description КОНТР-1б: компания ERP (null — клиент ещё не передан) */
@@ -18905,6 +18931,8 @@ export interface components {
       };
       /** @description Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем */
       do_not_work?: components["schemas"]["DoNotWork"] | null;
+      /** @description ТЕСТ-1: тестовая компания (отметка ERP снимком `company.updated`) — метка «Тестовая» в карточке */
+      is_test?: boolean;
     };
     /** @description Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только с подтверждения менеджера */
     ClientPartnerRequest: {
@@ -19689,6 +19717,8 @@ export interface components {
       brands: components["schemas"]["CounterpartyRef"][];
       /** @description Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
       do_not_work?: components["schemas"]["DoNotWork"] | null;
+      /** @description ТЕСТ-1: тестовая компания — метка «Тестовая» и действие «Снять отметку» */
+      is_test?: boolean;
       /** @description ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
       contract_term?: components["schemas"]["CounterpartyContractTerm"] | null;
     };
@@ -35525,6 +35555,8 @@ export interface operations {
     parameters: {
       query?: {
         q?: string;
+        /** @description ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе */
+        test?: "only" | "all";
       };
       header?: never;
       path?: never;
@@ -36842,6 +36874,8 @@ export interface operations {
         /** @description Роль-подсказка: компании с ней идут выше */
         role?: components["schemas"]["CounterpartyPickRole"];
         limit?: number;
+        /** @description ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе */
+        test?: "only" | "all";
       };
       header?: never;
       path?: never;
@@ -37292,6 +37326,64 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  setCounterpartyTest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка с отметкой */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  clearCounterpartyTest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка без отметки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   getCounterpartyNotClientPlan: {
     parameters: {
       query?: never;
@@ -37397,6 +37489,8 @@ export interface operations {
         q?: string;
         page?: number;
         page_size?: number;
+        /** @description ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе */
+        test?: "only" | "all";
       };
       header?: never;
       path?: never;

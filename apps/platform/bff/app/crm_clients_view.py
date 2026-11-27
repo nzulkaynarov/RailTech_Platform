@@ -56,6 +56,7 @@ class CrmClientItem(_Crm):
     open_deals: int = 0
     last_activity_at: datetime | None = None
     do_not_work: CrmDoNotWork | None = None
+    is_test: bool = False
 
 
 class CrmLeadBrief(_Crm):
@@ -85,6 +86,7 @@ class CrmClientDetail(_Crm):
     invitation: crm.InvitationOut | None = None
     partner_requests: list[crm.PartnerRequestOut] = []
     do_not_work: CrmDoNotWork | None = None
+    is_test: bool = False
 
 
 class CrmContact(_Crm):
@@ -159,6 +161,7 @@ def client_row(item: CrmClientItem) -> ClientRow:
         last_activity_at=item.last_activity_at,
         handoff_status=item.erp_handoff_status,
         do_not_work=item.do_not_work is not None,
+        is_test=item.is_test,
     )
 
 
@@ -344,4 +347,5 @@ def client_card(
         do_not_work=DoNotWork.model_validate(detail.do_not_work.model_dump())
         if detail.do_not_work
         else None,
+        is_test=detail.is_test,
     )

@@ -1,4 +1,5 @@
 import type { DoNotWork } from "../shared/api/generated/model";
+import { resetTests } from "./testMarks";
 
 /**
  * Отметки «Не работать» (Х-8) на моках: ставятся в карточке контрагента, а списки, карточка клиента и карточка проекта
@@ -27,4 +28,5 @@ export function clearMark(companyId: string): void {
 /** Сброс между тестами и сценариями. */
 export function resetMarks(): void {
   marks.clear();
+  resetTests();
 }

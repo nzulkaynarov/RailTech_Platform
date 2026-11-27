@@ -7,6 +7,7 @@ import type {
   DoNotWorkIn,
 } from "../shared/api/generated/model";
 import { clearMark, markOf, setMark } from "./doNotWorkMarks";
+import { clearTest, isTest, setTest } from "./testMarks";
 import { cabinetOf, isNotClient, markNotClient, planOf, roleStatesOf } from "./notClient";
 import { failure } from "./adminUsers";
 import { readErpCatalog } from "./fixtures/erpCatalog";
@@ -165,6 +166,7 @@ function cardOf(id: string): CounterpartyCard | null {
     ...card,
     ...requisites.get(id),
     do_not_work: markOf(id),
+    is_test: isTest(id),
     // ЕД-5, СУЩ-3: логотип и фото контактов — те же адреса, что отдаёт BFF (версия в `?v=`)
     logo_url: logoUrlOf(id),
     people: card.people.map((person) => ({ ...person, photo_url: photoUrlOf(person.id) })),
@@ -226,6 +228,29 @@ export const counterpartyHandlers = [
     const id = String(params["id"]);
     if (!cardOf(id)) return notFound();
     clearMark(id);
+    return HttpResponse.json(cardOf(id));
+  }),
+  // ТЕСТ-1: «Тестовая» ставит и снимает тот, кто правит реквизиты; повтор безопасен
+  http.post("*/people/counterparties/:id/test", ({ params }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    if (!cardOf(id)) return notFound();
+    setTest(id);
+    return HttpResponse.json(cardOf(id));
+  }),
+  http.delete("*/people/counterparties/:id/test", ({ params }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    if (!cardOf(id)) return notFound();
+    clearTest(id);
     return HttpResponse.json(cardOf(id));
   }),
   // КОНТР-1б: «Не клиент» — что изменится и само действие (право — как у реквизитов)

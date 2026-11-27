@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 
+import { inScope } from "./testMarks";
 import type {
   CounterpartyPersonPick,
   CounterpartyPick,
@@ -121,7 +122,9 @@ export const counterpartyPickHandlers = [
     const role = url.searchParams.get("role") as keyof CounterpartyPick["roles"] | null;
     const limit = Number(url.searchParams.get("limit") ?? "10");
     const found = COMPANIES.filter(
-      (row) => row.name.toLocaleLowerCase("ru").includes(q) || (row.inn ?? "").includes(q),
+      (row) =>
+        inScope(row.id, url.searchParams.get("test")) &&
+        (row.name.toLocaleLowerCase("ru").includes(q) || (row.inn ?? "").includes(q)),
     );
     const rank = (row: CounterpartyPick) =>
       (q !== "" && row.inn === q ? 0 : 2) + (role && row.roles[role] ? 0 : 1);

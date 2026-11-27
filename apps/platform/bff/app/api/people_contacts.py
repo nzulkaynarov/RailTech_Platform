@@ -245,6 +245,8 @@ class CounterpartyCard(BaseModel):
     accounts_masked: bool
     brands: list[CounterpartyRef]
     do_not_work: DoNotWork | None = None
+    # ТЕСТ-1: тестовая компания — метка «Тестовая» и действие «Снять отметку»
+    is_test: bool = False
     contract_term: CounterpartyContractTerm | None = None
     # ЕД-5: логотип только через BFF, `?v=` — версия; `None` — буквы названия
     logo_url: str | None = None
@@ -335,6 +337,7 @@ def to_card(raw: Any) -> CounterpartyCard:
             for brand in _rows(row.get("brands"))
         ],
         do_not_work=to_do_not_work(row.get("do_not_work")),
+        is_test=bool(row.get("is_test")),
         contract_term=to_contract_term(row.get("contract_term")),
     )
 
@@ -529,6 +532,29 @@ async def clear_counterparty_do_not_work(
 ) -> CounterpartyCard:
     """Снять «Не работать» (Х-8); повтор безопасен."""
     data = await ErpCompany(authed.call).data("DELETE", f"parties/organizations/{id}/do-not-work/")
+    return to_card(data)
+
+
+@router.post(
+    "/people/counterparties/{id}/test",
+    response_model=CounterpartyCard,
+    operation_id="setCounterpartyTest",
+)
+async def set_counterparty_test(id: CompanyId, authed: RequisitesWriter) -> CounterpartyCard:
+    """Отметить «Тестовая» (ТЕСТ-1): компания уходит из рабочих списков и счётчиков, видна на
+    вкладке «Тестовые»; ничего не удаляется. Право — как на реквизиты; повтор безопасен."""
+    data = await ErpCompany(authed.call).data("POST", f"parties/organizations/{id}/test/")
+    return to_card(data)
+
+
+@router.delete(
+    "/people/counterparties/{id}/test",
+    response_model=CounterpartyCard,
+    operation_id="clearCounterpartyTest",
+)
+async def clear_counterparty_test(id: CompanyId, authed: RequisitesWriter) -> CounterpartyCard:
+    """Снять отметку «Тестовая» (ТЕСТ-1); компания возвращается в рабочие списки."""
+    data = await ErpCompany(authed.call).data("DELETE", f"parties/organizations/{id}/test/")
     return to_card(data)
 
 
@@ -755,9 +781,13 @@ async def search_counterparties(
     q: Annotated[str | None, Query(max_length=100)] = None,
     role: PickerRole | None = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 10,
+    test: Annotated[
+        Literal["only", "all"] | None,
+        Query(description="ТЕСТ-1: без параметра тестовых нет; only — только они; all — все"),
+    ] = None,
 ) -> CounterpartyPickList:
     """Название или точный ИНН; `role` поднимает компании с ролью, остальных не скрывает."""
-    wanted = {"q": (q or "").strip(), "role": role, "limit": limit}
+    wanted = {"q": (q or "").strip(), "role": role, "limit": limit, "test": test}
     params = {k: v for k, v in wanted.items() if v not in (None, "")}
     data = await ErpCompany(authed.call).data("GET", "parties/organizations/", params=params)
     return CounterpartyPickList(

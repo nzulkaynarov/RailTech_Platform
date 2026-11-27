@@ -43,6 +43,12 @@ def _apply_do_not_work(client: Client, snapshot: CompanySnapshot) -> None:
     client.do_not_work_until = mark.until if mark else None
 
 
+def _apply_is_test(client: Client, snapshot: CompanySnapshot) -> None:
+    """ТЕСТ-1: отметка «Тестовая»; поля нет (прежний издатель) — не меняется."""
+    if "is_test" in snapshot.model_fields_set:
+        client.is_test = bool(snapshot.is_test)
+
+
 async def apply(session: AsyncSession, event: Event) -> int:
     """Применить снимок в транзакции inbox; возвращает число изменённых клиентов."""
     try:
@@ -76,6 +82,7 @@ async def apply(session: AsyncSession, event: Event) -> int:
         for field in changed:
             setattr(client, field, wanted[field])
         _apply_do_not_work(client, snapshot)
+        _apply_is_test(client, snapshot)
         client.erp_requisites_at = at
         if changed:
             changed_total += 1

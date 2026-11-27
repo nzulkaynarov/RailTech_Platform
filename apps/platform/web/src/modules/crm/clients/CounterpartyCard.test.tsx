@@ -242,6 +242,62 @@ describe("Карточка контрагента: «Не работать»", (
   });
 });
 
+/** ТЕСТ-1: «Тестовая» — обратимая отметка; вопрос только когда у компании есть открытые заявки. */
+describe("Карточка контрагента: «Тестовая»", () => {
+  it("у компании есть открытые заявки: один вопрос; потом метка «Тестовая», «Снять отметку» — без вопроса", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    expect(within(panel).queryByText("Тестовая")).toBeNull();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Отметить как тестовую" }));
+    const ask = await screen.findByRole("dialog", { name: "Отметить как тестовую?" });
+    expect(ask).toHaveTextContent("открытых заявок: 1");
+    fireEvent.click(within(ask).getByRole("button", { name: "Отметить" }));
+
+    expect(await within(panel).findByText("Тестовая")).toBeVisible();
+    expect(within(panel).queryByRole("button", { name: "Отметить как тестовую" })).toBeNull();
+    fireEvent.click(within(panel).getByRole("button", { name: "Снять отметку" }));
+    await waitFor(() => {
+      expect(within(panel).queryByText("Тестовая")).toBeNull();
+    });
+    expect(
+      await within(panel).findByRole("button", { name: "Отметить как тестовую" }),
+    ).toBeVisible();
+  });
+
+  it("открытых заявок нет — отмечается сразу, без вопроса", async () => {
+    server.use(
+      http.get("*/people/counterparties/:id/not-client", () =>
+        HttpResponse.json({
+          company_id: "1001",
+          dry_run: true,
+          is_client: true,
+          requests_to_close: [],
+          requests_kept: [],
+          history: { quotes_sent: 0, contracts: 0, invoices: 0, projects: 0 },
+          has_history: false,
+          contacts: 1,
+          contacts_with_cabinet: 1,
+          remaining_roles: [],
+          requests_closed: [],
+          candidate_entry: false,
+        }),
+      ),
+    );
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Отметить как тестовую" }));
+    expect(await within(panel).findByText("Тестовая")).toBeVisible();
+    expect(screen.queryByRole("dialog", { name: "Отметить как тестовую?" })).toBeNull();
+  });
+
+  it("бухгалтер метку видит, но поставить её не может", async () => {
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    expect(within(panel).queryByRole("button", { name: "Отметить как тестовую" })).toBeNull();
+  });
+});
+
 /** ЕД-5 и СУЩ-3: логотип компании и фото контакта — загрузка в карточке контрагента. */
 describe("Карточка контрагента: логотип и фото контакта", () => {
   async function pick(dialogName: string, input: HTMLElement, file: File) {

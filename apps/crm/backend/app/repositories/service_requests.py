@@ -19,7 +19,7 @@ async def list_with_clients(
     stmt = (
         select(ServiceRequest, Client.name)
         .join(Client, Client.id == ServiceRequest.client_id)
-        .where(ServiceRequest.status == status)
+        .where(ServiceRequest.status == status, Client.is_test.is_(False))  # ТЕСТ-1
         .order_by(order)
         .limit(limit)
     )
