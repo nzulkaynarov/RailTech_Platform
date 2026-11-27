@@ -68,11 +68,13 @@ async def test_not_an_image_is_204(web: Web, be: Backends) -> None:
 
 
 async def test_logo_from_portal_address_is_served(web: Web, be: Backends) -> None:
-    """ERP отдаёт адрес `/api/portal/v1/operator/logo?v=<версия>` — прежний путь в media больше не приходит."""
+    """ERP отдаёт адрес `/api/portal/v1/operator/logo?v=<версия>`, не путь в media."""
     path = "/api/portal/v1/operator/logo?v=a1b2c3d4e5"
     _operator(be, path)
     be.router.get(f"{ERP_URL}{path}").mock(
-        return_value=httpx.Response(200, content=b"RIFFwebp", headers={"content-type": "image/webp"})
+        return_value=httpx.Response(
+            200, content=b"RIFFwebp", headers={"content-type": "image/webp"}
+        )
     )
 
     response = await web.client.get("/api/v1/setup/logo")

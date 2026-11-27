@@ -30,6 +30,7 @@ def _contract() -> dict:
 
 CONTRACT = _contract()
 
+
 def _fresh_request(company):
     # Заявка, которую никто не трогал (DRAFT, КП нет): так её видит клиент. RFQ_OPEN/KYC_PENDING тоже дают стадию
     # `request`, но в Кабинете это уже «В работе»; событие шины при этом не шлётся (стадия контракта прежняя) — хвост PR.

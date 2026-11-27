@@ -215,7 +215,7 @@ _SEES_STEP: dict[StepCode, ClientSees] = {
 
 
 # Статус заявки в списке «Заявки» Кабинета — до проекта. Таблица зеркалит `by_external_stage` из
-# `packages/contracts/client-request-statuses.yaml` (тест сверяет с файлом); у проекта слово берётся из `client_sees`.
+# `packages/contracts/client-request-statuses.yaml` (тест сверяет); у проекта слово — `client_sees`.
 _CABINET_STATUS: dict[str | None, RequestStatus] = {
     None: "new",
     "request": "new",
@@ -226,7 +226,7 @@ _CABINET_STATUS: dict[str | None, RequestStatus] = {
 
 
 def cabinet_status_of(deal: CrmDeal) -> RequestStatus | None:
-    """Что клиент видит в Кабинете у заявки; `None` — заявка стала проектом, там слова проекта (`client_sees`)."""
+    """Что клиент видит у заявки в Кабинете; `None` — это проект, его слова — `client_sees`."""
     if step_of(deal) in _PROJECT:
         return None
     stage = "lost" if deal.stage == "lost" else deal.external_stage

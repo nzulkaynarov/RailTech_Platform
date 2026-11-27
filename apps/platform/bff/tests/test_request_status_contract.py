@@ -1,7 +1,7 @@
-"""ПРАВДА-2: «В кабинете клиента» в карточке компании — то же слово, что у заявки в списке «Заявки» Кабинета.
+"""ПРАВДА-2: «В кабинете клиента» в карточке компании — то же слово, что в «Заявках» Кабинета.
 
-Один источник — `packages/contracts/client-request-statuses.yaml`: Кабинет сверяет с ним i18n, ERP — свою проекцию
-`request_status`, здесь — таблица BFF и список статусов.
+Один источник — `packages/contracts/client-request-statuses.yaml`: Кабинет сверяет с ним i18n,
+ERP — свою проекцию `request_status`, здесь — таблица BFF и список статусов.
 """
 
 from datetime import UTC, datetime
@@ -43,7 +43,7 @@ def test_statuses_are_the_contract_statuses() -> None:
 
 
 def test_bff_table_is_the_contract_table() -> None:
-    expected = {k: v for k, v in CONTRACT["by_external_stage"].items()}
+    expected = dict(CONTRACT["by_external_stage"])
     assert {k: v for k, v in _CABINET_STATUS.items() if k is not None} == expected
     assert _CABINET_STATUS[None] == "new"  # событий ERP ещё не было
 
@@ -55,6 +55,8 @@ def test_every_request_stage_has_the_cabinet_word(stage: str) -> None:
     assert request_row(deal).cabinet_status == CONTRACT["by_external_stage"][stage]  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("stage", ["accepted", "contract", "invoiced", "paid", "fulfilment", "closing"])
+@pytest.mark.parametrize(
+    "stage", ["accepted", "contract", "invoiced", "paid", "fulfilment", "closing"]
+)
 def test_project_has_no_request_status(stage: str) -> None:
     assert cabinet_status_of(_deal(stage)) is None  # type: ignore[arg-type]
