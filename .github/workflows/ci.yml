@@ -494,7 +494,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.platform == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 35  # ~19 мин на main к 2026-11-02, 20 давали отмены (#361, #365, main c7d0f174); шардинг — B-CIPLAT-1
+    timeout-minutes: 50  # 35 давали отмены 2026-11-26 (main 42a7d9342, 46f74f989; #924, #933, #939) — тесты зелёные, обрывал лимит; шардинг — B-CIPLAT-1
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
