@@ -2620,6 +2620,8 @@ export interface components {
       track?: components["schemas"]["LetterTrack"];
       /** @description На контроле — поручения в работе (P8b) */
       on_control?: boolean;
+      /** @description ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false */
+      is_test?: boolean;
       /** @description Есть просроченное поручение (P8b) */
       overdue?: boolean;
       /** @description Ответственный исполнитель поручения (P8b); у пути `calc` — `null` */
@@ -3970,6 +3972,8 @@ export interface components {
       acting_for?: components["schemas"]["PersonRef"] | null;
       /** Format: date-time */
       created_at: string;
+      /** @description ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false */
+      is_test?: boolean;
     };
     ApprovalPage: {
       items: components["schemas"]["ApprovalListItem"][];
@@ -4050,6 +4054,8 @@ export interface components {
       links: components["schemas"]["ErpLinks"];
       /** @description Сумма строки (0.15.0); у письма и документа без суммы — `null` */
       amount: components["schemas"]["Money"] | null;
+      /** @description ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false */
+      is_test?: boolean;
     };
     RegistryPage: {
       items: components["schemas"]["RegistryItem"][];

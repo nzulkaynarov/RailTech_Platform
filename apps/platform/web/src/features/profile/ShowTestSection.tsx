@@ -4,10 +4,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Profile } from "../../shared/api/generated/model";
-import {
-  getGetProfileQueryKey,
-  useUpdateProfile,
-} from "../../shared/api/generated/platform-bff";
+import { getGetProfileQueryKey, useUpdateProfile } from "../../shared/api/generated/platform-bff";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
 

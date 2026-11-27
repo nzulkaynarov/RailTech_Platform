@@ -333,7 +333,6 @@ def dashboard_analytics(user, request, period: str = DEFAULT_PERIOD) -> dict:
     (сотрудник своей компании или покупательский аккаунт); переключателя контекста больше нет.
     """
     from django.core.cache import cache
-
     from parties import test_companies
 
     cache_key = f"dashboard_analytics_{period}_{user.pk}{test_companies.cache_suffix()}"

@@ -26,14 +26,18 @@ for (const width of [1440, 390] as const) {
 
       // 2. профиль: включить «Показывать тестовые компании и их документы»
       await spaGoto(page, "/me");
-      const toggle = page.getByRole("switch", { name: "Показывать тестовые компании и их документы" });
+      const toggle = page.getByRole("switch", {
+        name: "Показывать тестовые компании и их документы",
+      });
       await expect(toggle).not.toBeChecked();
       await waitForMotionEnd(page);
-      if (dir) await page.screenshot({ path: `${dir}/profile-off-${String(width)}.png`, fullPage: true });
+      if (dir)
+        await page.screenshot({ path: `${dir}/profile-off-${String(width)}.png`, fullPage: true });
       await toggle.click();
       await expect(toggle).toBeChecked();
       await waitForMotionEnd(page);
-      if (dir) await page.screenshot({ path: `${dir}/profile-on-${String(width)}.png`, fullPage: true });
+      if (dir)
+        await page.screenshot({ path: `${dir}/profile-on-${String(width)}.png`, fullPage: true });
       await expectNoViolations(page, "«Показывать тестовые»: профиль");
 
       // 3. в «Заявках» тестовая заявка видна, с меткой «Тестовая»
@@ -41,7 +45,8 @@ for (const width of [1440, 390] as const) {
       await expect(page.getByText(TEST_REQUEST).first()).toBeVisible();
       await expect(page.locator(".ant-tag", { hasText: "Тестовая" }).first()).toBeVisible();
       await waitForMotionEnd(page);
-      if (dir) await page.screenshot({ path: `${dir}/requests-${String(width)}.png`, fullPage: true });
+      if (dir)
+        await page.screenshot({ path: `${dir}/requests-${String(width)}.png`, fullPage: true });
       await expectNoViolations(page, "«Показывать тестовые»: «Заявки» с меткой");
 
       // 4. выключили — скрыта
