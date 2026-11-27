@@ -15,6 +15,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from parties.test_companies import ListScopeMixin
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -82,6 +83,7 @@ _QUOTE_PRICING_FIELDS = frozenset(
     destroy=extend_schema(summary="Delete quote", tags=["CRM"]),
 )
 class QuoteViewSet(
+    ListScopeMixin,
     RoleGatedViewMixin,
     QuoteApprovalMixin,
     QuoteClientDecisionMixin,
@@ -139,6 +141,8 @@ class QuoteViewSet(
             "revoke_public_link",
         )
         return ctx
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

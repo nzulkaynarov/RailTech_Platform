@@ -14,6 +14,7 @@ import pghistory
 from django.conf import settings
 from django.db.models import Count, Min, Q
 from django.utils import timezone
+from parties import test_companies
 from parties.do_not_work import is_marked
 from parties.models import Company
 from parties.people import contact_name, set_contact_name
@@ -28,7 +29,8 @@ from catalog.services import offer_validity_error
 SUPPLIER_TYPES = ("SUPPLIER", "MANUFACTURER")
 
 
-def supplier_queryset(params):
+def supplier_queryset(params, *, scoped: bool = False):
+    """Поставщики; `scoped=True` — список экрана: без тестовых компаний, `?test=only|all` меняет выборку (ТЕСТ-1)."""
     from core.tenant import own_company_id
 
     today = timezone.localdate()
@@ -64,6 +66,8 @@ def supplier_queryset(params):
         queryset = queryset.filter(
             Q(name__icontains=text) | Q(inn__icontains=text) | Q(registration_number__icontains=text)
         )
+    if scoped:
+        queryset = test_companies.scope(queryset, params, "")
     return queryset.order_by("name", "id")
 
 

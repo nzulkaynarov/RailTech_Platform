@@ -18,6 +18,7 @@ from decimal import Decimal
 
 from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
+from parties import test_companies
 
 from accounts.constants import CompanyTypeCode
 from crm.constants import DealStageCode, QuoteStatusCode
@@ -65,6 +66,7 @@ def scope_deals(deals, scope: DashboardScope):
 
     `user_company_ids` ограничивает покупателя своими компаниями; None = видно всё.
     """
+    deals = test_companies.hide(deals)  # ТЕСТ-1: тестовые компании не входят ни в один показатель панели
     if scope.user_company_ids is not None:
         return deals.filter(company_id__in=scope.user_company_ids)
     return deals
@@ -147,12 +149,16 @@ def _client_kpis(period_start, scope: DashboardScope) -> dict:
         client_type = CompanyType.objects.filter(code=CompanyTypeCode.CLIENT).first()
         if not client_type:
             return {"clients_count": 0, "clients_count_change": 0}
-        current_clients = Company.objects.filter(types=client_type).distinct().count()
+        current_clients = test_companies.hide(Company.objects.all(), "").filter(types=client_type).distinct().count()
         prev_clients = (
-            current_clients - Company.objects.filter(types=client_type, created_at__gte=period_start).distinct().count()
+            current_clients
+            - test_companies.hide(Company.objects.all(), "")
+            .filter(types=client_type, created_at__gte=period_start)
+            .distinct()
+            .count()
         )
     elif scope.seller_company_ids:
-        deals = Deal.objects.filter(company__isnull=False)
+        deals = test_companies.hide(Deal.objects.filter(company__isnull=False))
         current_clients = deals.values("company_id").distinct().count()
         # База = различные компании-покупатели, у которых сделка была УЖЕ ДО периода (аудит M4).
         # Прежняя арифметика «минус созданные в периоде» ошибочно выбрасывала повторных клиентов
@@ -171,7 +177,8 @@ def _counterparties() -> dict:
     from accounts.models import Company
 
     type_counts = dict(
-        Company.objects.filter(
+        test_companies.hide(Company.objects.all(), "")
+        .filter(
             types__code__in=[CompanyTypeCode.CLIENT, CompanyTypeCode.SUPPLIER],
         )
         .values_list("types__code")
@@ -189,7 +196,7 @@ def _counterparties() -> dict:
 
 def _request_completion(scope: DashboardScope) -> float:
     """Процент закрытия заявок в пределах области видимости."""
-    quotes_qs = Quote.objects.all()
+    quotes_qs = test_companies.hide(Quote.objects.all(), "deal__company")
     if scope.user_company_ids is not None:
         quotes_qs = quotes_qs.filter(deal__company_id__in=scope.user_company_ids)
     # ARCH-04: закрытые и всего по ОДНОМУ queryset одним aggregate.
@@ -258,7 +265,7 @@ def _activity_by_day(scope: DashboardScope) -> list:
     from crm.models import ActivityLog
 
     window_start = timezone.now() - timedelta(days=ACTIVITY_WINDOW_DAYS)
-    qs = ActivityLog.objects.filter(timestamp__gte=window_start)
+    qs = test_companies.hide(ActivityLog.objects.filter(timestamp__gte=window_start))
     if scope.user_company_ids is not None:
         qs = qs.filter(user__memberships__company_id__in=scope.user_company_ids)
     daily = qs.annotate(day=TruncDate("timestamp")).values("day").annotate(count=Count("id")).order_by("day")
@@ -280,7 +287,9 @@ def _top_products(scope: DashboardScope, limit: int = TOP_PRODUCTS_LIMIT) -> lis
     qs = Product.objects.select_related("category")
     if scope.user_company_ids is not None:
         qs = qs.filter(quote_items__quote__deal__company_id__in=scope.user_company_ids)
-    top = qs.annotate(deal_count=Count("quote_items", distinct=True)).order_by("-deal_count")[:limit]
+    top = qs.annotate(
+        deal_count=Count("quote_items", distinct=True, filter=~Q(quote_items__quote__deal__company__is_test=True))
+    ).order_by("-deal_count")[:limit]
     return [
         {
             "id": str(product.id),

@@ -14620,11 +14620,17 @@ paths:
       operationId: listCrmClients
       summary: 'Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)'
       description: >-
-        CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+        CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные. Тестовые компании
+        (ТЕСТ-1) в списке не показываются; `test=only` — вкладка «Тестовые».
       parameters:
         - name: q
           in: query
           schema: {type: string, maxLength: 100}
+        - name: test
+          in: query
+          required: false
+          description: 'ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе'
+          schema: {type: string, enum: [only, all]}
       responses:
         '200':
           description: Клиенты
@@ -15952,6 +15958,11 @@ paths:
         - {name: q, in: query, required: false, description: 'Часть названия или ИНН', schema: {type: string, maxLength: 100}}
         - {name: role, in: query, required: false, description: 'Роль-подсказка: компании с ней идут выше', schema: {$ref: '#/components/schemas/CounterpartyPickRole'}}
         - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 20, default: 10}}
+        - name: test
+          in: query
+          required: false
+          description: 'ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе'
+          schema: {type: string, enum: [only, all]}
       responses:
         '200':
           description: Строки выбора
@@ -16364,6 +16375,59 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/test:
+    post:
+      tags: [chats]
+      operationId: setCounterpartyTest
+      summary: 'Карточка контрагента: «Отметить как тестовую»'
+      description: >-
+        ERP `POST parties/organizations/{id}/test/` (ТЕСТ-1). Компания уходит из рабочих списков, счётчиков, панелей и
+        отчётов и видна на вкладке «Тестовые»; ничего не удаляется, письма, уведомления и вход в кабинет работают как прежде.
+        Повтор безопасен; действие пишется в журнал, CRM получает отметку снимком `company.updated`. Раздел `crm.clients`
+        или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка с отметкой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [chats]
+      operationId: clearCounterpartyTest
+      summary: 'Карточка контрагента: «Снять отметку»'
+      description: >-
+        ERP `DELETE parties/organizations/{id}/test/` (ТЕСТ-1): компания возвращается в рабочие списки; повтор безопасен.
+        Тот же доступ, что у «Отметить как тестовую».
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка без отметки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/counterparties/{id}/not-client:
     get:
       tags: [chats]
@@ -16481,6 +16545,11 @@ paths:
           in: query
           required: false
           schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: test
+          in: query
+          required: false
+          description: 'ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе'
+          schema: {type: string, enum: [only, all]}
       responses:
         '200':
           description: Готово
@@ -31222,6 +31291,7 @@ components:
         last_activity_at: {type: [string, 'null'], format: date-time}
         handoff_status: {type: [string, 'null'], enum: [pending, done, failed, null]}
         do_not_work: {type: boolean, description: 'Х-8: у компании действует отметка «Не работать» (фильтр «Не работаем»)'}
+        is_test: {type: boolean, description: 'ТЕСТ-1: тестовая компания (в рабочем списке её нет, видна на вкладке «Тестовые»)'}
         logo_url: {type: [string, 'null'], description: 'Логотип компании: адрес на BFF с `?v=<версия>` (ЕД-5); null — буквы названия'}
         company_id: {type: [string, 'null'], description: 'КОНТР-1б: компания ERP (null — клиент ещё не передан)'}
         roles:
@@ -31402,6 +31472,7 @@ components:
             - $ref: '#/components/schemas/DoNotWork'
             - type: 'null'
           description: 'Х-8: отметка «Не работать» компании (из ERP снимком `company.updated`) — полоса «С компанией не работаем»; нет — работаем'
+        is_test: {type: boolean, description: 'ТЕСТ-1: тестовая компания (отметка ERP снимком `company.updated`) — метка «Тестовая» в карточке'}
 
     ClientPartnerRequest:
       type: object
@@ -32243,6 +32314,7 @@ components:
             - $ref: '#/components/schemas/DoNotWork'
             - type: 'null'
           description: 'Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем'
+        is_test: {type: boolean, description: 'ТЕСТ-1: тестовая компания — метка «Тестовая» и действие «Снять отметку»'}
         contract_term:
           oneOf:
             - $ref: '#/components/schemas/CounterpartyContractTerm'

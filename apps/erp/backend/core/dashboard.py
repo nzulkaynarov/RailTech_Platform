@@ -5,6 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count, Q, Sum
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
+from parties import test_companies
 
 from accounts.models import Company, CustomUser
 from crm.models import Deal, Quote, QuoteItem
@@ -87,18 +88,22 @@ def _compute_dashboard_payload() -> dict:
     # ─── KPI Metrics (ARCH-04: one query per table — same-table counts merged) ───
 
     # Quote table: pipeline value (SENT+APPROVED) + total count, in one aggregate.
-    quote_agg = Quote.objects.aggregate(
+    quote_agg = test_companies.hide(Quote.objects.all(), "deal__company").aggregate(
         pipeline=Sum("total_incl_vat", filter=Q(status__code__in=["SENT", "APPROVED"])),
         total=Count("id"),
     )
     pipeline_value = quote_agg["pipeline"] or 0
     total_quotes = quote_agg["total"]
 
-    total_companies = Company.objects.count()
+    total_companies = test_companies.hide(Company.objects.all(), "").count()
 
     # Single-metric tables (distinct models → distinct queries; can't merge across tables).
-    active_deals = Deal.objects.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
-    sourcing_backlog = QuoteItem.objects.filter(product__isnull=True).count()
+    active_deals = (
+        test_companies.hide(Deal.objects.all()).exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
+    )
+    sourcing_backlog = (
+        test_companies.hide(QuoteItem.objects.all(), "quote__deal__company").filter(product__isnull=True).count()
+    )
     managers_count = CustomUser.objects.filter(role__code="ADMIN").count()
     productivity = round(total_quotes / managers_count, 1) if managers_count > 0 else 0
 
@@ -106,12 +111,17 @@ def _compute_dashboard_payload() -> dict:
 
     # Deal funnel
     deal_stats = list(
-        Deal.objects.values("stage__name").annotate(count=Count("id")).filter(count__gt=0).order_by("stage__sort_order")
+        test_companies.hide(Deal.objects.all())
+        .values("stage__name")
+        .annotate(count=Count("id"))
+        .filter(count__gt=0)
+        .order_by("stage__sort_order")
     )
 
     # Revenue by country (approved quotes)
     region_stats = list(
-        Quote.objects.filter(status__code="APPROVED", tax_country__isnull=False)
+        test_companies.hide(Quote.objects.all(), "deal__company")
+        .filter(status__code="APPROVED", tax_country__isnull=False)
         .values("tax_country__name")
         .annotate(revenue=Sum("total_incl_vat"))
         .order_by("-revenue")[:5]

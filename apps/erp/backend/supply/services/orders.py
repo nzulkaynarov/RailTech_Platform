@@ -38,6 +38,7 @@ from inventory.access import (
 from inventory.models import MovementKind, Reservation, ReservationStatus
 from inventory.services import stock, trace
 from inventory.services.overview import present_receipt_line
+from parties import test_companies
 from portal.models import NoticeChannel, NoticeEmailState
 from supply.models import (
     TRANSITIONS,
@@ -986,10 +987,9 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
     return row
 
 
-def _list_queryset():
-    return SupplierOrder.objects.select_related(
-        "supplier", "currency", "created_by__crm_user_mapping"
-    ).prefetch_related(
+def _list_queryset(*, working: bool = False):
+    base = test_companies.hide(SupplierOrder.objects.all(), "supplier") if working else SupplierOrder.objects
+    return base.select_related("supplier", "currency", "created_by__crm_user_mapping").prefetch_related(
         "lines__deal__company",
         "lines__deal__stage",
         "lines__product__category",
@@ -1021,7 +1021,7 @@ def list_orders(
     overdue: bool = False,
 ) -> dict:
     require_staff(user)
-    qs = _list_queryset()
+    qs = _list_queryset(working=True)
     if number:
         qs = qs.filter(number=number)
     if status:
@@ -1068,7 +1068,11 @@ def overdue_orders(user) -> list[dict]:
     """Источник вида очереди `supplier_overdue`: просроченные заказы (ожидаемая дата прошла, не получены). Видит держатель
     права снабжения: очередь — рабочий список действий, а не справка."""
     require_supply(user)
-    qs = _list_queryset().filter(status__in=OVERDUE_STATUSES, expected_date__lt=today()).order_by("expected_date", "id")
+    qs = (
+        _list_queryset(working=True)
+        .filter(status__in=OVERDUE_STATUSES, expected_date__lt=today())
+        .order_by("expected_date", "id")
+    )
     return [
         {
             "id": order.pk,

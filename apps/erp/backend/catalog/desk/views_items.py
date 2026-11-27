@@ -430,7 +430,8 @@ class SupplierDeskViewSet(DeskViewSet):
     )
     def list(self, request):
         return self.page_of(
-            suppliers.supplier_queryset(request.query_params), lambda rows: [suppliers.supplier_row(c) for c in rows]
+            suppliers.supplier_queryset(request.query_params, scoped=True),
+            lambda rows: [suppliers.supplier_row(c) for c in rows],
         )
 
     @extend_schema(

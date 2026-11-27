@@ -30,7 +30,7 @@ from app.schemas.letters import (
 )
 from app.schemas.letters import Letter as LetterOut
 from app.schemas.pagination import decode_cursor
-from app.services import dictionaries, files, instructions, journal, paging, reply
+from app.services import dictionaries, files, instructions, journal, paging, reply, test_companies
 from app.services.letters import fmt_pct
 from app.services.people import Directory, default_director, load_directory
 
@@ -305,9 +305,13 @@ async def list_page(
     on_control: bool | None = None,
     overdue: bool | None = None,
     kind: str | None = None,
+    test: str | None = None,
 ) -> LetterPage:
     today = clock.company_date(clock.now())
     stmt = select(Letter)
+    wanted = test_companies.scope(Letter.erp_company_id, test)  # ТЕСТ-1: без писем тестовых компаний
+    if wanted is not None:
+        stmt = stmt.where(wanted)
     if kind is not None:
         stmt = stmt.where(Letter.doc_kind == kind)
     if statuses:

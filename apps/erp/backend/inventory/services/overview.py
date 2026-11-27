@@ -13,6 +13,7 @@ from django.db.models import F, Q
 from inventory.access import can_manage_fulfillment, can_manage_supply, person_name, require_staff
 from inventory.models import Reservation, Shipment, StockBalance, StockMovement
 from inventory.services import stock, trace
+from parties import test_companies
 
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
@@ -161,6 +162,8 @@ def reservations(
         qs = qs.filter(status=status)
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
+    else:
+        qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: общий список без резервов тестовых компаний
     if product_id:
         qs = qs.filter(product_id=product_id)
     rows = list(qs.select_related("product__category").order_by("deal_id", "id")[:MAX_ROWS])
@@ -251,6 +254,8 @@ def shipments(user, *, deal_id: Optional[int] = None) -> dict:
     ).prefetch_related("lines__product", "lines__trace_allocations__unit")
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
+    else:
+        qs = test_companies.hide(qs, "deal__company")
     rows = list(qs[:MAX_ROWS])
     photos = main_photos(line.product_id for s in rows for line in s.lines.all())
     return {"results": [present_shipment(s, photos) for s in rows], "rights": rights(user)}
@@ -277,12 +282,16 @@ def pending_receipts(user) -> dict:
     from supply.services.orders import is_overdue
 
     require_staff(user)
+    pending_lines = SupplierOrderLine.objects.filter(
+        order__status=OrderStatus.CONFIRMED, received_quantity__lt=F("quantity")
+    )
     lines = (
-        SupplierOrderLine.objects.filter(order__status=OrderStatus.CONFIRMED, received_quantity__lt=F("quantity"))
+        test_companies.hide(test_companies.hide(pending_lines, "order__supplier"), "deal__company")
         .select_related("order__supplier", "deal__company", "deal__stage", "product__category")
         .order_by("order__expected_date", "order_id", "position")[:MAX_ROWS]
     )
-    receipts = GoodsReceipt.objects.select_related("order__supplier", "received_by").prefetch_related(
+    receipts = test_companies.hide(GoodsReceipt.objects.all(), "order__supplier")
+    receipts = receipts.select_related("order__supplier", "received_by").prefetch_related(
         "lines__order_line__product", "lines__trace_units"
     )[:50]
     lines = list(lines)

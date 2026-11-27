@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from parties.test_companies import ListScopeMixin
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -52,7 +53,9 @@ from .workflow import DealWorkflowActionsMixin
     partial_update=extend_schema(summary="Partially update deal", tags=["CRM"]),
     destroy=extend_schema(summary="Delete deal", tags=["CRM"]),
 )
-class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelViewSet):
+class DealViewSet(
+    ListScopeMixin, RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelViewSet
+):
     """
     CRUD for deals (the core CRM entity).
 
@@ -92,6 +95,8 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
     filter_backends = [DjangoFilterBackend, DealSearchFilter]
     search_fields = ["number", "title", "company__name"]
     # Operator sub-capability for the force-override action (ADR-0004 G1).
+
+    test_company_path = "company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

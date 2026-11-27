@@ -82,7 +82,7 @@ async def _reasons(session: AsyncSession, since: date) -> dict[str, int]:
 async def _funnel(session: AsyncSession) -> dict[str, int]:
     stmt = (
         select(Lead.stage, func.count())
-        .where(Lead.erased_at.is_(None), lead_visibility.listed())
+        .where(Lead.erased_at.is_(None), lead_visibility.working())
         .group_by(Lead.stage)
     )
     return {stage: int(n) for stage, n in (await session.execute(stmt)).all()}

@@ -68,7 +68,7 @@ def _search(q: str) -> ColumnElement[bool]:
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
     # Спам, тест и дубль (LH-1) в активные списки не попадают.
     stmt = select(Lead).where(
-        Lead.erased_at.is_(None), Lead.discarded_kind.is_(None), lead_visibility.listed()
+        Lead.erased_at.is_(None), Lead.discarded_kind.is_(None), lead_visibility.working()
     )
     if f.stage:
         stmt = stmt.where(Lead.stage.in_(f.stage.split(",")))
@@ -155,7 +155,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 Escalation.status.in_(("open", "snoozed")),
                 Lead.erased_at.is_(None),
                 Lead.discarded_kind.is_(None),
-                lead_visibility.listed(),
+                lead_visibility.working(),
             )
             .order_by(Escalation.created_at)
         )
@@ -172,7 +172,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 ),
                 Lead.erased_at.is_(None),
                 Lead.discarded_kind.is_(None),
-                lead_visibility.listed(),
+                lead_visibility.working(),
             )
             # Сначала те, кто ждёт ответа: лид написал после последнего ответа менеджера.
             .order_by(_waits_for_reply.desc(), Lead.last_lead_msg_at.desc().nulls_last())
@@ -187,7 +187,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 Lead.assigned_user_id.is_(None),
                 Lead.erased_at.is_(None),
                 Lead.discarded_kind.is_(None),
-                lead_visibility.listed(),
+                lead_visibility.working(),
             )
             .order_by(Lead.last_lead_msg_at.desc().nulls_last())
             .limit(100)

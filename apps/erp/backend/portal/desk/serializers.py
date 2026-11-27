@@ -631,6 +631,10 @@ class DeskCounterparty(serializers.Serializer):
         allow_null=True,
         help_text="Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем",
     )
+    is_test = serializers.BooleanField(
+        required=False,
+        help_text="Тестовая компания (ТЕСТ-1): не в рабочих списках, счётчиках и отчётах; видна по фильтру «Тестовые»",
+    )
     contract_term = DeskContractTerm(
         allow_null=True, required=False, help_text="Срок договора (ДС-1); `null` — подписанных договоров со сроком нет"
     )

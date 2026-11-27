@@ -38,6 +38,7 @@ import { initialsOf } from "./profileStore";
 import { logoUrlOf } from "./pictures";
 import { roleStatesOf } from "./notClient";
 import { markOf } from "./doNotWorkMarks";
+import { inScope, isTest } from "./testMarks";
 
 /**
  * Моки «Клиенты · Лиды, Клиенты и „Создать заявку“» (D1-2b). Права — как в BFF: лиды — `crm.leads`, клиенты и
@@ -278,12 +279,16 @@ export const crmLeadsHandlers = [
   http.get("*/api/v1/crm/clients", ({ request }) => {
     const denied = guard("crm.clients", "read");
     if (denied) return denied;
-    const q = (new URL(request.url).searchParams.get("q") ?? "").trim().toLowerCase();
+    const query = new URL(request.url).searchParams;
+    const q = (query.get("q") ?? "").trim().toLowerCase();
+    // ТЕСТ-1: без `test` тестовых компаний в списке нет; `only` — вкладка «Тестовые»
     const items = readLeads()
-      .clients.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.inn ?? "").includes(q))
+      .clients.filter((c) => inScope(c.in_erp ? String(1000 + c.id) : null, query.get("test")))
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.inn ?? "").includes(q))
       .map((c) => ({
         ...clientRow(c),
         do_not_work: markOf(String(1000 + c.id)) !== null,
+        is_test: isTest(String(1000 + c.id)),
         logo_url: c.in_erp ? logoUrlOf(String(1000 + c.id)) : null,
         company_id: c.in_erp ? String(1000 + c.id) : null,
         roles: c.in_erp ? roleStatesOf(String(1000 + c.id)) : null,
@@ -296,7 +301,11 @@ export const crmLeadsHandlers = [
     if (denied) return denied;
     const client = readLeads().clients.find((c) => c.id === Number(params["id"]));
     return client
-      ? HttpResponse.json({ ...client, do_not_work: markOf(String(1000 + client.id)) })
+      ? HttpResponse.json({
+          ...client,
+          do_not_work: markOf(String(1000 + client.id)),
+          is_test: isTest(String(1000 + client.id)),
+        })
       : clientNotFound();
   }),
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from parties import test_companies
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -47,12 +48,14 @@ class PageStatsView(APIView):
         # B2B data isolation: staff sees everything, regular users — only their companies
         is_staff = request.user.is_superuser
         if is_staff:
-            deals_qs = Deal.objects.all()
-            quotes_qs = Quote.objects.all()
+            deals_qs = test_companies.hide(Deal.objects.all())
+            quotes_qs = test_companies.hide(Quote.objects.all(), "deal__company")
         else:
             user_company_ids = request.user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-            deals_qs = Deal.objects.filter(company_id__in=user_company_ids)
-            quotes_qs = Quote.objects.filter(deal__company_id__in=user_company_ids)
+            deals_qs = test_companies.hide(Deal.objects.filter(company_id__in=user_company_ids))
+            quotes_qs = test_companies.hide(
+                Quote.objects.filter(deal__company_id__in=user_company_ids), "deal__company"
+            )
 
         deal_stats = self._get_deal_stats(deals_qs)
         quote_stats = self._get_quote_stats(quotes_qs)
@@ -137,7 +140,7 @@ class PageStatsView(APIView):
         """Aggregate company/client statistics — single query via aggregate()."""
         from accounts.models import Company
 
-        return Company.objects.aggregate(total=Count("id"))
+        return test_companies.hide(Company.objects.all(), "").aggregate(total=Count("id"))
 
     @staticmethod
     def _get_catalog_stats() -> dict:
@@ -260,10 +263,11 @@ class PlatformDashboardView(APIView):
         """Aggregate company counts by type — 2 queries."""
         from accounts.models import Company
 
-        total = Company.objects.count()
+        total = test_companies.hide(Company.objects.all(), "").count()
         # By-type breakdown via values().annotate() — 1 query for all types
         type_counts = dict(
-            Company.objects.filter(
+            test_companies.hide(Company.objects.all(), "")
+            .filter(
                 types__code__in=["CLIENT", "SUPPLIER"],
             )
             .values_list("types__code")
@@ -285,20 +289,23 @@ class PlatformDashboardView(APIView):
         from crm.models import Deal, Quote
 
         # 1 query: deal counts via aggregate
-        deal_stats = Deal.objects.aggregate(
+        deal_stats = test_companies.hide(Deal.objects.all()).aggregate(
             total=Count("id"),
             active=Count("id", filter=~Q(stage__code__in=["CLOSED_WON", "CLOSED_LOST"])),
             won=Count("id", filter=Q(stage__code="CLOSED_WON")),
             lost=Count("id", filter=Q(stage__code="CLOSED_LOST")),
         )
         # 1 query: quote values via aggregate
-        quote_values = Quote.objects.aggregate(
+        quote_values = test_companies.hide(Quote.objects.all(), "deal__company").aggregate(
             pipeline_value=Sum("total_incl_vat", filter=Q(status__code__in=["SENT", "APPROVED"]), default=Decimal("0")),
             won_value=Sum("total_incl_vat", filter=Q(deal__stage__code="CLOSED_WON"), default=Decimal("0")),
         )
         # 1 query: by_stage breakdown
         by_stage = list(
-            Deal.objects.values("stage__code", "stage__name").annotate(count=Count("id")).order_by("stage__sort_order")
+            test_companies.hide(Deal.objects.all())
+            .values("stage__code", "stage__name")
+            .annotate(count=Count("id"))
+            .order_by("stage__sort_order")
         )
         return {
             **deal_stats,
@@ -312,10 +319,14 @@ class PlatformDashboardView(APIView):
         """Compute pending-attention badge counters for the sidebar."""
         from crm.models import Invoice
 
-        overdue_invoices = Invoice.objects.filter(
-            status__code__in=["ISSUED", "PARTIAL", "OVERDUE"],
-            due_date__lt=now.date(),
-        ).count()
+        overdue_invoices = (
+            test_companies.hide(Invoice.objects.all(), "deal__company")
+            .filter(
+                status__code__in=["ISSUED", "PARTIAL", "OVERDUE"],
+                due_date__lt=now.date(),
+            )
+            .count()
+        )
         return {
             "overdue_invoices": overdue_invoices,
         }
@@ -337,5 +348,5 @@ class PlatformDashboardView(APIView):
                 "user_email": log.user.email if log.user else None,
                 "timestamp": log.timestamp.isoformat(),
             }
-            for log in ActivityLog.objects.select_related("user").order_by("-timestamp")[:20]
+            for log in test_companies.hide(ActivityLog.objects.select_related("user")).order_by("-timestamp")[:20]
         ]

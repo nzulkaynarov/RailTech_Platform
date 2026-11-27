@@ -35,6 +35,8 @@ class ClientOut(BaseModel):
     erp_handoff_error: str | None = None
     # Х-8: у компании в ERP стоит «Не работать» — действующая отметка; `None` — работаем
     do_not_work: DoNotWorkOut | None = None
+    # ТЕСТ-1: тестовая компания (проекция ERP); в рабочих списках её нет, видна по `?test=only`
+    is_test: bool = False
 
 
 class ClientListItem(ClientOut):

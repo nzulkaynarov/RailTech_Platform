@@ -141,7 +141,8 @@
     "applications": "Ulaniş arizalari",
     "bank_changes": "Rekvizitlarni özgartiriş",
     "do_not_work": "Işlamaymiz",
-    "none": "Rol körsatilmagan"
+    "none": "Rol körsatilmagan",
+    "test": "Sinov"
   },
   "addPartner": "Hamkor qöşiş",
   "counterparty": {
@@ -254,6 +255,19 @@
       "until": "{{number}} · {{until}}gaça",
       "open": "{{number}} · muddatsiz",
       "blocks": "Şartnoma uzaytirilmaguça yangi TT yaratilmaydi. Boşlangan bitimlar va tölovlar tegilmaydi."
+    },
+    "test": {
+      "set": "Sinov sifatida belgilaş",
+      "clear": "Belgini olib taşlaş",
+      "mark": "Sinov",
+      "hint": "Sinov kompaniyasi işçi röyxatlar va hisoblagiçlarga kirmaydi. Hiç narsa öçirilmaydi.",
+      "marked": "Kompaniya sinov sifatida belgilandi",
+      "cleared": "Belgi olib taşlandi",
+      "failed": "Saqlab bölmadi. Qayta urinib köring.",
+      "title": "Sinov sifatida belgilaysizmi?",
+      "ask": "Kompaniyada oçiq arizalar: {{open}}. Ular kompaniya bilan birga işçi röyxatlardan çiqadi; hiç narsa öçirilmaydi, belgini olib taşlaş mumkin.",
+      "ok": "Belgilaş",
+      "cancel": "Bekor qiliş"
     }
   },
   "picture": {

@@ -272,12 +272,21 @@ def _of_partner_lead() -> ColumnElement[bool]:
     return exists().where(Lead.id == Deal.lead_id, Lead.discarded_kind == "partner")
 
 
+def _of_test_client() -> ColumnElement[bool]:
+    """ТЕСТ-1: the deal belongs to a test company (ERP mark): not pipeline, not a result."""
+    return exists().where(Client.id == Deal.client_id, Client.is_test.is_(True))
+
+
+def _not_counted() -> ColumnElement[bool]:
+    return _of_partner_lead() | _of_test_client()
+
+
 async def summary(
     session: AsyncSession, days: int, now: datetime, tz: str = "Asia/Tashkent"
 ) -> DealsSummary:
     since = now - timedelta(days=days)
     # A lead handed over as a partner (ЛП-1) is not a lost sale and its deal is not pipeline.
-    closed = (Deal.closed_at >= since, ~_of_partner_lead())
+    closed = (Deal.closed_at >= since, ~_not_counted())
     won = await session.execute(
         select(
             Deal.currency,
@@ -303,7 +312,7 @@ async def summary(
     open_count = await session.scalar(
         select(func.count())
         .select_from(Deal)
-        .where(Deal.stage == DealStage.OPEN.value, ~_of_partner_lead())
+        .where(Deal.stage == DealStage.OPEN.value, ~_not_counted())
     )
     return DealsSummary(
         days=days,
@@ -326,7 +335,7 @@ async def _daily(session: AsyncSession, since: datetime, now: datetime, tz: str)
         .where(
             Deal.stage.in_((DealStage.WON.value, DealStage.LOST.value)),
             Deal.closed_at >= since,
-            ~_of_partner_lead(),
+            ~_not_counted(),
         )
         .group_by(day, Deal.stage)
     )

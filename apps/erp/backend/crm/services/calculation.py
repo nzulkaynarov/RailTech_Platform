@@ -35,6 +35,7 @@ from typing import Any, Iterable, Optional
 from django.db import DataError, transaction
 from django.db.models import Max, Q
 from django.utils import timezone
+from parties import test_companies
 from sales.services import deal_numbers
 
 from accounts.constants import Permission
@@ -650,6 +651,7 @@ def list_tasks_page(
     offset = max(0, int(offset))
     latest_ids = CalcTask.objects.values("deal_id").annotate(last=Max("id")).values("last")
     tasks = CalcTask.objects.filter(pk__in=latest_ids).select_related("deal__company", "deal__stage", "deal__manager")
+    tasks = test_companies.hide(tasks, "deal__company")  # ТЕСТ-1: заявки тестовых компаний не в реестре и очереди
     if state == "open":
         tasks = tasks.filter(deal__stage__code__in=OPEN_STAGES)
     else:

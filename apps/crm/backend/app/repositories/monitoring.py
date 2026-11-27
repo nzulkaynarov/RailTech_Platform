@@ -97,7 +97,7 @@ async def daily_figures(session: AsyncSession, since: datetime) -> DailyFigures:
         leads=await count(
             select(func.count())
             .select_from(Lead)
-            .where(Lead.created_at >= since, lead_visibility.listed())
+            .where(Lead.created_at >= since, lead_visibility.working())
         ),
         escalations=await count(
             select(func.count()).select_from(Escalation).where(Escalation.created_at >= since)

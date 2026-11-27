@@ -137,6 +137,8 @@ subscribers:
       - uz.railtech.erp.act.returned.v1
       # P4 волны 18a (письмо на бланке): проекция бланка своей компании (реквизиты, подписант, логотип) — владелец ERP.
       - uz.railtech.erp.letterhead.updated.v1
+      # ТЕСТ-1: отметка «Тестовая» компании-контрагента — проекция; реестр и списки скрывают её документы по умолчанию.
+      - uz.railtech.erp.company.updated.v1
       # P4 (B-W18AP1-1): итог письма адресату, запрошенного EDS с notify = true — журнал отправки письма на бланке.
       - uz.railtech.crm.mail.sent.v1
       - uz.railtech.crm.mail.failed.v1

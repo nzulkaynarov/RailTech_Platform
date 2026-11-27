@@ -141,7 +141,8 @@
     "applications": "Join requests",
     "bank_changes": "Bank details change",
     "do_not_work": "Not working",
-    "none": "No role set"
+    "none": "No role set",
+    "test": "Test"
   },
   "addPartner": "Add partner",
   "counterparty": {
@@ -254,6 +255,19 @@
       "until": "{{number}} · until {{until}}",
       "open": "{{number}} · no end date",
       "blocks": "New quotes are not created until the contract is renewed. Started deals and payments are not affected."
+    },
+    "test": {
+      "set": "Mark as test",
+      "clear": "Remove mark",
+      "mark": "Test",
+      "hint": "A test company stays out of working lists and counters. Nothing is deleted.",
+      "marked": "Company marked as test",
+      "cleared": "Mark removed",
+      "failed": "Could not save. Try again.",
+      "title": "Mark as test?",
+      "ask": "The company has {{open}} open requests. They leave working lists with it; nothing is deleted and the mark can be removed.",
+      "ok": "Mark",
+      "cancel": "Cancel"
     }
   },
   "picture": {

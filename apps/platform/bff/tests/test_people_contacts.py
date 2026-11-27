@@ -570,6 +570,37 @@ async def test_do_not_work_needs_a_reason_and_the_requisites_section(web: Web, b
     assert past.json()["details"]["fields"] == ["until"]
 
 
+async def test_test_mark_is_set_and_removed_in_erp(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """ТЕСТ-1: «Тестовая» ставится и снимается действием ERP; карточка несёт `is_test`."""
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    url = f"{API}/parties/organizations/9/test/"
+    post = router.post(url).mock(return_value=httpx.Response(200, json={**CARD, "is_test": True}))
+    delete = router.delete(url).mock(
+        return_value=httpx.Response(200, json={**CARD, "is_test": False})
+    )
+    headers = {"X-CSRF-Token": web.csrf}
+
+    marked = await web.client.post("/api/v1/people/counterparties/9/test", headers=headers)
+    assert marked.status_code == 200, marked.text
+    check(marked, "/people/counterparties/{id}/test", "post")
+    assert marked.json()["is_test"] is True and post.called
+
+    removed = await web.client.delete("/api/v1/people/counterparties/9/test", headers=headers)
+    assert removed.status_code == 200, removed.text
+    check(removed, "/people/counterparties/{id}/test", "delete")
+    assert removed.json()["is_test"] is False and delete.called
+
+
+async def test_accountant_cannot_mark_a_test_company(web: Web) -> None:
+    await web.login(["ACCOUNTANT"])
+    headers = {"X-CSRF-Token": web.csrf}
+    response = await web.client.post("/api/v1/people/counterparties/9/test", headers=headers)
+    assert response.status_code == 403
+
+
 async def test_accountant_cannot_mark_do_not_work(web: Web) -> None:
     await web.login(["ACCOUNTANT"])
     headers = {"X-CSRF-Token": web.csrf}

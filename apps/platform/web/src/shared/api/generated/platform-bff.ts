@@ -57589,7 +57589,7 @@ export const getListCrmClientsUrl = (params?: ListCrmClientsParams) => {
 };
 
 /**
- * CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+ * CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные. Тестовые компании (ТЕСТ-1) в списке не показываются; `test=only` — вкладка «Тестовые».
  * @summary Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
  */
 export const listCrmClients = async (
@@ -64788,6 +64788,196 @@ export const useClearCounterpartyDoNotWork = <
   TContext
 > => {
   return useMutation(getClearCounterpartyDoNotWorkMutationOptions(options), queryClient);
+};
+
+export const getSetCounterpartyTestUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/test`;
+};
+
+/**
+ * ERP `POST parties/organizations/{id}/test/` (ТЕСТ-1). Компания уходит из рабочих списков, счётчиков, панелей и отчётов и видна на вкладке «Тестовые»; ничего не удаляется, письма, уведомления и вход в кабинет работают как прежде. Повтор безопасен; действие пишется в журнал, CRM получает отметку снимком `company.updated`. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403.
+ * @summary Карточка контрагента: «Отметить как тестовую»
+ */
+export const setCounterpartyTest = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getSetCounterpartyTestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSetCounterpartyTestMutationKey = () => ["setCounterpartyTest"] as const;
+
+export const getSetCounterpartyTestMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCounterpartyTest>>,
+    TError,
+    SetCounterpartyTestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCounterpartyTest>>,
+  TError,
+  SetCounterpartyTestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCounterpartyTestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCounterpartyTest>>,
+    SetCounterpartyTestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return setCounterpartyTest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCounterpartyTestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCounterpartyTest>>
+>;
+
+export type SetCounterpartyTestMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type SetCounterpartyTestMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: «Отметить как тестовую»
+ */
+export const useSetCounterpartyTest = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setCounterpartyTest>>,
+      TError,
+      SetCounterpartyTestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setCounterpartyTest>>,
+  TError,
+  SetCounterpartyTestMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCounterpartyTestMutationOptions(options), queryClient);
+};
+
+export const getClearCounterpartyTestUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/test`;
+};
+
+/**
+ * ERP `DELETE parties/organizations/{id}/test/` (ТЕСТ-1): компания возвращается в рабочие списки; повтор безопасен. Тот же доступ, что у «Отметить как тестовую».
+ * @summary Карточка контрагента: «Снять отметку»
+ */
+export const clearCounterpartyTest = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getClearCounterpartyTestUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearCounterpartyTestMutationKey = () => ["clearCounterpartyTest"] as const;
+
+export const getClearCounterpartyTestMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCounterpartyTest>>,
+    TError,
+    ClearCounterpartyTestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearCounterpartyTest>>,
+  TError,
+  ClearCounterpartyTestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getClearCounterpartyTestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearCounterpartyTest>>,
+    ClearCounterpartyTestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return clearCounterpartyTest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearCounterpartyTestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearCounterpartyTest>>
+>;
+
+export type ClearCounterpartyTestMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type ClearCounterpartyTestMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Карточка контрагента: «Снять отметку»
+ */
+export const useClearCounterpartyTest = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof clearCounterpartyTest>>,
+      TError,
+      ClearCounterpartyTestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof clearCounterpartyTest>>,
+  TError,
+  ClearCounterpartyTestMutationVariables,
+  TContext
+> => {
+  return useMutation(getClearCounterpartyTestMutationOptions(options), queryClient);
 };
 
 export const getGetCounterpartyNotClientPlanUrl = (id: CompanyItemRef) => {

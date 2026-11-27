@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { CounterpartyPickRole } from "./counterpartyPickRole";
+import type { SearchCounterpartiesTest } from "./searchCounterpartiesTest";
 
 export type SearchCounterpartiesParams = {
   /**
@@ -19,4 +20,8 @@ export type SearchCounterpartiesParams = {
    * @maximum 20
    */
   limit?: number;
+  /**
+   * ТЕСТ-1: без параметра тестовых компаний нет; `only` — вкладка «Тестовые»; `all` — все вместе
+   */
+  test?: SearchCounterpartiesTest;
 };

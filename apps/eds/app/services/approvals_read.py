@@ -23,7 +23,7 @@ from app.schemas.approvals import ApprovalStep as StepOut
 from app.schemas.common import PersonRef
 from app.schemas.pagination import decode_cursor
 from app.security.permissions import EdsPermission as P
-from app.services import access, approvals, checklist, paging
+from app.services import access, approvals, checklist, paging, test_companies
 from app.services.people import Directory, load_directory
 
 
@@ -201,8 +201,12 @@ async def list_page(
     templates: list[ApprovalTemplate] | None,
     cursor: str | None,
     limit: int,
+    test: str | None = None,
 ) -> ApprovalPage:
     stmt = select(ApprovalRoute)
+    wanted = test_companies.scope(ApprovalRoute.erp_company_id, test)  # ТЕСТ-1: очередь без тестовых компаний
+    if wanted is not None:
+        stmt = stmt.where(wanted)
     if mine:
         waiting = exists(
             select(1).where(

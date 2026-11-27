@@ -33,6 +33,7 @@ from app.services import (
     letters,
     project_documents,
     quotes,
+    test_companies,
 )
 
 log = structlog.get_logger(__name__)
@@ -44,6 +45,7 @@ REQUEST_CREATED = "uz.railtech.erp.request.created.v1"
 QUOTE_READY = "uz.railtech.erp.quote.ready_for_approval.v1"
 DEAL_LOST = "uz.railtech.erp.deal.lost.v1"
 LETTERHEAD_UPDATED = "uz.railtech.erp.letterhead.updated.v1"
+COMPANY_UPDATED = "uz.railtech.erp.company.updated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
@@ -103,6 +105,13 @@ async def on_letterhead(event: Event, session: AsyncSession) -> None:
     log.info("letterhead_projection", erp_company_id=data.erp_company_id, applied=applied, event_id=event.id)
 
 
+async def on_company_updated(event: Event, session: AsyncSession) -> None:
+    """ТЕСТ-1: отметка «Тестовая» компании ERP — проекция; более старый снимок и снимок без поля не применяются."""
+    data = test_companies.CompanyUpdated.model_validate(event.data)
+    applied = await test_companies.apply(session, data)
+    log.info("company_mark_projection", erp_company_id=data.erp_company_id, applied=applied, event_id=event.id)
+
+
 def mail_result_handler(get_bus: Callable[[], AsyncBus] | None) -> Callable[[Event, AsyncSession], Awaitable[None]]:
     """Итог письма адресату от почтового сервиса CRM (P4, B-W18AP1-1): строка журнала отправки; чужие итоги — мимо.
     «Не ушло» — ещё и уведомление автору и делопроизводителям (EDS-REPLY-1; шина процесса — через `get_bus`)."""
@@ -139,6 +148,7 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     for event_type in project_documents.EVENT_STATUS:
         registry.add(event_type, on_project_document)
     registry.add(LETTERHEAD_UPDATED, on_letterhead)
+    registry.add(COMPANY_UPDATED, on_company_updated)
     registry.add(DEAL_LOST, on_deal_lost)
     on_mail_result = mail_result_handler(get_bus)
     registry.add(MAIL_SENT, on_mail_result)
