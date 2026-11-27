@@ -45,12 +45,12 @@ test.describe("Кто что может", () => {
     // предупреждения по фактам
     await expect(page.getByTestId("cap-warnings")).toBeVisible();
 
-    await page.getByRole("radio", { name: "Списком" }).check({ force: true });
+    await page.getByText("Списком", { exact: true }).click();
     await expect(
       page.getByRole("link", { name: "Открыть карточку: Демо Менеджеров" }),
     ).toBeVisible();
     await expect(page.getByTestId("cap-matrix")).toHaveCount(0);
-    await page.getByRole("radio", { name: "Кто что может" }).check({ force: true });
+    await page.getByText("Кто что может", { exact: true }).click();
     await expect(page.getByTestId("cap-matrix")).toBeVisible();
   });
 

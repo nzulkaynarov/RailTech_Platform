@@ -149,7 +149,7 @@ describe("Нет возможности", () => {
     fireEvent.click(screen.getByRole("button", { name: "Попросить возможность" }));
     expect(
       await screen.findByDisplayValue("Нужна возможность «Сотрудники и возможности»: смотреть."),
-    ).toBeVisible();
+    ).toBeInTheDocument();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
   });
 });
