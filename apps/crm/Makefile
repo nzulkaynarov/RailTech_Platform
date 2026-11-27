@@ -3,6 +3,8 @@
 # check/test/openapi — где угодно, без Docker.
 
 SHELL := /bin/bash
+# Общий предел тяжёлых проверок (два слота на машину): lint/typecheck/test/check берут слот целиком, вложенные — нет (scripts/heavy-lock.sh).
+HEAVY := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../../scripts/heavy-lock.sh)
 .DEFAULT_GOAL := help
 
 BACKEND  := backend
@@ -28,21 +30,41 @@ clean: ## Удалить .venv, node_modules и кэши (единственны
 
 .PHONY: lint
 lint: ## ruff check + ruff format --check
+	@$(HEAVY) $(MAKE) --no-print-directory lint-run
+
+.PHONY: lint-run
+lint-run:
 	cd $(BACKEND) && uv run ruff check . && uv run ruff format --check .
 
 .PHONY: typecheck
 typecheck: ## mypy
+	@$(HEAVY) $(MAKE) --no-print-directory typecheck-run
+
+.PHONY: typecheck-run
+typecheck-run:
 	cd $(BACKEND) && uv run mypy app tests evals promptfoo alembic
 
 .PHONY: test
 test: ## Unit-тесты backend (pytest)
+	@$(HEAVY) $(MAKE) --no-print-directory test-run
+
+.PHONY: test-run
+test-run:
 	cd $(BACKEND) && uv run pytest
 
 .PHONY: check
-check: lint typecheck test ## Всё вышеперечисленное — обязательно перед коммитом
+check: ## Всё вышеперечисленное — обязательно перед коммитом
+	@$(HEAVY) $(MAKE) --no-print-directory check-run
+
+.PHONY: check-run
+check-run: lint typecheck test
 
 .PHONY: test-int
 test-int: ## Integration-тесты (нужны Postgres+pgvector и RustFS; см. CI)
+	@$(HEAVY) $(MAKE) --no-print-directory test-int-run
+
+.PHONY: test-int-run
+test-int-run:
 	cd $(BACKEND) && uv run pytest -m integration
 
 .PHONY: test-e2e

@@ -236,6 +236,9 @@ stage_cpu-baseline() {
   "$ROOT/scripts/qemu_cpu_check.sh" run
 }
 
+# Предел тяжёлых проверок на машине (два слота, scripts/heavy-lock.sh): весь прогон — один слот; задания внутри его не берут.
+. "$ROOT/scripts/heavy-lock.sh"
+
 declare -a RESULT=()
 failed=0
 for s in "${STAGES[@]}"; do

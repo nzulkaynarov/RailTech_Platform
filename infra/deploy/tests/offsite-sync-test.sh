@@ -261,7 +261,7 @@ extra=(-e OFFSITE_KEEP_DAYS=14)
 run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "настройка из интерфейса: копия не прошла"; }
 grep -q '"offsite_config_loaded"' "$tmp/out" || { cat "$tmp/out"; fail "настройка из бакета offsite-config не загружена"; }
 [[ "$(field result)" == ok ]] || { status; fail "настройка из интерфейса: итог не ok"; }
-[[ "$(stat -f '%Lp' "$w/state/config/gdrive-sa.json" 2>/dev/null || stat -c '%a' "$w/state/config/gdrive-sa.json")" == 600 ]] || fail "копия ключа в томе состояния не chmod 600"
+[[ "$(stat -c '%a' "$w/state/config/gdrive-sa.json" 2>/dev/null || stat -f '%Lp' "$w/state/config/gdrive-sa.json")" == 600 ]] || fail "копия ключа в томе состояния не chmod 600"
 ! grep -rq "$FOLDER_ID" "$w/status" "$tmp/out" || fail "ID папки из интерфейса попал в status.json или журнал"
 printf '{"type": "authorized_user"}' > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
