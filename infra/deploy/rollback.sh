@@ -41,6 +41,8 @@ retry "pull образов" compose "$rel" pull "${pull_services[@]}" || log "pu
 up_stack "$rel"
 
 state_set previous_tag "$cur"
+# Откаченный релиз не должен вернуться сам (дневной тик ВЫКЛ-2, ночная выкладка): помечаем его в failed_tags; ручной deploy берёт.
+mark_failed_tag "$cur"
 state_set current_tag "$target"
 ln -sfn "$rel" "$RT_ROOT/current"
 

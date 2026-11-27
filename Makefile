@@ -161,6 +161,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/eds-prod-test.sh
 	@bash $(INFRA)/deploy/tests/retry-test.sh
 	@bash $(INFRA)/deploy/tests/should-deploy-test.sh
+	@bash $(INFRA)/deploy/tests/daytime-decision-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

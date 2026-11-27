@@ -1,11 +1,17 @@
-# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1, DECISIONS 2026-11-27). Запуск:
+# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1 и ВЫКЛ-2, DECISIONS 2026-11-27). Запуск:
 #   - ночью САМ, по расписанию (schedule, время UTC; сервер и владелец живут в UTC+5):
 #       30 19 * * *  (00:30 по Ташкенту) job notice: если HEAD main отличается от current_tag на VPS 1 - баннер «обновление в 01:00,
 #                    20 минут, planned» (scripts/maintenance-notice.sh);
 #       0 20 * * *   (01:00 по Ташкенту) prepare берёт HEAD main, а если его «CI ok» не зелёная - новейший коммит main с зелёной «CI ok»;
 #                    равен current_tag - ничего не выкладывается, баннер снимается; иначе build и deploy БЕЗ одобрения человека;
+#   - днём САМ (ВЫКЛ-2), крон каждые 15 минут с 06:00 до 23:00 по Ташкенту: job gate берёт новейший зелёный коммит main (тот же
+#     pick-green-main.sh), пропускает равный current_tag, старше выложенного и из failed_tags, читает на VPS 1 активность в Платформе
+#     (infra/deploy/activity-check.sh: успешные запросы к BFF за 30 минут) и решает (infra/deploy/daytime-decision.sh):
+#     никого нет - выкладка сразу; кто-то работает - баннер на now+15 минут (planned, 20 минут), выкладка на следующем тике; идёт другой
+#     Deploy - тик ничего не делает. Дальше те же prepare, build, deploy без одобрения и с автооткатом. Выбран крон, а не workflow_run:
+#     «зелёный main, но люди в Платформе» решается позже сам, без привязки ко времени окончания CI;
 #   - вручную (workflow_dispatch): action = deploy | rollback | build. deploy и rollback ждут одобрения владельца в job approve
-#     (environment `production-approval`); на PR, push и после CI сам по себе деплой не запускается (workflow_run убран).
+#     (environment `production-approval`); на PR, push и после CI деплой не запускается (workflow_run убран; дневную выкладку делает крон).
 # Выкладка по расписанию не берёт sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
 # ci.yml не трогает.
 #
@@ -44,6 +50,8 @@ on:
   schedule:
     - cron: '30 19 * * *'  # 00:30 Asia/Tashkent: баннер на 01:00
     - cron: '0 20 * * *'   # 01:00 Asia/Tashkent: выкладка
+    - cron: '*/15 1-17 * * *'  # 06:00-22:45 Asia/Tashkent: дневная выкладка (ВЫКЛ-2), тик раз в 15 минут
+    - cron: '0 18 * * *'       # 23:00 Asia/Tashkent: последний дневной тик (выкладка после баннера, поставленного в 22:45)
   workflow_dispatch:
     inputs:
       ref:
@@ -65,12 +73,120 @@ permissions:
   contents: read
 
 jobs:
+  # Дневной тик (ВЫКЛ-2): решает, выкладывать ли сейчас. go=true только для deploy-now и deploy-due (daytime-decision.sh); остальное -
+  # тик заканчивается здесь (нечего выкладывать, идёт другой Deploy, ждём время баннера, баннер поставлен). Сбой чтения активности
+  # или баннера - go=false (неизвестность не считается «никого нет»). Читает VPS 1 только на чтение; пишет лишь баннер.
+  gate:
+    name: Дневная выкладка - решение
+    if: github.event_name == 'schedule' && github.event.schedule != '30 19 * * *' && github.event.schedule != '0 20 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      checks: read
+      actions: read
+    outputs:
+      go: ${{ steps.decide.outputs.go }}
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0  # should-deploy.sh нужна история, чтобы отличить старый sha от нового
+          persist-credentials: false
+
+      - name: SSH к VPS 1
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ] || [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ]; then
+            echo "::error::нет секретов или переменных environment production"; exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host app"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Решение тика
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "go=false" >> "$GITHUB_OUTPUT"
+          say() { echo "$*"; echo "$*" >> "$GITHUB_STEP_SUMMARY"; }
+          # Не двух выкладок сразу: идущий или стоящий в очереди Deploy (кроме этого запуска) - тик пропускается. Запуск в ожидании
+          # одобрения (waiting) не считается: забытое одобрение не должно останавливать днём всё.
+          for st in in_progress queued; do
+            other="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/deploy.yml/runs" -f status="$st" -f per_page=100 \
+              --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID)] | length")" || { say "не удалось прочитать запуски Deploy - тик пропущен"; exit 0; }
+            [ "$other" = 0 ] || { say "идёт другой Deploy ($st: $other) - тик пропущен"; exit 0; }
+          done
+          cand="$(bash infra/deploy/pick-green-main.sh)" || { say "нет зелёного коммита main - тик пропущен"; exit 0; }
+          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || { say "нет связи с VPS 1 - тик пропущен"; exit 0; }
+          cur="$(tr -d '[:space:]' <<<"$cur")"
+          should="$(bash infra/deploy/should-deploy.sh "$cand" "$cur")"
+          failed=0
+          # shellcheck disable=SC2029
+          ssh app "grep -qxF '$cand' /opt/rt/state/failed_tags 2>/dev/null" && failed=1
+          # Баннер читаем всегда (его время решает «ждать или выкладывать»); активность - только когда есть что выкладывать.
+          json="$(ssh app "cat /opt/rt/maintenance/maintenance.json 2>/dev/null || true")" || { say "не удалось прочитать баннер - тик пропущен"; exit 0; }
+          banner=-; banner_end=-
+          if [ -n "$json" ]; then
+            # Пустой или нечитаемый starts_at - «баннера нет» (date -d "" вернул бы полночь и дал deploy-due). Конец окна = starts_at + minutes.
+            sa="$(jq -r '.starts_at // empty' <<<"$json" 2>/dev/null)" || sa=""
+            mins="$(jq -r '.minutes // 20' <<<"$json" 2>/dev/null)" || mins=20
+            [[ "$mins" =~ ^[0-9]+$ ]] || mins=20
+            if [ -n "$sa" ] && banner="$(date -d "$sa" +%s 2>/dev/null)" && [ -n "$banner" ]; then
+              banner_end=$((banner + mins * 60))
+            else
+              banner=-
+            fi
+          fi
+          activity=0
+          if [ "$should" = deploy ] && [ "$failed" = 0 ]; then
+            activity="$(ssh app 'bash -s' < infra/deploy/activity-check.sh)" || { say "не удалось прочитать активность - тик пропущен"; exit 0; }
+          fi
+          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$(date +%s)" "$banner_end")"
+          say "кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
+          case "$decision" in
+            deploy-now|deploy-due) echo "go=true" >> "$GITHUB_OUTPUT" ;;
+            banner)
+              at="$(TZ=Asia/Tashkent date -d '+15 minutes' +%H:%M)"
+              # shellcheck disable=SC2029
+              ssh app "bash -s set $at 20 planned" < scripts/maintenance-notice.sh
+              say "баннер на $at (Ташкент), выкладка - на следующем тике" ;;
+            wait) ;;
+            skip)
+              # выкладывать нечего, а баннер давно отыграл (откат, ручная выкладка): не оставляем висеть
+              if [ "$banner" != - ] && [ "$(date +%s)" -gt "$banner_end" ]; then
+                ssh app "rm -f /opt/rt/maintenance/maintenance.json" && say "устаревший баннер снят"
+              fi ;;
+            *) echo "::error::daytime-decision.sh вернул неожиданное '$decision'"; exit 1 ;;
+          esac
+
   prepare:
     name: Проверка и матрица образов
-    # schedule 0 20 * * *: ночная выкладка. Ручной запуск: deploy и build. Крон 30 19 * * * (баннер) - отдельный job notice.
+    needs: gate
+    # schedule 0 20 * * *: ночная выкладка; дневные тики (ВЫКЛ-2) - только когда gate сказал go. Ручной запуск: deploy и build.
+    # Крон 30 19 * * * (баннер) - отдельный job notice.
     if: >-
+      !cancelled() && (
       (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
       || (github.event_name == 'schedule' && github.event.schedule == '0 20 * * *')
+      || (needs.gate.outputs.go == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -116,7 +232,7 @@ jobs:
 
       # schedule: HEAD main, а если его «CI ok» не зелёная (нет проверки, идёт, красная) - новейший коммит main с зелёной «CI ok»
       # (просмотр последних 40 коммитов первого родителя). Дальше всё как у ручного deploy на этом sha.
-      - name: Ночь - новейший зелёный коммит main
+      - name: Расписание - новейший зелёный коммит main
         if: github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -590,11 +706,14 @@ jobs:
           fi
           ssh app "bash -s set 01:00 20 planned" < scripts/maintenance-notice.sh
 
-  # Ночью баннер не должен висеть после сбоя prepare, build, approve или deploy (успешная выкладка и автооткат снимают его сами).
+  # Баннер не должен висеть после сбоя prepare, build, approve или deploy (успешная выкладка и автооткат снимают его сами).
   banner-cleanup:
     name: Снять баннер после сбоя
-    needs: [prepare, build, approve, deploy]
-    if: always() && github.event_name == 'schedule' && github.event.schedule == '0 20 * * *'
+    needs: [gate, prepare, build, approve, deploy]
+    # Ночью - всегда; днём (ВЫКЛ-2) - только на тике, который начал выкладку (go): баннер с ожидающей выкладкой на пустых тиках трогать нельзя.
+    if: >-
+      always() && github.event_name == 'schedule'
+      && (github.event.schedule == '0 20 * * *' || needs.gate.outputs.go == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
