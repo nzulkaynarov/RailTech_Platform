@@ -6,6 +6,7 @@ import type { CalcCatalogHint } from "./calcCatalogHint";
 import type { CalcLineGroup } from "./calcLineGroup";
 import type { CalcLineKind } from "./calcLineKind";
 import type { CalcLineVisa } from "./calcLineVisa";
+import type { CalcPartnerPrice } from "./calcPartnerPrice";
 import type { CalcStock } from "./calcStock";
 import type { CalcSupplier } from "./calcSupplier";
 import type { CalcZone } from "./calcZone";
@@ -46,6 +47,7 @@ export interface CalcLine {
   unit_code: string | null;
   stock: CalcStock;
   supplier: CalcSupplier | null;
+  partner_price?: CalcPartnerPrice | null;
   /**
    * Срок поставки строки, дней
    * @nullable
