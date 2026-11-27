@@ -65,10 +65,11 @@ describe("один факт — один ответ", () => {
       signInAs("admin@demo.example");
       renderApp("/admin");
       const services = await screen.findByRole("region", { name: "Службы" });
+      const mailRow = () => services.querySelector<HTMLElement>('[data-service="mail"]');
       await waitFor(() => {
-        expect(tag(services.querySelector<HTMLElement>('[data-service="mail"]')!)).toBe(word);
+        expect(tag(mailRow() as HTMLElement)).toBe(word);
       });
-      const onState = tag(services.querySelector<HTMLElement>('[data-service="mail"]')!);
+      const onState = tag(mailRow() as HTMLElement);
       cleanup();
 
       renderApp("/admin/integrations");

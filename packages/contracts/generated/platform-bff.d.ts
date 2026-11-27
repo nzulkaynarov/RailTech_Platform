@@ -10034,6 +10034,7 @@ export interface components {
     BusJournal: {
       domains: components["schemas"]["BusDomainOverview"][];
       sources: components["schemas"]["BusSources"];
+      fact: components["schemas"]["StatusFact"];
     };
     /** @description Метаданные доставки; тела события нет. */
     BusDelivery: {
@@ -10457,9 +10458,13 @@ export interface components {
       | "bot_not_running"
       | "budget_near"
       | "budget_over"
-      | "no_data";
+      | "no_data"
+      | "not_verified"
+      | "stale"
+      | "check_failed";
     IntegrationCard: {
       key: components["schemas"]["IntegrationCardKey"];
+      fact: components["schemas"]["StatusFact"];
       status: components["schemas"]["IntegrationStatus"];
       access: components["schemas"]["IntegrationAccess"];
       note: components["schemas"]["IntegrationNote"];
@@ -10467,9 +10472,31 @@ export interface components {
       amount_usd: number | null;
       /**
        * Format: date-time
-       * @description Последняя проверка или событие карточки; `null` — данных нет
+       * @description Время проверки карточки, то же, что `fact.checked_at` (одна дата на карточку); `null` — проверки не было
        */
       last_activity_at: string | null;
+    };
+    /**
+     * @description Слово состояния (НАСТ-П1): `works` Работает — только по живой проверке не старше порога; `attention` Внимание; `broken` Не работает; `not_verified` Настроено, не проверено; `stale` Нет свежих данных (проверка старше порога); `unknown` Не удалось проверить (нет ответа или ответила только часть); `off` Не подключено.
+     * @enum {string}
+     */
+    StatusState: "works" | "attention" | "broken" | "not_verified" | "stale" | "unknown" | "off";
+    /**
+     * @description На чём держится слово: `check` — проба сервиса, `counters` — счётчики в базе CRM (связь не проверяют), `report` — отчёт, собранный в момент запроса, `none` — данных нет.
+     * @enum {string}
+     */
+    StatusSource: "check" | "counters" | "report" | "none";
+    /** @description Одна модель статуса. Её читают «Состояние», карточки «Сервисов», шаги мастера и счётчик готовности. */
+    StatusFact: {
+      state: components["schemas"]["StatusState"];
+      /**
+       * Format: date-time
+       * @description Время самой старой проверки, на которой держится «Работает»; у проблемы — самой свежей; `null` — проверки не было
+       */
+      checked_at: string | null;
+      source: components["schemas"]["StatusSource"];
+      /** @description Есть живая проверка не старше порога */
+      live: boolean;
     };
     /** @enum {string} */
     AttentionKind:
@@ -10482,7 +10509,8 @@ export interface components {
       | "budget_near"
       | "rotation_pending"
       | "paused"
-      | "bot_not_running";
+      | "bot_not_running"
+      | "check_failed";
     /**
      * @description Состояние словом (W15-H3, решает CRM): `broken` Сломано (непрерывный сбой не короче 15 минут), `unstable` Нестабильно (короткие провалы и дребезг — жёлтое, без оповещений), `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
      * @enum {string}
