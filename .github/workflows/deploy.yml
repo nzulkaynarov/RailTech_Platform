@@ -1,15 +1,14 @@
-# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1 и ВЫКЛ-2, DECISIONS 2026-11-27). Запуск:
-#   - ночью САМ, по расписанию (schedule, время UTC; сервер и владелец живут в UTC+5):
-#       30 19 * * *  (00:30 по Ташкенту) job notice: если HEAD main отличается от current_tag на VPS 1 - баннер «обновление в 01:00,
-#                    20 минут, planned» (scripts/maintenance-notice.sh);
-#       0 20 * * *   (01:00 по Ташкенту) prepare берёт HEAD main, а если его «CI ok» не зелёная - новейший коммит main с зелёной «CI ok»;
-#                    равен current_tag - ничего не выкладывается, баннер снимается; иначе build и deploy БЕЗ одобрения человека;
-#   - днём САМ (ВЫКЛ-2), крон каждые 15 минут с 06:00 до 23:00 по Ташкенту: job gate берёт новейший зелёный коммит main (тот же
-#     pick-green-main.sh), пропускает равный current_tag, старше выложенного и из failed_tags, читает на VPS 1 активность в Платформе
-#     (infra/deploy/activity-check.sh: успешные запросы к BFF за 30 минут) и решает (infra/deploy/daytime-decision.sh):
-#     никого нет - выкладка сразу; кто-то работает - баннер на now+15 минут (planned, 20 минут), выкладка на следующем тике; идёт другой
-#     Deploy - тик ничего не делает. Дальше те же prepare, build, deploy без одобрения и с автооткатом. Выбран крон, а не workflow_run:
-#     «зелёный main, но люди в Платформе» решается позже сам, без привязки ко времени окончания CI;
+# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1, ВЫКЛ-2 и ВЫКЛ-3, DECISIONS 2026-11-27). Запуск:
+#   - САМ, по расписанию (schedule, время UTC; сервер и владелец живут в UTC+5). ВАЖНО (ВЫКЛ-3): расписание GitHub на этом репозитории
+#     опаздывает на 6-9 часов, поэтому режим определяют ФАКТИЧЕСКИЕ часы (infra/deploy/clock-decision.sh, Asia/Tashkent), а не то,
+#     какой крон сработал. Любой тик (кроме баннерного) идёт через job gate:
+#       ночное окно 00:45-05:30 по Ташкенту - выкладывается новейший зелёный коммит main (pick-green-main.sh), без проверки активности;
+#       остальное время - дневные ворота: пропускает равный current_tag, старше выложенного и из failed_tags, читает на VPS 1 активность
+#                    в Платформе (infra/deploy/activity-check.sh: успешные запросы к BFF за 30 минут) и решает (daytime-decision.sh):
+#                    никого нет - выкладка сразу; кто-то работает - баннер на now+15 минут (planned, 20 минут), выкладка на следующем тике;
+#                    идёт другой Deploy - тик ничего не делает.
+#     Дальше те же prepare, build, deploy без одобрения и с автооткатом. Кроны: 30 19 * * * (00:30) - только job notice (баннер «в 01:00»,
+#     и только если сейчас 23:30-00:44: баннер на прошедшее время не пишется); 0 20 * * *, */15 1-17 * * *, 0 18 * * * - тики gate;
 #   - вручную (workflow_dispatch): action = deploy | rollback | build. deploy и rollback ждут одобрения владельца в job approve
 #     (environment `production-approval`); на PR, push и после CI деплой не запускается (workflow_run убран; дневную выкладку делает крон).
 # Выкладка по расписанию не берёт sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
@@ -71,12 +70,13 @@ permissions:
   contents: read
 
 jobs:
-  # Дневной тик (ВЫКЛ-2): решает, выкладывать ли сейчас. go=true только для deploy-now и deploy-due (daytime-decision.sh); остальное -
+  # Тик расписания (ВЫКЛ-2, ВЫКЛ-3): решает, выкладывать ли сейчас, по ФАКТИЧЕСКИМ часам (clock-decision.sh): ночное окно 00:45-05:30
+  # Ташкента - выкладка без проверки активности, иначе дневные ворота. go=true только для deploy-now и deploy-due (daytime-decision.sh); остальное -
   # тик заканчивается здесь (нечего выкладывать, идёт другой Deploy, ждём время баннера, баннер поставлен). Сбой чтения активности
   # или баннера - go=false (неизвестность не считается «никого нет»). Читает VPS 1 только на чтение; пишет лишь баннер.
   gate:
-    name: Дневная выкладка - решение
-    if: github.event_name == 'schedule' && github.event.schedule != '30 19 * * *' && github.event.schedule != '0 20 * * *'
+    name: Выкладка по расписанию - решение
+    if: github.event_name == 'schedule' && github.event.schedule != '30 19 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -152,12 +152,17 @@ jobs:
               banner=-
             fi
           fi
+          # Режим - по часам, а не по крону (расписание GitHub опаздывает на часы). Ночью: активность не смотрим, но баннер уже объявленного времени уважаем.
+          now="$(date +%s)"
+          phase="$(bash infra/deploy/clock-decision.sh phase "$now")"
           activity=0
-          if [ "$should" = deploy ] && [ "$failed" = 0 ]; then
+          if [ "$phase" = night ]; then
+            : # ночью активность не смотрим (activity=0), но баннер учитываем: объявленное время не наступило - ждём, наступило - выкладываем
+          elif [ "$should" = deploy ] && [ "$failed" = 0 ]; then
             activity="$(ssh app 'bash -s' < infra/deploy/activity-check.sh)" || { say "не удалось прочитать активность - тик пропущен"; exit 0; }
           fi
-          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$(date +%s)" "$banner_end")"
-          say "кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
+          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$now" "$banner_end")"
+          say "режим $phase ($(TZ=Asia/Tashkent date -d "@$now" +%H:%M) Ташкент), кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
           case "$decision" in
             deploy-now|deploy-due) echo "go=true" >> "$GITHUB_OUTPUT" ;;
             banner)
@@ -177,12 +182,11 @@ jobs:
   prepare:
     name: Проверка и матрица образов
     needs: gate
-    # schedule 0 20 * * *: ночная выкладка; дневные тики (ВЫКЛ-2) - только когда gate сказал go. Ручной запуск: deploy и build.
+    # schedule: ночные и дневные тики - только когда gate сказал go (режим решают часы, ВЫКЛ-3). Ручной запуск: deploy и build.
     # Крон 30 19 * * * (баннер) - отдельный job notice.
     if: >-
       !cancelled() && (
       (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
-      || (github.event_name == 'schedule' && github.event.schedule == '0 20 * * *')
       || (needs.gate.outputs.go == 'true')
       )
     runs-on: ubuntu-latest
@@ -646,6 +650,8 @@ jobs:
 
   # Крон 30 19 * * * (00:30 Ташкент): баннер на 01:00, 20 минут, planned - только если HEAD main отличается от выложенного на VPS 1.
   # Кандидат выбирается тем же правилом, что в prepare (pick-green-main.sh).
+  # Баннер пишется только при фактическом времени 23:30-00:44 по Ташкенту (clock-decision.sh banner): опоздавший на часы крон баннер
+  # на прошедшее время не пишет (maintenance-notice.sh перенёс бы его на завтра 01:00 и ввёл людей в заблуждение).
   notice:
     name: Баннер о ночном обновлении
     if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
@@ -665,7 +671,15 @@ jobs:
           fetch-depth: 40
           persist-credentials: false
 
+      - name: Время для баннера (фактические часы Ташкента)
+        id: clock
+        run: |
+          ok="$(bash infra/deploy/clock-decision.sh banner)"
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          [ "$ok" = yes ] || echo "сейчас $(TZ=Asia/Tashkent date +%H:%M) по Ташкенту, не 23:30-00:44 - крон опоздал, баннер на прошедшее время не пишется" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: SSH к VPS 1
+        if: steps.clock.outputs.ok == 'yes'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
@@ -687,6 +701,7 @@ jobs:
           } > ~/.ssh/config
 
       - name: Баннер, если ночью будет что выкладывать
+        if: steps.clock.outputs.ok == 'yes'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -710,10 +725,9 @@ jobs:
   banner-cleanup:
     name: Снять баннер после сбоя
     needs: [gate, prepare, build, approve, deploy]
-    # Ночью - всегда; днём (ВЫКЛ-2) - только на тике, который начал выкладку (go): баннер с ожидающей выкладкой на пустых тиках трогать нельзя.
+    # Только на тике, который начал выкладку (go): баннер с ожидающей выкладкой на пустых тиках трогать нельзя.
     if: >-
-      always() && github.event_name == 'schedule'
-      && (github.event.schedule == '0 20 * * *' || needs.gate.outputs.go == 'true')
+      always() && github.event_name == 'schedule' && needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production

@@ -24,6 +24,16 @@ expect deploy-due "баннер в конце своего окна"         dep
 expect banner     "баннер на секунду позже окна"       deploy 0 9 $((now - 1201)) $now
 expect deploy-due "окно задано явно (5 минут), идёт"   deploy 0 9 $((now - 200)) $now $((now - 200 + 300))
 expect banner     "окно задано явно (5 минут), прошло" deploy 0 9 $((now - 400)) $now $((now - 400 + 300))
+# ночью (activity=0, её не читают) баннер передаётся как есть: тик 00:45-00:59 при баннере на 00:55/01:00 не выкладывает раньше объявленного
+expect wait       "ночь: баннер на будущее время, активности не читали" deploy 0 0 $((now + 600)) $now $((now + 600 + 1200))
+expect wait       "ночь: баннер на 14 минут вперёд"                     deploy 0 0 $((now + 840)) $now $((now + 840 + 1200))
+expect deploy-due "ночь: время баннера наступило"                       deploy 0 0 $now $now $((now + 1200))
+expect deploy-now "ночь: баннер давно отыграл"                          deploy 0 0 $((now - 4000)) $now $((now - 4000 + 1200))
+# gate передаёт в решение реальный баннер в любой фазе (не подменяет его на «-» ночью)
+wf="$here/../../../.github/workflows/deploy.yml"
+grep -q 'daytime-decision.sh "\$should" "\$failed" "\$activity" "\$banner" "\$now" "\$banner_end"' "$wf" \
+  || { echo "FAIL: gate должен передавать в daytime-decision.sh реальные \$banner и \$banner_end"; exit 1; }
+! grep -q 'dbanner' "$wf" || { echo "FAIL: ночью баннер не подменяется (dbanner)"; exit 1; }
 expect skip       "sha уже выложен"                    skip-same 0 0 - $now
 expect skip       "sha старше выложенного"             skip-older 0 0 - $now
 expect skip       "расходящиеся ветки"                 skip-diverged 0 0 - $now

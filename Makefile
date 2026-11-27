@@ -163,7 +163,9 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/retry-test.sh
 	@bash $(INFRA)/deploy/tests/should-deploy-test.sh
 	@bash $(INFRA)/deploy/tests/daytime-decision-test.sh
-	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
+	@bash $(INFRA)/deploy/tests/clock-decision-test.sh
+	@python3 -c 'import yaml' 2>/dev/null && python3 $(INFRA)/deploy/tests/deploy-jobgraph-test.py || docker run --rm -v "$(CURDIR):/repo" -w /repo python:3.12-alpine sh -c 'pip install -q pyyaml && python $(INFRA)/deploy/tests/deploy-jobgraph-test.py'
+	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:1.7.7 .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---
 
