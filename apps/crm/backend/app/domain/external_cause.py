@@ -134,6 +134,8 @@ ROUTES: Final[dict[str, Route]] = {
     "smtp_rejected": _ADMIN_FIX,
     "smtp_unavailable": Route("provider", "recheck", ("reconnect",)),
     "queue_stuck": _HOSTING,
+    # Воркер жив, задача зависла: система снимает сама, админ только перепроверяет (ЗАВИС-1).
+    "job_stalled": Route("admin", "recheck"),
     "last_failed": Route("admin", "recheck", ("open_settings",)),
     "backup_admin": Route("admin", "open_settings", ("recheck",)),
     "cert": _HOSTING,

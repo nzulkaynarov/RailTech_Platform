@@ -43,6 +43,7 @@ from app.integrations.smtp import SmtpProbeError
 from app.integrations.telegram import resolve_token
 from app.models.system import IdentityCatalogState
 from app.repositories import external_services as repo
+from app.repositories import monitoring as monitoring_repo
 from app.security.secrets_store import SecretsStore
 from app.services import backups as backup_rules
 from app.services import identity_catalog
@@ -446,10 +447,18 @@ class _Run:
         )
         return rules.langfuse(rules.LangfuseFacts(True, health, keys_ok))
 
+    async def _worker_alive(self, session: Any) -> bool | None:
+        """Сердцебиение воркера очереди; не удалось узнать — None."""
+        try:
+            return await monitoring_repo.worker_alive(session, self.now)
+        except Exception:  # noqa: BLE001 — факт нужен только подсказке
+            return None
+
     async def mail(self) -> CheckResult:
         connection = (await self.d.mail.resolution()).connection
         async with self.d.sessions() as session:
             st = await repo.mail_stats(session, self.now - DAY)
+            alive = await self._worker_alive(session)
         prev = self.previous.get("mail", {})
         probe_error, probe_detail, latency = (
             _str(prev.get("_smtp")),
@@ -475,6 +484,7 @@ class _Run:
             probe_detail=probe_detail,
             probe_latency_ms=latency,
             paused="mail" in self.disabled,
+            worker_alive=alive,
         )
         result = rules.mail(facts, self.now)
         extra = {"_smtp": probe_error or "ok", "_smtp_detail": probe_detail}
@@ -492,6 +502,7 @@ class _Run:
             names = [f.name for f in resolved.folders]
             state = summary(await mail_repo.mailboxes(session, names))
             waiting = await mail_repo.count(session, "new")
+            alive = await self._worker_alive(session)
         facts = InboundFacts(
             configured=resolved.connection is not None,
             last_poll_at=state.last_poll_at if state else None,
@@ -499,6 +510,7 @@ class _Run:
             error_kind=state.last_error_kind if state else None,
             error=state.last_error if state else None,
             waiting=waiting,
+            worker_alive=alive,
         )
         return mail_inbound(facts, self.now)
 

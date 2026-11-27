@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Final
 
 from app.domain.external_status import CheckResult, Metric
-from app.domain.system_status import hosting_hint
+from app.domain.system_status import stuck_hint
 
 KEY: Final = "mail_inbound"
 STALE_AFTER: Final = timedelta(minutes=10)
@@ -33,6 +33,8 @@ class InboundFacts:
     error_kind: str | None = None
     error: str | None = None
     waiting: int = 0
+    # Воркер очереди жив по сердцебиению (None — неизвестно).
+    worker_alive: bool | None = None
 
 
 def mail_inbound(f: InboundFacts, now: datetime) -> CheckResult:
@@ -61,11 +63,13 @@ def mail_inbound(f: InboundFacts, now: datetime) -> CheckResult:
             KEY,
             "warn",
             "Ящик давно не опрашивался",
-            hint=hosting_hint(
-                "Опрос ящика идёт задачей фонового обработчика (воркер CRM) раз в 2 минуты",
+            hint=stuck_hint(
+                "Опрос ящика идёт задачей фонового обработчика раз в 2 минуты",
                 "Запустить crm-worker вместе с ансамблем",
+                f.worker_alive,
+                stalled_note="предыдущий опрос не завершился и не даёт начаться новому",
             ),
             metrics=metrics,
-            cause="queue_stuck",
+            cause="job_stalled" if f.worker_alive else "queue_stuck",
         )
     return CheckResult(KEY, "ok", f"Ящик опрашивается; ждут разбора: {f.waiting}", metrics=metrics)

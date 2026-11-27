@@ -9,8 +9,8 @@ worktree `gate-d17`), `HTTP_PORT=8097`, свои порты БД и Redis, **ч�
 `crm-bot` в режиме polling · **Доказательства:** снимки — [`docs/screens/w16-d1-7/`](../screens/w16-d1-7/) (215 файлов, 1440 и 390,
 вымышленные данные, без паролей и токенов), сценарии — [`qa/d17-gate/run.mjs`](qa/d17-gate/run.mjs) (помощники — из гейта C2a).
 
-Основание: [`wave16-d1-work-screens.md`](../runbooks/wave16-d1-work-screens.md) строка D1-7; [план 2026-11-01](../strategy/2026-11-01-plan-refresh.md)
-§2.1 (шаги 1–7) и §6 п. 2; SPEC-v3 §3.1, §3.2a; DECISIONS 2026-11-01 (граница по лидам); [BACKLOG](../BACKLOG.md) B-030, B-031.
+Основание: [`wave16-d1-work-screens.md`](../history/runbooks/wave16-d1-work-screens.md) строка D1-7; [план 2026-11-01](../strategy/2026-11-01-plan-refresh.md)
+§2.1 (шаги 1–7) и §6 п. 2; SPEC-v3 §3.1, §3.2a; DECISIONS 2026-11-01 (граница по лидам); [BACKLOG](../history/BACKLOG.md) B-030, B-031.
 Формат — [`wave15_gate_report.md`](wave15_gate_report.md).
 
 ## 1. Итог

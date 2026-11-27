@@ -23656,7 +23656,7 @@ components:
         supplier_price_until:
           type: [string, 'null']
           format: date
-          description: До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/BACKLOG.md`)
+          description: До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/history/BACKLOG.md`)
     QuoteChecklistLine:
       type: object
       additionalProperties: false

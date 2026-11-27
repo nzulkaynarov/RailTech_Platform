@@ -1,9 +1,9 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волны 3 и 4 — связка CRM ↔ ERP (FIX-30…37) и хвост M1 (FIX-40…44)
 
 Когда применять: волна 2 закрыта (FIX-21…24 влиты, FIX-24 проверен на стенде) и контракт шва 0.2.0 (FIX-29) в `main`.
-Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` («Волна 3», «Волна 4»), статусы — `docs/PROGRESS.md`, правила —
+Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` («Волна 3», «Волна 4»), статусы — `docs/history/PROGRESS.md`, правила —
 `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
 
 Две волны идут параллельно, **у каждой свой лид** (ORCHESTRATOR §4.1: один лид на волну): волна 3 — сессия Claude Opus,
@@ -22,9 +22,9 @@ dev-команды безопасны.
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 3 исправлений по аудиту: FIX-30…FIX-37.
 Код сам не пишешь — ставишь задачи субагентам-исполнителям, ревьюишь их PR свежим субагентом и ставишь автослияние.
 
-Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
+Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/history/HANDOFF.md,
 docs/history/runbooks/wave3-4-agents.md (целиком: §1 факты кода, §2 рабочее место, §3 раскладка, §4 порядок, §5 промпты, §6 цикл),
-docs/PROGRESS.md («Исправления по аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/architecture/CONTRACTS.md §2–§3,
+docs/history/PROGRESS.md («Исправления по аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/architecture/CONTRACTS.md §2–§3,
 packages/contracts/openapi/erp-integration.yaml и events.schema.json.
 
 Работай по раундам §4. Перед каждым раундом создай worktree задач раунда от свежего origin/main и поставь зависимости (§2).
@@ -44,8 +44,8 @@ packages/contracts/openapi/erp-integration.yaml и events.schema.json.
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 4 исправлений по аудиту: FIX-40…FIX-44 (хвост M1).
 Параллельно идёт волна 3 у другого лида — её файлы (integration/*, CRM) не трогай. Код сам не пишешь.
 
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/history/runbooks/wave3-4-agents.md (§1, §2, §3, §4
-«Волна 4», §5.0, §5.40–§5.44, §6), docs/PROGRESS.md, docs/systems/erp/CONVENTIONS.md.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/history/HANDOFF.md, docs/history/runbooks/wave3-4-agents.md (§1, §2, §3, §4
+«Волна 4», §5.0, §5.40–§5.44, §6), docs/history/PROGRESS.md, docs/systems/erp/CONVENTIONS.md.
 
 Работай по раундам §4 «Волна 4»: worktree от свежего origin/main, зависимости (§2), исполнители субагентами (model sonnet;
 у Gemini — flash) с промптом «§5.0 + §5.4x», ревью свежим субагентом, `gh pr merge --auto --merge <n>`, CI не опрашивать; перед раундом — одна проверка своих PR и docs-PR со статусами в
@@ -214,7 +214,7 @@ crm-integration` (одноразовые контейнеры, считаетс�
   integration CRM: scripts/ci_local.sh crm-integration. Зависимости уже установлены.
 - Миграции: ERP — одна на задачу (makemigrations --check без изменений после неё); CRM — Alembic через skill migration,
   номер после текущей головы, downgrade проверен.
-- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. docs/PROGRESS.md не правь — статус, хвосты и вопросы пиши в описание PR (PROGRESS ведёт лид).
+- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. docs/history/PROGRESS.md не правь — статус, хвосты и вопросы пиши в описание PR (PROGRESS ведёт лид).
 - Коммиты: Conventional Commits на русском, суффикс ({ID}), трейлер Co-Authored-By: Claude <noreply@anthropic.com>.
 - Финал: gh pr create (заголовок «{ID}: …»; тело — что, почему, как проверить, что обновлено в docs, открытые вопросы),
   ссылка на PR в ответе — и стоп.

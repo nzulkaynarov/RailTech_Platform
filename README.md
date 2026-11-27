@@ -4,7 +4,7 @@
 Платформа — единый интерфейс сотрудников, Cabinet — кабинет клиента.
 
 - Карта документации («тема → единственный документ») — [`docs/README.md`](docs/README.md)
-- Процесс и правила агентов — [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md); где мы — [`docs/HANDOFF.md`](docs/HANDOFF.md)
+- Процесс и правила агентов — [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md); где мы — [`docs/history/HANDOFF.md`](docs/history/HANDOFF.md)
 - Стратегия и план — [`docs/strategy/2026-10-23-platform-architecture-strategy.md`](docs/strategy/2026-10-23-platform-architecture-strategy.md)
 - Системы — [`docs/systems/`](docs/systems/); карта монорепо и правило среды — [`CLAUDE.md`](CLAUDE.md)
 

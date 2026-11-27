@@ -56,6 +56,11 @@ def _run_bot(args: argparse.Namespace) -> None:
     )
 
 
+# Остановка воркера (SIGTERM при деплое): дать задачам дойти, потом отменить их с записью статуса.
+# Меньше `stop_grace_period` у crm-worker в compose, иначе docker убьёт процесс (SIGKILL) раньше.
+SHUTDOWN_GRACE_S = 25.0
+
+
 async def _run_worker() -> None:
     from rt_bus.contrib.procrastinate import WORKER_OPTIONS
 
@@ -66,10 +71,13 @@ async def _run_worker() -> None:
     from app.services.identity_catalog import sync_eds_rights_on_start, sync_erp_rights_on_start
     from app.tasks.erp_users import enqueue_erp_sync
     from app.tasks.queue import queue
+    from app.tasks.stalled import recover_on_worker_start
 
     try:
         async with queue.open_async():
             try:
+                # Задачи, оставшиеся в `doing` после остановки воркера, снимаются до начала работы.
+                await recover_on_worker_start()
                 # Права EDS при смене каталога (W13C-F4): очередь уже открыта — коммит с событием
                 # будит ретранслятор; сбой не мешает старту.
                 await sync_eds_rights_on_start(get_container().session_factory)
@@ -84,7 +92,9 @@ async def _run_worker() -> None:
                 await sync_erp_rights_on_start(get_container().session_factory, enqueue_erp_sync)
                 # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины
                 await queue.run_worker_async(
-                    concurrency=get_settings().worker_concurrency, **WORKER_OPTIONS
+                    concurrency=get_settings().worker_concurrency,
+                    shutdown_graceful_timeout=SHUTDOWN_GRACE_S,
+                    **WORKER_OPTIONS,
                 )
             finally:
                 await get_container().drain_bus()  # пробуждения шины — пока очередь открыта

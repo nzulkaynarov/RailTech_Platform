@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 11 — этап B «Шина v1 и контракты событий» (версия 0.10)
 
@@ -12,7 +12,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 11 «Шина v1 и контракты событий» по
-docs/history/runbooks/wave11-bus-v1.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR (§3 п. 14–16, §4.1, §7), docs/HANDOFF.md,
+docs/history/runbooks/wave11-bus-v1.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR (§3 п. 14–16, §4.1, §7), docs/history/HANDOFF.md,
 docs/strategy/2026-10-23-platform-architecture-strategy.md (§1.2, §1.3, §3.4–§3.6, §7), ADR-0013, ADR-0014, ADR-0016, этот runbook,
 docs/research/2026-10-23-architecture/arch-audit-current.md (§1.3, §3.3, §4), docs/architecture/CONTRACTS.md, packages/contracts/events.schema.json.
 Порядок §1. Исполнители — субагенты: B1 и B2 — model "opus" (общая библиотека и контракт на все стороны), остальные — "sonnet";

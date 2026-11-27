@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 7 — Платформа, фаза P0 (подготовка): токены, каркас web и bff, стенд, CI, прод
 
@@ -12,7 +12,7 @@
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 7 «Платформа, фаза P0» по
 docs/history/runbooks/wave7-platform-p0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
-docs/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md,
+docs/history/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md,
 docs/history/platform/05-plan.md (P0), docs/architecture/CONTRACTS.md §8, docs/systems/ui-tokens/README.md.
 Старт — когда PR #140 влит в main (git ls-remote origin main + наличие packages/contracts/openapi/platform-bff.yaml).
 Работай по раундам §2: worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь до запуска
@@ -64,7 +64,7 @@ origin/main в ветку и повтор проверок задачи; зат�
 - Общий стенд rt-platform не трогаешь (make up/down, .env); свои контейнеры — только в проекте compose -p rt-p0-{ID}, после
   проверки docker compose -p rt-p0-{ID} down -v.
 - Секретов, реальных имён и адресов серверов в репозитории нет; демо-данные вымышленные.
-- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. docs/PROGRESS.md не правь.
+- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы не трогай. docs/history/PROGRESS.md не правь.
 - Коммиты: Conventional Commits на русском, суффикс ({ID}), трейлер Co-Authored-By: Claude <noreply@anthropic.com>.
 - Финал: gh pr create (заголовок «{ID}: …»; тело — что, как проверено, скриншоты, открытые вопросы), ссылка — и стоп.
 ```
