@@ -94,8 +94,9 @@ async def create_request_for_company(
     response: Response,
 ) -> RequestCreated:
     """«Заявка клиента» из письма компании без лида и без карточки клиента (ВХОД-1): карточку
-    находит по ИНН и названию или заводит, письмо — основание. 422 `validation_failed` по полю
-    `company` — компания не названа."""
+    находит по ИНН и названию или заводит. 422 `validation_failed` по полю `company` — компания не
+    названа, по полю `consent` — нет отметки согласия сотрудника (способ: письмо, звонок, бумага),
+    а лида с согласием у компании ещё нет."""
     created = await container.client_request_service.create_for_company(who, body)
     return _answer(created, response)
 

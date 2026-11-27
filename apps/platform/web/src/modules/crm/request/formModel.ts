@@ -47,7 +47,7 @@ export interface RequestContext {
   leadChannel: string | null;
   /** Telegram лида (имя без @), если он пишет из Telegram */
   leadTelegram: string | null;
-  /** Согласие на данные уже есть (или лида нет — форма из карточки клиента) */
+  /** Согласие на данные уже есть (или форма из карточки клиента); `false` и без лида — компания без карточки клиента: отметку ставит сотрудник */
   consentGiven: boolean;
   /** Контакты выбранного клиента */
   contacts: readonly ClientContactView[];
@@ -81,7 +81,7 @@ export function emptyRequestForm(): RequestFormState {
 }
 
 function consentNeeded(ctx: RequestContext): boolean {
-  return ctx.lead !== null && !ctx.consentGiven;
+  return !ctx.consentGiven;
 }
 
 /**

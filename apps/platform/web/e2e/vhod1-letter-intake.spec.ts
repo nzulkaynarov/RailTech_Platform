@@ -52,6 +52,11 @@ for (const width of [1440, 390] as const) {
       await sheet.getByRole("button", { name: /^Контакт/, expanded: false }).click();
       await sheet.getByLabel("Имя").fill("Азиз Демо");
       await sheet.getByLabel("Почта").fill("aziz@example.com");
+      // карточки клиента и лида нет: согласие на данные отмечает сотрудник, из письма — «Письмом»
+      await sheet.getByLabel("Согласие получено").check();
+      await expect(sheet.getByText("Письмом", { exact: false }).first()).toBeVisible();
+      await settledScreenshot(page, "letter-request-consent");
+      await expectNoViolations(page, `согласие в заявке из письма ${String(width)}`);
       await sheet.getByRole("button", { name: /^Проверка и отправка/, expanded: false }).click();
       await sheet.getByRole("button", { name: /Создать заявку/ }).click();
       await expect(sheet.getByText("Заявка создана")).toBeVisible();

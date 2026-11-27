@@ -216,6 +216,8 @@ export function RequestForm({
   const [requestKey, setRequestKey] = useState(newKey);
   const [state, setState] = useState<RequestFormState>(() => ({
     ...initialState(lead, clientId),
+    // Заявка из письма без лида: согласие отмечается «письмом» по умолчанию, из «+ Создать» — выбор за сотрудником
+    ...(letterFile && !lead ? { consentMethod: "email" as const } : {}),
     ...(letterHint ? { summary: letterHint.summary.slice(0, 5000), email: letterHint.email } : {}),
     ...(letterFrom && lead ? { letter: { name: "", status: "uploading" as const } } : {}),
     ...(letterFile
@@ -350,7 +352,8 @@ export function RequestForm({
     lead: lead?.lead ?? null,
     leadChannel: lead?.channel ?? null,
     leadTelegram: lead?.channel === "telegram" ? (lead.contacts.telegram ?? null) : null,
-    consentGiven: lead === null || lead.consent.given_at !== null,
+    // Без лида согласия нет у новой компании без карточки клиента: отметку ставит сотрудник (D-8), CRM её не выдумывает
+    consentGiven: lead === null ? state.clientId !== null : lead.consent.given_at !== null,
     contacts,
     doNotWork: Boolean(client.data?.do_not_work),
   };
@@ -504,6 +507,48 @@ export function RequestForm({
   };
 
   const leadTelegram = ctx.leadTelegram;
+
+  // Отметка согласия сотрудника (D-8): способ и комментарий; для лида без согласия и для новой компании без карточки клиента.
+  const markFields = (
+    <>
+      <Checkbox
+        checked={state.consentMarked}
+        aria-invalid={errors.consent ? true : undefined}
+        onChange={(event) => {
+          set({ consentMarked: event.target.checked });
+        }}
+      >
+        {t("request:consent.mark")}
+      </Checkbox>
+      {state.consentMarked ? (
+        <>
+          <FormField id={id("consent-method")} label={t("request:consent.method")}>
+            <Select
+              id={id("consent-method")}
+              value={state.consentMethod}
+              options={(["phone", "email", "paper"] as const).map((value) => ({
+                value,
+                label: t(`request:consent.methods.${value}`),
+              }))}
+              onChange={(value) => {
+                set({ consentMethod: value });
+              }}
+            />
+          </FormField>
+          <FormField id={id("consent-comment")} label={t("request:consent.comment")}>
+            <Input
+              id={id("consent-comment")}
+              value={state.consentComment}
+              maxLength={500}
+              onChange={(event) => {
+                set({ consentComment: event.target.value });
+              }}
+            />
+          </FormField>
+        </>
+      ) : null}
+    </>
+  );
 
   return (
     <form
@@ -764,55 +809,17 @@ export function RequestForm({
                         {lead.channel === "telegram" ? (
                           <p className="pf-fp-sub">{t("request:consent.viaBot")}</p>
                         ) : (
-                          <>
-                            <Checkbox
-                              checked={state.consentMarked}
-                              aria-invalid={errors.consent ? true : undefined}
-                              onChange={(event) => {
-                                set({ consentMarked: event.target.checked });
-                              }}
-                            >
-                              {t("request:consent.mark")}
-                            </Checkbox>
-                            {state.consentMarked ? (
-                              <>
-                                <FormField
-                                  id={id("consent-method")}
-                                  label={t("request:consent.method")}
-                                >
-                                  <Select
-                                    id={id("consent-method")}
-                                    value={state.consentMethod}
-                                    options={(["phone", "email", "paper"] as const).map(
-                                      (value) => ({
-                                        value,
-                                        label: t(`request:consent.methods.${value}`),
-                                      }),
-                                    )}
-                                    onChange={(value) => {
-                                      set({ consentMethod: value });
-                                    }}
-                                  />
-                                </FormField>
-                                <FormField
-                                  id={id("consent-comment")}
-                                  label={t("request:consent.comment")}
-                                >
-                                  <Input
-                                    id={id("consent-comment")}
-                                    value={state.consentComment}
-                                    maxLength={500}
-                                    onChange={(event) => {
-                                      set({ consentComment: event.target.value });
-                                    }}
-                                  />
-                                </FormField>
-                              </>
-                            ) : null}
-                          </>
+                          markFields
                         )}
                       </>
                     )}
+                    <FieldError id={`${id("consent")}-error`} text={err("consent")} />
+                  </fieldset>
+                ) : !ctx.consentGiven ? (
+                  <fieldset className="pf-req-group">
+                    <legend>{t("request:consent.legend")}</legend>
+                    <p className="pf-fp-sub">{t("request:consent.newCompany")}</p>
+                    {markFields}
                     <FieldError id={`${id("consent")}-error`} text={err("consent")} />
                   </fieldset>
                 ) : null}

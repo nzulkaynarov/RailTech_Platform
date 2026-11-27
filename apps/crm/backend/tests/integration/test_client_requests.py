@@ -657,7 +657,10 @@ async def test_letter_of_a_company_without_a_client_card_makes_the_card_and_the_
     """ВХОД-1: компания без карточки клиента и без лида — карточка заводится, заявка уходит."""
     who = await _manager(sessions)
     queue = Queue()
-    body = _body(contact={"full_name": "Пётр Снабженец", "email": "p@example.test"})
+    body = _body(
+        consent={"method": "email"},
+        contact={"full_name": "Пётр Снабженец", "email": "p@example.test"},
+    )
 
     created = await _service(sessions, queue).create_for_company(who, body)
 
@@ -730,7 +733,9 @@ async def test_letter_request_repeat_with_the_same_key_is_the_same_request(
 ) -> None:
     who = await _manager(sessions)
     queue = Queue()
-    body = _body(contact={"full_name": "Пётр", "phone": "+998901234567"})
+    body = _body(
+        consent={"method": "email"}, contact={"full_name": "Пётр", "phone": "+998901234567"}
+    )
 
     results = await asyncio.gather(
         _service(sessions, queue).create_for_company(who, body),
@@ -752,10 +757,13 @@ async def test_second_press_after_the_form_was_closed_returns_the_same_request(
     who = await _manager(sessions)
     queue = Queue()
     contact = {"full_name": "Пётр", "phone": "+998901234567"}
+    consent = {"method": "email"}
 
-    first = await _service(sessions, queue).create_for_company(who, _body(contact=contact))
+    first = await _service(sessions, queue).create_for_company(
+        who, _body(contact=contact, consent=consent)
+    )
     second = await _service(sessions, queue).create_for_company(
-        who, _body(contact=contact, summary="Другой текст")
+        who, _body(contact=contact, consent=consent, summary="Другой текст")
     )
     third = await _service(sessions, queue).create_for_client(
         who, first.client_id, _body(company=None, contact=contact)
@@ -777,7 +785,8 @@ async def test_consent_by_letter_is_recorded_like_the_employee_mark(
     who = await _manager(sessions)
 
     created = await _service(sessions).create_for_company(
-        who, _body(contact={"full_name": "Пётр", "phone": "+998901234567"})
+        who,
+        _body(consent={"method": "email"}, contact={"full_name": "Пётр", "phone": "+998901234567"}),
     )
 
     assert created.lead_id is not None
@@ -797,6 +806,51 @@ async def test_consent_by_letter_is_recorded_like_the_employee_mark(
         assert (lead.consent_method, lead.consent_given_at is not None) == ("email", True)
         notes = await session.scalars(select(LeadNote).where(LeadNote.lead_id == lead.id))
         assert any("получено письмом" in n.text for n in notes)
+
+
+async def test_request_for_a_new_company_without_the_consent_mark_is_a_field_error(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The service never invents the legal basis: no mark of the employee, nothing is created."""
+    who = await _manager(sessions)
+
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions).create_for_company(
+            who, _body(contact={"full_name": "Пётр", "phone": "+998901234567"})
+        )
+
+    assert caught.value.details["field"] == "consent"
+    async with sessions() as session:
+        assert (await session.scalars(select(Client))).all() == []
+        assert (await session.scalars(select(Lead))).all() == []
+
+
+async def test_phone_consent_of_a_new_company_makes_a_phone_lead_without_the_word_letter(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+
+    created = await _service(sessions).create_for_company(
+        who,
+        _body(
+            consent={"method": "phone", "comment": "по звонку"},
+            contact={"full_name": "Пётр", "phone": "+998901234567"},
+        ),
+    )
+
+    rows = await audit_rows(sessions, "lead.consent_recorded")
+    assert [r.after["consent_method"] for r in rows if r.after] == ["phone"]
+    assert rows[0].after is not None
+    assert "письм" not in rows[0].after["comment"]
+    (created_row,) = await audit_rows(sessions, "lead.create")
+    assert created_row.after is not None
+    assert (created_row.after["source"], created_row.after["basis"]) == ("phone", "file")
+    async with sessions() as session:
+        lead = await session.get(Lead, created.lead_id)
+        assert lead is not None
+        assert (lead.source, lead.consent_method) == ("phone", "phone")
+        notes = await session.scalars(select(LeadNote).where(LeadNote.lead_id == lead.id))
+        assert not any("письм" in n.text for n in notes)
 
 
 async def test_letter_request_without_a_company_is_a_field_error(

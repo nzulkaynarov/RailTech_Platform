@@ -118,9 +118,10 @@ class ClientRequestService:
         """«Создать заявку» из письма компании, у которой нет ни лида, ни карточки клиента (ВХОД-1).
 
         Карточка клиента находится по ИНН и названию или заводится здесь же (одна компания — одна
-        карточка); основание заявки — файл письма, поэтому согласие на обработку данных
-        отмечается за компанию способом «письмом» (лид по письму заводится сам, как «Новый лид»
-        из письма). Дальше — обычная заявка клиента: ERP свяжет компанию с карточкой по ИНН."""
+        карточка). Согласие на обработку данных отмечает сотрудник: без `body.consent` — 422 по
+        полю `consent`; лид заводится сам, его источник следует из способа согласия (письмо,
+        звонок). Дальше — обычная заявка клиента: ERP свяжет компанию с карточкой по ИНН.
+        """
         await self._require_erp()
         if body.company is None:
             raise ValidationFailedError("choose a client or enter the company", field="company")
@@ -144,6 +145,11 @@ class ClientRequestService:
         if client.erp_company_id is None:
             lead = await _latest_lead(session, client.id)
             if lead is None or lead.consent_given_at is None:
+                if body.consent is None:
+                    # The legal basis is marked by the employee (D-8), the service never invents it.
+                    raise ValidationFailedError(
+                        "mark the consent of the company contact", field="consent"
+                    )
                 await _letter_lead(session, client, body, who)
         return await self._for_client_tx(session, who, client.id, body)
 
@@ -479,15 +485,18 @@ async def _letter_lead(
     session: AsyncSession, client: Client, body: RequestCreate, who: Principal
 ) -> Lead:
     """Лид по письму компании: заявка клиента без лида не может уйти в ERP (передаче нужны лид и
-    согласие). Письмо — основание, согласие отмечено «письмом» на время заявки."""
+    согласие). Источник лида и основание следуют из отметки сотрудника: письмо или звонок."""
     contact = body.contact
+    given = body.consent
+    assert given is not None  # noqa: S101 - checked by the caller (422 on `consent`)
+    by_letter = given.method == "email"
     lead = Lead(
         display_name=((contact.full_name or "").strip() or client.name)[:255],
         language="ru",
         stage=Stage.NEW.value,
         owner_mode=OwnerMode.HUMAN.value,
         assigned_user_id=who.user_id,
-        source=LeadSource.EMAIL.value,
+        source=(LeadSource.EMAIL if by_letter else LeadSource.PHONE).value,
         phone_e164=_phone(contact.phone),
         email=_email(contact.email),
         company_name=client.name[:255],
@@ -507,15 +516,15 @@ async def _letter_lead(
         after={
             "source": lead.source,
             "client_id": client.id,
-            "basis": "letter",
+            "basis": "letter" if by_letter else "file",
             "letter_file_id": str(body.letter_file_id),
         },
     )
     # Consent by letter goes the same way as the employee's mark: lead feed note and audit (D-8).
-    given = body.consent
-    basis = f"основание — письмо, файл {body.letter_file_id}"
-    note = f"{given.comment.strip()}; {basis}" if given and given.comment else basis
-    await apply_manual_consent(session, who, lead, given.method if given else "email", note)
+    kind = "письмо, файл" if by_letter else "файл основания"
+    basis = f"основание — {kind} {body.letter_file_id}"
+    note = f"{given.comment.strip()}; {basis}" if given.comment else basis
+    await apply_manual_consent(session, who, lead, given.method, note)
     await events.publish(session, "lead.updated", lead_id=lead.id)
     return lead
 

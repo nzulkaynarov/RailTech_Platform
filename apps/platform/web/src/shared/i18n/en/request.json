@@ -66,6 +66,7 @@
     "legend": "Consent to data processing",
     "given": "Given in the bot on {{date}}",
     "givenStaff": "Recorded by staff on {{date}}",
+    "newCompany": "Company without a client card: mark how the consent to data processing was received.",
     "missing": "The client has not given consent yet.",
     "viaBot": "A Telegram lead gives consent in the bot: ask them to press “I agree”.",
     "mark": "Consent received",

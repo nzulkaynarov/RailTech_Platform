@@ -204,6 +204,40 @@ describe("форма «Создать заявку»: правила до отп
   });
 });
 
+describe("новая компания без лида и без карточки клиента: согласие отмечает сотрудник (D-8)", () => {
+  const ctx: RequestContext = {
+    lead: null,
+    leadChannel: null,
+    leadTelegram: null,
+    consentGiven: false,
+    contacts: [],
+  };
+  const filled = {
+    ...emptyRequestForm(),
+    company: { id: "9001", name: "ООО Демо", inn: null, crmClientId: null },
+    fullName: "Демо",
+    phone: "+998900000077",
+    summary: "Колодки",
+    letter: { name: "zapiska.pdf", status: "done" as const, id: "f-1", kind: "call_note" as const },
+  };
+
+  it("без отметки форма не уходит: ошибка у поля согласия", () => {
+    expect(validateRequest(filled, ctx)).toEqual({ consent: "consent" });
+  });
+
+  it("с отметкой «по телефону» в теле — способ телефон, а не письмо", () => {
+    const state = { ...filled, consentMarked: true, consentMethod: "phone" as const };
+    expect(validateRequest(state, ctx)).toEqual({});
+    const payload = toRequestPayload(state, ctx, "11111111-1111-4111-8111-111111111111");
+    expect(payload.consent).toEqual({ method: "phone", comment: null });
+  });
+
+  it("клиент с карточкой — отметка не нужна", () => {
+    const state = { ...filled, company: null, clientId: 4 };
+    expect(validateRequest(state, { ...ctx, consentGiven: true })).toEqual({});
+  });
+});
+
 describe("«Создать заявку» из лида и из клиента (D1-2b)", () => {
   it("лид «Просит КП»: поля из переписки, письмо директору, «Что произойдёт»; заявка — в карточке клиента", async () => {
     const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
