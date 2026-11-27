@@ -16,7 +16,7 @@ new_case() { # <имя>: чистое состояние; current_tag = A
   export RT_ROOT="$T" RT_STATE="$T/state" RT_RELEASES="$T/releases" RT_MAINTENANCE_DIR="$T/maint"
   echo "$A" > "$T/state/current_tag"
   CASE="$1"
-  unset FX_API_FAIL FX_ACTIVITY_RC; export FX_COMMITS="$C $B $A" FX_GREEN="$B $A" FX_COMPARE=ahead FX_IMAGES=0 FX_ACTIVITY=0 FX_DEPLOY=ok
+  unset FX_API_FAIL FX_ACTIVITY_RC; export FX_COMMITS="$C $B $A" FX_GREEN="$B $A" FX_STAND="$B $A" FX_COMPARE=ahead FX_IMAGES=0 FX_ACTIVITY=0 FX_DEPLOY=ok
   : > "$T/calls"
 }
 tick() { # <epoch>: один запуск auto-deploy.sh с подменёнными сетью и действиями
@@ -31,6 +31,9 @@ tick() { # <epoch>: один запуск auto-deploy.sh с подменённы
         commits/*/check-runs*) local c="${1#commits/}"; c="${c%%/*}"
           if [[ " $FX_GREEN " == *" $c "* ]]; then echo '{"check_runs":[{"status":"completed","conclusion":"success","started_at":"2026-11-27T10:00:00Z"}]}'
           else echo '{"check_runs":[{"status":"completed","conclusion":"failure","started_at":"2026-11-27T10:00:00Z"}]}'; fi ;;
+        commits/*/statuses*) local c="${1#commits/}"; c="${c%%/*}"
+          if [[ " $FX_STAND " == *" $c "* ]]; then echo '[{"context":"ci","state":"success","created_at":"2026-11-27T09:00:00Z"},{"context":"stand-ok","state":"success","created_at":"2026-11-27T10:00:00Z"}]'
+          else echo '[{"context":"ci","state":"success","created_at":"2026-11-27T09:00:00Z"}]'; fi ;;
         compare/*) printf '{"status":"%s"}' "$FX_COMPARE" ;;
         *) return 1 ;;
       esac
@@ -95,6 +98,23 @@ check "активность не прочитана" activity-unknown idle; expe
 
 new_case images-incomplete; FX_IMAGES=1; tick "$NIGHT"
 check "образы не готовы" wait-images idle; expect_calls "без выкладки" "ghcr $B"
+
+new_case no-stand-ok; FX_STAND="$A"; tick "$NIGHT"
+check "зелёный CI, но нет stand-ok" wait-stand "ждёт проверки на стенде"; expect_calls "ничего не выкладываем и образы не смотрим" ""
+assert "status.json говорит про стенд" grep -q "ждёт проверки на стенде" "$T/state/auto-deploy.status.json"
+assert "в журнале sha, ждущий стенда" grep -q "\"sha\":\"$B\"" "$T/state/auto-deploy.log"
+FX_STAND="$B $A"; tick "$((NIGHT + 600))"
+check "stand-ok поставлен - выкладываем" deploy-now ok
+
+new_case newest-lacks-stand; FX_COMMITS="$C $B $A"; FX_GREEN="$C $B $A"; FX_STAND="$B $A"; tick "$NIGHT"
+check "новейший без stand-ok пропускается, берётся новейший с обоими" deploy-now ok; expect_calls "выложен B" "ghcr $B;fetch $B;deploy $B"
+
+new_case stand-ok-without-ci; FX_GREEN="$A"; FX_STAND="$B $A"; tick "$NIGHT"
+check "stand-ok без зелёного CI не годится" up-to-date idle
+
+new_case stand-revoked
+out="$(bash -c 'source "$1"; echo "[{\"context\":\"stand-ok\",\"state\":\"success\",\"created_at\":\"2026-11-27T10:00:00Z\"},{\"context\":\"stand-ok\",\"state\":\"failure\",\"created_at\":\"2026-11-27T11:00:00Z\"}]" | stand_ok' _ "$script")"
+assert "снятый stand-ok (failure позже success) не годится" test "$out" = false
 
 new_case ghcr-down; FX_IMAGES=2; tick "$NIGHT"
 check "GHCR недоступен" ghcr-unavailable idle

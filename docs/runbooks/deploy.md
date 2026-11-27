@@ -141,7 +141,11 @@ job `approve` — он запускается при ручном `deploy`/`roll
 **Что делает один тик `auto-deploy.sh`** (по порядку; на каждом шаге «нечего делать» — запись в журнал и выход):
 
 1. Замок `state/deploy.lock` (`flock -n`); занят — `locked`. Есть файл `state/auto-deploy.paused` — `paused`.
-2. Кандидат — новейший коммит `main` с зелёной «CI ok» (тот же критерий, что у `pick-green-main.sh`): GitHub API без токена, список коммитов и
+2. Кандидат — новейший коммит `main` с зелёной «CI ok» (тот же критерий, что у `pick-green-main.sh`) **и статусом коммита `stand-ok` = success**
+   (решение владельца 2026-11-28: на прод ничего не идёт, пока не проверено на тестовом стенде). Статус ставит архитектор после приёмки **ровно этого
+   sha** на стенде: `scripts/stand-ok.sh <sha>` (`gh api` → `POST /repos/…/statuses/<sha>`, контекст `stand-ok`); снять — `scripts/stand-ok.sh --revoke <sha>`
+   (позднее состояние failure отменяет раннее success). Нет статуса — тик пишет в журнал `wait-stand` с результатом «ждёт проверки на стенде» (то же в
+   `auto-deploy.status.json`) и ничего не делает; новейший sha без `stand-ok` пропускается, берётся новейший с обоими условиями. Способ чтения: GitHub API без токена, список коммитов и
    проверки читаются с ETag (ответ 304 не тратит лимит 60 запросов/час на IP; зелёные sha кэшируются навсегда, за тик не больше 8 непроверенных).
    Сбой API или лимит — отступление 10, 20, 40, 60 минут (`state/auto-deploy.backoff`), журнал `api-unavailable`, затем `api-backoff`; **ничего не выкладывается**.
 3. Пропуск: кандидат равен `current_tag` (`up-to-date`; заодно снимается баннер, давно отыгравший свою минуту), лежит в `state/failed_tags` (`skip-failed`),
@@ -162,6 +166,9 @@ job `approve` — он запускается при ручном `deploy`/`roll
 - `auto-deploy.log` — одна JSON-строка на тик: `{"ts","sha","decision","result","duration_s"}`; ротация по 512 КБ, три копии `.1`–`.3`. Смотреть: `tail -n 20 /opt/rt/state/auto-deploy.log`,
   вывод `deploy.sh` последней выкладки — `auto-deploy.deploy.log`, служебный журнал юнита — `journalctl -u rt-auto-deploy -n 50`.
 - `auto-deploy.status.json` — последнее состояние (`ts`, `paused`, `current_tag`, `previous_tag`, `last_sha`, `last_decision`, `last_result`, `last_deploy_ts`); его покажет «Состояние» Платформы.
+
+**Ручной Deploy и стенд.** Шаг «Проверка на стенде» в `prepare` ручного deploy смотрит статус `stand-ok` на sha и, если его нет, громко предупреждает
+(`::warning::` и блок «ВНИМАНИЕ: не проверено на стенде» в сводке запуска), но **не блокирует**: гейтом остаётся одобрение владельца (`approve`).
 
 **Пауза.** `touch /opt/rt/state/auto-deploy.paused` — тики идут, но ничего не выкладывают (в журнале `paused`); вернуть — `rm /opt/rt/state/auto-deploy.paused`.
 Полная остановка — `sudo systemctl disable --now rt-auto-deploy.timer`.
@@ -184,7 +191,7 @@ systemctl list-timers rt-auto-deploy.timer
 Нужны `flock`, `curl`, `python3`, `tar` (есть в Ubuntu); `docker` — под пользователем `deploy`. Одновременно в GitHub: переменная репозитория `CRM_DOMAIN`
 (см. выше). Обновление самого `auto-deploy.sh` приезжает с обычной выкладкой (юнит запускает файл из `/opt/rt/current`); юниты при правке ставятся заново.
 
-**Тесты** (входят в `make deploy-check`): `auto-deploy-test.sh` — таблица со стабами API/GHCR/часов/активности: нет нового, ночью новый зелёный, днём тихо, днём активность → баннер → выкладка,
+**Тесты** (входят в `make deploy-check`): `auto-deploy-test.sh` — таблица со стабами API/GHCR/часов/активности: нет нового, нет `stand-ok` (ждёт стенда) / новейший без него / снятый `stand-ok`, ночью новый зелёный, днём тихо, днём активность → баннер → выкладка,
 образы неполные, failed-tag, старше/расходится, API недоступен и отступление, smoke упал → откат и failed-tag, три сбоя до переключения, замок занят, пауза, ротация журнала, ETag;
 `clock-decision-test.sh` — границы ночного окна; `deploy-jobgraph-test.py` — какие jobs `deploy.yml` запускаются на каждое событие, нет `schedule`, `images.yml` согласован с `deploy.yml` и сервером, ручная
 выкладка идёт под замком.

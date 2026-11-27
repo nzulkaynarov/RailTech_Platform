@@ -4,7 +4,9 @@
 # За один запуск (тик):
 #   1. замок state/deploy.lock (тот же берёт ручной deploy.yml: гонки нет); занят - тик пустой;
 #   2. state/auto-deploy.paused - пауза, ничего не делаем;
-#   3. новейший коммит main с зелёной «CI ok» (GitHub API без токена, ETag-кэш, отступление при сбоях);
+#   3. новейший коммит main с зелёной «CI ok» И статусом коммита `stand-ok` = success (его ставит архитектор через scripts/stand-ok.sh после
+#      приёмки ровно этого sha на тестовом стенде; «на прод ничего не идёт, пока не проверено на стенде»; нет статуса - тик пишет
+#      «ждёт проверки на стенде» и ничего не делает). GitHub API без токена, ETag-кэш, отступление при сбоях;
 #   4. пропуск: равен current_tag, в failed_tags, старше выложенного или расходится с ним;
 #   5. образы sha целиком в GHCR (все образы из AUTO_DEPLOY_IMAGES; их собирает .github/workflows/images.yml) - иначе ждём;
 #   6. часы: ночное окно 00:45-05:30 Ташкента - выкладка; днём - daytime-decision.sh (30 минут тишины в Платформе, иначе баннер за 15 минут);
@@ -142,6 +144,11 @@ ci_green() { python3 -I -c 'import sys,json
 r=sorted(json.load(sys.stdin).get("check_runs",[]),key=lambda x:x.get("started_at") or "")
 print("true" if r and r[-1].get("status")=="completed" and r[-1].get("conclusion")=="success" else "false")' 2>/dev/null || echo false; }
 compare_status() { python3 -I -c 'import sys,json; print(json.load(sys.stdin).get("status",""))' 2>/dev/null; }
+# stdin: statuses коммита (новые сверху); true, если у самого свежего статуса контекста stand-ok состояние success
+stand_ok() { python3 -I -c 'import sys,json
+r=[x for x in json.load(sys.stdin) if x.get("context")=="stand-ok"]
+r.sort(key=lambda x:x.get("created_at") or "")
+print("true" if r and r[-1].get("state")=="success" else "false")' 2>/dev/null || echo false; }
 # stdin: maintenance.json; печатает «начало_epoch конец_epoch» или «- -»
 banner_window() { python3 -I -c 'import sys,json,datetime
 try:
@@ -163,11 +170,11 @@ backoff_fail() {
   printf '%s %s\n' "$n" "$(( $(now_epoch) + delay ))" > "$f"
 }
 
-# Кандидат: новейший коммит main с зелёной «CI ok»; дойдя до current_tag, возвращает его (новее зелёного нет). 0 - есть CAND (пусто - нет
-# зелёного), 1 - сбой API.
+# Кандидат: новейший коммит main с зелёной «CI ok» и статусом stand-ok; дойдя до current_tag, возвращает его (новее годного нет). 0 - есть CAND
+# (пусто - нет годного), 1 - сбой API. WAIT_STAND - новейший коммит с зелёной «CI ok», но без stand-ok (ждёт проверки на стенде).
 find_candidate() {
   local cur="$1" list c json checked=0
-  CAND=""
+  CAND=""; WAIT_STAND=""
   list="$(api_get "commits?sha=main&per_page=30" | commit_shas)" && [[ -n "$list" ]] || return 1
   for c in $list; do
     if [[ "$c" == "$cur" ]]; then CAND="$cur"; return 0; fi
@@ -176,6 +183,11 @@ find_candidate() {
       checked=$((checked + 1))
       json="$(api_get "commits/$c/check-runs?check_name=CI%20ok&filter=latest&per_page=100")" || return 1
       if [[ "$(ci_green <<<"$json")" == true ]]; then mkdir -p "$AD_CACHE"; : > "$AD_CACHE/green.$c"; else continue; fi
+    fi
+    if [[ ! -f "$AD_CACHE/stand.$c" ]]; then
+      json="$(api_get "commits/$c/statuses?per_page=100")" || return 1
+      if [[ "$(stand_ok <<<"$json")" == true ]]; then mkdir -p "$AD_CACHE"; : > "$AD_CACHE/stand.$c"
+      else [[ -n "$WAIT_STAND" ]] || WAIT_STAND="$c"; continue; fi
     fi
     CAND="$c"; return 0
   done
@@ -199,6 +211,10 @@ run_tick() {
   if ! find_candidate "$cur"; then backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0; fi
   rm -f "$RT_STATE/auto-deploy.backoff"
   cand="$CAND"
+  if [[ -n "$WAIT_STAND" && ( -z "$cand" || "$cand" == "$cur" ) ]]; then
+    # есть более новый зелёный sha, но архитектор ещё не принял его на стенде: на прод ничего не идёт
+    AD_SHA="$WAIT_STAND"; AD_DECISION="wait-stand"; AD_RESULT="ждёт проверки на стенде"; return 0
+  fi
   if [[ -z "$cand" ]]; then AD_DECISION="no-green-main"; AD_RESULT=idle; return 0; fi
   AD_SHA="$cand"
   if [[ "$cand" == "$cur" ]]; then

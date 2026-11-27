@@ -65,6 +65,7 @@ jobs:
     permissions:
       contents: read
       checks: read  # проверка «CI ok» на sha (check-runs)
+      statuses: read  # статус stand-ok на sha
       actions: write  # только здесь: отмена устаревших ожидающих запусков Deploy
     outputs:
       sha: ${{ steps.ver.outputs.sha }}
@@ -147,6 +148,24 @@ jobs:
             exit 1
           fi
           echo "«CI ok» на $SHA: success"
+
+      # Решение владельца 2026-11-28: на прод ничего не идёт, пока не проверено на тестовом стенде. Серверный таймер без статуса stand-ok
+      # (scripts/stand-ok.sh) ничего не выкладывает; ручной deploy не блокируется (одобрение владельца в job approve - сам гейт), но громко предупреждает.
+      - name: Проверка на стенде (статус stand-ok)
+        if: steps.ver.outputs.action == 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.ver.outputs.sha }}
+        run: |
+          st="$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" -f per_page=100 \
+            --jq '[.[] | select(.context == "stand-ok")] | sort_by(.created_at) | last | .state // "none"')" || st=unknown
+          if [ "$st" = success ]; then
+            echo "stand-ok на $SHA: success"
+          else
+            msg="НА $SHA НЕТ stand-ok (состояние: $st) - этот sha не принят на тестовом стенде. Ручная выкладка не блокируется: решает одобрение владельца."
+            echo "::warning::$msg"
+            { echo "## ВНИМАНИЕ: не проверено на стенде"; echo; echo "$msg"; } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Матрица образов
         id: matrix
