@@ -29,6 +29,12 @@ p3="$(ops "$tmp/rel2/infra/offsite/offsite-sync.sh")"
 [[ "$p3" != "$p1" && -f "$p3" && -f "$p1" ]] || fail "смена содержимого должна давать новый путь, старый остаётся"
 for i in 1 2 3 4 5 6 7; do echo "# v$i" >> "$tmp/rel2/infra/offsite/offsite-sync.sh"; ops "$tmp/rel2/infra/offsite/offsite-sync.sh" >/dev/null; sleep 0.05; done
 [[ "$(find "$tmp/ops" -name 'offsite-sync.*.sh' | wc -l)" -eq 5 ]] || fail "должно храниться пять последних копий"
+# Файл, смонтированный в контейнер (docker inspect), не удаляется при чистке (заглушка docker).
+mkdir -p "$tmp/stub"; first="$(find "$tmp/ops" -name 'offsite-sync.*.sh' -printf '%T@ %p\n' | sort -n | head -1 | cut -d' ' -f2)"
+# shellcheck disable=SC2016
+printf '#!/bin/sh\ncase "$1" in ps) echo c1 ;; inspect) echo "%s" ;; esac\n' "$first" > "$tmp/stub/docker"; chmod +x "$tmp/stub/docker"
+for i in 1 2 3 4 5 6; do echo "# w$i" >> "$tmp/rel2/infra/offsite/offsite-sync.sh"; PATH="$tmp/stub:$PATH" ops "$tmp/rel2/infra/offsite/offsite-sync.sh" >/dev/null; sleep 0.05; done
+[[ -f "$first" ]] || fail "файл, смонтированный в контейнер, удалён чисткой"
 touch "$tmp/ro"; got="$(OPS="$tmp/ro/x" ops "$tmp/rel1/infra/offsite/offsite-sync.sh" 2>/dev/null)"
 [[ "$got" == "$tmp/rel1/infra/offsite/offsite-sync.sh" ]] || fail "нет прав на каталог: ожидался путь из релиза, получен $got"
 

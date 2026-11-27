@@ -95,8 +95,17 @@ stable_ops_file() {
       echo "$src"; return 0
     fi
   fi
+  # Файл, смонтированный в работающий (или остановленный) контейнер, не удаляем: иначе его перезапуск упал бы на монтировании.
+  local used
+  local ids
+  ids="$(docker ps -aq --filter label=com.docker.compose.service=offsite-backup 2>/dev/null || true)"
+  used=""
+  # shellcheck disable=SC2086  # список ID без пробелов внутри
+  [[ -z "$ids" ]] || used="$(docker inspect -f '{{range .Mounts}}{{println .Source}}{{end}}' $ids 2>/dev/null || true)"
   # shellcheck disable=SC2012  # имена — наши, без пробелов; нужна сортировка по времени
-  for old in $(ls -1t "$RT_OPS_DIR/$stem."*".$ext" 2>/dev/null | tail -n +6); do rm -f "$old" 2>/dev/null || true; done
+  for old in $(ls -1t "$RT_OPS_DIR/$stem."*".$ext" 2>/dev/null | tail -n +6); do
+    [[ "$old" == "$dst" ]] || grep -qxF "$old" <<<"$used" || rm -f "$old" 2>/dev/null || true
+  done
   echo "$dst"
 }
 

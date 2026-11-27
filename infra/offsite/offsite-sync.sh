@@ -97,8 +97,10 @@ export RCLONE_CONFIG_YADISK_TYPE=webdav RCLONE_CONFIG_YADISK_VENDOR=other RCLONE
 # (лимиты Drive API и WebDAV Яндекса). --use-server-modtime: время объекта S3 — из листинга (LastModified), без HEAD на каждый объект; оно же уходит на Drive.
 # Архив WAL — десятки тысяч мелких сегментов: время уходит на накладные расходы API (≈ 1 файл за 3 с при 2 потоках и 5 запросах/с), а не
 # на полосу. Поэтому для копии архива больше потоков и запросов (BEK-1; как у файлового этапа — FILES_TPS 10); полоса $BWLIMIT прежняя.
-WAL_TRANSFERS="${OFFSITE_WAL_TRANSFERS:-8}"
-WAL_CHECKERS="${OFFSITE_WAL_CHECKERS:-8}"
+# Память (контейнер 128 МБ, GOMEMLIMIT 96 МиБ): на поток --buffer-size 2M + --drive-chunk-size 4M (только Google) = 6 МиБ; 6 потоков = 36 МиБ
+# (Яндекс — 12 МиБ) плюс списки и сам rclone ≈ 30 МиБ — заметно ниже 96 МиБ. Умолчания rclone (16M буфер + 8M чанк × потоки) в лимит не вмещались.
+WAL_TRANSFERS="${OFFSITE_WAL_TRANSFERS:-6}"
+WAL_CHECKERS="${OFFSITE_WAL_CHECKERS:-6}"
 WAL_TPS="${OFFSITE_WAL_TPSLIMIT:-10}"
 PROGRESS_EVERY_S="${OFFSITE_PROGRESS_S:-300}"
 RETRIES="${OFFSITE_RETRIES:-3}"
@@ -177,7 +179,7 @@ copy_list() { # <файл путей> <журнал>
 copy_rclone() { # <файл путей> <журнал>
   timeout "$((RUN_TIMEOUT_S + 600))" rclone copy "$SRC" "$DST" --files-from-raw "$1" \
     --retries "$RETRIES" --retries-sleep "$RETRIES_SLEEP" --low-level-retries 10 --timeout 5m --contimeout 30s --tpslimit "$WAL_TPS" \
-    --use-server-modtime --size-only --bwlimit "$BWLIMIT" --transfers "$WAL_TRANSFERS" --checkers "$WAL_CHECKERS" --drive-chunk-size 8M \
+    --use-server-modtime --size-only --bwlimit "$BWLIMIT" --transfers "$WAL_TRANSFERS" --checkers "$WAL_CHECKERS" --buffer-size 2M --drive-chunk-size 4M \
     --drive-stop-on-upload-limit --max-duration "${RUN_TIMEOUT_S}s" --log-level INFO --stats 30m --stats-one-line 2>> "$2"
 }
 
