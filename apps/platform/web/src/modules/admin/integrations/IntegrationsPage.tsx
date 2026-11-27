@@ -145,12 +145,19 @@ function IntegrationTile({
 
 function AttentionSection({
   items,
+  cards,
   editable,
 }: {
   items: readonly AttentionItem[];
+  cards: readonly IntegrationCard[];
   editable: boolean;
 }) {
   const { t } = useTranslation("integrations");
+  // «Всё в порядке» — только когда каждая карточка живая и свежая; иначе называем, что не проверено (как «Состояние»)
+  const unchecked = cards.filter(
+    (card) =>
+      card.access !== "forbidden" && card.fact.state !== "works" && card.fact.state !== "off",
+  );
   return (
     <section aria-labelledby="pf-int-attention">
       <Card
@@ -162,7 +169,13 @@ function AttentionSection({
         }
       >
         {items.length === 0 ? (
-          <p className="pf-int-empty">{t("attention.empty")}</p>
+          <p className="pf-int-empty">
+            {unchecked.length === 0
+              ? t("attention.empty")
+              : t("attention.emptyUnverified", {
+                  list: unchecked.map((card) => t(`cards.${card.key}.title`)).join(", "),
+                })}
+          </p>
         ) : (
           <ul className="pf-int-attention">
             {mergeSameCause(items).map((item) => {
@@ -299,7 +312,7 @@ export function IntegrationsPage() {
             ))}
           </div>
         </section>
-        <AttentionSection items={data.attention} editable={editable} />
+        <AttentionSection items={data.attention} cards={data.cards} editable={editable} />
         {editable ? (
           <Card>
             <CabinetAddress />

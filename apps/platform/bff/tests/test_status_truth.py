@@ -297,3 +297,35 @@ async def test_bus_dead_letters_are_broken_even_when_a_domain_is_silent(
     await web.login(["ADMIN"])
 
     assert (await web.client.get(BUS)).json()["fact"]["state"] == "broken"
+
+
+# --- плитка и список не расходятся (по fix_card строки) -----------------------------------
+
+FIX_PATHS = {
+    "erp": "/integrations?tab=erp",
+    "telegram": "/integrations?tab=bot",
+    "mail": "/integrations?tab=mail",
+    "models": "/models",
+    "storage": "/backups",
+}
+
+
+@pytest.mark.parametrize("card", list(FIX_PATHS))
+async def test_every_attention_row_points_at_a_card_that_is_not_green(
+    web: Web, crm: CrmIntegrationsFake, card: str
+) -> None:
+    """Сервис с любым ключом, чей `fix_path` ведёт на карточку, не может оставить её «Работает»."""
+    broken = service(f"{card}.extra_probe", "fail", fix_path=FIX_PATHS[card], switch=None)
+    broken.update(state="broken", owner="admin", action="open_settings")
+    rows = [*healthy_services()["services"], broken]
+    groups = [group(f"{card}.extra_probe", "broken", id=f"{card}.extra_probe:down")]
+    crm.answer("GET", "admin/external-services", 200, services_out(rows, groups))
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    rows_for_card = [a for a in body["attention"] if a["card"] == card]
+    assert rows_for_card, "строка «Требует внимания» должна вести на карточку"
+    for attention in body["attention"]:
+        state = cards(body)[attention["card"]]["fact"]["state"]
+        assert state not in ("works", "off"), (attention["id"], state)

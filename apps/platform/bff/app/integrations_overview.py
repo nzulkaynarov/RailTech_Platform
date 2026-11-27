@@ -139,8 +139,16 @@ def _is_model_service(service: ExternalService) -> bool:
     return service.key == "litellm" or service.key.startswith("vendor.")
 
 
-def _by_key(services: list[ExternalService], keys: frozenset[str]) -> list[ExternalService]:
-    return [s for s in services if s.key in keys]
+def _card_services(parts: Parts, card: CardKey, keys: frozenset[str]) -> list[ExternalService]:
+    """Сервисы плитки: те, что назвал разработчик (`keys`), и все, чья строка «Требует внимания»
+    ведёт на эту карточку (`fix_card` сервиса или его группы) — плитка и список не расходятся."""
+    data = parts.services.data
+    grouped = (
+        {k for g in data.groups if g.fix_card == card for k in g.service_keys} if data else set()
+    )
+    return [
+        s for s in _services_of(parts) if s.key in keys or s.fix_card == card or s.key in grouped
+    ]
 
 
 def _level(service: ExternalService) -> Level:
@@ -253,7 +261,7 @@ def _erp_card(parts: Parts) -> IntegrationCard:
     access = _access(*needed)
     if access != "ok":
         return _blank("erp", access)
-    services = _by_key(_services_of(parts), ERP_KEYS)
+    services = _card_services(parts, "erp", ERP_KEYS)
     connector = parts.erp.data
     if connector is not None and not connector.configured:
         return _card("erp", "off", "not_configured", parts, probes=[], complete=_complete(*needed))
@@ -285,20 +293,25 @@ def _telegram_card(parts: Parts) -> IntegrationCard:
         return _blank("telegram", access)
     service = next((s for s in _services_of(parts) if s.key == "telegram"), None)
     connector = parts.telegram.data
-    status: Level = _level(service) if service else "unknown"
+    related = _card_services(parts, "telegram", frozenset({"telegram"}))
+    status: Level = worst([_level(s) for s in related]) if related else "unknown"
     common: dict[str, Any] = {
-        "probes": [_probe(service)],
+        "probes": _live(related) if related else [None],
         "complete": _complete(*needed),
-        "stale": service.stale if service else False,
+        "stale": _any_stale(related),
     }
+    extra_problems = _problems([s for s in related if s is not service])
     if connector is not None and not connector.configured:
         return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if service is not None and service.status == "off":
         return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if _paused(service):
         return _card("telegram", "off", "paused", parts, probes=[])
-    if service is not None and service.state in ("broken", "unstable", "degraded"):
-        return _card("telegram", status, "problems", parts, count=1, **common)
+    own = 1 if service is not None and service.state in ("broken", "unstable", "degraded") else 0
+    if own or extra_problems:
+        return _card(
+            "telegram", status, "problems", parts, count=own + len(extra_problems), **common
+        )
     if service is not None and service.state == "expected":
         return _card("telegram", "off", "not_configured", parts, probes=[], complete=True)
     if connector is not None and connector.configured and not connector.running:
@@ -314,7 +327,7 @@ def _mail_card(parts: Parts) -> IntegrationCard:
     access = _access(parts.services)
     if access != "ok":
         return _blank("mail", access)
-    services = _by_key(_services_of(parts), MAIL_KEYS)
+    services = _card_services(parts, "mail", MAIL_KEYS)
     sending = next((s for s in services if s.key == "mail"), None)
     if sending is None:
         return _card("mail", "unknown", "no_data", parts, probes=[None])
@@ -356,7 +369,8 @@ def _models_card(parts: Parts) -> IntegrationCard:
     access = _access(*needed)
     if access != "ok":
         return _blank("models", access)
-    registry = [s for s in _services_of(parts) if _is_model_service(s)]
+    model_keys = frozenset(s.key for s in _services_of(parts) if _is_model_service(s))
+    registry = _card_services(parts, "models", model_keys)
     models = parts.models.data.items if parts.models.data else []
     levels: list[Level] = [_level(s) for s in registry] + [
         _model_level(m.health) for m in models if not _provider_covered(parts, m.provider)
@@ -422,7 +436,7 @@ def _storage_card(parts: Parts) -> IntegrationCard:
     access = _access(*needed)
     if access != "ok":
         return _blank("storage", access)
-    services = _by_key(_services_of(parts), STORAGE_KEYS)
+    services = _card_services(parts, "storage", STORAGE_KEYS)
     levels: list[Level] = [_level(s) for s in services]
     backups = parts.backups.data
     note: Note | None = None

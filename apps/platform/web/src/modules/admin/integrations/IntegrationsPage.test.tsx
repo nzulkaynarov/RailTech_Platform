@@ -257,6 +257,43 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(within(models).queryByText("Работает")).toBeNull();
   });
 
+  it("пустой «Требует внимания» не говорит «Всё в порядке», пока есть непроверенное или устаревшее", async () => {
+    signIn("admin@demo.example");
+    const stale = { state: "stale", checked_at: null, source: "check", live: false };
+    server.use(
+      http.get("*/admin/integrations", async () => {
+        const { overviewWith } = await import("../../../mocks/statusScenarios");
+        return HttpResponse.json(
+          overviewWith({
+            mail: stale as never,
+            telegram: { ...stale, state: "not_verified" } as never,
+          }),
+        );
+      }),
+    );
+    renderAt("/admin/integrations");
+
+    expect(
+      await screen.findByText(/Проблем не найдено, но не всё проверено: Telegram, Почта/),
+    ).toBeVisible();
+    expect(screen.queryByText(/Всё в порядке: сбоев/)).toBeNull();
+  });
+
+  it("пустой «Требует внимания» при свежих проверках — «Всё в порядке»", async () => {
+    signIn("admin@demo.example");
+    server.use(
+      http.get("*/admin/integrations", async () => {
+        const { overviewWith } = await import("../../../mocks/statusScenarios");
+        return HttpResponse.json(overviewWith());
+      }),
+    );
+    renderAt("/admin/integrations");
+
+    expect(
+      await screen.findByText(/Всё в порядке: сбоев и неподключённых сервисов нет/),
+    ).toBeVisible();
+  });
+
   it("Раздел «Контакты» не ответил целиком: понятный текст и «Повторить»", async () => {
     signIn("admin@demo.example");
     server.use(

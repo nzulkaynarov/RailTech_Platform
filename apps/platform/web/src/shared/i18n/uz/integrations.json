@@ -112,7 +112,8 @@
     "paused": "Xizmat qölda öçirilgan.",
     "budget_over": "Limit oşib ketdi:",
     "budget_near": "Limitga yaqin:",
-    "checkFailed": "Tekşirib bölmadi: server javob bermadi, şuning uçun hozir işlayaptimi — nomaʼlum."
+    "checkFailed": "Tekşirib bölmadi: server javob bermadi, şuning uçun hozir işlayaptimi — nomaʼlum.",
+    "emptyUnverified": "Muammo topilmadi, lekin hammasi tekşirilmagan: {{list}}."
   },
   "common": {
     "check": "Tekşiriş",

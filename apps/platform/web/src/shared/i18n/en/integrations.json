@@ -112,7 +112,8 @@
     "paused": "The service was switched off manually.",
     "budget_over": "Limit exceeded:",
     "budget_near": "Close to the limit:",
-    "checkFailed": "Could not check: the server did not answer, so it is not known whether this works now."
+    "checkFailed": "Could not check: the server did not answer, so it is not known whether this works now.",
+    "emptyUnverified": "No problems found, but not everything has been checked: {{list}}."
   },
   "common": {
     "check": "Check",
