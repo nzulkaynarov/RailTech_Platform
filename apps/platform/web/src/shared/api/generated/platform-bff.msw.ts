@@ -24,6 +24,8 @@ import {
   CalcState,
   CalcVisaState,
   CalcZone,
+  CapabilityActionLevel,
+  CapabilityLevel,
   CatalogItemKind,
   CatalogOfferSource,
   CatalogProposalField,
@@ -141,6 +143,7 @@ import type {
   CalendarLink,
   CalendarLinkIssued,
   CallNoteView,
+  CapabilityMatrix,
   CatalogCategory,
   CatalogCategoryList,
   CatalogDuplicateRef,
@@ -228,6 +231,7 @@ import type {
   EmailTemplateList,
   EmailTemplatePreview,
   Employee,
+  EmployeeCapabilities,
   EmployeeCredentials,
   EmployeeList,
   EnrolledSession,
@@ -18368,6 +18372,623 @@ export const getCreateResponsibilityZoneResponseMock = (
     }),
   ),
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetCapabilityMatrixResponseMock = (
+  overrideResponse: Partial<Extract<CapabilityMatrix, object>> = {},
+): CapabilityMatrix => ({
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      step: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      name: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      capabilities: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: {
+          ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        levels: faker.helpers.arrayElements(Object.values(CapabilityActionLevel)),
+      })),
+    }),
+  ),
+  employees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      person: {
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        avatar_url: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      },
+      roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          system: faker.datatype.boolean(),
+          code: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        }),
+      ),
+      cells: {
+        [faker.string.alphanumeric(5)]: {
+          level: faker.helpers.arrayElement(Object.values(CapabilityLevel)),
+          partial: faker.datatype.boolean(),
+        },
+      },
+      signing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          limit: faker.helpers.arrayElement([
+            {
+              amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+              currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+            },
+            undefined,
+          ]),
+          basis: faker.helpers.arrayElement(["charter", "order", "power_of_attorney"] as const),
+          basis_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+          valid_to: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        }),
+      ),
+      zones: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: {
+            ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          role: faker.helpers.arrayElement(["responsible", "deputy", "curator"] as const),
+          valid_to: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        }),
+      ),
+      deputy: faker.helpers.arrayElement([
+        {
+          user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          date_from: faker.date.past().toISOString().slice(0, 10),
+          date_to: faker.date.past().toISOString().slice(0, 10),
+        },
+        undefined,
+      ]),
+    }),
+  ),
+  signing_known: faker.datatype.boolean(),
+  zones_known: faker.datatype.boolean(),
+  warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "only_decider",
+        "nobody_decides",
+        "visa_without_signing",
+      ] as const),
+      capability: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      person: faker.helpers.arrayElement([
+        {
+          id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+          position: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+          avatar_url: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        },
+        undefined,
+      ]),
+      has_deputy: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    }),
+  ),
+  free_for_all: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEmployeeCapabilitiesResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCapabilities, object>> = {},
+): EmployeeCapabilities => ({
+  employee: {
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  summary: {
+    does: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+    decides: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+    lacks: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+  },
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      step: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      name: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      rows: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: {
+            ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          level: faker.helpers.arrayElement(Object.values(CapabilityLevel)),
+          partial: faker.datatype.boolean(),
+          levels: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            level: faker.helpers.arrayElement(Object.values(CapabilityActionLevel)),
+            actions: Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => ({
+              key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              text: {
+                ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+                uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+                en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              },
+              on: faker.datatype.boolean(),
+              gates: Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+            })),
+          })),
+          from_roles: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            system: faker.datatype.boolean(),
+            code: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+          })),
+          others: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, (_, i) => i + 1).map(
+            () => ({
+              id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+              name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+              position: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                undefined,
+              ]),
+              avatar_url: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                undefined,
+              ]),
+            }),
+          ),
+          others_total: faker.number.int({ min: 0 }),
+        }),
+      ),
+    }),
+  ),
+  signing_known: faker.datatype.boolean(),
+  signing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      limit: faker.helpers.arrayElement([
+        {
+          amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+          currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+        },
+        undefined,
+      ]),
+      basis: faker.helpers.arrayElement(["charter", "order", "power_of_attorney"] as const),
+      basis_number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      valid_to: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+    }),
+  ),
+  zones_known: faker.datatype.boolean(),
+  zones: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    role: faker.helpers.arrayElement(["responsible", "deputy", "curator"] as const),
+    valid_to: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "only_decider",
+        "nobody_decides",
+        "visa_without_signing",
+      ] as const),
+      capability: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      person: faker.helpers.arrayElement([
+        {
+          id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+          position: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+          avatar_url: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        },
+        undefined,
+      ]),
+      has_deputy: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    }),
+  ),
+  free_for_all: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  grantors: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      avatar_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+    })),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetMyCapabilitiesResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCapabilities, object>> = {},
+): EmployeeCapabilities => ({
+  employee: {
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  summary: {
+    does: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+    decides: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+    lacks: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
+  },
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      step: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      name: {
+        ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      rows: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: {
+            ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          },
+          level: faker.helpers.arrayElement(Object.values(CapabilityLevel)),
+          partial: faker.datatype.boolean(),
+          levels: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            level: faker.helpers.arrayElement(Object.values(CapabilityActionLevel)),
+            actions: Array.from(
+              { length: faker.number.int({ min: 1, max: 10 }) },
+              (_, i) => i + 1,
+            ).map(() => ({
+              key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              text: {
+                ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+                uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+                en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              },
+              on: faker.datatype.boolean(),
+              gates: Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+            })),
+          })),
+          from_roles: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            system: faker.datatype.boolean(),
+            code: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+          })),
+          others: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, (_, i) => i + 1).map(
+            () => ({
+              id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+              name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+              position: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                undefined,
+              ]),
+              avatar_url: faker.helpers.arrayElement([
+                faker.string.alpha({ length: { min: 10, max: 20 } }),
+                undefined,
+              ]),
+            }),
+          ),
+          others_total: faker.number.int({ min: 0 }),
+        }),
+      ),
+    }),
+  ),
+  signing_known: faker.datatype.boolean(),
+  signing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      limit: faker.helpers.arrayElement([
+        {
+          amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+          currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+        },
+        undefined,
+      ]),
+      basis: faker.helpers.arrayElement(["charter", "order", "power_of_attorney"] as const),
+      basis_number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      valid_to: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+    }),
+  ),
+  zones_known: faker.datatype.boolean(),
+  zones: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    role: faker.helpers.arrayElement(["responsible", "deputy", "curator"] as const),
+    valid_to: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement([
+        "only_decider",
+        "nobody_decides",
+        "visa_without_signing",
+      ] as const),
+      capability: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      person: faker.helpers.arrayElement([
+        {
+          id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+          position: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+          avatar_url: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            undefined,
+          ]),
+        },
+        undefined,
+      ]),
+      has_deputy: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    }),
+  ),
+  free_for_all: {
+    ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  grantors: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      avatar_url: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -50804,6 +51425,78 @@ export const getCreateResponsibilityZoneMockHandler = (
   );
 };
 
+export const getGetCapabilityMatrixMockHandler = (
+  overrideResponse?:
+    | CapabilityMatrix
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CapabilityMatrix> | CapabilityMatrix),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/capabilities",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCapabilityMatrixResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEmployeeCapabilitiesMockHandler = (
+  overrideResponse?:
+    | EmployeeCapabilities
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EmployeeCapabilities> | EmployeeCapabilities),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/users/:id/capabilities",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEmployeeCapabilitiesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetMyCapabilitiesMockHandler = (
+  overrideResponse?:
+    | EmployeeCapabilities
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EmployeeCapabilities> | EmployeeCapabilities),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/capabilities",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetMyCapabilitiesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetResponsibilityZonesSummaryMockHandler = (
   overrideResponse?:
     | ZoneSummary
@@ -58695,6 +59388,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDeleteRoleMockHandler(),
   getListResponsibilityZonesMockHandler(),
   getCreateResponsibilityZoneMockHandler(),
+  getGetCapabilityMatrixMockHandler(),
+  getGetEmployeeCapabilitiesMockHandler(),
+  getGetMyCapabilitiesMockHandler(),
   getGetResponsibilityZonesSummaryMockHandler(),
   getGetResponsibilityZoneMockHandler(),
   getUpdateResponsibilityZoneMockHandler(),

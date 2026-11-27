@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import ContainerDep, require
+from app.api.v1.me import Settled
 from app.schemas.responsibility_zones import (
     ResponsibilityZoneCreate,
     ResponsibilityZoneList,
@@ -75,6 +76,22 @@ def to_out(view: ZoneView) -> ResponsibilityZoneOut:
 async def list_zones(_: Reader, container: ContainerDep) -> ResponsibilityZoneList:
     zones = await container.responsibility_zone_service.list_zones()
     return ResponsibilityZoneList(items=[to_out(z) for z in zones])
+
+
+@router.get("/mine", response_model=ResponsibilityZoneList)
+async def my_zones(who: Settled, container: ContainerDep) -> ResponsibilityZoneList:
+    """Зоны, где работающий — ответственный, замещающий или куратор (ДОСТ-1, «Мои возможности»).
+
+    Только свои записи, права `users:read` не нужны.
+    """
+    zones = await container.responsibility_zone_service.list_zones()
+    mine = [
+        z
+        for z in zones
+        if z.is_active
+        and any(p is not None and p.id == who.user_id for p in (z.responsible, z.deputy, z.curator))
+    ]
+    return ResponsibilityZoneList(items=[to_out(z) for z in mine])
 
 
 @router.get("/summary", response_model=ResponsibilityZoneSummary)

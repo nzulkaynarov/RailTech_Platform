@@ -23,6 +23,9 @@ afterEach(() => {
   endSession();
 });
 
+/** Кнопка «Нет доступа»: общая («Написать администратору») или с названием возможности («Попросить возможность», ДОСТ-1). */
+const ASK = /^(Написать администратору|Попросить возможность)$/;
+
 /** Пункт открытого выпадающего списка antd по подписи. */
 async function option(label: string): Promise<Element> {
   return waitFor(() => {
@@ -35,7 +38,7 @@ async function option(label: string): Promise<Element> {
 async function writeFromForbidden(text: string) {
   signInAs("manager@demo.example");
   renderApp("/admin/org");
-  fireEvent.click(await screen.findByRole("button", { name: "Написать администратору" }));
+  fireEvent.click(await screen.findByRole("button", { name: ASK }));
   const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
   fireEvent.change(within(dialog).getByRole("textbox", { name: "Что случилось" }), {
     target: { value: text },
@@ -47,11 +50,15 @@ describe("Обращения к администратору", () => {
   it("«Нет доступа»: тема «Нужен доступ» выбрана, страница и роль приложены; пустой текст не уходит", async () => {
     signInAs("manager@demo.example");
     renderApp("/admin/org");
-    fireEvent.click(await screen.findByRole("button", { name: "Написать администратору" }));
+    fireEvent.click(await screen.findByRole("button", { name: ASK }));
     const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
     expect(within(dialog).getByText("Нужен доступ к разделу")).toBeInTheDocument();
     expect(within(dialog).getByText(/страница \/admin\/org, роль Менеджер/)).toBeInTheDocument();
 
+    // название возможности в тексте обращения уже есть (ДОСТ-1): «пусто» проверяем, стерев его
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Что случилось" }), {
+      target: { value: "" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
     expect(await within(dialog).findByText("Опишите, что случилось")).toBeInTheDocument();
     expect(within(dialog).getByRole("textbox", { name: "Что случилось" })).toHaveAttribute(
@@ -63,7 +70,7 @@ describe("Обращения к администратору", () => {
   it("в обращение уходит только путь страницы, без query (там бывают чужие данные)", async () => {
     signInAs("manager@demo.example");
     renderApp("/admin/org?q=secret-client&employee=u-1");
-    fireEvent.click(await screen.findByRole("button", { name: "Написать администратору" }));
+    fireEvent.click(await screen.findByRole("button", { name: ASK }));
     const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
     expect(within(dialog).getByText(/страница \/admin\/org,/)).toBeInTheDocument();
     fireEvent.change(within(dialog).getByRole("textbox", { name: "Что случилось" }), {
@@ -212,11 +219,7 @@ describe("Обращения к администратору", () => {
     signInAs("manager@demo.example");
     renderApp("/help/requests");
     for (let i = 1; i <= 6; i += 1) {
-      fireEvent.click(
-        (
-          await screen.findAllByRole("button", { name: "Написать администратору" })
-        )[0] as HTMLElement,
-      );
+      fireEvent.click((await screen.findAllByRole("button", { name: ASK }))[0] as HTMLElement);
       const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
       fireEvent.mouseDown(within(dialog).getByRole("combobox"));
       fireEvent.click(await option("Другое"));

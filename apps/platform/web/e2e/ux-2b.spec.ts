@@ -83,7 +83,7 @@ const ROUTES = [
   "/chats",
   // Настройки (SET-IA): индекс и страницы всех пяти групп
   "/admin",
-  "/admin/org",
+  "/admin/org?view=list",
   "/admin/roles",
   "/admin/company",
   "/admin/numbering",

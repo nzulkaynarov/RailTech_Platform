@@ -111,7 +111,7 @@ for (const width of WIDTHS) {
     test("выдача роли — со свежим кодом; сброс фактора с причиной", async ({ page }) => {
       await scenario(page, { stepUp: true, withFactor: ["u-demo-admin"] });
       await loginAndWait(page, "admin@demo.example");
-      await spaGoto(page, "/admin/org");
+      await spaGoto(page, "/admin/org?view=list");
       await page.getByRole("link", { name: "Открыть карточку: Демо Менеджеров" }).click();
       const panel: Locator = page.locator("#pf-context-panel, .pf-crm-sheet").last();
       await expect(panel.getByRole("heading", { level: 3, name: "Демо Менеджеров" })).toBeVisible();

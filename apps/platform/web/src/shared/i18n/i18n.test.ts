@@ -46,6 +46,7 @@ describe("i18n", () => {
     "legal",
     "signing",
     "zones",
+    "capabilities",
     "stock",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {

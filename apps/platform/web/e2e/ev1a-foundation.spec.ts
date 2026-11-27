@@ -78,7 +78,7 @@ test.describe("Общая рамка списка", () => {
 
   test("Сотрудники: выбранная строка закрашена", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     const table = page.getByRole("table", { name: "Сотрудники" });
     await expect(table.getByRole("row").nth(1)).toBeVisible();
     expect((await look(page)).headAlign).toBe("left");

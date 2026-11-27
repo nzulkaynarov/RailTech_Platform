@@ -55,8 +55,10 @@ test.describe("Мелкие дефекты гейта волны 15", () => {
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
-    await page.goto("/admin/org");
-    await page.getByRole("button", { name: "Написать администратору" }).click();
+    await page.goto("/admin/org?view=list");
+    await page
+      .getByRole("button", { name: /^(Написать администратору|Попросить возможность)$/ })
+      .click();
     const dialog = page.getByRole("dialog", { name: "Написать администратору" });
     await dialog
       .getByRole("textbox", { name: "Что случилось" })

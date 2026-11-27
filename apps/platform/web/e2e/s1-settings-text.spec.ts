@@ -81,7 +81,7 @@ test.describe("S1 · Настройки короче", () => {
         ["/admin/setup", "Первый запуск", "s1-setup"],
         ["/admin", "Состояние", "s1-index"],
         ["/admin/roles", "Роли и права", "s1-roles"],
-        ["/admin/org", "Сотрудники", "s1-org"],
+        ["/admin/org?view=list", "Сотрудники", "s1-org"],
       ] as const) {
         await spaGoto(page, path);
         await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();

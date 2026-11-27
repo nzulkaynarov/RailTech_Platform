@@ -133,7 +133,7 @@ for (const width of [1440, 390] as const) {
       await own.apply.click();
       await expect(page.getByText("Фото обновлено")).toBeVisible();
 
-      await spaGoto(page, "/admin/org");
+      await spaGoto(page, "/admin/org?view=list");
       await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
       await expect(page.locator(".pf-entity__pic img").first()).toHaveAttribute(
         "src",

@@ -6,3 +6,4 @@ playwright-report
 src/app/tokens.generated.css
 src/generated/kb-docs
 src/generated/help-articles
+src/mocks/fixtures/capabilities.generated.json

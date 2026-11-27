@@ -8191,6 +8191,71 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /admin/capabilities:
+    get:
+      tags: [admin]
+      operationId: getCapabilityMatrix
+      summary: «Кто что может» — таблица возможностей всех действующих сотрудников (только чтение)
+      description: >-
+        ДОСТ-1. Что каждый сотрудник может СЕГОДНЯ, словами по ходу сделки: ~30 строк-возможностей с уровнями «смотреть /
+        работать / решать» и пометкой «не всё». Считается из ролей сотрудника (объединение), кодов бэкендов CRM, ERP и EDS и
+        каталога `platform-capabilities.yaml`; ничего не выдаёт и не меняет, расчёт доступа не затрагивает. Подпись (EDS) и
+        зоны (CRM) читаются правами читающего; если их читать нечем, `signing_known` / `zones_known` = false — это «не известно»,
+        а не «нет». `warnings` — «единственный, кто решает», «никто не решает», «визирует договоры, а права подписи нет».
+        Раздел `admin` — от чтения.
+      responses:
+        '200':
+          description: Таблица
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilityMatrix'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/users/{id}/capabilities:
+    get:
+      tags: [admin]
+      operationId: getEmployeeCapabilities
+      summary: «Что может этот человек» — карточка возможностей сотрудника (только чтение)
+      description: >-
+        ДОСТ-1. Итог словами из текстов каталога (без модели), строки по шагам сделки с действиями «включено / выключено»,
+        откуда строка (`from_roles`), кто ещё может (`others`), подпись, зоны («отвечает за»), замещение, предупреждения по
+        этому человеку. Раздел `admin` — от чтения. Отключённый сотрудник тоже открывается.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Карточка возможностей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCapabilities'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/capabilities:
+    get:
+      tags: [admin]
+      operationId: getMyCapabilities
+      summary: «Мои возможности» — то же про себя (только чтение)
+      description: >-
+        ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит
+        администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и
+        зоны — свои записи, их читает любой сотрудник (CRM `/responsibility-zones/mine`, EDS `/signing/mine`); не прочиталось — `signing_known` / `zones_known` = false.
+      responses:
+        '200':
+          description: Мои возможности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCapabilities'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
   /admin/responsibility-zones/summary:
     get:
       tags: [admin]
@@ -19190,6 +19255,244 @@ components:
           items:
             $ref: '#/components/schemas/ZoneProblem'
         updated_at: {type: string, format: date-time}
+
+    CapabilityText:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      properties:
+        ru: {type: string}
+        uz: {type: string, description: 'Латиница нового алфавита (Ö Ğ Ş Ç, ʼ)'}
+        en: {type: string}
+
+    CapabilityLevel:
+      type: string
+      enum: [none, view, work, decide]
+      description: Нет / смотреть / работать / решать («решать» — визы, одобрения, резолюции, подтверждение оплаты)
+
+    CapabilityActionLevel:
+      type: string
+      enum: [view, work, decide]
+
+    CapabilityPerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, initials]
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$'}
+        name: {type: string}
+        initials: {type: string, maxLength: 3}
+        position: {type: string}
+        avatar_url: {type: string}
+
+    CapabilityAction:
+      type: object
+      additionalProperties: false
+      required: [key, text, 'on', gates]
+      properties:
+        key: {type: string}
+        text: {$ref: '#/components/schemas/CapabilityText'}
+        'on': {type: boolean, description: 'Включено: бэкенды разрешают это действие сотруднику сегодня'}
+        gates:
+          type: array
+          items: {type: string}
+          description: 'Условия BFF «раздел:уровень»; через «|» — любое из. По ним экран «Нет доступа» называет возможность'
+
+    CapabilityLevelActions:
+      type: object
+      additionalProperties: false
+      required: [level, actions]
+      properties:
+        level: {$ref: '#/components/schemas/CapabilityActionLevel'}
+        actions:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityAction'}
+
+    CapabilityRow:
+      type: object
+      additionalProperties: false
+      required: [key, group, name, level, partial, levels, from_roles, others, others_total]
+      properties:
+        key: {type: string}
+        group: {type: string}
+        name: {$ref: '#/components/schemas/CapabilityText'}
+        level: {$ref: '#/components/schemas/CapabilityLevel'}
+        partial:
+          type: boolean
+          description: «Не всё» — выключено хоть одно действие этого или нижнего уровня
+        levels:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityLevelActions'}
+        from_roles:
+          type: array
+          items: {$ref: '#/components/schemas/RoleRef'}
+          description: Роли, каждая из которых сама даёт строке уровень выше «нет»
+        others:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/CapabilityPerson'}
+          description: Кто ещё держит строку на этом уровне или выше (только карточка человека)
+        others_total: {type: integer, minimum: 0}
+
+    CapabilityGroup:
+      type: object
+      additionalProperties: false
+      required: [key, step, name, rows]
+      properties:
+        key: {type: string}
+        step: {$ref: '#/components/schemas/CapabilityText'}
+        name: {$ref: '#/components/schemas/CapabilityText'}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityRow'}
+
+    CapabilitySummary:
+      type: object
+      additionalProperties: false
+      description: Итог словами из текстов каталога, без модели; нет поля — сказать нечего
+      properties:
+        does: {$ref: '#/components/schemas/CapabilityText'}
+        decides: {$ref: '#/components/schemas/CapabilityText'}
+        lacks: {$ref: '#/components/schemas/CapabilityText'}
+
+    CapabilityZone:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, role]
+      properties:
+        id: {type: string}
+        code: {type: string}
+        name: {$ref: '#/components/schemas/ZoneText'}
+        role: {type: string, enum: [responsible, deputy, curator]}
+        valid_to: {type: string}
+
+    CapabilityAuthority:
+      type: object
+      additionalProperties: false
+      required: [id, kinds, basis]
+      properties:
+        id: {type: string}
+        kinds:
+          type: array
+          items: {type: string}
+          description: Коды видов документов реестра прав подписи
+        limit: {$ref: '#/components/schemas/EdsMoney'}
+        basis: {type: string, enum: [charter, order, power_of_attorney]}
+        basis_number: {type: string}
+        valid_to: {type: string}
+
+    CapabilityWarning:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: {type: string, enum: [only_decider, nobody_decides, visa_without_signing]}
+        capability: {type: string}
+        person: {$ref: '#/components/schemas/CapabilityPerson'}
+        has_deputy: {type: boolean}
+
+    EmployeeCapabilities:
+      type: object
+      additionalProperties: false
+      required: [employee, roles, summary, groups, signing_known, signing, zones_known, zones, warnings, free_for_all]
+      properties:
+        employee: {$ref: '#/components/schemas/CapabilityPerson'}
+        roles:
+          type: array
+          items: {$ref: '#/components/schemas/RoleRef'}
+        summary: {$ref: '#/components/schemas/CapabilitySummary'}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityGroup'}
+        signing_known: {type: boolean}
+        signing:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityAuthority'}
+        zones_known: {type: boolean}
+        zones:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityZone'}
+        deputy: {$ref: '#/components/schemas/DeputyPeriod'}
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityWarning'}
+        free_for_all: {$ref: '#/components/schemas/CapabilityText'}
+        grantors:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityPerson'}
+          description: >-
+            Только `/me/capabilities`: действующие сотрудники, которые выдают возможности («Сотрудники и возможности — работать»,
+            раздел `admin` на изменение). Пустой список — выдать некому; нет поля — не известно.
+
+    CapabilityMatrixCell:
+      type: object
+      additionalProperties: false
+      required: [level, partial]
+      properties:
+        level: {$ref: '#/components/schemas/CapabilityLevel'}
+        partial: {type: boolean}
+
+    CapabilityMatrixCapability:
+      type: object
+      additionalProperties: false
+      required: [key, name, levels]
+      properties:
+        key: {type: string}
+        name: {$ref: '#/components/schemas/CapabilityText'}
+        levels:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityActionLevel'}
+
+    CapabilityMatrixGroup:
+      type: object
+      additionalProperties: false
+      required: [key, step, name, capabilities]
+      properties:
+        key: {type: string}
+        step: {$ref: '#/components/schemas/CapabilityText'}
+        name: {$ref: '#/components/schemas/CapabilityText'}
+        capabilities:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityMatrixCapability'}
+
+    CapabilityMatrixEmployee:
+      type: object
+      additionalProperties: false
+      required: [person, roles, cells, signing, zones]
+      properties:
+        person: {$ref: '#/components/schemas/CapabilityPerson'}
+        roles:
+          type: array
+          items: {$ref: '#/components/schemas/RoleRef'}
+        cells:
+          type: object
+          additionalProperties: {$ref: '#/components/schemas/CapabilityMatrixCell'}
+          description: Ключ — `key` строки каталога
+        signing:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityAuthority'}
+        zones:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityZone'}
+        deputy: {$ref: '#/components/schemas/DeputyPeriod'}
+
+    CapabilityMatrix:
+      type: object
+      additionalProperties: false
+      required: [groups, employees, signing_known, zones_known, warnings, free_for_all]
+      properties:
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityMatrixGroup'}
+        employees:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityMatrixEmployee'}
+        signing_known: {type: boolean}
+        zones_known: {type: boolean}
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityWarning'}
+        free_for_all: {$ref: '#/components/schemas/CapabilityText'}
 
     ZoneList:
       type: object
