@@ -1,7 +1,7 @@
 """Метрики эксплуатации для монитора и дневного отчёта (SPEC §13)."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select, text
@@ -148,3 +148,14 @@ async def _top_gaps(session: AsyncSession) -> tuple[str, ...]:
         .limit(TOP_GAPS)
     )
     return tuple((await session.scalars(stmt)).all())
+
+
+WORKER_ALIVE = text(
+    "SELECT EXISTS (SELECT 1 FROM procrastinate_workers WHERE last_heartbeat > :after)"
+)
+
+
+async def worker_alive(session: AsyncSession, now: datetime, within_s: float = 90.0) -> bool:
+    """Есть ли воркер очереди с недавним сердцебиением: «воркер стоит» или «задача зависла»?"""
+    after = now - timedelta(seconds=within_s)
+    return bool((await session.execute(WORKER_ALIVE, {"after": after})).scalar_one())

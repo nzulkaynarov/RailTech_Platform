@@ -7,14 +7,18 @@
 import procrastinate
 
 from app.config import get_settings
+from app.tasks.policy import enforce_timeout
 
 TASK_MODULES = (
     "app.tasks.bus",
     "app.tasks.maintenance",
     "app.tasks.renders",
+    "app.tasks.stalled",
 )
 
 queue = procrastinate.App(
     connector=procrastinate.PsycopgConnector(conninfo=get_settings().libpq_dsn),
     import_paths=TASK_MODULES,
+    # Предельное время задачи (ЗАВИС-1): зависший вызов не оставляет задачу в `doing` навсегда.
+    worker_defaults={"worker_middleware": [enforce_timeout]},
 )
