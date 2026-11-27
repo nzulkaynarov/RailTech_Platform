@@ -893,8 +893,10 @@ jobs:
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
       # Shell-тесты выкладки (infra/deploy/tests/*-test.sh), shellcheck скриптов и actionlint deploy.yml — тот же `make deploy-check`
       # (CI-1: раньше в CI их не было, только локально).
+      # От root: тесты кладут файлы в общий с контейнером каталог от имени root контейнера, а на раннере docker не rootless
+      # (локально — rootless, поэтому offsite-sync-test падал здесь с «Permission denied»).
       - name: make deploy-check (shell-тесты выкладки, shellcheck, actionlint)
-        run: make deploy-check
+        run: sudo env "PATH=$PATH" make deploy-check
 
   # ─── CPU прод-VPS: старт каждого образа под qemu64 (S0-7, ADR-0013 п. 8) ────────────────────────────────────────────────────
   # Прод-VPS отдают «QEMU Virtual CPU 2.5+» — базовый x86-64 без v2 (docs/runbooks/servers.md). Образ, которому нужен v2, падает здесь,
