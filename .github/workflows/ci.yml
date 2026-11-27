@@ -28,7 +28,7 @@ on:
   merge_group:
     types: [checks_requested]
   schedule:
-    - cron: "17 1 * * *"  # 01:17 UTC (06:17 по Ташкенту); GitHub запускает расписание только на ветке по умолчанию
+    - cron: "30 18 * * *"  # 18:30 UTC (23:30 по Ташкенту): полный прогон кончается до выкладки в 01:00; GitHub запускает расписание только на ветке по умолчанию (CI-1)
   workflow_dispatch:
 
 # Устаревший прогон PR отменяется новым. Прогон push в main — своя группа на каждый sha и не отменяется (иначе «CI ok»
@@ -78,7 +78,7 @@ jobs:
           # push: фильтру нужен коммит до push (при необходимости он докачивает глубже сам); PR читает список файлов через API;
           # merge_group: сравнение вершины main (base_sha) с проверяемым коммитом очереди (head_sha)
           fetch-depth: ${{ github.event_name != 'pull_request' && 100 || 1 }}
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
         if: contains(fromJSON('["pull_request","push","merge_group"]'), github.event_name)
         id: filter
         with:
@@ -243,7 +243,7 @@ jobs:
         working-directory: apps/crm
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -291,7 +291,7 @@ jobs:
         working-directory: apps/crm
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -346,7 +346,7 @@ jobs:
             sleep 2
           done
           docker logs rustfs; exit 1
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -377,8 +377,8 @@ jobs:
               contracts=packages/contracts
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ${{ matrix.context }}
           build-contexts: ${{ matrix.contexts }}
@@ -396,7 +396,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -420,7 +420,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -431,21 +431,49 @@ jobs:
       - run: make -C apps/erp lint
 
   erp-backend:
-    name: ERP · pytest
+    name: ERP · pytest (шард ${{ matrix.shard }}/3)
     needs: changes
     if: needs.changes.outputs.erp == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 40
+    timeout-minutes: 30
+    # CI-1: три шарда по `--shard=i/3` (apps/erp/backend/core/pytest_shard.py: каждый третий тест отсортированного полного набора),
+    # у каждого свои Postgres и Redis; что шарды вместе = весь набор, проверяет erp-shards-check.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       # свой набор контейнеров и сеть на задание: на self-hosted раннере (CI_RUNNER) задания не пересекаются
-      ERP_TEST_NS: ci-${{ github.run_id }}-pytest
+      ERP_TEST_NS: ci-${{ github.run_id }}-pytest-${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v7
       # pytest в контейнере на одноразовых Postgres 17 и Redis (apps/erp/scripts/test_backend_local.sh)
-      - run: make -C apps/erp test-backend
+      - run: make -C apps/erp test-backend args="--shard=${{ matrix.shard }}/3 --shard-report=shard-report-${{ matrix.shard }}.json"
+      - uses: actions/upload-artifact@v7
+        if: success()
+        with:
+          name: erp-shard-report-${{ matrix.shard }}
+          path: apps/erp/backend/shard-report-${{ matrix.shard }}.json
+          retention-days: 1
       - name: Контейнеры тестов удалены
         if: always()
         run: apps/erp/scripts/test_backend_local.sh --down
+
+  # Шарды не пересекаются, а вместе дают ровно весь набор pytest ERP (иначе тест мог бы выпасть из CI незаметно).
+  erp-shards-check:
+    name: ERP · шарды = весь набор
+    needs: [changes, erp-backend]
+    if: needs.changes.outputs.erp == 'true' && needs.changes.outputs.heavy == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: erp-shard-report-*
+          path: shard-reports
+          merge-multiple: true
+      - run: python3 scripts/check_pytest_shards.py shard-reports --shards 3
 
   erp-schema:
     name: ERP · миграции и схема
@@ -458,7 +486,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # Миграции и схема идут в контейнере: кэша uv на раннере нет, а пустой кэш роняет пост-шаг setup-uv (DECISIONS 2026-11-14)
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -492,21 +520,24 @@ jobs:
 
   # ─── Платформа (apps/platform): bff на uv, web на pnpm ─────────────────────────────────────
 
-  platform:
-    name: Platform · check
+  # `platform` разрезан на параллельные задания (CI-1, DECISIONS 2026-11-27): один `make check-platform` шёл ~30 мин. Состав = цели
+  # apps/platform/Makefile (lint, typecheck, test, api-check, tokens-check, rbac-check, crm-models-check) — ничего не потеряно;
+  # локально `make check-platform` прежний. Установки берутся из кэша (uv, pnpm store), ставится только нужное заданию.
+  platform-lint:
+    name: Platform · lint
     needs: changes
     if: needs.changes.outputs.platform == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 50  # 35 давали отмены 2026-11-26 (main 42a7d9342, 46f74f989; #924, #933, #939) — тесты зелёные, обрывал лимит; шардинг — B-CIPLAT-1
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: apps/platform/bff/uv.lock
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           package_json_file: apps/platform/web/package.json
       - uses: actions/setup-node@v7
@@ -516,8 +547,110 @@ jobs:
           cache-dependency-path: apps/platform/web/pnpm-lock.yaml
       - name: Install
         run: make -C apps/platform install
-      # ruff, mypy, pytest (bff); eslint, prettier, tsc, vitest (web); клиент orval и токены свежие
-      - run: make check-platform
+      # ruff check/format (bff); eslint, prettier --check (web)
+      - run: make -C apps/platform lint
+
+  platform-types:
+    name: Platform · types
+    needs: changes
+    if: needs.changes.outputs.platform == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/platform/bff/uv.lock
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          package_json_file: apps/platform/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/platform/web/pnpm-lock.yaml
+      - name: Install
+        run: make -C apps/platform install
+      # mypy strict (bff); tsc -b (web)
+      - run: make -C apps/platform typecheck
+
+  platform-bff-test:
+    name: Platform · pytest (bff)
+    needs: changes
+    if: needs.changes.outputs.platform == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/platform/bff/uv.lock
+      - name: Install (bff)
+        working-directory: apps/platform/bff
+        run: uv sync --frozen
+      - name: pytest
+        working-directory: apps/platform/bff
+        run: uv run pytest
+
+  platform-web-test:
+    name: Platform · vitest (шард ${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.platform == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          package_json_file: apps/platform/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/platform/web/pnpm-lock.yaml
+      - name: Install (pnpm)
+        working-directory: apps/platform/web
+        run: pnpm install --frozen-lockfile
+      - name: vitest
+        working-directory: apps/platform/web
+        run: pnpm exec vitest run --shard=${{ matrix.shard }}/3
+
+  platform-contract-checks:
+    name: Platform · контракты и генерация
+    needs: changes
+    if: needs.changes.outputs.platform == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/platform/bff/uv.lock
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+        with:
+          package_json_file: apps/platform/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/platform/web/pnpm-lock.yaml
+      - name: Install
+        run: make -C apps/platform install
+      # клиент orval (api-check), токены, RBAC и capabilities, модели CRM из crm.yaml — свежие; diff = падение
+      - run: make -C apps/platform api-check tokens-check rbac-check crm-models-check
 
   # EDS: тесты идут против настоящего PostgreSQL (service-контейнер), как у rt-bus и CRM integration.
   eds:
@@ -542,7 +675,7 @@ jobs:
       EDS_TEST_DATABASE_URL: postgresql://rt:ci-only-password@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -561,21 +694,21 @@ jobs:
       - run: make check-eds
 
   # E2E Платформы (MSW, BFF не нужен) не ждёт `platform` (W14-S2): сборка `vite build --mode mock` + `vite preview`, а не dev-сервер
-  # (antd приходит готовыми чанками), три шарда `--shard=i/3`, повторов нет (retries=0 в playwright.config.ts: «flaky» = красный).
+  # (antd приходит готовыми чанками), шесть шардов `--shard=i/6` (CI-1), повторов нет (retries=0 в playwright.config.ts: «flaky» = красный).
   # Проект mobile (390) гоняет только сценарии с тегом @mobile. На push в main не идёт (heavy=false).
   platform-e2e:
-    name: Platform · e2e (шард ${{ matrix.shard }}/3)
+    name: Platform · e2e (шард ${{ matrix.shard }}/6)
     needs: changes
     if: needs.changes.outputs.platform == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           package_json_file: apps/platform/web/package.json
       - uses: actions/setup-node@v7
@@ -600,7 +733,7 @@ jobs:
         run: |
           pnpm exec playwright install chromium
           pnpm exec playwright install-deps chromium || echo "::warning::Системные пакеты Playwright не поставились (зеркала Ubuntu недоступны) — прогон на библиотеках образа раннера"
-          pnpm exec playwright test --shard=${{ matrix.shard }}/3
+          pnpm exec playwright test --shard=${{ matrix.shard }}/6
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -636,13 +769,13 @@ jobs:
             git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
             echo "CONTRACTS_BASE_REF=origin/main" >> "$GITHUB_ENV"
           fi
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: packages/contracts/uv.lock
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           package_json_file: packages/contracts/package.json
       - uses: actions/setup-node@v7
@@ -688,7 +821,7 @@ jobs:
       RT_BUS_REQUIRE_PG: "1"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -711,7 +844,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
@@ -730,7 +863,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.infra == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - name: .env из .env.example (без секретов)
@@ -758,6 +891,10 @@ jobs:
             -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org -e PLATFORM_DOMAIN=platform.example.org \
             -v "$PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" \
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
+      # Shell-тесты выкладки (infra/deploy/tests/*-test.sh), shellcheck скриптов и actionlint deploy.yml — тот же `make deploy-check`
+      # (CI-1: раньше в CI их не было, только локально).
+      - name: make deploy-check (shell-тесты выкладки, shellcheck, actionlint)
+        run: make deploy-check
 
   # ─── CPU прод-VPS: старт каждого образа под qemu64 (S0-7, ADR-0013 п. 8) ────────────────────────────────────────────────────
   # Прод-VPS отдают «QEMU Virtual CPU 2.5+» — базовый x86-64 без v2 (docs/runbooks/servers.md). Образ, которому нужен v2, падает здесь,
@@ -818,9 +955,9 @@ jobs:
       - name: Параметры сборки образа
         id: p
         run: scripts/qemu_cpu_check.sh params "${{ matrix.image }}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Сборка ${{ matrix.image }} (linux/amd64, кэш слоёв как в deploy.yml)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ steps.p.outputs.context }}
           file: ${{ steps.p.outputs.file }}
@@ -842,7 +979,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-audit, erp-lint, erp-backend, erp-schema, cabinet, platform, platform-e2e, eds, contracts, rt-bus, rt-docs, infra, cpu-rules, cpu-common, cpu-image]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-audit, erp-lint, erp-backend, erp-shards-check, erp-schema, cabinet, platform-lint, platform-types, platform-bff-test, platform-web-test, platform-contract-checks, platform-e2e, eds, contracts, rt-bus, rt-docs, infra, cpu-rules, cpu-common, cpu-image]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:

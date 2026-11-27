@@ -8,6 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, SystemRole, WorkspaceRole
 
+pytest_plugins = ["core.pytest_shard"]  # --shard=I/N, --shard-report (CI-1)
+
 User = get_user_model()
 
 # Шина читает подписки тестов (crm, erp), а не боевой список: новый подписчик боевого файла (platform-bff, коннекторы)
