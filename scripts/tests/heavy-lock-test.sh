@@ -66,4 +66,8 @@ if [[ "$(id -u)" != 0 ]]; then
   RT_HEAVY_LOCK_DIR="$tmp/ro" timeout 5 bash -c "set -euo pipefail; . '$lock'; true" 2>/dev/null || fail "source под set -e в каталоге только для чтения"
   chmod 755 "$tmp/ro"
 fi
+# после взятия слота stderr команды доходит до вызывающего (регрессия: exec ... 2>/dev/null глушил stderr навсегда)
+[[ "$(RT_HEAVY_LOCK_DIR="$tmp/err" bash "$lock" bash -c 'echo e >&2' 2>&1 >/dev/null | grep -c '^e$')" == 1 ]] || fail "stderr команды под замком потерян"
+[[ "$(RT_HEAVY_LOCK_DIR="$tmp/err" bash -c "set -euo pipefail; . '$lock'; readlink /proc/\$\$/fd/2" 2>&1 | tail -1)" != /dev/null ]] || fail "source-форма: stderr скрипта ушёл в /dev/null"
+
 echo "heavy-lock-test: ok"

@@ -24,7 +24,8 @@ _rt_heavy_acquire() {
   done
   while true; do
     for ((slot = 1; slot <= slots; slot++)); do
-      if ! exec {RT_HEAVY_FD}>"$dir/slot$slot.lock" 2>/dev/null; then
+      # 2>/dev/null — на составной команде: у голого exec он остался бы на stderr shell навсегда
+      if ! { exec {RT_HEAVY_FD}>"$dir/slot$slot.lock"; } 2>/dev/null; then
         echo "[heavy] не открыть $dir/slot$slot.lock — лимит не применяется" >&2
         return 0
       fi
