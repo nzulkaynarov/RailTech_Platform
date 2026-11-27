@@ -47,7 +47,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `apps/crm/**` | CRM: lint, unit, integration\*, build\*, аудит зависимостей\* |
 | `apps/erp/**` | ERP: lint, миграции и схема, pytest\* |
 | `apps/cabinet/**` | Cabinet |
-| `apps/platform/**` | Platform: lint, types, pytest bff, vitest (3 шарда), контракты и генерация; e2e\* (6 шардов) |
+| `apps/platform/**` | Platform: lint, types, pytest bff, vitest (3 шарда), контракты и генерация; e2e\* (8 шардов) |
 | `apps/platform/web/src/modules/*/module.ts`, `…/modules/*/settingsRegistry.ts` | + CRM (реестр маршрутов и настроек Платформы читает `test_platform_links`) |
 | `apps/eds/**` | EDS |
 | `packages/rt-bus/**` | rt-bus, contracts, CRM, ERP, EDS, Platform (библиотека вшита в образы) |
@@ -83,7 +83,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 - CRM: lint, unit, integration, build и аудит стартуют сразу после `changes`; раньше integration/build ждали lint и unit (+3–5 минут
   к каждому PR ради экономии минут runner'а при красном lint — цель волны другая: время ответа).
 - ERP: три параллельных задания вместо одного `make check-erp` — «lint» (`make -C apps/erp lint`), «pytest»
-  (`make -C apps/erp test-backend`, **3 шарда** `--shard=i/3` — `apps/erp/backend/core/pytest_shard.py`, у каждого свои Postgres и Redis;
+  (`make -C apps/erp test-backend`, **4 шарда** `--shard=i/4` — `apps/erp/backend/core/pytest_shard.py`, у каждого свои Postgres и Redis;
   «ERP · шарды = весь набор» сверяет отчёты шардов: без пересечений, объединение = полный набор), «миграции и схема» (`--migration-check`, `openapi-check`).
 - Platform (CI-1): вместо одного `make check-platform` (~30 мин) — параллельно lint, types, pytest bff, vitest (3 шарда `--shard=i/3`),
   контракты и генерация (api-check, tokens-check, rbac-check, crm-models-check); локально `make check-platform` прежний. e2e не ждёт их (BFF не нужен).
@@ -100,7 +100,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 - Сервер — **сборка**, а не dev-сервер: `vite build --mode mock` (≈1 с, `NODE_ENV=development`, чтобы оставались мокирование MSW и витрина
   `/dev/ui`) и `vite preview`; воркер MSW кладёт в сборку `vite.config.ts` только в режиме `mock`, боевая сборка не меняется.
   `E2E_DEV=1` возвращает dev-сервер (отладка с HMR).
-- **Шесть шардов** (`playwright test --shard=i/6`, matrix в `ci.yml`), по два воркера на шард; отчёт упавшего шарда — артефакт
+- **Восемь шардов** (`playwright test --shard=i/8`, matrix в `ci.yml`), по два воркера на шард; отчёт упавшего шарда — артефакт
   `platform-playwright-report-<i>`.
 - Проект `mobile` (390) гоняет **только** сценарии с тегом `@mobile` — экраны с адаптивной логикой (нижняя панель и Drawer, центр
   уведомлений, поиск). Остальное — на десктопе (ширины в сценариях задаёт `setViewportSize`). Новый сценарий на узкий экран — `test(…, { tag: "@mobile" }, …)`.

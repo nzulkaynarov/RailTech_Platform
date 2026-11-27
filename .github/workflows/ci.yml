@@ -431,24 +431,24 @@ jobs:
       - run: make -C apps/erp lint
 
   erp-backend:
-    name: ERP · pytest (шард ${{ matrix.shard }}/3)
+    name: ERP · pytest (шард ${{ matrix.shard }}/4)
     needs: changes
     if: needs.changes.outputs.erp == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
-    # CI-1: три шарда по `--shard=i/3` (apps/erp/backend/core/pytest_shard.py: каждый третий тест отсортированного полного набора),
+    # CI-1: четыре шарда по `--shard=i/4` (apps/erp/backend/core/pytest_shard.py: каждый N-й тест отсортированного полного набора),
     # у каждого свои Postgres и Redis; что шарды вместе = весь набор, проверяет erp-shards-check.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     env:
       # свой набор контейнеров и сеть на задание: на self-hosted раннере (CI_RUNNER) задания не пересекаются
       ERP_TEST_NS: ci-${{ github.run_id }}-pytest-${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v7
       # pytest в контейнере на одноразовых Postgres 17 и Redis (apps/erp/scripts/test_backend_local.sh)
-      - run: make -C apps/erp test-backend args="--shard=${{ matrix.shard }}/3 --shard-report=shard-report-${{ matrix.shard }}.json"
+      - run: make -C apps/erp test-backend args="--shard=${{ matrix.shard }}/4 --shard-report=shard-report-${{ matrix.shard }}.json"
       - uses: actions/upload-artifact@v7
         if: success()
         with:
@@ -473,7 +473,7 @@ jobs:
           pattern: erp-shard-report-*
           path: shard-reports
           merge-multiple: true
-      - run: python3 scripts/check_pytest_shards.py shard-reports --shards 3
+      - run: python3 scripts/check_pytest_shards.py shard-reports --shards 4
 
   erp-schema:
     name: ERP · миграции и схема
@@ -694,10 +694,10 @@ jobs:
       - run: make check-eds
 
   # E2E Платформы (MSW, BFF не нужен) не ждёт `platform` (W14-S2): сборка `vite build --mode mock` + `vite preview`, а не dev-сервер
-  # (antd приходит готовыми чанками), шесть шардов `--shard=i/6` (CI-1), повторов нет (retries=0 в playwright.config.ts: «flaky» = красный).
+  # (antd приходит готовыми чанками), восемь шардов `--shard=i/8` (CI-1), повторов нет (retries=0 в playwright.config.ts: «flaky» = красный).
   # Проект mobile (390) гоняет только сценарии с тегом @mobile. На push в main не идёт (heavy=false).
   platform-e2e:
-    name: Platform · e2e (шард ${{ matrix.shard }}/6)
+    name: Platform · e2e (шард ${{ matrix.shard }}/8)
     needs: changes
     if: needs.changes.outputs.platform == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -705,7 +705,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
@@ -733,7 +733,7 @@ jobs:
         run: |
           pnpm exec playwright install chromium
           pnpm exec playwright install-deps chromium || echo "::warning::Системные пакеты Playwright не поставились (зеркала Ubuntu недоступны) — прогон на библиотеках образа раннера"
-          pnpm exec playwright test --shard=${{ matrix.shard }}/6
+          pnpm exec playwright test --shard=${{ matrix.shard }}/8
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
