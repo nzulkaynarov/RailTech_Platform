@@ -13,6 +13,7 @@ from io import StringIO
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from finance.services import receivables
 from integration.models import CrmClientMapping
 from integration.tests.bus_support import published
 from inventory.tests.support import api, make_world
@@ -20,12 +21,11 @@ from parties import test_companies
 from parties.models import Company, Contact
 from portal.desk import service_counterparty as counterparty
 from portal.services.access import company_access
+from supply.models import SupplierOrder
+from supply.services import tasks as supply_tasks
 
 from core.views.stats import PlatformDashboardView
 from crm.models import ActivityLog, Deal, DealStage, Invoice, InvoiceStatus
-from finance.services import receivables
-from supply.models import SupplierOrder
-from supply.services import tasks as supply_tasks
 
 pytestmark = pytest.mark.django_db
 
@@ -153,7 +153,11 @@ def test_receivables_counts_and_board_skip_test_companies(world):
     for company, number in ((world["real"], "INV-R"), (world["fake"], "INV-F")):
         deal = _deal(company, number)
         Invoice.objects.create(
-            deal=deal, number=number, status=status, due_date=date.today() - timedelta(days=3), total_incl_vat=Decimal("100.00")
+            deal=deal,
+            number=number,
+            status=status,
+            due_date=date.today() - timedelta(days=3),
+            total_incl_vat=Decimal("100.00"),
         )
     day = date.today()
     all_before = sum(receivables.counts(day).values())
@@ -172,7 +176,9 @@ def test_supply_queue_and_orders_skip_test_companies(world):
         return SupplierOrder.objects.get(pk=made.json()["id"])
 
     real_order, fake_order = order(world["vendor"]), order(world["silent"])
-    ids = lambda: {row["id"] for row in supply_tasks.supply_tasks(world["supply"]) if row["kind"] == "send_order"}  # noqa: E731
+    ids = lambda: {
+        row["id"] for row in supply_tasks.supply_tasks(world["supply"]) if row["kind"] == "send_order"
+    }  # noqa: E731
     assert ids() == {real_order.pk, fake_order.pk}
     counterparty.set_test(world["silent"], True, actor=world["supply"])
     assert ids() == {real_order.pk}
