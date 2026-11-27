@@ -12,6 +12,7 @@ import { NotificationSettings } from "../profile-notifications/NotificationSetti
 import { CalendarLinkSection } from "./CalendarLinkSection";
 import { DeputySection } from "./DeputySection";
 import { IdentitySection } from "./IdentitySection";
+import { ShowTestSection } from "./ShowTestSection";
 import { SecondFactorSection } from "./SecondFactorSection";
 import { Section } from "./Section";
 import { TelegramSection } from "./TelegramSection";
@@ -64,6 +65,7 @@ export function ProfilePage() {
   const renderPart = (key: Part, data: Profile) => (
     <div className="pf-profile-part">
       {key === "all" || key === "general" ? <IdentitySection me={me} profile={data} /> : null}
+      {key === "all" || key === "general" ? <ShowTestSection profile={data} /> : null}
       {key === "all" || key === "general" || key === "notifications" ? (
         <TelegramSection profile={data} />
       ) : null}

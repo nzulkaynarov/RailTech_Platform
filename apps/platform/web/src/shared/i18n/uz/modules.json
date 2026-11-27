@@ -762,6 +762,10 @@
           "notEnabled": "Xodimda kod bilan kiriş yoqilmagan.",
           "default": "Bölmadi. Qayta urinib köring."
         }
+      },
+      "showTest": {
+        "label": "Sinovlarni kördi",
+        "hint": "Xodimda sinov kompaniyalarini körsatiş yoqilgan"
       }
     },
     "roles": {

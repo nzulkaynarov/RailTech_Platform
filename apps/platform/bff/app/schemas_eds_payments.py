@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.schemas_eds_documents import EdsDealRef, EdsFile, EdsPerson
+from app.test_tag import TestTagged
 
 COMPANY_TZ = ZoneInfo("Asia/Tashkent")
 Day = date  # у тела `PaymentConfirmIn` поле называется `date`: имя типа не затеняется
@@ -55,7 +56,7 @@ class PaymentCounts(BaseModel):
     overdue: int
 
 
-class PaymentRow(BaseModel):
+class PaymentRow(TestTagged):
     id: int
     number: str
     project_number: str

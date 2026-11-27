@@ -334,7 +334,9 @@ def dashboard_analytics(user, request, period: str = DEFAULT_PERIOD) -> dict:
     """
     from django.core.cache import cache
 
-    cache_key = f"dashboard_analytics_{period}_{user.pk}"
+    from parties import test_companies
+
+    cache_key = f"dashboard_analytics_{period}_{user.pk}{test_companies.cache_suffix()}"
     cached = cache.get(cache_key)
     if cached:
         return cached

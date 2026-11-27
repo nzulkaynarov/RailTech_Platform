@@ -104,9 +104,15 @@ def notify_user(
         event_code=event_code,
         event_params=event_params or {},
     )
-    if push:
+    # ТЕСТ-2: уведомление по сделке тестовой компании не «выскакивает» живым пушем — оно видно в списке и на колокольчике
+    # у тех, у кого включено «Показывать тестовые» (опрос BFF добавляет `?test=all`), у остальных скрыто.
+    if push and not _of_test_company(deal):
         push_notification_ws(notification)
     return notification
+
+
+def _of_test_company(deal) -> bool:
+    return bool(deal is not None and deal.company_id and deal.company.is_test)
 
 
 def push_notification_ws(notification: Notification):

@@ -40,6 +40,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # ТЕСТ-2: `?test=all` (BFF по профилю сотрудника) -> тестовые компании входят в выборки всего запроса.
+    "parties.test_companies.TestScopeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Adds RFC 8594 Deprecation/Sunset headers for deprecated API versions (F2.6).

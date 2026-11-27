@@ -557,3 +557,24 @@ async def test_list_survives_when_erp_cannot_name_the_roles(
     items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
     assert items
     assert all(row["roles"] is None for row in items)
+
+
+async def test_show_test_switch_decides_in_the_bff_not_the_query_string(
+    web: Web, be: Backends, crm: CrmLeadsFake
+) -> None:
+    """ТЕСТ-2: выключено — `test=all` из запроса не доходит до CRM; включено — идёт само."""
+    crm.answer("GET", "clients", body=[client_item(21, is_test=True)])
+    await web.login(["DIRECTOR"])
+
+    await web.client.get(f"{BASE}?test=all")  # своя строка запроса переключатель не заменяет
+    assert crm.params("GET", "clients") == {}
+    await web.client.get(f"{BASE}?test=only")  # вкладка «Тестовые» — как раньше
+    assert crm.params("GET", "clients") == {"test": "only"}
+
+    be.profile["show_test"] = True  # включено в профиле CRM; сессия читает снимок на сервере
+    await web.client.post("/api/v1/auth/logout", headers={"X-CSRF-Token": web.csrf})
+    await web.login(["DIRECTOR"])
+    await web.client.get(BASE)
+    assert crm.params("GET", "clients") == {"test": "all"}
+    await web.client.get(f"{BASE}?test=only")
+    assert crm.params("GET", "clients") == {"test": "only"}

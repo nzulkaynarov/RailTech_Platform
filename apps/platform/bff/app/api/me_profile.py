@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.deps import AuthedDep
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
+from app.feeds.feed import drop_snapshots
 from app.schemas import Me, build_me
 from app.schemas_profile import (
     Colleague,
@@ -137,7 +138,11 @@ async def get_profile(authed: AuthedDep) -> Profile:
 )
 async def update_profile(body: ProfileUpdate, authed: AuthedDep) -> Profile:
     crm_me = _json(await authed.call("crm", "PATCH", ME, json=body.to_crm()))
-    return await _profile_of(authed, crm_me)
+    profile = await _profile_of(authed, crm_me)
+    if "show_test" in body.model_fields_set:
+        # ТЕСТ-2: переключатель меняет выдачу всех списков — кэш ответов бэкендов сессии устарел
+        await drop_snapshots(authed.service.store.redis, authed.sid)
+    return profile
 
 
 async def _avatar_body(request: Request) -> tuple[bytes, str]:

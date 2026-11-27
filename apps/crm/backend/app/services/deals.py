@@ -10,9 +10,10 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
-from sqlalchemy import ColumnElement, exists, func, literal_column, select
+from sqlalchemy import ColumnElement, exists, false, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import test_scope
 from app.domain.deals import (
     DealStage,
     deal_title,
@@ -274,6 +275,8 @@ def _of_partner_lead() -> ColumnElement[bool]:
 
 def _of_test_client() -> ColumnElement[bool]:
     """ТЕСТ-1: the deal belongs to a test company (ERP mark): not pipeline, not a result."""
+    if test_scope.show_all():  # ТЕСТ-2: у сотрудника включено «Показывать тестовые»
+        return false()
     return exists().where(Client.id == Deal.client_id, Client.is_test.is_(True))
 
 

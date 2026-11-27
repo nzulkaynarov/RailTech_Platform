@@ -44,6 +44,7 @@ import { LeadPanel } from "./LeadPanel";
 import "../crm.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { PageFrame } from "../../../shared/ui/PageFrame";
+import { TestTag } from "../../../shared/ui/TestTag";
 
 const PAGE_SIZE = 50;
 /** Порядок щелчком по шапке (Х-15): ключи, которые принимает BFF `sort` */
@@ -186,6 +187,7 @@ function NameCell({
         {row.name}
       </Link>
       {row.company ? <span className="pf-hint">({row.company})</span> : null}
+      <TestTag value={row.is_test} />
       {row.unread ? <StatusTag tone="blue">{t("unread")}</StatusTag> : null}
       {row.overdue ? <StatusTag tone="red">{t("overdue")}</StatusTag> : null}
     </span>

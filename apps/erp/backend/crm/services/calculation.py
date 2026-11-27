@@ -569,6 +569,7 @@ def _deal_brief(deal: Deal) -> dict:
         "stage_code": deal.stage.code if deal.stage_id else DealStageCode.DRAFT,
         "client_name": deal.company.name if deal.company_id else None,
         "manager_name": person_name(deal.manager) if deal.manager_id else None,
+        **test_companies.flag(deal.company if deal.company_id else None),
     }
 
 

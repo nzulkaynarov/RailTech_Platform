@@ -509,6 +509,7 @@ def row(raw: RawRow) -> ProjectRow:
         title=raw.title or raw.company_name or project_number(raw),
         client_name=raw.company_name,
         client_id=raw.company_id,
+        is_test=raw.is_test,
         step=raw.step,
         client_status=raw.client_status,
         total=raw.total,

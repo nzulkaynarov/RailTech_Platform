@@ -345,6 +345,21 @@ class UserService:
             user.ui_mode = mode
             return await _loaded_view(session, user, roles)
 
+    async def set_show_test(self, actor: Actor, user_id: int, show: bool) -> UserView:
+        """ТЕСТ-2: «Показывать тестовые» — сотрудник включает и выключает себе сам, в журнал."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            if user.show_test != show:
+                before = {"show_test": user.show_test}
+                user.show_test = show
+                await audit.record(
+                    session, actor, "user.update", "user", user_id,
+                    before=before, after={"show_test": show},
+                )  # fmt: skip
+            return await _loaded_view(session, user)
+
     async def set_language(self, actor: Actor, user_id: int, language: str) -> UserView:
         """Язык интерфейса (CRM-01b): сотрудник меняет сам себе, значение проверено схемой."""
         async with self._sessions() as session, session.begin():

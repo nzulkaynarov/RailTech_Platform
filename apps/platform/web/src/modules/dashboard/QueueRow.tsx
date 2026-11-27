@@ -8,6 +8,7 @@ import { useAcknowledgeLetter, useTakeCrmLead } from "../../shared/api/generated
 import { useFormat } from "../../shared/lib/useFormat";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { StatusTag } from "../../shared/ui/StatusTag";
+import { TestTag } from "../../shared/ui/TestTag";
 import { objectLink } from "../objectLinks";
 import { dueBadge, isUrgent } from "./queue";
 import { actionKeyOf, acquaintLetterId, quickActionOf } from "./queueModel";
@@ -74,7 +75,9 @@ export function QueueRow({ item, primary = false }: { item: QueueItem; primary?:
         {badge.label}
       </StatusTag>
       <div className="pf-queue-body">
-        <div className="pf-queue-title">{item.title}</div>
+        <div className="pf-queue-title">
+          {item.title} <TestTag value={item.object.is_test} />
+        </div>
         {item.reason ? (
           <div className="pf-queue-why">
             <span className="pf-hint">{t("modules:dashboard.queue.why")}</span> {item.reason}

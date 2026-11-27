@@ -127,7 +127,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
               <StepTag step={row.step} />
             </div>
             <p className="pf-dec-card-subject">
-              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} test={row.is_test} />
             </p>
             <p className="pf-hint">{t(`clientStatus.${row.client_status}`)}</p>
             <Documents row={row} />
@@ -180,7 +180,7 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       width: null,
       cell: (row) => (
         <>
-          <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+          <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} test={row.is_test} />
           <div className="pf-hint">{row.title}</div>
         </>
       ),

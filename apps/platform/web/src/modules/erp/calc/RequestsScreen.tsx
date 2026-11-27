@@ -16,6 +16,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { DataBlock } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { TestTag } from "../../../shared/ui/TestTag";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -148,7 +149,9 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
               </Link>
               <Due due={row.due} closed={isClosedRow(row)} />
             </div>
-            <p className="pf-calc-card-title">{row.client ?? row.title}</p>
+            <p className="pf-calc-card-title">
+              {row.client ?? row.title} <TestTag value={row.is_test} />
+            </p>
             <p className="pf-hint">
               <Stage row={row} />
             </p>
@@ -198,7 +201,9 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
       width: null,
       cell: (row) => (
         <>
-          <div>{row.client ?? "—"}</div>
+          <div>
+            {row.client ?? "—"} <TestTag value={row.is_test} />
+          </div>
           <div className="pf-hint">{row.title}</div>
         </>
       ),

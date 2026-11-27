@@ -47,6 +47,13 @@ async def test_test_company_documents_leave_lists_and_come_back(
     assert await letters(client, manager) == []
     assert [row["id"] for row in await letters(client, manager, "?test=only")] == [letter_id]
     assert len(await letters(client, manager, "?test=all")) == 1
+    # ТЕСТ-2: при `?test=all` строки тестовой компании несут метку, без параметра тестовых строк нет
+    assert [row["is_test"] for row in await letters(client, manager, "?test=all")] == [True]
+    assert [
+        row["is_test"]
+        for row in await registry(client, manager, "?test=all")
+        if row["links"]["erp_company_id"] == COMPANY
+    ] == [True]
     assert [row for row in await registry(client, manager) if row["links"]["erp_company_id"] == COMPANY] == []
     assert (await client.get(f"/api/v1/letters/{letter_id}", headers=manager.headers)).status_code == 200  # по номеру
 
@@ -59,7 +66,7 @@ async def test_test_company_documents_leave_lists_and_come_back(
     assert await letters(client, manager) == []
 
     assert await deliver_erp(client, container, company_event("2026-11-27T10:00:00Z", is_test=False)) == "processed"
-    assert len(await letters(client, manager)) == 1
+    assert [row["is_test"] for row in await letters(client, manager)] == [False]
     async with container.session_factory() as session:
         row = (
             await session.execute(text("SELECT is_test FROM company_marks WHERE erp_company_id = :c"), {"c": COMPANY})

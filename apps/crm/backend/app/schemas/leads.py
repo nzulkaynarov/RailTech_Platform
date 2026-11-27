@@ -63,6 +63,8 @@ class LeadOut(BaseModel):
     assigned_user_id: int | None
     assigned_user_name: str | None = None
     client_id: int | None = None
+    # ТЕСТ-2: лид тестовой компании; `true` только при `?test=all`, без него таких лидов нет.
+    is_test: bool = False
     # Лид написал после последнего ответа менеджера (аудит P-23).
     unread: bool = False
     need_summary: str | None

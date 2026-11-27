@@ -60,6 +60,7 @@ from app.log import BusCorrelationMiddleware, configure_logging, is_valid_reques
 from app.schemas.errors import ErrorOut
 from app.services.readiness import ReadinessService
 from app.tasks.lifespan import queue_lifespan
+from app.test_scope import TestScopeMiddleware
 
 
 async def _issue_setup_code(container: Container) -> None:
@@ -145,6 +146,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     # Порядок: добавленный раньше — глубже. Корреляция шины читает id, который ставит
     # `CorrelationIdMiddleware`, поэтому лежит под ним.
+    app.add_middleware(TestScopeMiddleware)  # ТЕСТ-2: `?test=all` -> контекст запроса
     app.add_middleware(BusCorrelationMiddleware)
     app.add_middleware(
         CorrelationIdMiddleware, header_name="X-Request-ID", validator=is_valid_request_id

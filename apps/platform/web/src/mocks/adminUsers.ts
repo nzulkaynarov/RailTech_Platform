@@ -17,7 +17,7 @@ import { rememberTemporaryPassword, registerUser, updateExtraUser } from "./fixt
 import { stepUpRefusal } from "./secondFactor";
 import { markStepDone } from "./setupState";
 import { deputyRefusal } from "./profileHandlers";
-import { patchProfile } from "./profileStore";
+import { patchProfile, readProfile } from "./profileStore";
 
 export function failure(
   status: number,
@@ -94,7 +94,8 @@ export const adminUsersHandlers = [
       .filter(
         (e) => !q || `${e.name} ${e.email} ${e.position ?? ""}`.toLocaleLowerCase().includes(q),
       )
-      .map(toEmployee);
+      .map(toEmployee)
+      .map((e) => (readProfile(e.id).showTest === true ? { ...e, show_test: true } : e));
     // ERP отвечает между чтениями: «выдаётся» в этом ответе — «ок» в следующем (как очередь CRM).
     if (stored.some((e) => e.erp_sync === "pending")) {
       writeEmployees(

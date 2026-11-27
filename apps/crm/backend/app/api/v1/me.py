@@ -102,6 +102,8 @@ async def update_me(body: MePatch, principal: Settled, container: ContainerDep) 
             decisions=body.notify_decisions,
             tasks=body.notify_tasks,
         )
+    if body.show_test is not None:
+        view = await svc.set_show_test(principal.actor, principal.user_id, body.show_test)
     if body.onboarding_done:
         view = await svc.set_onboarding_done(principal.actor, principal.user_id)
     if body.whats_new_shown is not None or body.whats_new_read is not None:
