@@ -16,4 +16,5 @@ export const AttentionKind = {
   rotation_pending: "rotation_pending",
   paused: "paused",
   bot_not_running: "bot_not_running",
+  check_failed: "check_failed",
 } as const;

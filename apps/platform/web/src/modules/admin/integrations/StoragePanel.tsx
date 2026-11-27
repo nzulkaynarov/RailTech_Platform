@@ -91,9 +91,13 @@ function BackupsBody({ backups, editable }: { backups: BackupsStatus; editable: 
           },
           {
             label: t("storage.backups.daemon"),
-            value: backups.daemon_alive
-              ? t("storage.backups.daemonValue.alive")
-              : t("storage.backups.daemonValue.down"),
+            // Копии делает другой сервер: CRM видит только итог в хранилище, «отвечает» было бы выдумкой (Л-32)
+            value:
+              backups.source === "rustfs"
+                ? t("storage.backups.daemonValue.remote")
+                : backups.daemon_alive
+                  ? t("storage.backups.daemonValue.alive")
+                  : t("storage.backups.daemonValue.down"),
           },
         ]}
       />

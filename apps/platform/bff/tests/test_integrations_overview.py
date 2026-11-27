@@ -204,7 +204,7 @@ async def test_manually_paused_service_is_attention_not_error(
 
     body = (await web.client.get(URL)).json()
 
-    assert (cards(body)["mail"]["status"], cards(body)["mail"]["note"]) == ("ok", "paused")
+    assert (cards(body)["mail"]["status"], cards(body)["mail"]["note"]) == ("off", "paused")
     assert [(a["kind"], a["card"], a["detail"]) for a in body["attention"]] == [
         ("paused", "mail", "ремонт")
     ]
@@ -321,7 +321,10 @@ async def test_one_cause_is_one_row_not_five(web: Web, crm: CrmIntegrationsFake)
         "GET",
         "admin/external-services",
         200,
-        services_out([vendor, service("s3")], [key_rejected_group()]),
+        services_out(
+            [vendor, service("s3"), service("telegram"), service("mail", switch=None)],
+            [key_rejected_group()],
+        ),
     )
     crm.answer(
         "GET",
@@ -384,7 +387,10 @@ async def test_expected_on_stand_is_not_attention_and_does_not_colour_cards(
         group("telegram", "expected", id="telegram:no_token"),
     ]
     crm.answer(
-        "GET", "admin/external-services", 200, services_out([docling, token], groups, stand=True)
+        "GET",
+        "admin/external-services",
+        200,
+        services_out([docling, token], groups, stand=True),
     )
     crm.answer("GET", "integrations/telegram", 200, telegram_status(configured=False))
     status = system_status("ok")
@@ -403,7 +409,8 @@ async def test_expected_on_stand_is_not_attention_and_does_not_colour_cards(
 
     body = (await web.client.get(URL)).json()
 
-    assert body["attention"] == []
+    # «Почта» CRM не назвала вовсе — это «не удалось проверить», а не сбой и не «ожидаемо на стенде»
+    assert [a["id"] for a in body["attention"]] == ["check:mail"]
     by_key = cards(body)
     assert by_key["services"]["status"] == "off"
     assert by_key["telegram"]["status"] == "off"
@@ -417,6 +424,7 @@ async def test_erp_not_connected_is_one_row_for_all_its_services(
         service(key, "off", state="not_configured", cause_key="erp:erp_not_connected")
         for key in ("erp_sync", "erp_handoff", "erp.mail")
     ]
+    rows += [service("telegram"), service("mail", switch=None)]
     erp_group = group(
         "erp_sync",
         "not_configured",

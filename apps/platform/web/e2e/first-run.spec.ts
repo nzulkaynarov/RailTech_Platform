@@ -274,8 +274,9 @@ test.describe("Первый запуск: полный путь", () => {
     );
     await page.reload();
     await spaGoto(page, "/admin/setup");
-    await expect(page.getByText("Всё готово: Платформа настроена.")).toBeVisible();
-    await expect(page.getByText("Готово 5 из 5", { exact: true })).toBeVisible();
+    // НАСТ-П1: шаги сохранены, но службы мок-стенда не подтверждены проверкой — «Всё готово» и «5 из 5» не пишем
+    await expect(page.getByText("Всё готово: Платформа настроена.")).toHaveCount(0);
+    await expect(page.getByText("Готово 5 из 5", { exact: true })).toHaveCount(0);
     await spaGoto(page, "/admin/org");
     await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);

@@ -13,6 +13,7 @@ import type {
   IntegrationNote,
   IntegrationStatus,
   IntegrationsOverview,
+  StatusFact,
   OffsiteBackupIn,
   PasswordConfirm,
   ProviderKeyIn,
@@ -102,6 +103,35 @@ function levelOf(s: ExternalService): IntegrationStatus {
   return s.state === "expected" || s.state === "not_configured" ? "off" : s.status;
 }
 
+/** Слово состояния по тем же правилам, что в BFF (`status_model.resolve`): «Работает» только по свежей проверке. */
+const STALE_AFTER_MS = 45 * 60 * 1000;
+
+export function factOf(
+  level: IntegrationStatus,
+  checkedAt: string | null,
+  source: StatusFact["source"] = "check",
+): StatusFact {
+  if (level === "off") return { state: "off", checked_at: null, source: "none", live: false };
+  // В мок-стенде проверки «свежие»: время — три минуты назад по часам браузера, а не дата фикстуры
+  const fresh = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+  if (level === "warn" || level === "fail") {
+    return {
+      state: level === "warn" ? "attention" : "broken",
+      checked_at: checkedAt === null ? null : fresh,
+      source,
+      live: checkedAt !== null,
+    };
+  }
+  if (level === "unknown") return { state: "unknown", checked_at: checkedAt, source, live: false };
+  if (checkedAt === null) {
+    return { state: "not_verified", checked_at: null, source: "counters", live: false };
+  }
+  const old = Date.parse(MOCK_NOW) - Date.parse(checkedAt) > STALE_AFTER_MS;
+  return old
+    ? { state: "stale", checked_at: checkedAt, source, live: false }
+    : { state: "works", checked_at: fresh, source, live: true };
+}
+
 function overview(state: IntegrationsMock): IntegrationsOverview {
   const services = state.services.map(withState);
   const by = (keys: (key: string) => boolean) => services.filter((s) => keys(s.key));
@@ -118,15 +148,26 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
     count: number | null = null,
     last: string | null = null,
     amount: number | null = null,
-  ): IntegrationCard => ({
-    key,
-    status,
-    access: "ok",
-    note,
-    count,
-    amount_usd: amount,
-    last_activity_at: last,
-  });
+  ): IntegrationCard => {
+    const fact = factOf(status, last, key === "spend" || key === "system" ? "report" : "check");
+    return {
+      key,
+      status: fact.state === "works" ? "ok" : status === "ok" ? "unknown" : status,
+      access: "ok",
+      note:
+        note !== "all_ok" || fact.state === "works" || fact.state === "off"
+          ? note
+          : fact.state === "not_verified"
+            ? "not_verified"
+            : fact.state === "stale"
+              ? "stale"
+              : "check_failed",
+      count,
+      amount_usd: amount,
+      last_activity_at: fact.checked_at,
+      fact,
+    };
+  };
 
   const erpServices = by((k) => ["erp_sync", "erp_handoff", "erp_events"].includes(k));
   const telegram = services.find((s) => s.key === "telegram");
@@ -197,7 +238,7 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
     ratio >= 1 ? "fail" : ratio >= 0.8 ? "warn" : "ok",
     ratio >= 1 ? "budget_over" : ratio >= 0.8 ? "budget_near" : "all_ok",
     null,
-    null,
+    MOCK_NOW,
     report.today_usd,
   );
   const b = state.backups;

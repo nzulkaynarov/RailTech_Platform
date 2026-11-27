@@ -556,6 +556,46 @@ async def test_heavy_only_service_is_rechecked_by_its_own_schedule(
     assert await container.external_checks.recheck_broken(T0 + timedelta(minutes=2)) == []
 
 
+async def test_manual_check_is_the_probe_the_minute_pass_carries_forward(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    """НАСТ-П1, Л-14: ручная проверка живёт до следующей тяжёлой, а не до минутного прохода.
+
+    Минутный проход берёт итог дорогих проб (вход на почтовый сервер) из последней тяжёлой
+    проверки; ручная пишется `manual` и не учитывалась — починили, нажали «Проверить» —
+    «Работает», через минуту снова «Сбой».
+    """
+
+    def row(tier: str, minutes: float, smtp: str) -> ExternalServiceCheck:
+        return ExternalServiceCheck(
+            service_key="mail",
+            checked_at=at(minutes),
+            tier=tier,
+            status="ok" if smtp == "ok" else "fail",
+            summary="x",
+            metrics={"_smtp": smtp},
+        )
+
+    async with sessions() as session, session.begin():
+        session.add_all(
+            [row("heavy", 0, "auth_failed"), row("manual", 5, "ok"), row("cheap", 6, "ok")]
+        )
+    container = client.app.state.container  # type: ignore[attr-defined]
+    collector = container.external_checks._collector
+    seen: dict[str, Any] = {}
+    collect = collector.collect
+
+    async def spy(keys: Any, run: Any, now: Any, previous: Any, disabled: Any) -> Any:
+        seen["previous"] = previous
+        return await collect(keys, run, now, previous, disabled)
+
+    collector.collect = spy
+
+    await container.external_checks.run("cheap", at(7), keys=["mail"])
+
+    assert seen["previous"]["mail"]["_smtp"] == "ok"  # итог ручной проверки новее тяжёлой
+
+
 async def test_telegram_webhook_not_configured_is_an_incident_without_token_leak(
     sessions: async_sessionmaker[AsyncSession],
     webhook_client: TestClient,

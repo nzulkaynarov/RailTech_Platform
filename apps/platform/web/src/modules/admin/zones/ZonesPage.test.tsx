@@ -150,14 +150,12 @@ describe("Настройки · Зоны ответственности (ЕВ-З
 });
 
 describe("Сигнал «зона без ответственного»", () => {
-  it("Настройки · «Состояние»: строка «Требует внимания» со счётом и кнопкой, пока есть зона без ответственного", async () => {
+  it("Настройки · «Состояние»: строки про зоны нет — зоны ничего не направляют (НАСТ-П1, Л-10)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin");
-    expect(await screen.findByText(/Зон без ответственного: 9/)).toBeInTheDocument();
-    const line = screen.getByText(/Зон без ответственного: 9/).closest("li") as HTMLElement;
-    expect(
-      within(line).getByRole("link", { name: "Открыть «Зоны ответственности»" }),
-    ).toHaveAttribute("href", "/admin/zones");
+    await screen.findByRole("region", { name: "Службы" });
+    expect(screen.queryByText(/Зон без ответственного/)).toBeNull();
+    expect(screen.queryByText(/некому взять/)).toBeNull();
   });
 
   it("Главная: карточка директору, а менеджеру её нет", async () => {

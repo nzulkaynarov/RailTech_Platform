@@ -92,7 +92,8 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await expect(page.getByRole("region", { name: /^Требует внимания · \d+$/ })).toBeVisible();
       await expect(page.getByRole("region", { name: "Службы" })).toBeVisible();
       await expect(page.getByRole("region", { name: /^Готовность · \d+ из \d+$/ })).toBeVisible();
-      await expect(page.getByText("не подключена")).toBeVisible();
+      // НАСТ-П1 (Л-06): постоянной строки «не подключена» нет
+      await expect(page.getByText("Внешняя проверка доступности")).toHaveCount(0);
       await expectNoViolations(page, `state ${String(width)}`);
       await shot(page, "state");
 
