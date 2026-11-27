@@ -50,4 +50,20 @@ wait_file "$tmp/held1"; wait_file "$tmp/held2"
 [[ "$(RT_HEAVY_LOCK=0 timeout 5 bash "$lock" echo off)" == off ]] || fail "RT_HEAVY_LOCK=0 должен быть no-op"
 touch "$tmp/release"
 wait
+
+# внешний держатель (прежняя обёртка): слот взят через FD без RT_HEAVY_LOCK_HELD, вложенный вызов не ждёт даже при двух занятых слотах
+mkdir -p "$tmp/slots"
+( exec 8>"$tmp/slots/slot1.lock"; flock -n 8
+  exec 9>"$tmp/slots/slot2.lock"; flock -n 9
+  [[ "$(env -u RT_HEAVY_LOCK_HELD timeout 5 bash "$lock" echo inner 2>/dev/null)" == inner ]] ) || fail "внешний держатель с открытым FD: вложенный вызов ждёт"
+
+# каталог слотов недоступен на запись: одно предупреждение и no-op (форма с командой и форма source под set -euo pipefail)
+if [[ "$(id -u)" != 0 ]]; then
+  mkdir -p "$tmp/ro" && chmod 555 "$tmp/ro"
+  [[ "$(RT_HEAVY_LOCK_DIR="$tmp/ro" timeout 5 bash "$lock" echo ro 2>/dev/null)" == ro ]] || fail "каталог только для чтения: команда должна идти"
+  warns="$(RT_HEAVY_LOCK_DIR="$tmp/ro" timeout 5 bash "$lock" true 2>&1 >/dev/null | wc -l)"
+  [[ "$warns" == 1 ]] || fail "ожидалось одно предупреждение, получено $warns"
+  RT_HEAVY_LOCK_DIR="$tmp/ro" timeout 5 bash -c "set -euo pipefail; . '$lock'; true" 2>/dev/null || fail "source под set -e в каталоге только для чтения"
+  chmod 755 "$tmp/ro"
+fi
 echo "heavy-lock-test: ok"

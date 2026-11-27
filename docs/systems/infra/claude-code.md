@@ -40,7 +40,7 @@ worktree.
 занятых обоих ждёт по 15 с и повторяет. Слот берут: `scripts/ci_local.sh` (весь прогон — один слот),
 `make lint|typecheck|test|check|e2e` в приложениях и `make check-*` (цель целиком — один слот), `test_backend_local.sh` ERP,
 `test_int_local.sh` CRM, скрипты `lint`/`typecheck`/`test`/`e2e` в `package.json` Платформы и Cabinet. Вложенные вызовы
-слот не берут (`RT_HEAVY_LOCK_HELD=1` в окружении детей). Без слота: `CI=true`, `RT_HEAVY_LOCK=0`, нет `flock` (macOS).
+слот не берут (`RT_HEAVY_LOCK_HELD=1` в окружении детей; слот, взятый внешней обёрткой, узнаётся по открытому FD на `slot*.lock` в `/proc/$$/fd`). Без слота: каталог слотов недоступен на запись (одно предупреждение в stderr), `CI=true`, `RT_HEAVY_LOCK=0`, нет `flock` (macOS).
 Правило агентам: вызывай `make`, `ci_local.sh`, `pnpm`/`npm run` напрямую, лимит уже внутри; никогда не оборачивай
 команды во внешние скрипты. Тест механики — `scripts/tests/heavy-lock-test.sh` (входит в `make deploy-check`).
 

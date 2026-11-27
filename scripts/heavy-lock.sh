@@ -13,10 +13,21 @@ _rt_heavy_acquire() {
   [[ "${RT_HEAVY_LOCK_HELD:-}" == 1 || "${CI:-}" == true || "${RT_HEAVY_LOCK:-}" == 0 ]] && return 0
   command -v flock >/dev/null 2>&1 || return 0
   local dir="${RT_HEAVY_LOCK_DIR:-/tmp/claude-$(id -u)/rt-heavy}" slots="${RT_HEAVY_SLOTS:-2}" slot
-  mkdir -p "$dir"
+  if ! mkdir -p "$dir" 2>/dev/null || [[ ! -w "$dir" ]]; then
+    echo "[heavy] каталог слотов $dir недоступен на запись — лимит не применяется" >&2
+    return 0
+  fi
+  # Слот уже держит внешний процесс (прежняя обёртка heavy.sh не выставляет RT_HEAVY_LOCK_HELD, но дети наследуют её FD).
+  local link
+  for link in /proc/$$/fd/*; do
+    [[ "$(readlink "$link" 2>/dev/null)" == "$dir"/slot*.lock ]] && { export RT_HEAVY_LOCK_HELD=1; return 0; }
+  done
   while true; do
     for ((slot = 1; slot <= slots; slot++)); do
-      exec {RT_HEAVY_FD}>"$dir/slot$slot.lock"
+      if ! exec {RT_HEAVY_FD}>"$dir/slot$slot.lock" 2>/dev/null; then
+        echo "[heavy] не открыть $dir/slot$slot.lock — лимит не применяется" >&2
+        return 0
+      fi
       if flock -n "$RT_HEAVY_FD"; then
         echo "[heavy] slot $slot" >&2
         export RT_HEAVY_LOCK_HELD=1
