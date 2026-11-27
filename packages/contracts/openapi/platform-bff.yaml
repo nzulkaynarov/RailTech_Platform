@@ -827,7 +827,13 @@ paths:
                 type: string
                 format: binary
         '204':
-          description: Логотипа нет — Платформа рисует буквы названия компании
+          description: Логотипа нет — тело пустое, Платформа рисует буквы названия компании
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+                maxLength: 0
 
   /setup/admin:
     post:

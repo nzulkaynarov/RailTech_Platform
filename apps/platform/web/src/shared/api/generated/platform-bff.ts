@@ -1710,10 +1710,8 @@ export const getGetOperatorLogoUrl = () => {
  * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
  * @summary Логотип своей компании до входа (ДВ-3)
  */
-export const getOperatorLogo = async (
-  options?: Parameters<typeof http>[1],
-): Promise<Blob | void> => {
-  return http<Blob | void>(getGetOperatorLogoUrl(), {
+export const getOperatorLogo = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetOperatorLogoUrl(), {
     ...options,
     method: "GET",
   });

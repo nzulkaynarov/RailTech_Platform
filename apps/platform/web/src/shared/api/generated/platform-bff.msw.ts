@@ -703,7 +703,10 @@ export const getGetSetupStateResponseMock = (
 });
 
 export const getGetOperatorLogoResponseMock = (): Blob =>
-  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+  faker.helpers.arrayElement([
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+  ]);
 
 export const getCreateFirstAdminResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
@@ -45431,9 +45434,7 @@ export const getGetSetupStateMockHandler = (
 
 export const getGetOperatorLogoMockHandler = (
   overrideResponse?:
-    | Blob
-    | void
-    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob | void> | Blob | void),
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
   options?: RequestHandlerOptions,
 ) => {
   return http.get(

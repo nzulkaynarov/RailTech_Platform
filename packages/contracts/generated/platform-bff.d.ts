@@ -21341,12 +21341,14 @@ export interface operations {
           "image/*": string;
         };
       };
-      /** @description Логотипа нет — Платформа рисует буквы названия компании */
+      /** @description Логотипа нет — тело пустое, Платформа рисует буквы названия компании */
       204: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "image/*": string;
+        };
       };
     };
   };
