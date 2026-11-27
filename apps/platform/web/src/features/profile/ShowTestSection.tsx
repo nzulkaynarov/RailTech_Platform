@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Switch } from "antd";
+import { Alert, Switch } from "antd";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Profile } from "../../shared/api/generated/model";
 import { getGetProfileQueryKey, useUpdateProfile } from "../../shared/api/generated/platform-bff";
+import { useNotify } from "../../shared/notify/NotifyProvider";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
 
@@ -15,14 +16,14 @@ import { Section } from "./Section";
  */
 export function ShowTestSection({ profile }: { profile: Profile }) {
   const { t } = useTranslation("profile");
-  const { message } = App.useApp();
+  const notify = useNotify();
   const queryClient = useQueryClient();
   const labelId = useId();
   const update = useUpdateProfile({
     mutation: {
       onSuccess: (next) => {
         queryClient.setQueryData(getGetProfileQueryKey(), next);
-        void message.success(t("showTest.saved"));
+        notify.success(t("showTest.saved"));
         // Выдача всех списков зависит от настройки: сбрасываем всё, кроме самого профиля.
         void queryClient.invalidateQueries({
           predicate: (query) => query.queryKey[0] !== getGetProfileQueryKey()[0],
