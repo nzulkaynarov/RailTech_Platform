@@ -893,8 +893,8 @@ jobs:
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
       # Shell-тесты выкладки (infra/deploy/tests/*-test.sh), shellcheck скриптов и actionlint deploy.yml — тот же `make deploy-check`
       # (CI-1: раньше в CI их не было, только локально).
-      # От root: тесты кладут файлы в общий с контейнером каталог от имени root контейнера, а на раннере docker не rootless
-      # (локально — rootless, поэтому offsite-sync-test падал здесь с «Permission denied»).
+      # От root: тесты кладут файлы в общий с контейнером каталог от имени root контейнера; на Linux-раннере без root
+      # offsite-sync-test падает с «Permission denied» (на Docker Desktop macOS владельцы файлов подменяются).
       - name: make deploy-check (shell-тесты выкладки, shellcheck, actionlint)
         run: sudo env "PATH=$PATH" make deploy-check
 
