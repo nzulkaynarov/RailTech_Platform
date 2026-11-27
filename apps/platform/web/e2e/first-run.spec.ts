@@ -185,6 +185,7 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByLabel("Временный пароль", { exact: true })).toHaveCount(0);
     await expect(page.getByText(temporary)).toHaveCount(0);
     expect(page.url()).not.toContain(temporary);
+    await page.getByText("Списком", { exact: true }).click();
     await expect(page.getByRole("row", { name: /Тест Без Почты/ })).toContainText("Приглашён");
 
     // Шаг «Первый сотрудник» теперь сделан

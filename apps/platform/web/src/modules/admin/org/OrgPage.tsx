@@ -192,7 +192,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
         title={title}
         readOnly={!editable}
         extra={
-          <>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
             <Segmented<"matrix" | "list">
               aria-label={t("capabilities:view.label")}
               value={view}
@@ -207,7 +207,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
                 {t("modules:admin.action")}
               </Button>
             ) : null}
-          </>
+          </div>
         }
       />
       {view === "matrix" ? (

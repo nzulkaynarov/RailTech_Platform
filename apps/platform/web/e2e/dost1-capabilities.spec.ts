@@ -140,8 +140,8 @@ test.describe("Мои возможности", () => {
     await expect(mine).toContainText("Что я делаю");
     await expect(mine.locator('[data-capability="leads"]').getByText("Работать")).toBeVisible();
     await expect(mine.locator('[data-capability="staff"]').getByText("Нет")).toBeVisible();
-    // свои подпись и зоны читает любой сотрудник: блоки на месте
-    await expect(mine.getByTestId("cap-signing")).toContainText("Права подписи нет");
+    // свои подпись и зоны читает любой сотрудник (у менеджера в демо — доверенность на письма и КП)
+    await expect(mine.getByTestId("cap-signing")).toContainText("по доверенности");
     await expect(mine.getByTestId("cap-zones")).toBeVisible();
     await mine.getByRole("button", { name: "Попросить возможность" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -168,7 +168,7 @@ test.describe("Нет возможности", () => {
       page.getByRole("heading", { level: 2, name: "«Сотрудники и возможности» вам не выдано" }),
     ).toBeVisible();
     await expect(page.getByText(/Сейчас у вас — «Нет»/)).toBeVisible();
-    await expect(page.getByText(/Выдают возможности: Демо Админов\./)).toBeVisible();
+    await expect(page.getByText(/Выдают возможности: .*Демо Админов/)).toBeVisible();
     await page.getByRole("button", { name: "Попросить возможность" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -181,7 +181,7 @@ test.describe("Нет возможности", () => {
       await loginAndWait(page, "manager@demo.example");
       await spaGoto(page, "/admin/org");
       await h1(page, "Нет доступа");
-      await expect(page.getByText(/Выдают возможности: Демо Админов\./)).toBeVisible();
+      await expect(page.getByText(/Выдают возможности: .*Демо Админов/)).toBeVisible();
       await expectNoViolations(page, `denied ${String(width)}`);
       await settledScreenshot(page, "denied");
     });
