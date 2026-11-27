@@ -6,7 +6,7 @@ import { expectNoViolations } from "./support/axe";
 // КАРКАС-2: остальные страницы Настроек и реестры CRM/EDS в `PageFrame`. Снимки: `E2E_SCREENSHOT_DIR=docs/screens/frame2/<before|after>`.
 const WIDTHS = [1512, 390] as const;
 const PAGES = [
-  ["org", "/admin/org"],
+  ["org", "/admin/org?view=list"],
   ["roles", "/admin/roles"],
   ["audit", "/admin/audit"],
   ["integrations", "/admin/integrations"],

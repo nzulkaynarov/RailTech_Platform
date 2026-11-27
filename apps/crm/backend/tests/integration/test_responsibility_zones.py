@@ -369,3 +369,25 @@ async def test_every_change_is_journaled_with_before_and_after(
     off = await audit_rows(sessions, "responsibility_zone.deactivate")
     assert off[0].before is not None
     assert off[0].before["is_active"] is True
+
+
+async def test_my_zones_list_only_my_own_records_without_the_users_right(
+    client: TestClient, staff: dict[str, tuple[int, dict[str, str]]]
+) -> None:
+    """ДОСТ-1: сотрудник без `users:read` читает свои зоны; чужие не видит."""
+    admin = staff["admin"][1]
+    manager_id, manager = staff["manager"]
+    zone = _create(client, admin)
+    patched = client.patch(
+        f"{ZONES}/{zone['id']}", json={"responsible_user_id": manager_id}, headers=admin
+    )
+    assert patched.status_code == 200, patched.text
+
+    mine = client.get(f"{ZONES}/mine", headers=manager)
+    other = client.get(f"{ZONES}/mine", headers=staff["director"][1])
+
+    assert mine.status_code == 200, mine.text
+    assert [z["code"] for z in mine.json()["items"]] == ["quality"]
+    assert other.status_code == 200
+    assert other.json()["items"] == []
+    assert client.get(ZONES, headers=manager).status_code == 403

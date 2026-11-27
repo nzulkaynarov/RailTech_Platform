@@ -1,6 +1,7 @@
 import { Alert } from "antd";
 import { useTranslation } from "react-i18next";
 
+import { CapabilityCard } from "../../../features/capabilities/CapabilityCard";
 import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
 import { EmployeeDeputy } from "../../../features/assign-deputy/EmployeeDeputy";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
@@ -69,6 +70,10 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             : []),
         ]}
       />
+      <CapabilityCard
+        employeeId={employee.id}
+        {...(canEdit && !disabled ? { rolesTargetId: `pf-roles-${employee.id}` } : {})}
+      />
       {attention === "pending" ? (
         <Alert type="info" showIcon message={t("admin.org.card.erpPending")} />
       ) : null}
@@ -95,11 +100,13 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
         </>
       ) : (
         <>
-          <AssignRoleForm
-            employee={employee}
-            selfId={selfId}
-            otherActiveAdmins={otherActiveAdmins}
-          />
+          <div id={`pf-roles-${employee.id}`} tabIndex={-1}>
+            <AssignRoleForm
+              employee={employee}
+              selfId={selfId}
+              otherActiveAdmins={otherActiveAdmins}
+            />
+          </div>
           <EmployeeDeputy employee={employee} selfId={selfId} />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
           <ResetPassword employee={employee} selfId={selfId} />

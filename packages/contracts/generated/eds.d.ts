@@ -871,6 +871,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/signing/mine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мои полномочия подписи (ДОСТ-1)
+     * @description Полномочия подписи самого сотрудника (все состояния, как `status=all` реестра). Только свои записи: право `signing.manage`
+     *     не нужно — сотрудник видит про себя то, что администратор реестра видит о нём («Мои возможности» Платформы).
+     */
+    get: operations["listMySigningAuthorities"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/signing/authorities": {
     parameters: {
       query?: never;
@@ -5430,6 +5451,27 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  listMySigningAuthorities: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Мои полномочия */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
     };
   };
   listSigningAuthorities: {

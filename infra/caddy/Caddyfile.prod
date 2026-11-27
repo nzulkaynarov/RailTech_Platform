@@ -108,12 +108,19 @@
 
 # Плановое обновление (DECISIONS 2026-11-23): файл-предупреждение /maintenance.json лежит на хосте (/opt/rt/maintenance, монтируется
 # в Caddy только на чтение), пишет его scripts/maintenance-notice.sh, снимает выкладка. Нет файла — 404 (баннера нет). SPA опрашивает
-# его раз в минуту, поэтому no-store. Подключается на доменах Cabinet и Платформы.
+# его раз в минуту, поэтому no-store. Подключается на доменах Cabinet и Платформы. Нет файла — 204 без тела, а не 404:
+# опрос идёт на каждой странице, и 404 каждую минуту засоряет консоль браузера (ПРАВДА-2); SPA читает 204 как «баннера нет».
 (maintenance_notice) {
 	handle /maintenance.json {
 		root * /srv/maintenance
 		header Cache-Control "no-store"
-		file_server
+		@present file {path}
+		handle @present {
+			file_server
+		}
+		handle {
+			respond 204
+		}
 	}
 }
 

@@ -217,7 +217,7 @@ export interface paths {
     };
     /**
      * Логотип своей компании до входа (ДВ-3)
-     * @description Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+     * @description Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
      */
     get: operations["getOperatorLogo"];
     put?: never;
@@ -4403,6 +4403,66 @@ export interface paths {
      * @description Только `admin: full`. Разделы — из каталога прав, неизвестный — 422; повтор `code` — 409 `CONFLICT`.
      */
     post: operations["createResponsibilityZone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * «Кто что может» — таблица возможностей всех действующих сотрудников (только чтение)
+     * @description ДОСТ-1. Что каждый сотрудник может СЕГОДНЯ, словами по ходу сделки: ~30 строк-возможностей с уровнями «смотреть / работать / решать» и пометкой «не всё». Считается из ролей сотрудника (объединение), кодов бэкендов CRM, ERP и EDS и каталога `platform-capabilities.yaml`; ничего не выдаёт и не меняет, расчёт доступа не затрагивает. Подпись (EDS) и зоны (CRM) читаются правами читающего; если их читать нечем, `signing_known` / `zones_known` = false — это «не известно», а не «нет». `warnings` — «единственный, кто решает», «никто не решает», «визирует договоры, а права подписи нет». Раздел `admin` — от чтения.
+     */
+    get: operations["getCapabilityMatrix"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * «Что может этот человек» — карточка возможностей сотрудника (только чтение)
+     * @description ДОСТ-1. Итог словами из текстов каталога (без модели), строки по шагам сделки с действиями «включено / выключено», откуда строка (`from_roles`), кто ещё может (`others`), подпись, зоны («отвечает за»), замещение, предупреждения по этому человеку. Раздел `admin` — от чтения. Отключённый сотрудник тоже открывается.
+     */
+    get: operations["getEmployeeCapabilities"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * «Мои возможности» — то же про себя (только чтение)
+     * @description ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и зоны — свои записи, их читает любой сотрудник (CRM `/responsibility-zones/mine`, EDS `/signing/mine`); не прочиталось — `signing_known` / `zones_known` = false.
+     */
+    get: operations["getMyCapabilities"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -10287,6 +10347,138 @@ export interface components {
       problems: components["schemas"]["ZoneProblem"][];
       /** Format: date-time */
       updated_at: string;
+    };
+    CapabilityText: {
+      ru: string;
+      /** @description Латиница нового алфавита (Ö Ğ Ş Ç, ʼ) */
+      uz: string;
+      en: string;
+    };
+    /**
+     * @description Нет / смотреть / работать / решать («решать» — визы, одобрения, резолюции, подтверждение оплаты)
+     * @enum {string}
+     */
+    CapabilityLevel: "none" | "view" | "work" | "decide";
+    /** @enum {string} */
+    CapabilityActionLevel: "view" | "work" | "decide";
+    CapabilityPerson: {
+      id: string;
+      name: string;
+      initials: string;
+      position?: string;
+      avatar_url?: string;
+    };
+    CapabilityAction: {
+      key: string;
+      text: components["schemas"]["CapabilityText"];
+      /** @description Включено: бэкенды разрешают это действие сотруднику сегодня */
+      on: boolean;
+      /** @description Условия BFF «раздел:уровень»; через «|» — любое из. По ним экран «Нет доступа» называет возможность */
+      gates: string[];
+    };
+    CapabilityLevelActions: {
+      level: components["schemas"]["CapabilityActionLevel"];
+      actions: components["schemas"]["CapabilityAction"][];
+    };
+    CapabilityRow: {
+      key: string;
+      group: string;
+      name: components["schemas"]["CapabilityText"];
+      level: components["schemas"]["CapabilityLevel"];
+      /** @description «Не всё» — выключено хоть одно действие этого или нижнего уровня */
+      partial: boolean;
+      levels: components["schemas"]["CapabilityLevelActions"][];
+      /** @description Роли, каждая из которых сама даёт строке уровень выше «нет» */
+      from_roles: components["schemas"]["RoleRef"][];
+      /** @description Кто ещё держит строку на этом уровне или выше (только карточка человека) */
+      others: components["schemas"]["CapabilityPerson"][];
+      others_total: number;
+    };
+    CapabilityGroup: {
+      key: string;
+      step: components["schemas"]["CapabilityText"];
+      name: components["schemas"]["CapabilityText"];
+      rows: components["schemas"]["CapabilityRow"][];
+    };
+    /** @description Итог словами из текстов каталога, без модели; нет поля — сказать нечего */
+    CapabilitySummary: {
+      does?: components["schemas"]["CapabilityText"];
+      decides?: components["schemas"]["CapabilityText"];
+      lacks?: components["schemas"]["CapabilityText"];
+    };
+    CapabilityZone: {
+      id: string;
+      code: string;
+      name: components["schemas"]["ZoneText"];
+      /** @enum {string} */
+      role: "responsible" | "deputy" | "curator";
+      valid_to?: string;
+    };
+    CapabilityAuthority: {
+      id: string;
+      /** @description Коды видов документов реестра прав подписи */
+      kinds: string[];
+      limit?: components["schemas"]["EdsMoney"];
+      /** @enum {string} */
+      basis: "charter" | "order" | "power_of_attorney";
+      basis_number?: string;
+      valid_to?: string;
+    };
+    CapabilityWarning: {
+      /** @enum {string} */
+      code: "only_decider" | "nobody_decides" | "visa_without_signing";
+      capability?: string;
+      person?: components["schemas"]["CapabilityPerson"];
+      has_deputy?: boolean;
+    };
+    EmployeeCapabilities: {
+      employee: components["schemas"]["CapabilityPerson"];
+      roles: components["schemas"]["RoleRef"][];
+      summary: components["schemas"]["CapabilitySummary"];
+      groups: components["schemas"]["CapabilityGroup"][];
+      signing_known: boolean;
+      signing: components["schemas"]["CapabilityAuthority"][];
+      zones_known: boolean;
+      zones: components["schemas"]["CapabilityZone"][];
+      deputy?: components["schemas"]["DeputyPeriod"];
+      warnings: components["schemas"]["CapabilityWarning"][];
+      free_for_all: components["schemas"]["CapabilityText"];
+      /** @description Только `/me/capabilities`: действующие сотрудники, которые выдают возможности («Сотрудники и возможности — работать», раздел `admin` на изменение). Пустой список — выдать некому; нет поля — не известно. */
+      grantors?: components["schemas"]["CapabilityPerson"][];
+    };
+    CapabilityMatrixCell: {
+      level: components["schemas"]["CapabilityLevel"];
+      partial: boolean;
+    };
+    CapabilityMatrixCapability: {
+      key: string;
+      name: components["schemas"]["CapabilityText"];
+      levels: components["schemas"]["CapabilityActionLevel"][];
+    };
+    CapabilityMatrixGroup: {
+      key: string;
+      step: components["schemas"]["CapabilityText"];
+      name: components["schemas"]["CapabilityText"];
+      capabilities: components["schemas"]["CapabilityMatrixCapability"][];
+    };
+    CapabilityMatrixEmployee: {
+      person: components["schemas"]["CapabilityPerson"];
+      roles: components["schemas"]["RoleRef"][];
+      /** @description Ключ — `key` строки каталога */
+      cells: {
+        [key: string]: components["schemas"]["CapabilityMatrixCell"];
+      };
+      signing: components["schemas"]["CapabilityAuthority"][];
+      zones: components["schemas"]["CapabilityZone"][];
+      deputy?: components["schemas"]["DeputyPeriod"];
+    };
+    CapabilityMatrix: {
+      groups: components["schemas"]["CapabilityMatrixGroup"][];
+      employees: components["schemas"]["CapabilityMatrixEmployee"][];
+      signing_known: boolean;
+      zones_known: boolean;
+      warnings: components["schemas"]["CapabilityWarning"][];
+      free_for_all: components["schemas"]["CapabilityText"];
     };
     ZoneList: {
       items: components["schemas"]["Zone"][];
@@ -18742,6 +18934,11 @@ export interface components {
       /** @description Заявка стала проектом (КП принято) */
       project: boolean;
       client_sees: components["schemas"]["ClientSees"];
+      /**
+       * @description Слово статуса заявки в списке «Заявки» Кабинета (`packages/contracts/client-request-statuses.yaml`); `null` — заявка стала проектом, тогда слова проекта — `client_sees`. Карточка компании пишет «В кабинете клиента» именно им.
+       * @enum {string|null}
+       */
+      cabinet_status: "new" | "in_progress" | "quoted" | "closed" | null;
       /** @enum {string|null} */
       urgency: "normal" | "urgent" | null;
       /**
@@ -21360,7 +21557,15 @@ export interface operations {
           "image/*": string;
         };
       };
-      404: components["responses"]["NotFound"];
+      /** @description Логотипа нет — тело пустое, Платформа рисует буквы названия компании */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
     };
   };
   createFirstAdmin: {
@@ -28589,6 +28794,75 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getCapabilityMatrix: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Таблица */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CapabilityMatrix"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getEmployeeCapabilities: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка возможностей */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeCapabilities"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  getMyCapabilities: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Мои возможности */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeCapabilities"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
     };
   };
   getResponsibilityZonesSummary: {

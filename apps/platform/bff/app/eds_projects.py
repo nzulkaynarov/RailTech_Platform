@@ -19,6 +19,7 @@ from app.errors import PlatformError, backend_code, backend_unavailable
 from app.row_logos import attach_client_logos
 from app.schemas_eds_projects import (
     ActActionIn,
+    ClientStatus,
     ContractActionIn,
     DocumentClientLinks,
     ProjectCard,
@@ -226,6 +227,21 @@ class ErpProjects:
         return ProjectPage(
             items=[row(r) for r in raw.results], total=raw.count, offset=offset, limit=limit
         )
+
+    async def client_status_by_number(self, number: str) -> ClientStatus | None:
+        """Слово «что видит клиент» проекта по номеру — как считает ERP (то же видит Кабинет).
+
+        Нет проекта, нет прав или ERP не ответила — `None`: вызывающий оставляет своё значение.
+        """
+        try:
+            raw = parse(
+                RawPage,
+                await self._json("GET", f"{API}/projects/", params={"number": number, "limit": 5}),
+                "projects",
+            )
+        except PlatformError:
+            return None
+        return next((r.client_status for r in raw.results if r.number == number), None)
 
     async def raw_card(self, ref: str) -> RawCard:
         deal_id = deal_id_of_ref(ref)

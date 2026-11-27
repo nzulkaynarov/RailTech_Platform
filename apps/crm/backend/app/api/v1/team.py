@@ -14,6 +14,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac, require
+from app.api.v1.me import Settled
 from app.domain.errors import ForbiddenError, ValidationFailedError
 from app.schemas.leads import TeamMember
 from app.security.principal import Principal
@@ -70,3 +71,13 @@ async def team(
         if section is None or level is None:
             return await team_service.workers(session)
         return await team_service.by_section(session, section, level)
+
+
+@router.get("/team/granters", response_model=list[TeamMember])
+async def granters(_: Settled, container: ContainerDep) -> list[TeamMember]:
+    """Кто выдаёт возможности: действующие сотрудники с `admin` на изменение (ДОСТ-1).
+
+    Любому сотруднику: имя и должность тех, к кому идти; ролей, почты и телефона нет.
+    """
+    async with container.session_factory() as session:
+        return await team_service.by_section(session, "admin", "full")

@@ -24,6 +24,8 @@ from tests.crm_leads_support import (
     deal,
     invitation_out,
 )
+from tests.eds_projects_support import ProjectsFake
+from tests.eds_projects_support import row as project_row
 
 BASE = "/api/v1/crm/clients"
 
@@ -58,6 +60,15 @@ async def test_without_the_clients_section_everything_is_forbidden_before_crm(
     assert (await web.client.get(BASE)).status_code == 403
     assert (await web.client.get(f"{BASE}/12")).status_code == 403
     assert crm.calls == []
+
+
+@pytest.fixture(autouse=True)
+def erp_projects(be: Backends) -> ProjectsFake:
+    """ERP отвечает на «проекты клиента» (слово проекта в карточке); по умолчанию проектов нет."""
+    fake = ProjectsFake(be)
+    fake.rows = []
+    fake.cards = {}
+    return fake
 
 
 async def test_reader_cannot_resend_the_invitation(web: Web, crm: CrmLeadsFake) -> None:
@@ -141,6 +152,7 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
         "step": "QUOTE",
         "project": False,
         "client_sees": "awaiting_decision",
+        "cabinet_status": "quoted",
         "urgency": "urgent",
         "transfer": "done",
         "transfer_error": None,
@@ -149,8 +161,14 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
     }
     assert (failed["number"], failed["step"], failed["client_sees"]) == (None, "REQUEST", "in_work")
     assert (failed["transfer"], failed["transfer_error"]) == ("failed", "erp_unreachable")
+    assert failed["cabinet_status"] == "new"
     assert (paid["step"], paid["project"], paid["client_sees"]) == ("PAYMENT", True, "fulfilling")
-    assert (lost["step"], lost["client_sees"]) == ("LOST", "rejected")
+    assert paid["cabinet_status"] is None  # проект: слова проекта, не заявки
+    assert (lost["step"], lost["client_sees"], lost["cabinet_status"]) == (
+        "LOST",
+        "rejected",
+        "closed",
+    )
     assert card["documents"] == [
         {
             "id": 61,
@@ -578,3 +596,31 @@ async def test_show_test_switch_decides_in_the_bff_not_the_query_string(
     assert crm.params("GET", "clients") == {"test": "all"}
     await web.client.get(f"{BASE}?test=only")
     assert crm.params("GET", "clients") == {"test": "only"}
+
+
+async def test_card_takes_the_project_word_from_erp_after_the_client_agrees(
+    web: Web, erp_projects: ProjectsFake, crm: CrmLeadsFake
+) -> None:
+    """ПРАВДА-2: после «Принять редакцию» в Кабинете карточка не пишет «Согласуйте редакцию»."""
+    erp = erp_projects
+    erp.rows = [project_row(7, client_status="contract_signing")]  # ПР-2026-007 — проект сделки 79
+    await web.login(["DIRECTOR"])
+
+    card = (await web.client.get(f"{BASE}/12")).json()
+
+    project = next(r for r in card["requests"] if r["number"] == "ПР-2026-007")
+    assert (project["project"], project["client_sees"]) == (True, "contract_signing")
+    quote = next(r for r in card["requests"] if r["number"] == "ЗВ-2026-104")
+    assert quote["client_sees"] == "awaiting_decision"  # заявки ERP не спрашиваем
+
+
+async def test_card_keeps_the_mirror_word_when_erp_does_not_answer(
+    web: Web, erp_projects: ProjectsFake, crm: CrmLeadsFake
+) -> None:
+    erp_projects.answer("GET", r"projects/", httpx.Response(502, json={"detail": "x"}))
+    await web.login(["DIRECTOR"])
+
+    card = (await web.client.get(f"{BASE}/12")).json()
+
+    project = next(r for r in card["requests"] if r["number"] == "ПР-2026-007")
+    assert project["client_sees"] == "fulfilling"

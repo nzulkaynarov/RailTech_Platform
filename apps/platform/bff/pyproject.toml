@@ -42,7 +42,8 @@ filterwarnings = ["error"]
 line-length = 100
 target-version = "py312"
 # Модели CRM генерирует datamodel-codegen из packages/contracts/openapi/crm.yaml (формат и линт — его, свежесть — make crm-models-check).
-extend-exclude = ["app/clients/crm_models.py"]
+# Каталог возможностей (ДОСТ-1) — JSON в строке из platform-capabilities.yaml (make rbac), свежесть — rbac-check.
+extend-exclude = ["app/clients/crm_models.py", "app/capabilities_generated.py"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]

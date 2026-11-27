@@ -50,6 +50,8 @@ ClientSees = Literal[
     "quote_expired",
 ]
 
+RequestStatus = Literal["new", "in_progress", "quoted", "closed"]
+
 LEAD_PATTERN = r"^[Ll]-?\d{1,9}$"
 UUID_PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
@@ -226,6 +228,7 @@ class ClientRequestRow(BaseModel):
     step: StepCode
     project: bool
     client_sees: ClientSees
+    cabinet_status: RequestStatus | None
     urgency: Urgency | None
     transfer: Transfer | None
     transfer_error: str | None

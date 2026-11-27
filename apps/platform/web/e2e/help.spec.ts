@@ -166,12 +166,16 @@ test.describe("Обращения к администратору", () => {
   }) => {
     // 1. Менеджер открывает раздел, которого у него нет.
     await loginAndWait(page, "manager@demo.example");
-    await page.goto("/admin/org");
+    await page.goto("/admin/org?view=list");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    await page.getByRole("button", { name: "Написать администратору" }).click();
+    await page
+      .getByRole("button", { name: /^(Написать администратору|Попросить возможность)$/ })
+      .click();
     const dialog = page.getByRole("dialog", { name: "Написать администратору" });
     await expect(dialog.getByText("Нужен доступ к разделу")).toBeVisible();
     await expect(dialog.getByText(/страница \/admin\/org, роль Менеджер/)).toBeVisible();
+    // в тексте обращения уже может стоять название возможности (ДОСТ-1): «пусто» проверяем, стерев его
+    await dialog.getByRole("textbox", { name: "Что случилось" }).fill("");
     await dialog.getByRole("button", { name: "Отправить" }).click();
     await expect(dialog.getByText("Опишите, что случилось", { exact: true })).toBeVisible();
     await dialog

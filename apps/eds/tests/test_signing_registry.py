@@ -447,3 +447,21 @@ def test_today_is_the_company_date() -> None:
     from app.services import signing_registry
 
     assert isinstance(signing_registry.today(), date)
+
+
+async def test_my_authorities_are_visible_to_their_holder_without_the_registry_right(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    """ДОСТ-1: «Мои возможности» — сотрудник видит свои полномочия, чужих не видит, права реестра не нужны."""
+    mine = await issue(client, staff["admin"], **{**CHARTER, "crm_user_id": staff["director"].id})
+    theirs = await issue(client, staff["admin"], **{**POA, "crm_user_id": staff["nobody"].id})
+
+    own = await client.get("/api/v1/signing/mine", headers=staff["director"].headers)
+
+    assert own.status_code == 200, own.text
+    validate("SigningAuthorityList", own.json())
+    assert [i["id"] for i in own.json()["items"]] == [mine["id"]]
+    other = await client.get("/api/v1/signing/mine", headers=staff["nobody"].headers)
+    assert other.status_code == 200
+    assert [i["id"] for i in other.json()["items"]] == [theirs["id"]]
+    assert (await client.get("/api/v1/signing/mine")).status_code == 401

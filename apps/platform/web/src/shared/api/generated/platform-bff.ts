@@ -78,6 +78,7 @@ import type {
   CalendarLink,
   CalendarLinkIssued,
   CallNoteView,
+  CapabilityMatrix,
   CatalogCategory,
   CatalogCategoryIn,
   CatalogCategoryList,
@@ -203,6 +204,7 @@ import type {
   EmailTemplatePreview,
   EmailTemplateUpdate,
   Employee,
+  EmployeeCapabilities,
   EmployeeCredentials,
   EmployeeInvite,
   EmployeeList,
@@ -1707,7 +1709,7 @@ export const getGetOperatorLogoUrl = () => {
 };
 
 /**
- * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+ * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
  * @summary Логотип своей компании до входа (ДВ-3)
  */
 export const getOperatorLogo = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
@@ -1723,7 +1725,7 @@ export const getGetOperatorLogoQueryKey = () => {
 
 export const getGetOperatorLogoQueryOptions = <
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -1743,11 +1745,11 @@ export const getGetOperatorLogoQueryOptions = <
 };
 
 export type GetOperatorLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getOperatorLogo>>>;
-export type GetOperatorLogoQueryError = ErrorType<NotFoundResponse>;
+export type GetOperatorLogoQueryError = ErrorType<unknown>;
 
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
@@ -1765,7 +1767,7 @@ export function useGetOperatorLogo<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
@@ -1783,7 +1785,7 @@ export function useGetOperatorLogo<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
@@ -1797,7 +1799,7 @@ export function useGetOperatorLogo<
 
 export function useGetOperatorLogo<
   TData = Awaited<ReturnType<typeof getOperatorLogo>>,
-  TError = ErrorType<NotFoundResponse>,
+  TError = ErrorType<unknown>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
@@ -30417,6 +30419,386 @@ export const useCreateResponsibilityZone = <
 > => {
   return useMutation(getCreateResponsibilityZoneMutationOptions(options), queryClient);
 };
+
+export const getGetCapabilityMatrixUrl = () => {
+  return `/api/v1/admin/capabilities`;
+};
+
+/**
+ * ДОСТ-1. Что каждый сотрудник может СЕГОДНЯ, словами по ходу сделки: ~30 строк-возможностей с уровнями «смотреть / работать / решать» и пометкой «не всё». Считается из ролей сотрудника (объединение), кодов бэкендов CRM, ERP и EDS и каталога `platform-capabilities.yaml`; ничего не выдаёт и не меняет, расчёт доступа не затрагивает. Подпись (EDS) и зоны (CRM) читаются правами читающего; если их читать нечем, `signing_known` / `zones_known` = false — это «не известно», а не «нет». `warnings` — «единственный, кто решает», «никто не решает», «визирует договоры, а права подписи нет». Раздел `admin` — от чтения.
+ * @summary «Кто что может» — таблица возможностей всех действующих сотрудников (только чтение)
+ */
+export const getCapabilityMatrix = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CapabilityMatrix> => {
+  return http<CapabilityMatrix>(getGetCapabilityMatrixUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCapabilityMatrixQueryKey = () => {
+  return [`/api/v1/admin/capabilities`] as const;
+};
+
+export const getGetCapabilityMatrixQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCapabilityMatrix>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCapabilityMatrix>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCapabilityMatrixQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCapabilityMatrix>>> = ({ signal }) =>
+    getCapabilityMatrix({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCapabilityMatrix>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCapabilityMatrixQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCapabilityMatrix>>
+>;
+export type GetCapabilityMatrixQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetCapabilityMatrix<
+  TData = Awaited<ReturnType<typeof getCapabilityMatrix>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCapabilityMatrix>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCapabilityMatrix>>,
+          TError,
+          Awaited<ReturnType<typeof getCapabilityMatrix>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCapabilityMatrix<
+  TData = Awaited<ReturnType<typeof getCapabilityMatrix>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCapabilityMatrix>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCapabilityMatrix>>,
+          TError,
+          Awaited<ReturnType<typeof getCapabilityMatrix>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCapabilityMatrix<
+  TData = Awaited<ReturnType<typeof getCapabilityMatrix>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCapabilityMatrix>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary «Кто что может» — таблица возможностей всех действующих сотрудников (только чтение)
+ */
+
+export function useGetCapabilityMatrix<
+  TData = Awaited<ReturnType<typeof getCapabilityMatrix>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCapabilityMatrix>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCapabilityMatrixQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetEmployeeCapabilitiesUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/capabilities`;
+};
+
+/**
+ * ДОСТ-1. Итог словами из текстов каталога (без модели), строки по шагам сделки с действиями «включено / выключено», откуда строка (`from_roles`), кто ещё может (`others`), подпись, зоны («отвечает за»), замещение, предупреждения по этому человеку. Раздел `admin` — от чтения. Отключённый сотрудник тоже открывается.
+ * @summary «Что может этот человек» — карточка возможностей сотрудника (только чтение)
+ */
+export const getEmployeeCapabilities = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EmployeeCapabilities> => {
+  return http<EmployeeCapabilities>(getGetEmployeeCapabilitiesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEmployeeCapabilitiesQueryKey = (id: string) => {
+  return [`/api/v1/admin/users/${id}/capabilities`] as const;
+};
+
+export const getGetEmployeeCapabilitiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEmployeeCapabilitiesQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeCapabilities>>> = ({
+    signal,
+  }) => getEmployeeCapabilities(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEmployeeCapabilitiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEmployeeCapabilities>>
+>;
+export type GetEmployeeCapabilitiesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetEmployeeCapabilities<
+  TData = Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeCapabilities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEmployeeCapabilities<
+  TData = Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeCapabilities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEmployeeCapabilities<
+  TData = Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary «Что может этот человек» — карточка возможностей сотрудника (только чтение)
+ */
+
+export function useGetEmployeeCapabilities<
+  TData = Awaited<ReturnType<typeof getEmployeeCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEmployeeCapabilities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEmployeeCapabilitiesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetMyCapabilitiesUrl = () => {
+  return `/api/v1/me/capabilities`;
+};
+
+/**
+ * ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и зоны — свои записи, их читает любой сотрудник (CRM `/responsibility-zones/mine`, EDS `/signing/mine`); не прочиталось — `signing_known` / `zones_known` = false.
+ * @summary «Мои возможности» — то же про себя (только чтение)
+ */
+export const getMyCapabilities = async (
+  options?: Parameters<typeof http>[1],
+): Promise<EmployeeCapabilities> => {
+  return http<EmployeeCapabilities>(getGetMyCapabilitiesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyCapabilitiesQueryKey = () => {
+  return [`/api/v1/me/capabilities`] as const;
+};
+
+export const getGetMyCapabilitiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyCapabilities>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyCapabilitiesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyCapabilities>>> = ({ signal }) =>
+    getMyCapabilities({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCapabilities>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetMyCapabilitiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyCapabilities>>
+>;
+export type GetMyCapabilitiesQueryError = ErrorType<SessionExpiredResponse>;
+
+export function useGetMyCapabilities<
+  TData = Awaited<ReturnType<typeof getMyCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyCapabilities>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyCapabilities>>,
+          TError,
+          Awaited<ReturnType<typeof getMyCapabilities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyCapabilities<
+  TData = Awaited<ReturnType<typeof getMyCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyCapabilities>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyCapabilities>>,
+          TError,
+          Awaited<ReturnType<typeof getMyCapabilities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyCapabilities<
+  TData = Awaited<ReturnType<typeof getMyCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyCapabilities>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary «Мои возможности» — то же про себя (только чтение)
+ */
+
+export function useGetMyCapabilities<
+  TData = Awaited<ReturnType<typeof getMyCapabilities>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyCapabilities>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyCapabilitiesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetResponsibilityZonesSummaryUrl = () => {
   return `/api/v1/admin/responsibility-zones/summary`;

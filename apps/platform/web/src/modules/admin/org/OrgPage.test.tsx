@@ -16,9 +16,14 @@ import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import { ROLE_ID, ref } from "../../../test/roles";
 
-function renderAt(path: string) {
+/** Список — прежний вид экрана; «Кто что может» (ДОСТ-1) открывается по умолчанию и проверяется отдельно. */
+function renderAt(path: string, view: "list" | "matrix" = "list") {
   const queryClient = createQueryClient({ retry: false, staleTime: 0 });
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
+  const entry =
+    view === "matrix" || path.includes("view=")
+      ? path
+      : `${path}${path.includes("?") ? "&" : "?"}view=list`;
+  const router = createMemoryRouter(routes, { initialEntries: [entry] });
   render(
     <AppProviders queryClient={queryClient}>
       <RouterProvider router={router} />
@@ -57,7 +62,9 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     signIn("admin@demo.example");
     renderAt("/admin/org?panel=open");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Сотрудники и возможности" }),
+    ).toBeVisible();
     expect(
       await screen.findByRole("link", { name: "Открыть карточку: Демо Менеджеров" }),
     ).toBeVisible();

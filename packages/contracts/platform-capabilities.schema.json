@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/platform-capabilities.schema.json",
+  "title": "Каталог «что может человек» (platform-capabilities.yaml, ДОСТ-1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "free_for_all", "groups", "capabilities"],
+  "$defs": {
+    "i18n": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ru", "uz", "en"],
+      "properties": {
+        "ru": { "type": "string", "minLength": 1 },
+        "uz": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      }
+    },
+    "codes": { "type": "array", "items": { "type": "string", "pattern": "^[a-z_]+[.:][a-z_.]+$" }, "uniqueItems": true },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "text", "gates"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z_]*$" },
+        "text": { "$ref": "#/$defs/i18n" },
+        "gates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z.]+:(read|full)(\\|[a-z.]+:(read|full))*$" }
+        },
+        "crm": { "$ref": "#/$defs/codes" },
+        "erp": { "$ref": "#/$defs/codes" },
+        "eds": { "$ref": "#/$defs/codes" },
+        "fields": { "type": "array", "items": { "enum": ["cost_margin", "supplier_prices", "totals_only"] } },
+        "erp_superuser": { "type": "boolean" }
+      }
+    },
+    "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } }
+  },
+  "properties": {
+    "version": { "const": 1 },
+    "free_for_all": { "$ref": "#/$defs/i18n" },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "step", "name"],
+        "properties": {
+          "key": { "type": "string" },
+          "step": { "$ref": "#/$defs/i18n" },
+          "name": { "$ref": "#/$defs/i18n" }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "group", "name", "levels"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z_]*$" },
+          "group": { "type": "string" },
+          "name": { "$ref": "#/$defs/i18n" },
+          "levels": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "view": { "$ref": "#/$defs/actions" },
+              "work": { "$ref": "#/$defs/actions" },
+              "decide": { "$ref": "#/$defs/actions" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

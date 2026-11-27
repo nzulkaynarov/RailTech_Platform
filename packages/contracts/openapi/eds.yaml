@@ -1595,6 +1595,24 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/signing/mine:
+    get:
+      tags: [signing]
+      operationId: listMySigningAuthorities
+      summary: Мои полномочия подписи (ДОСТ-1)
+      description: |
+        Полномочия подписи самого сотрудника (все состояния, как `status=all` реестра). Только свои записи: право `signing.manage`
+        не нужно — сотрудник видит про себя то, что администратор реестра видит о нём («Мои возможности» Платформы).
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Мои полномочия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/v1/signing/authorities:
     get:
       tags: [signing]

@@ -37,13 +37,13 @@ async def test_logo_is_public_with_safe_headers(web: Web, be: Backends) -> None:
     assert "authorization" not in file.calls.last.request.headers
 
 
-async def test_no_logo_is_404(web: Web, be: Backends) -> None:
+async def test_no_logo_is_204_not_an_error(web: Web, be: Backends) -> None:
     _operator(be, None)
 
     response = await web.client.get("/api/v1/setup/logo")
 
-    assert response.status_code == 404
-    assert response.json()["code"] == "NOT_FOUND"
+    assert response.status_code == 204
+    assert response.content == b""
 
 
 async def test_foreign_path_is_not_fetched(web: Web, be: Backends) -> None:
@@ -54,14 +54,30 @@ async def test_foreign_path_is_not_fetched(web: Web, be: Backends) -> None:
 
     response = await web.client.get("/api/v1/setup/logo")
 
-    assert response.status_code == 404
+    assert response.status_code == 204
     assert not secret.called
 
 
-async def test_not_an_image_is_404(web: Web, be: Backends) -> None:
+async def test_not_an_image_is_204(web: Web, be: Backends) -> None:
     _operator(be, LOGO)
     be.router.get(f"{ERP_URL}{LOGO}").mock(
         return_value=httpx.Response(200, content=b"<html>", headers={"content-type": "text/html"})
     )
 
-    assert (await web.client.get("/api/v1/setup/logo")).status_code == 404
+    assert (await web.client.get("/api/v1/setup/logo")).status_code == 204
+
+
+async def test_logo_from_portal_address_is_served(web: Web, be: Backends) -> None:
+    """ERP отдаёт адрес `/api/portal/v1/operator/logo?v=<версия>`, не путь в media."""
+    path = "/api/portal/v1/operator/logo?v=a1b2c3d4e5"
+    _operator(be, path)
+    be.router.get(f"{ERP_URL}{path}").mock(
+        return_value=httpx.Response(
+            200, content=b"RIFFwebp", headers={"content-type": "image/webp"}
+        )
+    )
+
+    response = await web.client.get("/api/v1/setup/logo")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/webp"
