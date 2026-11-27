@@ -1,4 +1,4 @@
-import { Alert, App, Button } from "antd";
+import { Alert, Button } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard } from "../../../shared/api/generated/model";
 import { completeInstruction } from "../../../shared/api/generated/platform-bff";
+import { useNotify } from "../../../shared/notify/NotifyProvider";
 import { DisabledReason } from "../../../shared/ui/DisabledReason";
 import { PartnerDialog, RequestSheet } from "../tasks/LetterOutcomes";
 import { useRefreshLetters } from "./api";
@@ -25,7 +26,7 @@ const NOT_WORKED = new Set(["closed", "duplicate", "rejected", "returned"]);
 export function LetterIntake({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
   const { me } = useAuth();
-  const { message } = App.useApp();
+  const notify = useNotify();
   const refresh = useRefreshLetters();
   const [open, setOpen] = useState<Kind | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function LetterIntake({ letter }: { letter: LetterCard }) {
         handed_to: { kind: kind === "request" ? "client_request" : "partner_application", id },
       });
     }
-    void message.success(t(`intake.done.${kind}`, { number: letter.number }));
+    notify.success(t(`intake.done.${kind}`, { number: letter.number }));
     await refresh();
   };
 
