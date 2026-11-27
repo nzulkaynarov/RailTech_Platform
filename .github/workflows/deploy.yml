@@ -154,17 +154,16 @@ jobs:
               banner=-
             fi
           fi
-          # Режим - по часам, а не по крону (расписание GitHub опаздывает на часы). Ночью: активность не смотрим, баннер не ждём.
+          # Режим - по часам, а не по крону (расписание GitHub опаздывает на часы). Ночью: активность не смотрим, но баннер уже объявленного времени уважаем.
           now="$(date +%s)"
           phase="$(bash infra/deploy/clock-decision.sh phase "$now")"
           activity=0
-          dbanner="$banner"; dbanner_end="$banner_end"
           if [ "$phase" = night ]; then
-            dbanner=-; dbanner_end=-
+            : # ночью активность не смотрим (activity=0), но баннер учитываем: объявленное время не наступило - ждём, наступило - выкладываем
           elif [ "$should" = deploy ] && [ "$failed" = 0 ]; then
             activity="$(ssh app 'bash -s' < infra/deploy/activity-check.sh)" || { say "не удалось прочитать активность - тик пропущен"; exit 0; }
           fi
-          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$dbanner" "$now" "$dbanner_end")"
+          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$banner" "$now" "$banner_end")"
           say "режим $phase ($(TZ=Asia/Tashkent date -d "@$now" +%H:%M) Ташкент), кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
           case "$decision" in
             deploy-now|deploy-due) echo "go=true" >> "$GITHUB_OUTPUT" ;;
