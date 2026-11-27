@@ -92,6 +92,7 @@ jobs:
       # Запуск, забытый в ожидании одобрения (или застрявший в очереди), не должен ничего держать: отменяем более старые запуски
       # этого workflow в статусах waiting/queued/pending (кроме себя). Идущие (in_progress) не трогаем.
       - name: Отмена устаревших ожидающих запусков Deploy
+        if: inputs.action != 'build'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -121,18 +122,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git rev-parse --verify -q origin/main >/dev/null || { echo "::error::нет origin/main"; exit 1; }
-          for c in $(git rev-list --first-parent --max-count=40 origin/main); do
-            n="$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$c/check-runs" -f check_name='CI ok' -f filter=latest -f per_page=100 \
-              --jq '[.check_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
-            if [ "$n" -ge 1 ]; then
-              echo "выкладываем $c (HEAD main: $(git rev-parse origin/main))"
-              git checkout -q --detach "$c"
-              exit 0
-            fi
-            echo "«CI ok» на $c не зелёная - смотрим предыдущий коммит main"
-          done
-          echo "::error::в последних 40 коммитах main нет зелёной «CI ok» - ночная выкладка не идёт"
-          exit 1
+          c="$(bash infra/deploy/pick-green-main.sh)" || { echo "::error::в последних 40 коммитах main нет зелёной «CI ok» - ночная выкладка не идёт"; exit 1; }
+          echo "выкладываем $c (HEAD main: $(git rev-parse origin/main))"
+          git checkout -q --detach "$c"
 
       - name: Режим, sha и тег
         id: ver
@@ -167,7 +159,7 @@ jobs:
         run: |
           runs="$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
             -f check_name='CI ok' -f filter=latest -f per_page=100 \
-            --jq '[.check_runs[] | {status, conclusion}]')"
+            --jq '[.check_runs[] | {status, conclusion, started_at}] | sort_by(.started_at) | if length > 0 then [last] else [] end')"
           total="$(jq 'length' <<<"$runs")"
           if [ "$total" -eq 0 ]; then
             echo "::error::на $SHA нет проверки «CI ok» — CI на этом коммите не запускался; деплой только после зелёного CI"
@@ -328,9 +320,8 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           # Ночной запуск (schedule) не должен выкладывать тот же sha повторно и, главное, более СТАРЫЙ коммит поверх нового
-          # (инцидент 2026-10-28: два слияния подряд дали два автодеплоя, CI старшего коммита закончился позже, и его деплой
-          # выложил старый релиз поверх нового). concurrency выстраивает запуски в очередь целиком (prepare, build, deploy),
-          # поэтому второй запуск доходит сюда уже после первого и читает его current_tag. Решение - infra/deploy/should-deploy.sh
+          # (инцидент 2026-10-28: два автодеплоя подряд, старый релиз лёг поверх нового). Job deploy стоит в группе deploy-production
+          # (на уровне job), поэтому параллельная выкладка доходит сюда после первой и читает её current_tag. Решение - infra/deploy/should-deploy.sh
           # (deploy | skip-same | skip-older | skip-diverged; тест - infra/deploy/tests/should-deploy-test.sh).
           # Ручной deploy (workflow_dispatch) выкладывает всегда: так владелец повторяет выкладку, у которой упал smoke
           # (current_tag выставляется до smoke), или сознательно откатывается на старый sha; решение только пишется в журнал.
@@ -409,6 +400,7 @@ jobs:
           ssh app "tar -xzf - -C /opt/rt/releases/$TAG" < release.tgz
 
       - name: Деплой на VPS 1 (pg_dump-гейт, миграции, up)
+        id: deployvps
         if: steps.already.outputs.skip != 'true'
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
@@ -435,16 +427,29 @@ jobs:
         run: |
           bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" "$PLATFORM_DOMAIN" --retries 12
 
-      # Автооткат (ВЫКЛ-1): smoke не прошёл -> rollback.sh на предыдущий тег (state/previous_tag, его выставил deploy.sh) + smoke
-        # с раннера, баннер снимается, запуск падает. Миграции не откатываются (docs/runbooks/deploy.md, п. 3).
-      - name: Автооткат после неуспешного smoke
+      # Автооткат (ВЫКЛ-1): упал deploy.sh (его smoke и проверка EDS идут ПОСЛЕ переключения current_tag) или smoke с раннера.
+      # Откатываем, только если на сервере current_tag == TAG и previous_tag непуст и != TAG: сбой до переключения (pull, cpu-check,
+      # pg_dump-гейт, миграции) старый релиз не трогает - откат увёл бы на ещё более старый. Откат: rollback.sh + smoke с раннера,
+      # TAG пишется в state/failed_tags (ночная выкладка его больше не берёт), баннер снимается, запуск красный.
+      # Миграции не откатываются (docs/runbooks/deploy.md, п. 3).
+      - name: Автооткат после неуспешной выкладки
         id: autorollback
-        if: failure() && steps.smoke.conclusion == 'failure'
+        if: failure() && (steps.deployvps.conclusion == 'failure' || steps.smoke.conclusion == 'failure')
+        env:
+          TAG: ${{ needs.prepare.outputs.sha }}
         run: |
-          echo "::error::smoke после выкладки не прошёл - автооткат на предыдущий тег"
-          # запоминаем sha: ночная выкладка его больше не возьмёт (ручной deploy - возьмёт)
           # shellcheck disable=SC2029
-          ssh app "mkdir -p /opt/rt/state && echo '${{ needs.prepare.outputs.sha }}' >> /opt/rt/state/failed_tags" \
+          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""
+          # shellcheck disable=SC2029
+          prev="$(ssh app "cat /opt/rt/state/previous_tag 2>/dev/null || true")" || prev=""
+          cur="$(tr -d '[:space:]' <<<"$cur")"; prev="$(tr -d '[:space:]' <<<"$prev")"
+          if [ "$cur" != "$TAG" ] || [ -z "$prev" ] || [ "$prev" = "$TAG" ]; then
+            echo "::error::выкладка упала до переключения на $TAG (current_tag=${cur:-<пусто>}, previous_tag=${prev:-<пусто>}) - автооткат не нужен или невозможен"
+            exit 1
+          fi
+          echo "::error::выкладка $TAG не прошла проверки после переключения - автооткат на $prev"
+          # shellcheck disable=SC2029
+          ssh app "mkdir -p /opt/rt/state && echo '$TAG' >> /opt/rt/state/failed_tags" \
             || echo "::warning::не удалось записать failed_tags"
           ssh app "bash /opt/rt/current/infra/deploy/rollback.sh" || { echo "::error::АВТООТКАТ НЕ УДАЛСЯ - прод требует ручного вмешательства (п. 3 runbook)"; exit 1; }
           domains=("$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN")
@@ -458,7 +463,7 @@ jobs:
           bash infra/deploy/smoke.sh --domains "${domains[@]}" --retries 12 \
             || { echo "::error::smoke после автоотката не прошёл - прод требует ручного вмешательства"; exit 1; }
           ssh app "rm -f /opt/rt/maintenance/maintenance.json" || true
-          echo "::error::выкладка ${{ needs.prepare.outputs.sha }} откатена автоматически: smoke не прошёл. Прод работает на предыдущем теге."
+          echo "::error::выкладка $TAG откатена автоматически на $prev. Прод работает на предыдущем теге."
           exit 1
 
       - name: Снять предупреждение о плановом обновлении
@@ -518,13 +523,16 @@ jobs:
           path: ${{ steps.notes.outputs.file }}
 
   # Крон 30 19 * * * (00:30 Ташкент): баннер на 01:00, 20 минут, planned - только если HEAD main отличается от выложенного на VPS 1.
-  # Если HEAD main не зелёный, выкладка в 01:00 может взять более старый коммит или ничего; баннер при этом снимет deploy/prepare.
+  # Кандидат выбирается тем же правилом, что в prepare (pick-green-main.sh).
   notice:
     name: Баннер о ночном обновлении
     if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
+    permissions:
+      contents: read
+      checks: read
     env:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
       DEPLOY_USER: ${{ vars.DEPLOY_USER }}
@@ -532,7 +540,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 1
+          fetch-depth: 40
           persist-credentials: false
 
       - name: SSH к VPS 1
@@ -556,22 +564,56 @@ jobs:
             echo "  StrictHostKeyChecking yes"
           } > ~/.ssh/config
 
-      - name: Баннер, если на main есть что выкладывать
+      - name: Баннер, если ночью будет что выкладывать
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          # Кандидат - тот же, что выберет ночной prepare: новейший зелёный коммит main (pick-green-main.sh).
+          cand="$(bash infra/deploy/pick-green-main.sh)" || { echo "нет зелёного коммита main - баннер не нужен"; exit 0; }
           cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""
           cur="$(tr -d '[:space:]' <<<"$cur")"
-          echo "HEAD main: $head; current_tag на VPS 1: ${cur:-<пусто>}"
-          if [ -n "$head" ] && [ "$head" = "$cur" ]; then
-            echo "main уже выложен - баннер не нужен"
+          echo "кандидат: $cand; current_tag на VPS 1: ${cur:-<пусто>}"
+          if [ "$cand" = "$cur" ]; then
+            echo "кандидат уже выложен - баннер не нужен"
             exit 0
           fi
           # shellcheck disable=SC2029
-          if ssh app "grep -qxF '$head' /opt/rt/state/failed_tags 2>/dev/null"; then
-            echo "HEAD main $head ранее откачен автооткатом - ночной выкладки не будет, баннер не нужен"
+          if ssh app "grep -qxF '$cand' /opt/rt/state/failed_tags 2>/dev/null"; then
+            echo "кандидат $cand ранее откачен автооткатом - ночной выкладки не будет, баннер не нужен"
             exit 0
           fi
           ssh app "bash -s set 01:00 20 planned" < scripts/maintenance-notice.sh
+
+  # Ночью баннер не должен висеть после сбоя prepare, build, approve или deploy (успешная выкладка и автооткат снимают его сами).
+  banner-cleanup:
+    name: Снять баннер после сбоя
+    needs: [prepare, build, approve, deploy]
+    if: always() && github.event_name == 'schedule' && github.event.schedule == '0 20 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+    steps:
+      - name: SSH и снятие баннера
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host app"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+          ssh app "rm -f /opt/rt/maintenance/maintenance.json" || echo "::warning::не удалось снять баннер"
 
   rollback:
     needs: approve
