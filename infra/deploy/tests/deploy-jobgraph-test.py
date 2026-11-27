@@ -5,6 +5,7 @@
 needs, а явного `if` нет), и проверить это было нечем. Тест разбирает deploy.yml, считает job-level `if` и `needs` по семантике GitHub
 Actions (подмножество выражений: контексты github/inputs/needs, ==, !=, &&, ||, !, cancelled(), always(), success(), failure())
 и сверяет набор запущенных jobs с ожидаемым. Исход jobs в модели - success, кроме явно заданных в сценарии.
+Тот же тест сверяет images.yml (образы после зелёного CI) с deploy.yml и auto-deploy.sh и требует замок сервера в ручной выкладке.
 Запуск: python3 infra/deploy/tests/deploy-jobgraph-test.py [путь/к/deploy.yml]
 """
 import re
@@ -180,51 +181,74 @@ def as_list(v):
     return [] if v is None else v if isinstance(v, list) else [v]
 
 
-NIGHT, DAY = "0 20 * * *", "*/15 1-17 * * *"
 SCENARIOS = [
-    # (название, event, inputs, schedule, outputs, results, ожидаемые запущенные jobs)
-    ("ручной deploy после одобрения", "workflow_dispatch", {"action": "deploy"}, "", {}, {},
+    # (название, event, inputs, outputs, results, ожидаемые запущенные jobs)
+    ("ручной deploy после одобрения", "workflow_dispatch", {"action": "deploy"}, {}, {},
      {"prepare", "build", "approve", "deploy", "release-notes"}),
-    ("ручной deploy, одобрение отклонено", "workflow_dispatch", {"action": "deploy"}, "", {}, {"approve": "failure"},
+    ("ручной deploy, одобрение отклонено", "workflow_dispatch", {"action": "deploy"}, {}, {"approve": "failure"},
      {"prepare", "build", "approve"}),
-    ("ручной rollback после одобрения", "workflow_dispatch", {"action": "rollback"}, "", {}, {},
+    ("ручной deploy, build упал", "workflow_dispatch", {"action": "deploy"}, {}, {"build": "failure"},
+     {"prepare", "build", "approve"}),
+    ("ручной rollback после одобрения", "workflow_dispatch", {"action": "rollback"}, {}, {},
      {"approve", "rollback"}),
-    ("ручной rollback, одобрение отклонено", "workflow_dispatch", {"action": "rollback"}, "", {}, {"approve": "failure"},
+    ("ручной rollback, одобрение отклонено", "workflow_dispatch", {"action": "rollback"}, {}, {"approve": "failure"},
      {"approve"}),
-    ("ручной build (без выкладки)", "workflow_dispatch", {"action": "build"}, "", {}, {},
+    ("ручной build (без выкладки)", "workflow_dispatch", {"action": "build"}, {}, {},
      {"prepare", "build"}),
-    ("расписание, ночное окно: gate сказал go", "schedule", {}, NIGHT, {"gate": {"go": "true"}}, {},
-     {"gate", "prepare", "build", "deploy", "release-notes", "banner-cleanup"}),
-    ("расписание, день: никого нет - go", "schedule", {}, DAY, {"gate": {"go": "true"}}, {},
-     {"gate", "prepare", "build", "deploy", "release-notes", "banner-cleanup"}),
-    ("расписание, день: skip/wait/banner - go=false", "schedule", {}, DAY, {"gate": {"go": "false"}}, {},
-     {"gate"}),
-    ("расписание, ночной крон, но решение skip (нечего выкладывать)", "schedule", {}, NIGHT, {"gate": {"go": "false"}}, {},
-     {"gate"}),
-    ("крон баннера 00:30", "schedule", {}, "30 19 * * *", {}, {},
-     {"notice"}),
-    ("расписание go, но build упал", "schedule", {}, DAY, {"gate": {"go": "true"}}, {"build": "failure"},
-     {"gate", "prepare", "build", "banner-cleanup"}),
+    # после ВЫКЛ-3 расписания нет: ни push, ни schedule, ни workflow_run не запускают ни одного job
+    ("schedule (GitHub опаздывает на часы - не используется)", "schedule", {}, {}, {}, set()),
+    ("push в main", "push", {}, {}, {}, set()),
 ]
+
+
+def check_images(wf_deploy, images_wf):
+    """images.yml: триггер, условие и список образов (совпадает с deploy.yml и с AUTO_DEPLOY_IMAGES сервера)."""
+    bad = []
+    on = images_wf.get(True, images_wf.get("on"))
+    if set(on) != {"workflow_run"} or on["workflow_run"].get("workflows") != ["CI"] or on["workflow_run"].get("types") != ["completed"] \
+            or on["workflow_run"].get("branches") != ["main"]:
+        bad.append("images.yml должен запускаться только workflow_run от CI (completed, ветка main)")
+    cond = images_wf["jobs"]["prepare"].get("if", "")
+    for part in ("conclusion == 'success'", "event == 'push'", "head_branch == 'main'"):
+        if part not in cond:
+            bad.append(f"images.yml prepare: в условии нет {part}")
+    if images_wf["jobs"]["build"].get("needs") != "prepare":
+        bad.append("images.yml build должен идти после prepare (иначе собирается и при красном CI)")
+    built = sorted(m["image"] for m in images_wf["jobs"]["build"]["strategy"]["matrix"]["include"])
+    deploy_src = WORKFLOW.read_text(encoding="utf-8")
+    deployed = sorted(re.findall(r'\{"image":"(rt-[a-z-]+)"', deploy_src))
+    server = sorted(re.search(r'AUTO_DEPLOY_IMAGES:-([^}]+)\}', (WORKFLOW.parents[2] / "infra/deploy/auto-deploy.sh").read_text(encoding="utf-8")).group(1).split())
+    if built != deployed:
+        bad.append(f"образы images.yml {built} != образы матрицы deploy.yml {deployed}")
+    if built != server:
+        bad.append(f"образы images.yml {built} != AUTO_DEPLOY_IMAGES сервера {server}")
+    return bad
 
 
 def main():
     wf = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     bad = 0
-    for title, event, inputs, schedule, outputs, results, expected in SCENARIOS:
-        state = run_graph(wf, event, inputs, schedule, outputs, results)
+    on = wf.get(True, wf.get("on"))
+    if "schedule" in on:
+        bad += 1
+        print("FAIL: в deploy.yml есть schedule - расписание GitHub опаздывает на часы, выкладку ведёт таймер сервера")
+    for title, event, inputs, outputs, results, expected in SCENARIOS:
+        state = run_graph(wf, event, inputs, "", outputs, results)
         ran = {j for j, r in state.items() if r != "skipped"}
         if ran != expected:
             bad += 1
             print(f"FAIL: {title}\n  запущены:  {sorted(ran)}\n  ожидались: {sorted(expected)}")
         else:
             print(f"ok:   {title}")
-    # прямые утверждения из задачи: deploy идёт для dispatch-deploy после approve и для schedule-go, и никогда - для skip
-    for title, event, inputs, schedule, outputs, results, expected in SCENARIOS:
-        state = run_graph(wf, event, inputs, schedule, outputs, results)
-        if "go" in outputs.get("gate", {}) and outputs["gate"]["go"] == "false" and state["deploy"] != "skipped":
-            bad += 1
-            print(f"FAIL: deploy запущен при go=false ({title})")
+    images_path = WORKFLOW.parent / "images.yml"
+    for msg in check_images(wf, yaml.safe_load(images_path.read_text(encoding="utf-8"))):
+        bad += 1
+        print("FAIL:", msg)
+    # ручные deploy и rollback берут замок сервера (тот же, что таймер)
+    src = WORKFLOW.read_text(encoding="utf-8")
+    if src.count("flock -w 1800 /opt/rt/state/deploy.lock") < 3:
+        bad += 1
+        print("FAIL: deploy.sh, автооткат и rollback.sh в deploy.yml должны идти под flock state/deploy.lock")
     if bad:
         sys.exit(1)
     print("deploy-jobgraph-test: ok")

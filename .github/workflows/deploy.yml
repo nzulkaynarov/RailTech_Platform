@@ -1,28 +1,20 @@
-# Деплой прода (M5-INF-01, W14-S4; ВЫКЛ-1, ВЫКЛ-2 и ВЫКЛ-3, DECISIONS 2026-11-27). Запуск:
-#   - САМ, по расписанию (schedule, время UTC; сервер и владелец живут в UTC+5). ВАЖНО (ВЫКЛ-3): расписание GitHub на этом репозитории
-#     опаздывает на 6-9 часов, поэтому режим определяют ФАКТИЧЕСКИЕ часы (infra/deploy/clock-decision.sh, Asia/Tashkent), а не то,
-#     какой крон сработал. Любой тик (кроме баннерного) идёт через job gate:
-#       ночное окно 00:45-05:30 по Ташкенту - выкладывается новейший зелёный коммит main (pick-green-main.sh), без проверки активности;
-#       остальное время - дневные ворота: пропускает равный current_tag, старше выложенного и из failed_tags, читает на VPS 1 активность
-#                    в Платформе (infra/deploy/activity-check.sh: успешные запросы к BFF за 30 минут) и решает (daytime-decision.sh):
-#                    никого нет - выкладка сразу; кто-то работает - баннер на now+15 минут (planned, 20 минут), выкладка на следующем тике;
-#                    идёт другой Deploy - тик ничего не делает.
-#     Дальше те же prepare, build, deploy без одобрения и с автооткатом. Кроны: 30 19 * * * (00:30) - только job notice (баннер «в 01:00»,
-#     и только если сейчас 23:30-00:44: баннер на прошедшее время не пишется); 0 20 * * *, */15 1-17 * * *, 0 18 * * * - тики gate;
-#   - вручную (workflow_dispatch): action = deploy | rollback | build. deploy и rollback ждут одобрения владельца в job approve
-#     (environment `production-approval`); на PR, push и после CI деплой не запускается (workflow_run убран; дневную выкладку делает крон).
-# Выкладка по расписанию не берёт sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
-# ci.yml не трогает.
+# Деплой прода: РУЧНОЙ путь (M5-INF-01, W14-S4). Автоматическую выкладку ведёт таймер сервера (ВЫКЛ-3, DECISIONS 2026-11-28):
+# расписание GitHub на этом репозитории опаздывало на 6-9 часов, поэтому кроны из этого файла убраны. Образы после зелёного CI собирает
+# images.yml (workflow_run), а infra/deploy/auto-deploy.sh на VPS 1 (systemd-таймер раз в 10 минут) решает по часам Ташкента и активности
+# в Платформе и выкладывает сам, с автооткатом; подробно - docs/runbooks/deploy.md. Здесь остаётся запуск вручную (workflow_dispatch):
+# action = deploy | rollback | build. deploy и rollback ждут одобрения владельца в job approve (environment `production-approval`);
+# на PR, push и после CI этот workflow не запускается. Ручные deploy и rollback берут на сервере тот же замок state/deploy.lock, что и таймер
+# (flock), поэтому одновременно с автовыкладкой не идут. ci.yml не трогает.
 #
-# Одобрение без дублирования секретов: секреты и variables лежат только в environment `production` (его используют deploy, rollback и
-# notice; после ВЫКЛ-1 в нём НЕТ required reviewers, а ветки деплоя ограничены main). Ожидание человека - отдельный job approve в
+# Одобрение без дублирования секретов: секреты и variables лежат только в environment `production` (его используют deploy и rollback;
+# после ВЫКЛ-1 в нём НЕТ required reviewers, а ветки деплоя ограничены main). Ожидание человека - отдельный job approve в
 # environment `production-approval` БЕЗ секретов: в нём ОБЯЗАТЕЛЕН required reviewer = владелец. approve запускается только при ручном
-# deploy/rollback; deploy и rollback идут после него (успех approve; пропуск approve допустим только для schedule). Отклонённое или
+# deploy/rollback; deploy и rollback идут после него (только при успехе approve). Отклонённое или
 # упавшее одобрение выкладку блокирует.
 # Очередь: concurrency `deploy-production` стоит на jobs deploy и rollback, а не на всём запуске, - запуск, забытый в ожидании
 # одобрения, группу не держит. Первый шаг prepare отменяет (actions: write) более старые запуски Deploy в статусах waiting/queued/pending.
 #
-# prepare:  без environment и секретов - sha (для schedule - новейший зелёный коммит main), «sha входит в main» (deploy), зелёная проверка
+# prepare:  без environment и секретов - sha, «sha входит в main» (deploy), зелёная проверка
 #           «CI ok» на этом sha (deploy), матрица образов.
 # build:    семь образов параллельно (matrix, по job'у на образ), каждый со своим кэшем type=gha,scope=<образ>; push в GHCR с тегом =
 #           полный git sha (только при deploy). Без environment: нужны лишь packages: write и GITHUB_TOKEN.
@@ -41,16 +33,9 @@
 # Variables environment `production`: DEPLOY_HOST (публичный IP/имя VPS 1), DEPLOY_USER, CRM_DOMAIN, ERP_DOMAIN,
 # CABINET_DOMAIN, PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
 # smoke с раннера — сам домен читают Caddy и deploy.sh из /opt/rt/.env.prod на сервере). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
-#
-# schedule берёт этот файл из ветки по умолчанию (main): ночная выкладка начинает работать после слияния изменения.
 name: Deploy
 
 on:
-  schedule:
-    - cron: '30 19 * * *'  # 00:30 Asia/Tashkent: баннер на 01:00 (только если фактическое время 23:30-00:44)
-    - cron: '0 20 * * *'   # 01:00 Asia/Tashkent: ночной тик; режим решают часы, а не этот крон
-    - cron: '*/15 1-17 * * *'  # 06:00-22:45 Asia/Tashkent: дневная выкладка (ВЫКЛ-2), тик раз в 15 минут
-    - cron: '0 18 * * *'       # 23:00 Asia/Tashkent: последний дневной тик (выкладка после баннера, поставленного в 22:45)
   workflow_dispatch:
     inputs:
       ref:
@@ -72,126 +57,9 @@ permissions:
   contents: read
 
 jobs:
-  # Тик расписания (ВЫКЛ-2, ВЫКЛ-3): решает, выкладывать ли сейчас, по ФАКТИЧЕСКИМ часам (clock-decision.sh): ночное окно 00:45-05:30
-  # Ташкента - выкладка без проверки активности, иначе дневные ворота. go=true только для deploy-now и deploy-due (daytime-decision.sh); остальное -
-  # тик заканчивается здесь (нечего выкладывать, идёт другой Deploy, ждём время баннера, баннер поставлен). Сбой чтения активности
-  # или баннера - go=false (неизвестность не считается «никого нет»). Читает VPS 1 только на чтение; пишет лишь баннер.
-  gate:
-    name: Выкладка по расписанию - решение
-    if: github.event_name == 'schedule' && github.event.schedule != '30 19 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    permissions:
-      contents: read
-      checks: read
-      actions: read
-    outputs:
-      go: ${{ steps.decide.outputs.go }}
-    env:
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0  # should-deploy.sh нужна история, чтобы отличить старый sha от нового
-          persist-credentials: false
-
-      - name: SSH к VPS 1
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ] || [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ]; then
-            echo "::error::нет секретов или переменных environment production"; exit 1
-          fi
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          {
-            echo "Host app"
-            echo "  HostName $DEPLOY_HOST"
-            echo "  User $DEPLOY_USER"
-            echo "  IdentityFile ~/.ssh/id_deploy"
-            echo "  IdentitiesOnly yes"
-            echo "  StrictHostKeyChecking yes"
-          } > ~/.ssh/config
-
-      - name: Решение тика
-        id: decide
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "go=false" >> "$GITHUB_OUTPUT"
-          say() { echo "$*"; echo "$*" >> "$GITHUB_STEP_SUMMARY"; }
-          # Не двух выкладок сразу: идущий или стоящий в очереди Deploy (кроме этого запуска) - тик пропускается. Запуск в ожидании
-          # одобрения (waiting) не считается: забытое одобрение не должно останавливать днём всё.
-          for st in in_progress queued; do
-            other="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/deploy.yml/runs" -f status="$st" -f per_page=100 \
-              --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID)] | length")" || { say "не удалось прочитать запуски Deploy - тик пропущен"; exit 0; }
-            [ "$other" = 0 ] || { say "идёт другой Deploy ($st: $other) - тик пропущен"; exit 0; }
-          done
-          cand="$(bash infra/deploy/pick-green-main.sh)" || { say "нет зелёного коммита main - тик пропущен"; exit 0; }
-          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || { say "нет связи с VPS 1 - тик пропущен"; exit 0; }
-          cur="$(tr -d '[:space:]' <<<"$cur")"
-          should="$(bash infra/deploy/should-deploy.sh "$cand" "$cur")"
-          failed=0
-          # shellcheck disable=SC2029
-          ssh app "grep -qxF '$cand' /opt/rt/state/failed_tags 2>/dev/null" && failed=1
-          # Баннер читаем всегда (его время решает «ждать или выкладывать»); активность - только когда есть что выкладывать.
-          json="$(ssh app "cat /opt/rt/maintenance/maintenance.json 2>/dev/null || true")" || { say "не удалось прочитать баннер - тик пропущен"; exit 0; }
-          banner=-; banner_end=-
-          if [ -n "$json" ]; then
-            # Пустой или нечитаемый starts_at - «баннера нет» (date -d "" вернул бы полночь и дал deploy-due). Конец окна = starts_at + minutes.
-            sa="$(jq -r '.starts_at // empty' <<<"$json" 2>/dev/null)" || sa=""
-            mins="$(jq -r '.minutes // 20' <<<"$json" 2>/dev/null)" || mins=20
-            [[ "$mins" =~ ^[0-9]+$ ]] || mins=20
-            if [ -n "$sa" ] && banner="$(date -d "$sa" +%s 2>/dev/null)" && [ -n "$banner" ]; then
-              banner_end=$((banner + mins * 60))
-            else
-              banner=-
-            fi
-          fi
-          # Режим - по часам, а не по крону (расписание GitHub опаздывает на часы). Ночью: активность не смотрим, баннер не ждём.
-          now="$(date +%s)"
-          phase="$(bash infra/deploy/clock-decision.sh phase "$now")"
-          activity=0
-          dbanner="$banner"; dbanner_end="$banner_end"
-          if [ "$phase" = night ]; then
-            dbanner=-; dbanner_end=-
-          elif [ "$should" = deploy ] && [ "$failed" = 0 ]; then
-            activity="$(ssh app 'bash -s' < infra/deploy/activity-check.sh)" || { say "не удалось прочитать активность - тик пропущен"; exit 0; }
-          fi
-          decision="$(bash infra/deploy/daytime-decision.sh "$should" "$failed" "$activity" "$dbanner" "$now" "$dbanner_end")"
-          say "режим $phase ($(TZ=Asia/Tashkent date -d "@$now" +%H:%M) Ташкент), кандидат $cand, current_tag ${cur:-<пусто>}, should-deploy $should, failed_tags $failed, запросов за 30 минут $activity, баннер ${banner} - решение: $decision"
-          case "$decision" in
-            deploy-now|deploy-due) echo "go=true" >> "$GITHUB_OUTPUT" ;;
-            banner)
-              at="$(TZ=Asia/Tashkent date -d '+15 minutes' +%H:%M)"
-              # shellcheck disable=SC2029
-              ssh app "bash -s set $at 20 planned" < scripts/maintenance-notice.sh
-              say "баннер на $at (Ташкент), выкладка - на следующем тике" ;;
-            wait) ;;
-            skip)
-              # выкладывать нечего, а баннер давно отыграл (откат, ручная выкладка): не оставляем висеть
-              if [ "$banner" != - ] && [ "$(date +%s)" -gt "$banner_end" ]; then
-                ssh app "rm -f /opt/rt/maintenance/maintenance.json" && say "устаревший баннер снят"
-              fi ;;
-            *) echo "::error::daytime-decision.sh вернул неожиданное '$decision'"; exit 1 ;;
-          esac
-
   prepare:
     name: Проверка и матрица образов
-    needs: gate
-    # schedule: ночные и дневные тики - только когда gate сказал go (режим решают часы, ВЫКЛ-3). Ручной запуск: deploy и build.
-    # Крон 30 19 * * * (баннер) - отдельный job notice.
-    if: >-
-      !cancelled() && (
-      (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
-      || (needs.gate.outputs.go == 'true')
-      )
+    if: github.event_name == 'workflow_dispatch' && inputs.action != 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -207,7 +75,6 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     env:
       # Входы — через env, а не подстановкой в скрипт (ref вводит человек)
-      EVENT_NAME: ${{ github.event_name }}
       INPUT_ACTION: ${{ inputs.action }}
     steps:
       # Запуск, забытый в ожидании одобрения (или застрявший в очереди), не должен ничего держать: отменяем более старые запуски
@@ -235,22 +102,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # schedule: HEAD main, а если его «CI ok» не зелёная (нет проверки, идёт, красная) - новейший коммит main с зелёной «CI ok»
-      # (просмотр последних 40 коммитов первого родителя). Дальше всё как у ручного deploy на этом sha.
-      - name: Расписание - новейший зелёный коммит main
-        if: github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git rev-parse --verify -q origin/main >/dev/null || { echo "::error::нет origin/main"; exit 1; }
-          c="$(bash infra/deploy/pick-green-main.sh)" || { echo "::error::в последних 40 коммитах main нет зелёной «CI ok» - ночная выкладка не идёт"; exit 1; }
-          echo "выкладываем $c (HEAD main: $(git rev-parse origin/main))"
-          git checkout -q --detach "$c"
-
       - name: Режим, sha и тег
         id: ver
         run: |
-          if [ "$EVENT_NAME" = "schedule" ]; then action=deploy; else action="$INPUT_ACTION"; fi
+          action="$INPUT_ACTION"
           sha="$(git rev-parse HEAD)"
           # push в GHCR — только при deploy: образы ветки задачи (режим build) в реестр не попадают
           if [ "$action" = "deploy" ]; then push=true; else push=false; fi
@@ -315,7 +170,7 @@ jobs:
   build:
     name: Образ ${{ matrix.image }}
     needs: prepare
-    # Явное условие: без него GitHub пропускает сборку, если пропущен `gate` выше по цепочке (ручной запуск и ночная выкладка).
+    # Явное условие: без него GitHub пропускает job, если пропущен job выше по цепочке.
     if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -360,7 +215,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
 
   # Одобрение владельца для РУЧНОГО deploy/rollback. Environment production-approval: required reviewer = владелец, секретов нет.
-  # Для schedule не запускается (result = skipped): ночная выкладка человека не ждёт.
   approve:
     name: Одобрение владельца
     needs: prepare
@@ -376,10 +230,10 @@ jobs:
   deploy:
     name: Выкладка на VPS 1
     needs: [prepare, build, approve]
-    # approve: success (ручной запуск) либо skipped у schedule. Отклонённое/упавшее одобрение, упавшие prepare и build блокируют.
+    # Только ручной запуск: нужен success у approve (одобрение владельца), prepare и build. Отклонённое/упавшее одобрение блокирует.
     if: >-
       !cancelled() && needs.prepare.outputs.action == 'deploy' && needs.prepare.result == 'success' && needs.build.result == 'success'
-      && (needs.approve.result == 'success' || (needs.approve.result == 'skipped' && github.event_name == 'schedule'))
+      && needs.approve.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production
@@ -440,49 +294,17 @@ jobs:
         id: already
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Ночной запуск (schedule) не должен выкладывать тот же sha повторно и, главное, более СТАРЫЙ коммит поверх нового
-          # (инцидент 2026-10-28: два автодеплоя подряд, старый релиз лёг поверх нового). Job deploy стоит в группе deploy-production
-          # (на уровне job), поэтому параллельная выкладка доходит сюда после первой и читает её current_tag. Решение - infra/deploy/should-deploy.sh
-          # (deploy | skip-same | skip-older | skip-diverged; тест - infra/deploy/tests/should-deploy-test.sh).
-          # Ручной deploy (workflow_dispatch) выкладывает всегда: так владелец повторяет выкладку, у которой упал smoke
-          # (current_tag выставляется до smoke), или сознательно откатывается на старый sha; решение только пишется в журнал.
+          # Выкладка идёт только вручную (workflow_dispatch после одобрения владельца): выкладывает всегда - так владелец повторяет выкладку,
+          # у которой упал smoke (current_tag выставляется до smoke), или сознательно откатывается на старый sha; решение только пишется в журнал.
+          # Автоматическую выкладку ведёт таймер сервера (infra/deploy/auto-deploy.sh, ВЫКЛ-3) - он не откатывает и не повторяет sha из failed_tags.
           # shellcheck disable=SC2029
           cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""   # нет связи - не пропускаем, выкладываем
           cur="$(tr -d '[:space:]' <<<"$cur")"
           echo "previous=$cur" >> "$GITHUB_OUTPUT"
           decision="$(bash infra/deploy/should-deploy.sh "$TAG" "$cur")"
-          # sha, откаченный автооткатом (failed_tags на VPS 1), ночная выкладка не берёт; ручной deploy - берёт (решение владельца).
-          # shellcheck disable=SC2029
-          if [ "$EVENT_NAME" = schedule ] && ssh app "grep -qxF '$TAG' /opt/rt/state/failed_tags 2>/dev/null"; then
-            msg="sha $TAG ранее откачен автооткатом (state/failed_tags) - ночная выкладка пропущена; нужен новый коммит или ручной deploy"
-            echo "::warning::$msg"
-            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение: $decision"
-          if [ "$EVENT_NAME" = schedule ]; then
-            case "$decision" in
-              deploy) ;;
-              skip-same)
-                echo "sha $TAG уже current_tag на VPS 1 - повторная выкладка пропущена"
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0 ;;
-              skip-older)
-                echo "sha $TAG старше или равен выложенному $cur - пропуск (ночная выкладка не откатывает; откат - только ручным запуском)"
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0 ;;
-              skip-diverged)
-                echo "::warning::sha $TAG и выложенный $cur не в отношении предок/потомок (или $cur не разобрать) - ночная выкладка пропущена; выкладка только ручным запуском"
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0 ;;
-              *) echo "::error::should-deploy.sh вернул неожиданное '$decision'"; exit 1 ;;
-            esac
-          elif [ "$decision" != deploy ]; then
-            echo "::notice::ручной запуск: решение ночной выкладки было бы $decision - выкладываем по явному запросу владельца"
-          fi
+          echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение автовыкладки было бы: $decision"
+          [ "$decision" = deploy ] || echo "::notice::ручной запуск: автовыкладка выбрала бы $decision - выкладываем по явному запросу владельца"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - if: steps.already.outputs.skip != 'true'
@@ -516,7 +338,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.sha }}
         run: |
           # TAG — полный git sha из шага ver; подстановка на клиенте намеренная
-          tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json
+          tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json scripts/maintenance-notice.sh
           # shellcheck disable=SC2029
           ssh app "mkdir -p /opt/rt/releases/$TAG"
           # shellcheck disable=SC2029
@@ -542,7 +364,8 @@ jobs:
           }
           retry "docker login ghcr.io" ghcr_login
           # shellcheck disable=SC2029
-          ssh app "bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
+          # Замок state/deploy.lock - тот же, что берёт серверный таймер auto-deploy.sh: ручная выкладка и таймер не идут одновременно (ждём до 30 минут).
+          ssh app "mkdir -p /opt/rt/state && flock -w 1800 /opt/rt/state/deploy.lock bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
 
       - name: Smoke четырёх доменов (с раннера)
         id: smoke
@@ -580,7 +403,7 @@ jobs:
           # shellcheck disable=SC2029
           ssh app "mkdir -p /opt/rt/state && echo '$TAG' >> /opt/rt/state/failed_tags" \
             || echo "::warning::не удалось записать failed_tags"
-          ssh app "bash /opt/rt/current/infra/deploy/rollback.sh" || { echo "::error::АВТООТКАТ НЕ УДАЛСЯ - прод требует ручного вмешательства (п. 3 runbook)"; exit 1; }
+          ssh app "flock -w 1800 /opt/rt/state/deploy.lock bash /opt/rt/current/infra/deploy/rollback.sh" || { echo "::error::АВТООТКАТ НЕ УДАЛСЯ - прод требует ручного вмешательства (п. 3 runbook)"; exit 1; }
           domains=("$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN")
           rc=0
           ssh app "grep -q '^  platform-bff:' /opt/rt/current/infra/compose/base.yml" || rc=$?
@@ -598,7 +421,6 @@ jobs:
       - name: Снять предупреждение о плановом обновлении
         # Баннер «Обновление в ЧЧ:ММ» (DECISIONS 2026-11-23) показывается, пока на VPS 1 лежит /opt/rt/maintenance/maintenance.json
         # (scripts/maintenance-notice.sh). После успешной выкладки и smoke файл удаляется; сбой удаления выкладку не отменяет.
-        # Ночью баннер снимается и когда выкладывать нечего (skip: sha уже на проде, старше выложенного).
         if: success()
         run: ssh app "rm -f /opt/rt/maintenance/maintenance.json" || echo "::warning::не удалось снять предупреждение о плановом обновлении - scripts/maintenance-notice.sh clear на VPS 1"
 
@@ -651,112 +473,6 @@ jobs:
           name: release-notes-${{ steps.notes.outputs.day }}
           path: ${{ steps.notes.outputs.file }}
 
-  # Крон 30 19 * * * (00:30 Ташкент): баннер на 01:00, 20 минут, planned - только если HEAD main отличается от выложенного на VPS 1.
-  # Кандидат выбирается тем же правилом, что в prepare (pick-green-main.sh).
-  # Баннер пишется только при фактическом времени 23:30-00:44 по Ташкенту (clock-decision.sh banner): опоздавший на часы крон баннер
-  # на прошедшее время не пишет (maintenance-notice.sh перенёс бы его на завтра 01:00 и ввёл людей в заблуждение).
-  notice:
-    name: Баннер о ночном обновлении
-    if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    permissions:
-      contents: read
-      checks: read
-    env:
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 40
-          persist-credentials: false
-
-      - name: Время для баннера (фактические часы Ташкента)
-        id: clock
-        run: |
-          ok="$(bash infra/deploy/clock-decision.sh banner)"
-          echo "ok=$ok" >> "$GITHUB_OUTPUT"
-          [ "$ok" = yes ] || echo "сейчас $(TZ=Asia/Tashkent date +%H:%M) по Ташкенту, не 23:30-00:44 - крон опоздал, баннер на прошедшее время не пишется" | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: SSH к VPS 1
-        if: steps.clock.outputs.ok == 'yes'
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ] || [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ]; then
-            echo "::error::нет секретов или переменных environment production"; exit 1
-          fi
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          {
-            echo "Host app"
-            echo "  HostName $DEPLOY_HOST"
-            echo "  User $DEPLOY_USER"
-            echo "  IdentityFile ~/.ssh/id_deploy"
-            echo "  IdentitiesOnly yes"
-            echo "  StrictHostKeyChecking yes"
-          } > ~/.ssh/config
-
-      - name: Баннер, если ночью будет что выкладывать
-        if: steps.clock.outputs.ok == 'yes'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Кандидат - тот же, что выберет ночной prepare: новейший зелёный коммит main (pick-green-main.sh).
-          cand="$(bash infra/deploy/pick-green-main.sh)" || { echo "нет зелёного коммита main - баннер не нужен"; exit 0; }
-          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""
-          cur="$(tr -d '[:space:]' <<<"$cur")"
-          echo "кандидат: $cand; current_tag на VPS 1: ${cur:-<пусто>}"
-          if [ "$cand" = "$cur" ]; then
-            echo "кандидат уже выложен - баннер не нужен"
-            exit 0
-          fi
-          # shellcheck disable=SC2029
-          if ssh app "grep -qxF '$cand' /opt/rt/state/failed_tags 2>/dev/null"; then
-            echo "кандидат $cand ранее откачен автооткатом - ночной выкладки не будет, баннер не нужен"
-            exit 0
-          fi
-          ssh app "bash -s set 01:00 20 planned" < scripts/maintenance-notice.sh
-
-  # Баннер не должен висеть после сбоя prepare, build, approve или deploy (успешная выкладка и автооткат снимают его сами).
-  banner-cleanup:
-    name: Снять баннер после сбоя
-    needs: [gate, prepare, build, approve, deploy]
-    # Только на тике, который начал выкладку (go): баннер с ожидающей выкладкой на пустых тиках трогать нельзя.
-    if: >-
-      always() && github.event_name == 'schedule' && needs.gate.outputs.go == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    env:
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-    steps:
-      - name: SSH и снятие баннера
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          {
-            echo "Host app"
-            echo "  HostName $DEPLOY_HOST"
-            echo "  User $DEPLOY_USER"
-            echo "  IdentityFile ~/.ssh/id_deploy"
-            echo "  IdentitiesOnly yes"
-            echo "  StrictHostKeyChecking yes"
-          } > ~/.ssh/config
-          ssh app "rm -f /opt/rt/maintenance/maintenance.json" || echo "::warning::не удалось снять баннер"
-
   rollback:
     needs: approve
     if: "!cancelled() && github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && needs.approve.result == 'success'"
@@ -808,7 +524,7 @@ jobs:
 
       - name: Откат кода на предыдущий тег
         # Скрипт берётся из текущего релиза на сервере (/opt/rt/current); образы предыдущего тега уже лежат на VPS 1.
-        run: ssh app "bash /opt/rt/current/infra/deploy/rollback.sh"
+        run: ssh app "mkdir -p /opt/rt/state && flock -w 1800 /opt/rt/state/deploy.lock bash /opt/rt/current/infra/deploy/rollback.sh"
 
       - name: Smoke доменов с раннера (четыре, если в релизе отката есть Платформа)
         # Те же четыре домена, что и после деплоя (INF-P1-0). Откат может вернуть релиз до Платформы (INF-P0-5) — тогда

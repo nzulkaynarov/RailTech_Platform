@@ -1,0 +1,18 @@
+# Автовыкладка VPS 1 (ВЫКЛ-3): один тик auto-deploy.sh. Ставится от root: docs/runbooks/deploy.md, «Автовыкладка: установка».
+[Unit]
+Description=RailTech auto-deploy tick
+Wants=network-online.target
+After=network-online.target docker.service
+# Нет релиза на сервере (первая установка) - тик не запускается
+ConditionPathExists=/opt/rt/current/infra/deploy/auto-deploy.sh
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+# Необязательный файл с GITHUB_TOKEN, GHCR_USER, GHCR_TOKEN (нужен, когда репозиторий станет приватным); chmod 600, владелец deploy
+EnvironmentFile=-/opt/rt/auto-deploy.env
+ExecStart=/bin/bash /opt/rt/current/infra/deploy/auto-deploy.sh
+# Выкладка с миграциями и дампом бывает долгой; зависший тик не должен держать замок бесконечно
+TimeoutStartSec=2h
+Nice=5
