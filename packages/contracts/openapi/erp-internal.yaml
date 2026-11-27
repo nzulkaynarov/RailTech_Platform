@@ -41779,6 +41779,9 @@ components:
           type: integer
         client_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`'
         currency:
           type: string
           nullable: true
@@ -42066,6 +42069,9 @@ components:
           type: integer
         client_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`'
         currency:
           type: string
           nullable: true
