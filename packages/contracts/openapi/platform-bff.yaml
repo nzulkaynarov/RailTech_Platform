@@ -8234,7 +8234,7 @@ paths:
       description: >-
         ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит
         администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и
-        зоны — если читающему есть чем их читать (иначе `signing_known` / `zones_known` = false).
+        зоны — свои записи, их читает любой сотрудник (CRM `/responsibility-zones/mine`, EDS `/signing/mine`); не прочиталось — `signing_known` / `zones_known` = false.
       responses:
         '200':
           description: Мои возможности
@@ -19403,6 +19403,12 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CapabilityWarning'}
         free_for_all: {$ref: '#/components/schemas/CapabilityText'}
+        grantors:
+          type: array
+          items: {$ref: '#/components/schemas/CapabilityPerson'}
+          description: >-
+            Только `/me/capabilities`: действующие сотрудники, которые выдают возможности («Сотрудники и возможности — работать»,
+            раздел `admin` на изменение). Пустой список — выдать некому; нет поля — не известно.
 
     CapabilityMatrixCell:
       type: object

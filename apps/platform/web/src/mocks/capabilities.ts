@@ -449,16 +449,20 @@ export const capabilitiesHandlers = [
       me.roles.map((r) => r.id),
       readRoles(),
     );
-    // Про себя: подпись и зоны читают те, у кого есть на них раздел (как в BFF).
-    const manages = Boolean(me.resources["admin"]);
-    return HttpResponse.json(
-      cardOf(
+    // Про себя: свои подпись и зоны читает любой сотрудник (`/signing/mine`, `/responsibility-zones/mine`).
+    // «Нет доступа»: кто выдаёт возможности — те, у кого «Сотрудники и возможности» включено на «работать».
+    const grantors = company()
+      .filter((row) => row.states["staff"]?.on["manage"] === true)
+      .map((row) => personOf(row.employee));
+    return HttpResponse.json({
+      ...cardOf(
         personOf({ id: me.id, name: me.name, initials: me.initials, position: me.position }),
         roles,
         null,
         employee ? toEmployee(employee).deputy : undefined,
-        { signing: Boolean(me.resources["eds.signing.manage"]), zones: manages },
+        { signing: true, zones: true },
       ),
-    );
+      grantors,
+    });
   }),
 ];

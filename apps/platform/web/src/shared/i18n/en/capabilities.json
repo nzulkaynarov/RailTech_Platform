@@ -38,9 +38,6 @@
     "signs": "Signs",
     "responsible": "Responsible for",
     "deputy": "Covers for",
-    "unknownSigning": "no data",
-    "unknownSigningHint": "The signing register is read by those who keep it.",
-    "unknownZones": "no data",
     "noSigning": "—",
     "noZones": "—",
     "unlimited": "no limit",
@@ -82,11 +79,9 @@
       "curator": "curator"
     },
     "responsibleEmpty": "Not assigned to any area",
-    "responsibleUnknown": "Responsibility areas are visible to administrators.",
     "responsibleNote": "An area is only recorded for now: it does not route tasks.",
     "signingTitle": "Signs",
     "signingEmpty": "No signing authority",
-    "signingUnknown": "The signing register is read by those who keep it — no data here.",
     "signingLine": "{{kinds}}",
     "signingUntil": "until {{date}}",
     "signingPower": "by power of attorney",
@@ -122,6 +117,8 @@
     "need": "To open this section you need the capability “{{name}}”: {{level}}. Now you have “{{current}}”.",
     "who": "Capabilities are granted by the administrator.",
     "ask": "Ask for a capability",
-    "askBody": "I need the capability “{{name}}”: {{level}}."
+    "askBody": "I need the capability “{{name}}”: {{level}}.",
+    "grantors": "Capabilities are granted by: {{names}}.",
+    "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator."
   }
 }

@@ -113,6 +113,8 @@ class EmployeeCapabilities(BaseModel):
     deputy: DeputyPeriod | None = None
     warnings: list[CapabilityWarning]
     free_for_all: CapabilityText
+    # «Нет доступа»: кто выдаёт («Сотрудники и возможности: работать»); нет поля — не известно
+    grantors: list[CapabilityPerson] | None = None
 
 
 class MatrixCell(BaseModel):

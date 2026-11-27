@@ -182,14 +182,34 @@ async def test_card_of_a_disabled_employee_opens(
 async def test_my_capabilities_is_the_same_data_about_me(
     web: Web, be: Backends, eds: EdsFake, check: ContractChecker
 ) -> None:
+    """Про себя читаются свои подпись и зоны и без разделов `admin` и `eds.signing.manage`."""
     be.profile.update(
         deputy_user_id=12,
         deputy_name="Борис Директоров",
         deputy_from="2026-12-02",
         deputy_to="2026-12-09",
     )
-    be.router.get(f"{CRM_URL}/api/v1/responsibility-zones").mock(
-        return_value=httpx.Response(403, json={"code": "forbidden", "message": "x", "details": {}})
+    be.router.get(f"{CRM_URL}/api/v1/responsibility-zones/mine").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [crm_zone(1, "finance", responsible=person(7, "Иван Тестов"), problems=[])]
+            },
+        )
+    )
+    be.router.get(f"{CRM_URL}/api/v1/team/granters").mock(
+        return_value=httpx.Response(
+            200,
+            json=[{"id": 9, "full_name": "Мария Админова", "initials": "МА", "position": "Админ"}],
+        )
+    )
+    eds.answer(
+        "GET",
+        "signing/mine",
+        httpx.Response(
+            200,
+            json={"items": [{**EDS_AUTHORITY, "holder": {"crm_user_id": 7, "full_name": "Иван"}}]},
+        ),
     )
     await web.login(["ACCOUNTANT"])
 
@@ -203,19 +223,32 @@ async def test_my_capabilities_is_the_same_data_about_me(
     assert rows["leads"]["level"] == "none"
     assert rows["payments"]["others"] == []
     assert body["warnings"] == []
-    assert body["zones_known"] is False  # зоны читает администратор: «не известно»
+    assert body["zones_known"] is True
+    assert [z["role"] for z in body["zones"]] == ["responsible"]
+    assert body["signing_known"] is True
+    assert [a["kinds"] for a in body["signing"]] == [["letter_out", "contract"]]
+    assert [p["name"] for p in body["grantors"]] == ["Мария Админова"]
     assert body["deputy"]["name"] == "Борис Директоров"
+    # только чтение и только «мои» адреса: полного реестра подписи и списка сотрудников не просили
+    asked = {str(c.request.url.path) for c in be.router.calls}
+    assert "/api/v1/users" not in asked
+    assert "/api/v1/responsibility-zones" not in asked
+    assert not [e for e in eds.calls if e.url.path.endswith("/signing/authorities")]
 
 
-async def test_my_capabilities_works_for_everyone_with_a_session(
+async def test_my_capabilities_say_nothing_false_when_own_reads_fail(
     web: Web, be: Backends, eds: EdsFake
 ) -> None:
-    eds.exchange_status = 403  # у сотрудника нет доступа к реестру подписи: «не известно»
-    be.router.get(f"{CRM_URL}/api/v1/responsibility-zones").mock(
-        return_value=httpx.Response(403, json={"code": "forbidden", "message": "x", "details": {}})
+    be.router.get(f"{CRM_URL}/api/v1/responsibility-zones/mine").mock(
+        return_value=httpx.Response(500)
     )
+    be.router.get(f"{CRM_URL}/api/v1/team/granters").mock(return_value=httpx.Response(500))
+    eds.exchange_status = 403
     await web.login(["MANAGER"])
     response = await web.client.get("/api/v1/me/capabilities")
     assert response.status_code == 200, response.text
-    assert response.json()["signing_known"] is False
-    assert "deputy" not in response.json()
+    body = response.json()
+    assert body["signing_known"] is False
+    assert body["zones_known"] is False
+    assert "grantors" not in body  # «не известно», а не «выдавать некому»
+    assert "deputy" not in body

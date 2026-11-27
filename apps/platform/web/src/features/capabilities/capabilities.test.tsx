@@ -127,8 +127,9 @@ describe("Мои возможности", () => {
     expect(within(leads).getByText("Работать")).toBeVisible();
     const staff = mine.querySelector('[data-capability="staff"]') as HTMLElement;
     expect(within(staff).getByText("Нет")).toBeVisible();
-    // менеджер не читает реестр подписи: «нет данных», а не «нет права»
-    expect(within(mine).getByTestId("cap-signing")).toHaveTextContent("нет данных");
+    // свои подпись и зоны читает любой сотрудник: у менеджера их нет — так и сказано, блоки не пропадают
+    expect(within(mine).getByTestId("cap-signing")).toHaveTextContent("Права подписи нет");
+    expect(within(mine).getByTestId("cap-zones")).toBeVisible();
     expect(within(mine).getByRole("button", { name: "Попросить возможность" })).toBeEnabled();
   });
 });
@@ -145,7 +146,8 @@ describe("Нет возможности", () => {
       }),
     ).toBeVisible();
     expect(screen.getByText(/Сейчас у вас — «Нет»/)).toBeVisible();
-    expect(screen.getByText(/Возможности выдаёт администратор\./)).toBeVisible();
+    // кто выдаёт: в демо-данных «Сотрудники и возможности — работать» держит администратор
+    expect(screen.getByText(/Выдают возможности: Демо Админов\./)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Попросить возможность" }));
     expect(
       await screen.findByDisplayValue("Нужна возможность «Сотрудники и возможности»: смотреть."),

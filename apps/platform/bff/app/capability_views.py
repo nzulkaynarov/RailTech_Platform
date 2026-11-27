@@ -198,6 +198,7 @@ def card(
     today: date,
     *,
     with_others: bool = True,
+    grantors: list[CapabilityPerson] | None = None,
 ) -> EmployeeCapabilities:
     """Карточка «Что может этот человек»: итог словами, строки по шагам, подпись, зоны."""
     summary = summarize(person.states)
@@ -226,6 +227,7 @@ def card(
         deputy=person.deputy,
         warnings=warnings(everyone, extras, today, only=person.id) if with_others else [],
         free_for_all=_text(FREE_FOR_ALL),
+        grantors=grantors,
     )
 
 

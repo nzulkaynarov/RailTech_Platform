@@ -173,62 +173,62 @@ function MatrixTable({
             </div>
           ))}
           <div role="rowgroup" aria-label={t("matrix.apart")}>
-            <div role="row" className="pf-cap-line pf-cap-grouprow">
-              <div role="columnheader" className="pf-cap-cell pf-cap-groupcell">
-                {t("matrix.apart")}
-              </div>
-            </div>
-            <div role="row" className="pf-cap-line pf-cap-apart" data-testid="cap-row-signing">
-              <div role="rowheader" className="pf-cap-cell pf-cap-rowhead">
-                {t("matrix.signs")}
-              </div>
-              {matrix.employees.map((employee) => (
-                <div role="cell" className="pf-cap-cell" key={employee.person.id}>
-                  {!matrix.signing_known ? (
-                    <span className="pf-hint" title={t("matrix.unknownSigningHint")}>
-                      {t("matrix.unknownSigning")}
-                    </span>
-                  ) : employee.signing.length === 0 ? (
-                    <span className="pf-hint">{t("matrix.noSigning")}</span>
-                  ) : (
-                    employee.signing.map((item) => (
-                      <div key={item.id}>
-                        {item.kinds.map(kindName).join(", ")}
-                        {" · "}
-                        {item.limit ? (
-                          <MoneyText value={item.limit.amount} currency={item.limit.currency} />
-                        ) : (
-                          t("matrix.unlimited")
-                        )}
-                        {item.valid_to
-                          ? ` · ${t("card.signingUntil", { date: format.date(item.valid_to) })}`
-                          : ""}
-                      </div>
-                    ))
-                  )}
+            {matrix.signing_known || matrix.zones_known ? (
+              <div role="row" className="pf-cap-line pf-cap-grouprow">
+                <div role="columnheader" className="pf-cap-cell pf-cap-groupcell">
+                  {t("matrix.apart")}
                 </div>
-              ))}
-            </div>
-            <div role="row" className="pf-cap-line pf-cap-apart" data-testid="cap-row-zones">
-              <div role="rowheader" className="pf-cap-cell pf-cap-rowhead">
-                {t("matrix.responsible")}
               </div>
-              {matrix.employees.map((employee) => (
-                <div role="cell" className="pf-cap-cell" key={employee.person.id}>
-                  {!matrix.zones_known ? (
-                    <span className="pf-hint">{t("matrix.unknownZones")}</span>
-                  ) : employee.zones.length === 0 ? (
-                    <span className="pf-hint">{t("matrix.noZones")}</span>
-                  ) : (
-                    employee.zones.map((zone) => (
-                      <div key={`${zone.id}-${zone.role}`}>
-                        {pickText(zone.name, language)} · {t(`card.responsibleRole.${zone.role}`)}
-                      </div>
-                    ))
-                  )}
+            ) : null}
+            {matrix.signing_known ? (
+              <div role="row" className="pf-cap-line pf-cap-apart" data-testid="cap-row-signing">
+                <div role="rowheader" className="pf-cap-cell pf-cap-rowhead">
+                  {t("matrix.signs")}
                 </div>
-              ))}
-            </div>
+                {matrix.employees.map((employee) => (
+                  <div role="cell" className="pf-cap-cell" key={employee.person.id}>
+                    {employee.signing.length === 0 ? (
+                      <span className="pf-hint">{t("matrix.noSigning")}</span>
+                    ) : (
+                      employee.signing.map((item) => (
+                        <div key={item.id}>
+                          {item.kinds.map(kindName).join(", ")}
+                          {" · "}
+                          {item.limit ? (
+                            <MoneyText value={item.limit.amount} currency={item.limit.currency} />
+                          ) : (
+                            t("matrix.unlimited")
+                          )}
+                          {item.valid_to
+                            ? ` · ${t("card.signingUntil", { date: format.date(item.valid_to) })}`
+                            : ""}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {matrix.zones_known ? (
+              <div role="row" className="pf-cap-line pf-cap-apart" data-testid="cap-row-zones">
+                <div role="rowheader" className="pf-cap-cell pf-cap-rowhead">
+                  {t("matrix.responsible")}
+                </div>
+                {matrix.employees.map((employee) => (
+                  <div role="cell" className="pf-cap-cell" key={employee.person.id}>
+                    {employee.zones.length === 0 ? (
+                      <span className="pf-hint">{t("matrix.noZones")}</span>
+                    ) : (
+                      employee.zones.map((zone) => (
+                        <div key={`${zone.id}-${zone.role}`}>
+                          {pickText(zone.name, language)} · {t(`card.responsibleRole.${zone.role}`)}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

@@ -24,4 +24,6 @@ export interface EmployeeCapabilities {
   deputy?: DeputyPeriod;
   warnings: CapabilityWarning[];
   free_for_all: CapabilityText;
+  /** Только `/me/capabilities`: действующие сотрудники, которые выдают возможности («Сотрудники и возможности — работать», раздел `admin` на изменение). Пустой список — выдать некому; нет поля — не известно. */
+  grantors?: CapabilityPerson[];
 }

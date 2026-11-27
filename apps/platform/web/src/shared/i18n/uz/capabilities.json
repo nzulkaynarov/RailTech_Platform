@@ -38,9 +38,6 @@
     "signs": "Imzolaydi",
     "responsible": "Masul",
     "deputy": "Almaştiradi",
-    "unknownSigning": "maʼlumot yöq",
-    "unknownSigningHint": "Imzo reyestrini uni yurituvçilar oqiydi.",
-    "unknownZones": "maʼlumot yöq",
     "noSigning": "—",
     "noZones": "—",
     "unlimited": "çegarasiz",
@@ -82,11 +79,9 @@
       "curator": "kurator"
     },
     "responsibleEmpty": "Hec bir soha uçun tayinlanmagan",
-    "responsibleUnknown": "Masullik sohalarini administratorlar köradi.",
     "responsibleNote": "Soha hozircha faqat yozib qöyilgan: vazifalarni yönaltirmaydi.",
     "signingTitle": "Imzolaydi",
     "signingEmpty": "Imzo huquqi yöq",
-    "signingUnknown": "Imzo reyestrini uni yurituvçilar oqiydi — bu yerda maʼlumot yöq.",
     "signingLine": "{{kinds}}",
     "signingUntil": "{{date}} gaçha",
     "signingPower": "işonçnoma böyiça",
@@ -122,6 +117,8 @@
     "need": "Bu bölimni açiş uçun «{{name}}» imkoniyati kerak: {{level}}. Hozir sizda — «{{current}}».",
     "who": "Imkoniyatlarni administrator beradi.",
     "ask": "Imkoniyat söraş",
-    "askBody": "«{{name}}» imkoniyati kerak: {{level}}."
+    "askBody": "«{{name}}» imkoniyati kerak: {{level}}.",
+    "grantors": "Imkoniyatlarni beradiganlar: {{names}}.",
+    "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing."
   }
 }

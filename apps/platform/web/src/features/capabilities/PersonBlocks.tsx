@@ -23,12 +23,12 @@ export function SigningBlock({
   const { t } = useTranslation("capabilities");
   const format = useFormat();
   const kindName = useKindNames(known && items.length > 0);
+  // Реестр не прочитался — блока нет совсем: пустой экран «нет права подписи» был бы неправдой
+  if (!known) return null;
   return (
     <div className="pf-cap-block" data-testid="cap-signing">
       <h4>{title}</h4>
-      {!known ? (
-        <p className="pf-hint">{t("card.signingUnknown")}</p>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <p className="pf-hint">{t("card.signingEmpty")}</p>
       ) : (
         <ul>
@@ -64,12 +64,11 @@ export function ZonesBlock({
   items: readonly CapabilityZone[];
 }) {
   const { t, i18n } = useTranslation("capabilities");
+  if (!known) return null;
   return (
     <div className="pf-cap-block" data-testid="cap-zones">
       <h4>{title}</h4>
-      {!known ? (
-        <p className="pf-hint">{t("card.responsibleUnknown")}</p>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <p className="pf-hint">{t("card.responsibleEmpty")}</p>
       ) : (
         <>

@@ -28,10 +28,10 @@ from app.clients.crm_users import CrmRoles, CrmUsers
 from app.clients.crm_zones import CrmZones
 from app.deps import Authed, AuthedDep, require
 from app.eds_documents import API, EdsProxy
-from app.errors import PlatformError
+from app.errors import PlatformError, from_backend
 from app.schemas import initials_of
 from app.schemas_admin import deputy_of, role_refs, status_of
-from app.schemas_capabilities import CapabilityMatrix, EmployeeCapabilities
+from app.schemas_capabilities import CapabilityMatrix, CapabilityPerson, EmployeeCapabilities
 from app.schemas_eds_signing import to_authority
 from app.schemas_profile import avatar_url
 
@@ -40,6 +40,7 @@ router = APIRouter(tags=["admin"])
 Reader = Annotated[Authed, Depends(require("admin", "read"))]
 EmployeeId = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
 SIGNING = f"{API}/signing/authorities"
+ZONES = "/api/v1/responsibility-zones"
 
 
 def _role_views(raw_roles: list[dict[str, Any]]) -> dict[int, RoleView]:
@@ -71,19 +72,31 @@ def _person(user: dict[str, Any], roles: dict[int, RoleView], names: dict[str, s
     )
 
 
-async def _extras(authed: Authed) -> Extras:
-    """Зоны (CRM) и подписи (EDS), если у сотрудника есть чем их читать; иначе — «не известно»."""
+async def _extras(authed: Authed, *, mine: bool = False) -> Extras:
+    """Зоны (CRM) и подписи (EDS): `mine` — только свои записи, их читает любой сотрудник;
+    иначе весь реестр (нужны `admin` и `eds.signing.manage`). Не прочиталось — «не известно»."""
     zones: dict[str, Any] = {}
     zones_known = False
     try:
-        zones = zones_by_person(await CrmZones(authed.call).list_all())
+        if mine:
+            response = await authed.call("crm", "GET", f"{ZONES}/mine")
+            if response.status_code != 200:
+                raise from_backend("crm", response)
+            raw_zones = response.json().get("items") or []
+        else:
+            raw_zones = await CrmZones(authed.call).list_all()
+        zones = zones_by_person(raw_zones)
         zones_known = True
     except PlatformError:
         zones_known = False
     signing: dict[str, Any] = {}
     signing_known = False
     try:
-        raw = await EdsProxy(authed.call).request("GET", SIGNING, params={"status": "all"})
+        raw = await EdsProxy(authed.call).request(
+            "GET",
+            f"{API}/signing/mine" if mine else SIGNING,
+            params=None if mine else {"status": "all"},
+        )
         items = raw.get("items") if isinstance(raw, dict) else None
         if isinstance(items, list):
             signing = authorities_by_person(to_authority(item) for item in items)
@@ -93,6 +106,30 @@ async def _extras(authed: Authed) -> Extras:
     return Extras(
         signing_known=signing_known, signing=signing, zones_known=zones_known, zones=zones
     )
+
+
+async def _grantors(authed: Authed) -> list[CapabilityPerson] | None:
+    """Кто выдаёт возможности: действующие сотрудники с разделом `admin` на изменение (CRM, любому
+    сотруднику: имя и должность). Не прочиталось — `None`, «не известно»."""
+    try:
+        response = await authed.call("crm", "GET", "/api/v1/team/granters")
+    except PlatformError:
+        return None
+    if response.status_code != 200:
+        return None
+    people: list[CapabilityPerson] = []
+    for row in response.json():
+        name = str(row.get("full_name") or "")
+        position = str(row.get("position") or "").strip()
+        people.append(
+            CapabilityPerson(
+                id=str(row["id"]),
+                name=name,
+                initials=str(row.get("initials") or initials_of(name, name or "?")),
+                **({"position": position} if position else {}),
+            )
+        )
+    return people
 
 
 async def _company(authed: Authed) -> tuple[list[Person], Extras]:
@@ -179,6 +216,6 @@ async def get_my_capabilities(authed: AuthedDep) -> EmployeeCapabilities:
         deputy=deputy,
     )
     prepare([me])
-    extras = await _extras(authed)
+    extras = await _extras(authed, mine=True)
     # Про себя: «Кто ещё может» и предупреждения по компании — не здесь (их видит администратор).
-    return card(me, [me], extras, _today(), with_others=False)
+    return card(me, [me], extras, _today(), with_others=False, grantors=await _grantors(authed))

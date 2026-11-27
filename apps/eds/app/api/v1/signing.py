@@ -85,6 +85,14 @@ async def list_authorities(
     return await signing_registry.list_authorities(session, status=status, crm_user_id=crm_user_id)
 
 
+@router.get("/mine", response_model=SigningAuthorityList, operation_id="listMySigningAuthorities")
+async def list_my_authorities(
+    employee: Annotated[Employee, Depends(require_permission())], session: Session
+) -> SigningAuthorityList:
+    """Мои полномочия подписи (ДОСТ-1, «Мои возможности»): только записи самого сотрудника, права реестра не нужны."""
+    return await signing_registry.list_authorities(session, status="all", crm_user_id=employee.crm_user_id)
+
+
 @router.post(
     "/authorities", response_model=SigningAuthorityDetail, status_code=201, operation_id="createSigningAuthority"
 )

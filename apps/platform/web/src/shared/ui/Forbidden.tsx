@@ -41,8 +41,15 @@ export function Forbidden({ roles, embedded = false, rule }: ForbiddenProps) {
   const name = missing ? pickText(missing.name, i18n.language) : "";
   const level = missing ? t(`capabilities:levelVerb.${missing.needed}`) : "";
   useDocumentTitle(embedded ? undefined : t("forbidden.heading"));
+  const grantors = mine.data?.grantors;
+  const who =
+    grantors === undefined
+      ? t("capabilities:denied.who")
+      : grantors.length === 0
+        ? t("capabilities:denied.nobody")
+        : t("capabilities:denied.grantors", { names: grantors.map((p) => p.name).join(", ") });
   const text = missing
-    ? `${t("capabilities:denied.need", { name, level, current: t(`capabilities:level.${missing.current}`) })} ${t("capabilities:denied.who")}`
+    ? `${t("capabilities:denied.need", { name, level, current: t(`capabilities:level.${missing.current}`) })} ${who}`
     : roles && roles.length > 0
       ? t("forbidden.textRoles", { roles: roles.join(", ") })
       : t("forbidden.text");

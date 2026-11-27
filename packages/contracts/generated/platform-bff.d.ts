@@ -4458,7 +4458,7 @@ export interface paths {
     };
     /**
      * «Мои возможности» — то же про себя (только чтение)
-     * @description ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и зоны — если читающему есть чем их читать (иначе `signing_known` / `zones_known` = false).
+     * @description ДОСТ-1. Любой сотрудник про себя: те же строки и итог словами; `others` пусты, `warnings` пусты (их видит администратор). Условия `gates` у действий нужны экрану «Нет доступа», чтобы назвать недостающую возможность. Подпись и зоны — свои записи, их читает любой сотрудник (CRM `/responsibility-zones/mine`, EDS `/signing/mine`); не прочиталось — `signing_known` / `zones_known` = false.
      */
     get: operations["getMyCapabilities"];
     put?: never;
@@ -10442,6 +10442,8 @@ export interface components {
       deputy?: components["schemas"]["DeputyPeriod"];
       warnings: components["schemas"]["CapabilityWarning"][];
       free_for_all: components["schemas"]["CapabilityText"];
+      /** @description Только `/me/capabilities`: действующие сотрудники, которые выдают возможности («Сотрудники и возможности — работать», раздел `admin` на изменение). Пустой список — выдать некому; нет поля — не известно. */
+      grantors?: components["schemas"]["CapabilityPerson"][];
     };
     CapabilityMatrixCell: {
       level: components["schemas"]["CapabilityLevel"];

@@ -18998,6 +18998,31 @@ paths:
       summary: Create Zone
       tags:
       - responsibility-zones
+  /api/v1/responsibility-zones/mine:
+    get:
+      description: 'Зоны, где работающий — ответственный, замещающий или куратор (ДОСТ-1, «Мои возможности»).
+
+
+        Только свои записи, права `users:read` не нужны.'
+      operationId: my_zones
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponsibilityZoneList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: My Zones
+      tags:
+      - responsibility-zones
   /api/v1/responsibility-zones/summary:
     get:
       description: 'Числа для сигналов: доступны держателям `company.settings`, без списка людей.'
@@ -19985,6 +20010,34 @@ paths:
       security:
       - HTTPBearer: []
       summary: Team
+      tags:
+      - leads
+  /api/v1/team/granters:
+    get:
+      description: 'Кто выдаёт возможности: действующие сотрудники с `admin` на изменение (ДОСТ-1).
+
+
+        Любому сотруднику: имя и должность тех, к кому идти; ролей, почты и телефона нет.'
+      operationId: granters
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+                title: Response Granters
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Granters
       tags:
       - leads
   /api/v1/telegram-groups:
