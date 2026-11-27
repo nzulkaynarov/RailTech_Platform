@@ -90,6 +90,29 @@ const MONEY_STATUS_RULES = [
   },
 ];
 
+// НАСТ-П1 (аудит Настроек §7, сторож 1): слово состояния службы модуль не пишет сам. «Работает» приходит из ответа BFF
+// (`fact` карточки) и показывается только через `<StatusStrip fact>`; литерал состояния у статуса интеграции — запрещён.
+const INTEGRATION_STATUS_RULES = [
+  {
+    selector:
+      'JSXOpeningElement[name.name="StatusTag"]:has(JSXAttribute[name.name="kind"][value.value="integration"]) > JSXAttribute[name.name="status"][value.type="Literal"]',
+    message:
+      "Состояние интеграции литералом запрещено: слово приходит из `fact` ответа BFF — <StatusStrip fact scope> (shared/ui, НАСТ-П1).",
+  },
+  {
+    selector:
+      'JSXOpeningElement[name.name="StatusTag"]:has(JSXAttribute[name.name="kind"][value.value="integration"]) > JSXAttribute[name.name="status"] > JSXExpressionContainer > Literal',
+    message:
+      "Состояние интеграции литералом запрещено: слово приходит из `fact` ответа BFF — <StatusStrip fact scope> (shared/ui, НАСТ-П1).",
+  },
+  {
+    selector:
+      'JSXOpeningElement[name.name="LevelTag"] > JSXAttribute[name.name="level"][value.type="Literal"]',
+    message:
+      "Уровень литералом запрещён: <LevelTag level> берёт его из ответа сервера; постоянных «Работает» и «Сбой» в разметке нет (НАСТ-П1).",
+  },
+];
+
 export default tseslint.config(
   {
     ignores: ["dist", "coverage", "playwright-report", "test-results", "src/shared/api/generated"],
@@ -135,6 +158,19 @@ export default tseslint.config(
         ...QUERY_KEY_RULES,
         ...NATIVE_FIELD_RULES,
         ...MONEY_STATUS_RULES,
+      ],
+    },
+  },
+  {
+    files: ["src/modules/admin/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...QUERY_KEY_RULES,
+        ...NATIVE_FIELD_RULES,
+        ...MONEY_STATUS_RULES,
+        ...INTEGRATION_STATUS_RULES,
       ],
     },
   },

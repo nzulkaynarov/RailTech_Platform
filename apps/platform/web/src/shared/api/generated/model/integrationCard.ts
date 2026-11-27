@@ -6,9 +6,11 @@ import type { IntegrationAccess } from "./integrationAccess";
 import type { IntegrationCardKey } from "./integrationCardKey";
 import type { IntegrationNote } from "./integrationNote";
 import type { IntegrationStatus } from "./integrationStatus";
+import type { StatusFact } from "./statusFact";
 
 export interface IntegrationCard {
   key: IntegrationCardKey;
+  fact: StatusFact;
   status: IntegrationStatus;
   access: IntegrationAccess;
   note: IntegrationNote;
@@ -17,7 +19,7 @@ export interface IntegrationCard {
   /** @nullable */
   amount_usd: number | null;
   /**
-   * Последняя проверка или событие карточки; `null` — данных нет
+   * Время проверки карточки, то же, что `fact.checked_at` (одна дата на карточку); `null` — проверки не было
    * @nullable
    */
   last_activity_at: string | null;

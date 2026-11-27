@@ -13,6 +13,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query
 
+from app import status_model
 from app.bus_journal import (
     DELIVERIES,
     INBOX,
@@ -48,6 +49,7 @@ from app.schemas_bus import (
     DomainRetry,
     InboxStatus,
 )
+from app.status_model import bus_fact
 
 router = APIRouter(prefix="/admin/bus", tags=["bus"])
 
@@ -89,7 +91,12 @@ async def journal(authed: Admin) -> BusJournal:
                 subscribers=subscribers,
             )
         )
-    return BusJournal(domains=domains, sources=sources(states))
+    fact = bus_fact(
+        dead=sum(d.dlq_size for d in domains),
+        answered=[d in {o.domain for o in domains} for d in DOMAINS],
+        now=status_model.now_utc(),
+    )
+    return BusJournal(domains=domains, sources=sources(states), fact=fact)
 
 
 @router.get("/deliveries", response_model=BusDeliveryPage, operation_id="listBusDeliveries")

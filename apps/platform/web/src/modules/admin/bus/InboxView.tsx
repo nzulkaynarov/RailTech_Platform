@@ -24,6 +24,7 @@ import {
   inboxWord,
   shortType,
   subscriberName,
+  troubledSources,
 } from "./format";
 import { BusSourcesNote, FilterSelect } from "./parts";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
@@ -94,8 +95,16 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
     body = (
       <EmptyState
         level={3}
-        title={t("inboxView.empty.title")}
-        text={t("inboxView.empty.text")}
+        title={t(
+          troubledSources(sources).length > 0
+            ? "inboxView.partialEmpty.title"
+            : "inboxView.empty.title",
+        )}
+        text={t(
+          troubledSources(sources).length > 0
+            ? "inboxView.partialEmpty.text"
+            : "inboxView.empty.text",
+        )}
         action={
           domain !== "all" ? (
             <Button

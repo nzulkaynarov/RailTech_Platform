@@ -893,7 +893,7 @@ async def test_system_status_components(web: Web, crm: CrmIntegrationsFake) -> N
     response = await web.client.get(f"{BASE}/system")
 
     assert response.json()["status"] == "ok"
-    assert [c["key"] for c in response.json()["components"]] == ["database", "bot"]
+    assert [c["key"] for c in response.json()["components"]] == ["database", "erp", "bot"]
 
 
 # --- ошибки CRM в едином формате ----------------------------------------------------------------

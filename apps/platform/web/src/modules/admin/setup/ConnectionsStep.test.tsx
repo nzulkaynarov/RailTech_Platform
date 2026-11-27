@@ -12,10 +12,25 @@ describe("мастер первого запуска: шаги чек-листа
       <MemoryRouter>
         <ConnectionsStep
           steps={[
-            { key: "bot", state: "done", to: "/admin/setup?step=bot&panel=open" },
-            { key: "models", state: "unknown", to: "/admin/setup?step=models&panel=open" },
-            { key: "mail", state: "todo", to: "/admin/setup?step=mail&panel=open" },
-            { key: "signing", state: "todo", to: "/admin/signing" },
+            {
+              key: "bot",
+              state: "done",
+              verdict: "done",
+              to: "/admin/setup?step=bot&panel=open",
+            },
+            {
+              key: "models",
+              state: "unknown",
+              verdict: "unknown",
+              to: "/admin/setup?step=models&panel=open",
+            },
+            {
+              key: "mail",
+              state: "todo",
+              verdict: "todo",
+              to: "/admin/setup?step=mail&panel=open",
+            },
+            { key: "signing", state: "todo", verdict: "todo", to: "/admin/signing" },
           ]}
         />
       </MemoryRouter>,

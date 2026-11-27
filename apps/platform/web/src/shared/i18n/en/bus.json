@@ -12,7 +12,8 @@
     "pending": "Waiting to be sent",
     "paused": "Paused subscribers",
     "inboxFailed": "Processing errors",
-    "source": "CRM, ERP and EDS"
+    "source": "CRM, ERP and EDS",
+    "sourcePartial": "Only {{list}}: the others did not answer"
   },
   "domains": {
     "crm": "CRM",
@@ -113,7 +114,11 @@
       "text": "All events reached their subscribers or are still being retried on the bus schedule."
     },
     "more": "Show more",
-    "line": "{{time}} · {{domain}} → {{subscriber}} · attempts {{attempts}}"
+    "line": "{{time}} · {{domain}} → {{subscriber}} · attempts {{attempts}}",
+    "partialEmpty": {
+      "title": "Could not check",
+      "text": "Some systems did not answer, so the list may be incomplete. Press Refresh."
+    }
   },
   "inboxView": {
     "caption": "Received events whose processing failed",
@@ -132,7 +137,11 @@
       "title": "No processing errors",
       "text": "All received events of CRM, ERP and EDS are processed. If a handler fails, the event appears here."
     },
-    "line": "{{time}} · from {{publisher}} to {{domain}} · attempts {{attempts}}"
+    "line": "{{time}} · from {{publisher}} to {{domain}} · attempts {{attempts}}",
+    "partialEmpty": {
+      "title": "Could not check",
+      "text": "Some systems did not answer, so the list may be incomplete. Press Refresh."
+    }
   },
   "panel": {
     "deliveryTitle": "Delivery {{id}} · {{domain}}",

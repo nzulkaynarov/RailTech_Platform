@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.status_model import StatusFact
+
 BusDomain = Literal["crm", "erp", "eds"]
 BusSourceState = Literal["ok", "unavailable", "forbidden", "not_applicable"]
 DeliveryStatus = Literal["pending", "in_flight", "delivered", "dead"]
@@ -129,6 +131,7 @@ class BusDomainOverview(BaseModel):
 class BusJournal(BaseModel):
     domains: list[BusDomainOverview]
     sources: BusSources
+    fact: StatusFact
 
 
 class BusDelivery(DomainDelivery):

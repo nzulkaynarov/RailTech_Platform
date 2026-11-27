@@ -288,5 +288,19 @@
       "rejected": "the recipient's server rejected the email",
       "other": "the mail server returned the email"
     }
+  },
+  "statusStrip": {
+    "state": {
+      "works": "Working",
+      "attention": "Attention",
+      "broken": "Failure",
+      "not_verified": "Set up, not checked",
+      "stale": "No recent data",
+      "unknown": "Could not check",
+      "off": "Not connected"
+    },
+    "checkedAgo": "checked {{when}}",
+    "never": "not checked yet",
+    "check": "Check"
   }
 }

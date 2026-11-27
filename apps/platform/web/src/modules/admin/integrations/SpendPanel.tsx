@@ -262,15 +262,7 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
               width: 240,
               cell: (system) => (
                 <>
-                  {!system.connected ? (
-                    <LevelTag level="off" />
-                  ) : system.over_today ? (
-                    <LevelTag level="fail" />
-                  ) : system.days_over > 0 ? (
-                    <LevelTag level="warn" />
-                  ) : (
-                    <LevelTag level="ok" />
-                  )}{" "}
+                  <LevelTag level={systemLevel(system)} />{" "}
                   <span className="pf-hint">
                     {!system.connected
                       ? t("spend.ensemble.notConnected")
@@ -364,6 +356,17 @@ function EnsembleSpend() {
 }
 
 /** Карточка «Расходы»: бот (`/spend`) и весь ансамбль (`/admin/ai-spend`); директору — на чтение. */
+/** Уровень строки «Системы» — из данных отчёта (не подключена, превышение сегодня, дни превышения), а не литералом. */
+function systemLevel(system: {
+  connected: boolean;
+  over_today: boolean;
+  days_over: number;
+}): IntegrationStatus {
+  if (!system.connected) return "off";
+  if (system.over_today) return "fail";
+  return system.days_over > 0 ? "warn" : "ok";
+}
+
 export function SpendPanel({ titled = true }: { titled?: boolean }) {
   const { t } = useTranslation("integrations");
   return (

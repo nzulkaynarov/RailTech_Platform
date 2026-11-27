@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -68,6 +69,14 @@ async def client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 
 
 # --- вход, сессия, RBAC (PLT-10, PLT-11) ----------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def status_now(monkeypatch: pytest.MonkeyPatch) -> datetime:
+    """«Сейчас» статусов: через пять минут после проверок фикстур (`integrations_support.NOW`)."""
+    moment = datetime(2026, 10, 26, 9, 5, tzinfo=UTC)
+    monkeypatch.setattr("app.status_model.now_utc", lambda: moment)
+    return moment
 
 
 @pytest.fixture
