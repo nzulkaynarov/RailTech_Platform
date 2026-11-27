@@ -11,6 +11,7 @@ from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from parties.people import contact_name
+from parties.test_companies import ListScopeMixin
 from rest_framework import exceptions, filters, permissions
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -60,7 +61,12 @@ from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
     ),
 )
 class CompanyViewSet(
-    RoleGatedViewMixin, CompanyDocumentsMixin, CompanyBankAccountsMixin, CompanyTeamMixin, viewsets.ModelViewSet
+    ListScopeMixin,
+    RoleGatedViewMixin,
+    CompanyDocumentsMixin,
+    CompanyBankAccountsMixin,
+    CompanyTeamMixin,
+    viewsets.ModelViewSet,
 ):
     """
     CRUD operations for companies.
@@ -90,6 +96,8 @@ class CompanyViewSet(
         "update_member_capabilities": "team.manage",
     }
 
+    test_company_path = ""
+    test_company_actions = ("list", "export")
     queryset = (
         Company.objects.select_related("country")
         .prefetch_related(

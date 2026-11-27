@@ -1,7 +1,7 @@
 """Реестр «Все документы»: `/api/v1/registry`, `/registry/export` (eds.yaml, тег `registry`)."""
 
 import datetime as dt
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query
@@ -34,6 +34,7 @@ async def filters(
     crm_client_id: int | None = None,
     number: Annotated[str | None, Query(max_length=64)] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
+    test: Annotated[Literal["only", "all"] | None, Query()] = None,
 ) -> registry.Filters:
     return registry.Filters(
         kinds=kind or [],
@@ -45,6 +46,7 @@ async def filters(
         crm_client_id=crm_client_id,
         number=number,
         q=q,
+        test=test,
     )
 
 

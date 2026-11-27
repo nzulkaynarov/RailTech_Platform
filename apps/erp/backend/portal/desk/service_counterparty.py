@@ -124,6 +124,7 @@ def card(company: Company, client_ids: set, user) -> dict:
             for brand in Manufacturer.objects.filter(company=company).order_by("name")
         ],
         "do_not_work": do_not_work.facts(company),
+        "is_test": bool(company.is_test),
         "contract_term": _contract_term(company),
     }
 
@@ -377,6 +378,29 @@ def clear_do_not_work(company: Company, *, actor) -> Company:
         action="С контрагента снято «Не работать»",
         before=before,
         after=None,
+        detail=company.name,
+    )
+    return company
+
+
+@transaction.atomic
+def set_test(company: Company, on: bool, *, actor) -> Company:
+    """«Тестовая» (ТЕСТ-1): отметить компанию или снять отметку. Ничего не удаляется: компания уходит из рабочих списков,
+    счётчиков и отчётов и видна по фильтру «Тестовые». Повтор безопасен — ничего не меняется и не пишется; действие
+    пишется в журнал, CRM получает отметку в снимке `company.updated`."""
+    company = Company.objects.select_for_update().get(pk=company.pk)
+    if company.is_test == bool(on):
+        return company
+    company.is_test = bool(on)
+    company.save()
+    record(
+        actor,
+        entity="company",
+        instance=company,
+        event="updated",
+        action="Контрагент отмечен как тестовый" if on else "С контрагента снята отметка «Тестовая»",
+        before={"is_test": not on},
+        after={"is_test": bool(on)},
         detail=company.name,
     )
     return company

@@ -48,6 +48,8 @@ export interface CounterpartyCard {
   brands: CounterpartyRef[];
   /** Х-8: отметка «Не работать» — причина, кто и когда поставил, срок; нет — работаем */
   do_not_work?: DoNotWork | null;
+  /** ТЕСТ-1: тестовая компания — метка «Тестовая» и действие «Снять отметку» */
+  is_test?: boolean;
   /** ДС-1: срок действующего или последнего подписанного договора; null — подписанных договоров со сроком нет */
   contract_term?: CounterpartyContractTerm | null;
 }

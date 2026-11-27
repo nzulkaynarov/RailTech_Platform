@@ -622,6 +622,7 @@ paths:
           schema:
             type: string
             pattern: '^[a-z][a-z_]{0,31}$'
+        - $ref: '#/components/parameters/TestCompanies'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -2883,6 +2884,7 @@ paths:
               $ref: '#/components/schemas/ApprovalTemplate'
           style: form
           explode: true
+        - $ref: '#/components/parameters/TestCompanies'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -3043,6 +3045,7 @@ paths:
         - $ref: '#/components/parameters/RegistryClient'
         - $ref: '#/components/parameters/RegistryNumber'
         - $ref: '#/components/parameters/RegistryQuery'
+        - $ref: '#/components/parameters/TestCompanies'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
@@ -3663,6 +3666,16 @@ components:
       schema:
         type: string
         maxLength: 64
+    TestCompanies:
+      name: test
+      in: query
+      required: false
+      description: >-
+        ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они,
+        `all` — все вместе. Открытие по номеру и по клиенту не сужается.
+      schema:
+        type: string
+        enum: [only, all]
     RegistryQuery:
       name: q
       in: query

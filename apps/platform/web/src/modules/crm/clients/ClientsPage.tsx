@@ -51,6 +51,7 @@ const KINDS = [
   "do_not_work",
   "applications",
   "bank_changes",
+  "test",
 ] as const;
 type KindFilter = (typeof KINDS)[number];
 type RelationKind = "client" | "partner" | "both" | "none";
@@ -187,9 +188,15 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   // Заявки партнёров читает и держатель зоны «Право»: договор на его решении
   const seesApplications = seesPartners || canSee(me, { resource: "eds.visa.legal" });
   const seesBankChanges = canSee(me, { resource: "eds.payments" });
-  const list = useListCrmClients(q ? { q } : {}, { query: { enabled: seesClients } });
+  // ТЕСТ-1: вкладка «Тестовые» — те же списки с `test=only`; на остальных вкладках тестовых компаний нет
+  const testTab = params.get("kind") === "test";
+  const scope = testTab ? ({ test: "only" } as const) : {};
+  const list = useListCrmClients(
+    { ...(q ? { q } : {}), ...scope },
+    { query: { enabled: seesClients } },
+  );
   const suppliers = useListCatalogSuppliers(
-    { ...(q ? { q } : {}), page: 1, page_size: 200 },
+    { ...(q ? { q } : {}), ...scope, page: 1, page_size: 200 },
     { query: { enabled: seesPartners } },
   );
   // Без `crm.clients` список строится только из партнёров каталога: ожидание и сбой — по запросу поставщиков.
@@ -204,7 +211,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const termsOf = new Map((suppliers.data?.items ?? []).map((row) => [row.id, row]));
   // КОНТР-1б: компании без роли (завели письмом или мастером как «организацию») тоже в списке — «Роль не указана»
   const orgs = useSearchCounterparties(
-    { ...(q ? { q } : {}), role: "organization", limit: 20 },
+    { ...(q ? { q } : {}), ...scope, role: "organization", limit: 20 },
     { query: { enabled: seesClients || seesPartners } },
   );
   const applications = useListPartnerApplications(
@@ -220,6 +227,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     if (value === "applications") return seesApplications;
     if (value === "do_not_work") return seesClients || seesPartners; // Х-8: «Не работаем» — отметка видна тем, кто видит компании
     if (value === "bank_changes") return seesBankChanges;
+    if (value === "test") return seesClients || seesPartners; // ТЕСТ-1: «Тестовые» — те, кто видит компании
     return seesClients; // «Все» и «Клиенты» — только тем, кто видит клиентов
   });
   const askedKind = params.get("kind");
@@ -288,6 +296,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
       return all.filter((row) => ["client", "both"].includes(relationOf(row)));
     if (kind === "partners")
       return all.filter((row) => ["partner", "both"].includes(relationOf(row)));
+    if (kind === "test") return all;
     if (kind === "do_not_work") return all.filter((row) => row.do_not_work === true);
     return all;
   };

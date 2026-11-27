@@ -4146,6 +4146,8 @@ export interface components {
     RegistryClient: number;
     /** @description Точный номер (`ВХ-104/26`, `СЗ-2026/031`, `КП-2026/115`) */
     RegistryNumber: string;
+    /** @description ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они, `all` — все вместе. Открытие по номеру и по клиенту не сужается. */
+    TestCompanies: "only" | "all";
     /** @description Поиск по номеру и теме */
     RegistryQuery: string;
   };
@@ -4540,6 +4542,8 @@ export interface operations {
         overdue?: boolean;
         /** @description Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG) */
         kind?: string;
+        /** @description ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они, `all` — все вместе. Открытие по номеру и по клиенту не сужается. */
+        test?: components["parameters"]["TestCompanies"];
         /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
@@ -6490,6 +6494,8 @@ export interface operations {
         mine?: boolean;
         status?: components["schemas"]["RouteStatus"][];
         template?: components["schemas"]["ApprovalTemplate"][];
+        /** @description ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они, `all` — все вместе. Открытие по номеру и по клиенту не сужается. */
+        test?: components["parameters"]["TestCompanies"];
         /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
@@ -6639,6 +6645,8 @@ export interface operations {
         number?: components["parameters"]["RegistryNumber"];
         /** @description Поиск по номеру и теме */
         q?: components["parameters"]["RegistryQuery"];
+        /** @description ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они, `all` — все вместе. Открытие по номеру и по клиенту не сужается. */
+        test?: components["parameters"]["TestCompanies"];
         /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];

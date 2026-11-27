@@ -84,6 +84,7 @@ async def test_list_puts_recently_active_first(
         "last_activity_at": "2026-10-27T08:48:00Z",
         "handoff_status": "done",
         "do_not_work": False,
+        "is_test": False,
         "logo_url": "/api/v1/people/counterparties/501/logo?v=a1b2c3d4e5",
         "company_id": "501",
         "roles": [{"role": "client", "state": "active", "kind": None}],
@@ -401,6 +402,25 @@ async def test_card_and_list_show_the_do_not_work_mark_from_erp(
     assert card["do_not_work"] == MARK
     items = check(await web.client.get(BASE), "/crm/clients", "get").json()["items"]
     assert {row["id"]: row["do_not_work"] for row in items} == {12: True, 13: False}
+
+
+async def test_test_companies_are_out_of_the_list_unless_asked(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """ТЕСТ-1: без `test` CRM тестовых не отдаёт; `test=only` («Тестовые») уходит в CRM как есть."""
+    crm.answer("GET", "clients", body=[client_item(21, is_test=True)])
+    crm.answer("GET", "clients/21", body=client_detail(21, is_test=True))
+    await web.login(["DIRECTOR"])
+
+    items = check(await web.client.get(f"{BASE}?test=only"), "/crm/clients", "get").json()["items"]
+    assert [(row["id"], row["is_test"]) for row in items] == [(21, True)]
+    assert crm.params("GET", "clients") == {"test": "only"}
+    card = check(await web.client.get(f"{BASE}/21"), "/crm/clients/{id}", "get").json()
+    assert card["is_test"] is True
+
+    await web.client.get(BASE)
+    assert crm.params("GET", "clients") == {}
+    assert (await web.client.get(f"{BASE}?test=junk")).status_code == 422
 
 
 async def test_card_without_the_mark_has_none(

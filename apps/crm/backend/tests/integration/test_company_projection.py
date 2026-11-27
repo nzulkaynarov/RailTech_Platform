@@ -193,3 +193,26 @@ async def test_an_expired_mark_does_not_act(harness: Harness) -> None:
     # the same fact is active on the last day of the term and the day before it
     assert client.do_not_work_on(date(2020, 1, 1)) is not None
     assert client.do_not_work_on(date(2020, 1, 2)) is None
+
+
+async def test_the_test_mark_is_projected_and_a_snapshot_without_it_keeps_it(
+    harness: Harness,
+) -> None:
+    """ТЕСТ-1: `is_test` едет в снимке; снимок без поля (прежний издатель) отметку не меняет."""
+    client_id, _ = await harness.seed_client()
+    assert (await client_of(harness, client_id)).is_test is False
+
+    await apply(harness, snapshot(at="2026-11-18T10:00:00Z", is_test=True))
+    assert (await client_of(harness, client_id)).is_test is True
+
+    without = snapshot(at="2026-11-18T11:00:00Z", name="Без отметки в снимке")
+    del without["company"]["is_test"]
+    await apply(harness, without)
+    assert (await client_of(harness, client_id)).is_test is True
+
+    # более старый снимок отметку не снимает
+    await apply(harness, snapshot(at="2026-11-18T08:00:00Z", is_test=False))
+    assert (await client_of(harness, client_id)).is_test is True
+
+    await apply(harness, snapshot(at="2026-11-18T12:00:00Z", is_test=False))
+    assert (await client_of(harness, client_id)).is_test is False

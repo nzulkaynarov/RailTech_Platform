@@ -10,6 +10,7 @@
 | [migrations.md](migrations.md) | Управление миграциями и начальными данными | Изменение моделей, проверка `makemigrations --check`, откат, `core_seed` |
 | [workers.md](workers.md) | Celery worker, worker-ai и Celery Beat | Зависание PDF, простой очереди `ai`, курсы ЦБ РУз не обновляются, перезапуск воркеров |
 | [backup-restore.md](backup-restore.md) | Резервное копирование и восстановление | Снятие дампа базы `erp`, восстановление после сбоя, бэкап медиафайлов (RustFS/S3) |
+| [test-companies.md](test-companies.md) | Пометка тестовых компаний и скрытие из рабочих списков (ТЕСТ-1) | Пробные компании мешают в списках и счётчиках; пометка пачкой `mark_test_companies` после выкладки |
 
 ---
 

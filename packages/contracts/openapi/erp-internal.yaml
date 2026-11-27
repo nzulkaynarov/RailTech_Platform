@@ -19429,6 +19429,14 @@ paths:
           - partner
           - supplier
         description: 'Роль-подсказка: компании с ней идут выше, остальные не скрываются'
+      - in: query
+        name: test
+        schema:
+          type: string
+          enum:
+          - all
+          - only
+        description: 'ТЕСТ-1: без параметра тестовые компании не входят; `only` — только они; `all` — все вместе'
       tags:
       - Parties
       security:
@@ -20039,6 +20047,81 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '409':
           description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/parties/organizations/{id}/test/:
+    post:
+      operationId: parties_organizations_test_set
+      description: 'ТЕСТ-1. Отметить компанию «Тестовая»: она уходит из рабочих списков, счётчиков, панелей и отчётов, видна
+        по фильтру `?test=only`; ничего не удаляется, письма, уведомления и вход в кабинет работают как прежде. Право `deal.manage`
+        или `supply.manage`; повтор безопасен; действие пишется в журнал. Ответ — карточка контрагента.'
+      summary: Mark a counterparty as test
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: parties_organizations_test_clear
+      description: 'ТЕСТ-1. Снять отметку «Тестовая»: компания возвращается в рабочие списки. Тот же доступ.'
+      summary: Remove the test mark
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
           content:
             application/json:
               schema:
@@ -29189,6 +29272,9 @@ components:
           - $ref: '#/components/schemas/DoNotWorkFacts'
           nullable: true
           description: 'Отметка «Не работать» (Х-8): причина, кто и когда поставил, срок; `null` — с компанией работаем'
+        is_test:
+          type: boolean
+          description: 'Тестовая компания (ТЕСТ-1): не в рабочих списках, счётчиках и отчётах; видна по фильтру «Тестовые»'
         contract_term:
           allOf:
           - $ref: '#/components/schemas/DeskContractTerm'

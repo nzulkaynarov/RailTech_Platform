@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from parties.test_companies import ListScopeMixin
 from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -174,6 +175,7 @@ def _signing_status(row) -> dict:
 
 
 class ContractViewSet(
+    ListScopeMixin,
     RoleGatedViewMixin,
     OptimisticLockingMixin,
     ContractFlowMixin,
@@ -227,6 +229,8 @@ class ContractViewSet(
     # Без FilterSet DjangoFilterBackend молча возвращает список ЦЕЛИКОМ — см. billing_filters.
     filterset_class = ContractFilter
     # Operator sub-capability for the admin contract overrides (ADR-0004 G1).
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -577,6 +581,7 @@ class ContractViewSet(
 
 
 class InvoiceViewSet(
+    ListScopeMixin,
     RoleGatedViewMixin,
     OptimisticLockingMixin,
     CommercialSigningMixin,
@@ -618,6 +623,8 @@ class InvoiceViewSet(
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_class = InvoiceFilter
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -812,7 +819,7 @@ class InvoiceViewSet(
         return Response(ActSerializer(act).data, status=201)
 
 
-class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+class PaymentViewSet(ListScopeMixin, viewsets.ReadOnlyModelViewSet):
     """Платежи — ТОЛЬКО чтение (Rule 8).
 
     Запись идёт исключительно через `invoices/{id}/record-payment/` → сервис
@@ -826,6 +833,8 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_class = PaymentFilter
+
+    test_company_path = "invoice__deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -853,7 +862,12 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ActViewSet(
-    RoleGatedViewMixin, ActFlowMixin, CommercialSigningMixin, DocumentLinksMixin, viewsets.ReadOnlyModelViewSet
+    ListScopeMixin,
+    RoleGatedViewMixin,
+    ActFlowMixin,
+    CommercialSigningMixin,
+    DocumentLinksMixin,
+    viewsets.ReadOnlyModelViewSet,
 ):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
@@ -879,6 +893,8 @@ class ActViewSet(
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_class = ActFilter
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -966,7 +982,7 @@ class ActViewSet(
         return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
 
-class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
+class FulfillmentViewSet(ListScopeMixin, RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     """Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
 
     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
@@ -980,6 +996,8 @@ class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = FulfillmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_class = FulfillmentFilter
+
+    test_company_path = "deal__company"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

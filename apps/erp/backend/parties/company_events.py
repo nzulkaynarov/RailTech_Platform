@@ -29,6 +29,8 @@ TRACKED = (
     "do_not_work_by_id",
     "do_not_work_reason",
     "do_not_work_until",
+    # ТЕСТ-1: «Тестовая» едет в том же снимке — CRM прячет клиента из рабочих списков
+    "is_test",
 )
 
 
@@ -58,6 +60,7 @@ def company_data(company, user=None) -> Dict[str, Any]:
             "updated_at": company.updated_at.isoformat(),
             # Х-8: `null` — отметки нет или снята; срок CRM сверяет сам (отметка действует до `until`)
             "do_not_work": do_not_work.facts(company, only_active=False),
+            "is_test": bool(company.is_test),
         },
     }
 

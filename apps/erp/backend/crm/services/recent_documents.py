@@ -18,6 +18,8 @@ this feed from drifting away from the canonical querysets.
 
 from typing import List, Optional
 
+from parties import test_companies
+
 from .fulfillment import delivery_note_number
 
 MIN_LIMIT = 1
@@ -51,6 +53,7 @@ def _recent_quotes(user, request, limit: int) -> List[dict]:
     from crm.models import Quote
 
     qs = Quote.objects.select_related("deal", "status").order_by("-created_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not sees_all_deals(user):
         qs = qs.filter(deal__company_id__in=_user_company_ids(user))
     return [
@@ -72,6 +75,7 @@ def _recent_contracts(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _billing_visibility_q
 
     qs = Contract.objects.select_related("status").order_by("-created_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not _sees_all(user):
         qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal")).distinct()
     return [
@@ -97,6 +101,7 @@ def _recent_invoices(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _seller_side_q
 
     qs = Invoice.objects.select_related("status").order_by("-created_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not _sees_all(user):
         buyer_q = Q(deal__company_id__in=_user_company_ids(user))
         seller_side_q = _seller_side_q(user)
@@ -124,6 +129,7 @@ def _recent_acts(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _billing_visibility_q
 
     qs = Act.objects.select_related("status").order_by("-created_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not _sees_all(user):
         qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal")).distinct()
     return [
@@ -149,6 +155,7 @@ def _recent_generated(user, request, limit: int) -> List[dict]:
     from crm.services.generated_documents import party_visible_document_q
 
     qs = GeneratedDocument.objects.select_related("status").order_by("-created_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not getattr(user, "is_superuser", False):  # как GeneratedDocumentViewSet: чужой DRAFT не виден и сотруднику
         qs = qs.filter(Q(company_id__in=_user_company_ids(user)) | party_visible_document_q(user)).distinct()
     return [
@@ -173,6 +180,7 @@ def _recent_receipts(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _seller_side_q
 
     qs = Payment.objects.exclude(receipt_number="").select_related("invoice").order_by("-created_at")
+    qs = test_companies.hide(qs, "invoice__deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not _sees_all(user):
         buyer_q = Q(invoice__deal__company_id__in=_user_company_ids(user))
         seller_q = _seller_side_q(user)
@@ -205,6 +213,7 @@ def _recent_delivery_notes(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _seller_side_q
 
     qs = Fulfillment.objects.filter(shipped_at__isnull=False).select_related("deal", "status").order_by("-shipped_at")
+    qs = test_companies.hide(qs, "deal__company")  # ТЕСТ-1: тестовые компании не в «Недавних» и не в поиске
     if not _sees_all(user):
         buyer_q = Q(deal__company_id__in=_user_company_ids(user))
         seller_q = _seller_side_q(user)

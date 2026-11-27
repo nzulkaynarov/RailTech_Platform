@@ -17,6 +17,7 @@ from app.models.numbering import NumberCounter, NumberLabel
 from app.models.project_documents import ProjectDocument
 from app.models.resolution_templates import ResolutionTemplate
 from app.models.signing import SigningAuthority, SigningAuthorityEvent
+from app.models.test_companies import CompanyMark
 
 __all__ = [
     "Acquaintance",
@@ -24,6 +25,7 @@ __all__ = [
     "ApprovalRoute",
     "ApprovalStep",
     "Base",
+    "CompanyMark",
     "DictionaryItem",
     "DocflowSettings",
     "Document",

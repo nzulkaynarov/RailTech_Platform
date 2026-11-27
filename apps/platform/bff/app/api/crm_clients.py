@@ -8,7 +8,7 @@ BFF проксирует к CRM с токеном сотрудника; разд
 """
 
 import asyncio
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import TypeAdapter, ValidationError
@@ -48,10 +48,21 @@ ClientId = Annotated[int, Path(ge=1)]
 
 @router.get("/crm/clients", response_model=ClientList, operation_id="listCrmClients")
 async def list_clients(
-    authed: Reader, q: Annotated[str | None, Query(max_length=100)] = None
+    authed: Reader,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    test: Annotated[
+        Literal["only", "all"] | None,
+        Query(description="ТЕСТ-1: без параметра тестовых нет; only — вкладка «Тестовые»"),
+    ] = None,
 ) -> ClientList:
-    params = {"q": q.strip()} if q and q.strip() else None
-    rows = await CrmProxy(authed.call).get_list(CrmClientItem, f"{API}/clients", params=params)
+    params: dict[str, str] = {}
+    if q and q.strip():
+        params["q"] = q.strip()
+    if test:
+        params["test"] = test
+    rows = await CrmProxy(authed.call).get_list(
+        CrmClientItem, f"{API}/clients", params=params or None
+    )
     logos = await logo_urls(authed, [r.erp_company_id for r in rows if r.erp_company_id])
     roles = await company_role_states(authed, [r.erp_company_id for r in rows if r.erp_company_id])
     items = [

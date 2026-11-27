@@ -64,6 +64,9 @@ class Client(TimestampMixin, Base):
     do_not_work_by: Mapped[str | None] = mapped_column(String(255))
     do_not_work_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     do_not_work_until: Mapped[date | None] = mapped_column(Date)
+    # ТЕСТ-1: «Тестовая» — проекция компании ERP (`company.updated.is_test`): клиент уходит из
+    # рабочих списков, счётчиков и панелей, виден по фильтру «Тестовые»; ничего не удаляется.
+    is_test: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # Передача в бэк-офис идёт задачей после коммита клиента (FIX-31): состояние для карточки.
     # `NULL` — передачи не было (режим local или клиент создан вручную).
     erp_handoff_status: Mapped[str | None] = mapped_column(String(16))

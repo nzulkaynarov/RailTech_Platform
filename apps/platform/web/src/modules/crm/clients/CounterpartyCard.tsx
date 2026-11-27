@@ -24,6 +24,8 @@ import {
   useGetCounterpartyNotClientPlan,
   useSetCounterpartyNotClient,
   useClearCounterpartyDoNotWork,
+  useClearCounterpartyTest,
+  useSetCounterpartyTest,
   useDeleteContactPhoto,
   useDeleteCounterpartyLogo,
   useSetCounterpartyDoNotWork,
@@ -165,6 +167,27 @@ function Loaded({
       },
     },
   });
+  // ТЕСТ-1: «Тестовая» — обратимая отметка, без вопроса; вопрос только когда у компании есть открытые заявки
+  const [testAsk, setTestAsk] = useState<number | null>(null);
+  const markTest = useSetCounterpartyTest({
+    mutation: {
+      onSuccess: (next) => {
+        store(next);
+        setTestAsk(null);
+        refreshLists();
+        void message.success(t("counterparty.test.marked"));
+      },
+    },
+  });
+  const clearTest = useClearCounterpartyTest({
+    mutation: {
+      onSuccess: (next) => {
+        store(next);
+        refreshLists();
+        void message.success(t("counterparty.test.cleared"));
+      },
+    },
+  });
   const conflict = setRole.error instanceof ApiError && setRole.error.status === 409;
   // КОНТР-1б: «Не клиент» — одно действие на месте; предупреждение показывается только когда в компании есть настоящая
   // история (КП, договоры, счета): тогда решает сотрудник, действие не блокируется
@@ -194,6 +217,14 @@ function Loaded({
       if (plan.data?.has_history || (plan.data?.requests_to_close.length ?? 0) > 0)
         setWarn(plan.data ?? null);
       else notClient.mutate({ id: card.id });
+    });
+  };
+  const startTest = () => {
+    void notClientPlan.refetch().then((plan) => {
+      const open =
+        (plan.data?.requests_to_close.length ?? 0) + (plan.data?.requests_kept.length ?? 0);
+      if (open > 0) setTestAsk(open);
+      else markTest.mutate({ id: card.id });
     });
   };
   const roleText = (role: (typeof ROLE_ORDER)[number]): string => {
@@ -293,6 +324,33 @@ function Loaded({
               </Button>
             )
           ) : null}
+          {card.is_test ? (
+            <Tag title={t("counterparty.test.hint")}>{t("counterparty.test.mark")}</Tag>
+          ) : null}
+          {requisitesEditable ? (
+            card.is_test ? (
+              <Button
+                key="test-clear"
+                size="small"
+                loading={clearTest.isPending}
+                onClick={() => {
+                  clearTest.mutate({ id: card.id });
+                }}
+              >
+                {t("counterparty.test.clear")}
+              </Button>
+            ) : (
+              <Button
+                key="test-set"
+                size="small"
+                type="text"
+                loading={notClientPlan.isFetching || markTest.isPending}
+                onClick={startTest}
+              >
+                {t("counterparty.test.set")}
+              </Button>
+            )
+          ) : null}
         </div>
         <span className="pf-hint">
           {[card.inn ? `${t("card.inn")} ${card.inn}` : null, card.legal_address]
@@ -301,6 +359,25 @@ function Loaded({
         </span>
       </div>
       <DoNotWorkStrip mark={card.do_not_work} />
+      {clearTest.isError || markTest.isError ? (
+        <Alert type="warning" showIcon role="alert" message={t("counterparty.test.failed")} />
+      ) : null}
+      {testAsk !== null ? (
+        <Dialog
+          title={t("counterparty.test.title")}
+          okLabel={t("counterparty.test.ok")}
+          cancelLabel={t("counterparty.test.cancel")}
+          loading={markTest.isPending}
+          onOk={() => {
+            markTest.mutate({ id: card.id });
+          }}
+          onCancel={() => {
+            setTestAsk(null);
+          }}
+        >
+          <p>{t("counterparty.test.ask", { open: testAsk })}</p>
+        </Dialog>
+      ) : null}
       {clearMark.isError ? (
         <Alert type="warning" showIcon role="alert" message={t("counterparty.doNotWork.failed")} />
       ) : null}

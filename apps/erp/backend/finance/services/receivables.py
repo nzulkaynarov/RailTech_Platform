@@ -23,6 +23,7 @@ from django.db import transaction
 from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, QuerySet, Subquery, Value, When
 from django.utils import timezone
 from finance.models import Invoice, Payment, PaymentConfirmation
+from parties import test_companies
 
 from accounts.models import CustomUser
 from crm.constants import InvoiceStatusCode
@@ -51,12 +52,16 @@ def _is_overdue_q(day: date) -> Q:
     return Q(status__code__in=OPEN_STATUSES, due_date__lt=day, has_proof=False)
 
 
-def annotated(day: date | None = None) -> QuerySet:
-    """Счета с признаками очереди: есть платёжка без подтверждения, когда пришла старейшая."""
-    return Invoice.objects.select_related("deal__company", "status", "currency").annotate(
+def annotated(day: date | None = None, *, working: bool = False) -> QuerySet:
+    """Счета с признаками очереди: есть платёжка без подтверждения, когда пришла старейшая.
+
+    `working=True` — рабочая доска и счётчики вкладок: счета тестовых компаний (ТЕСТ-1) не в счёте; карточка открывается.
+    """
+    qs = Invoice.objects.select_related("deal__company", "status", "currency").annotate(
         has_proof=Exists(_pending_proof()),
         proof_at=Subquery(_pending_proof().order_by("received_at").values("received_at")[:1]),
     )
+    return test_companies.hide(qs, "deal__company") if working else qs
 
 
 def tab_q(tab: str, day: date) -> Q:
@@ -90,7 +95,7 @@ def display_status(invoice: Invoice, has_proof: bool, day: date) -> str:
 def counts(day: date) -> dict[str, int]:
     """Число счетов на каждой вкладке одним запросом."""
     aggregates = {tab: Count("pk", filter=tab_q(tab, day)) for tab in TAB_COUNTED}
-    return annotated().aggregate(**aggregates)
+    return annotated(working=True).aggregate(**aggregates)
 
 
 #: Белый список порядка (Х-15б): ключ параметра `ordering` → поле выборки. Поле вне списка не сортирует: порядок по
@@ -134,7 +139,7 @@ def board(
 ) -> Tuple[QuerySet, int]:
     """Страница счетов вкладки: самые срочные сверху, либо порядок `ordering` из белого списка (пустые значения — в конце,
     равные — по id). Возвращает выборку страницы и общее число."""
-    qs = annotated().filter(tab_q(tab, day))
+    qs = annotated(working=True).filter(tab_q(tab, day))
     needle = q.strip()
     if needle:
         qs = qs.filter(number_search_q("number", needle) | Q(deal__company__name__icontains=needle))

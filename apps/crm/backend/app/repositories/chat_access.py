@@ -81,7 +81,7 @@ async def list_dialogs(
     zone = has_invoice if scope.invoiced_zone else false()
     visible = true() if scope.registry else or_(is_participant, zone)
     stmt = select(Lead, is_participant.label("participant"), has_invoice.label("invoiced")).where(
-        Lead.erased_at.is_(None), lead_visibility.listed(), visible
+        Lead.erased_at.is_(None), lead_visibility.working(), visible
     )
     if client_id is not None:
         stmt = stmt.where(Lead.client_id == client_id)

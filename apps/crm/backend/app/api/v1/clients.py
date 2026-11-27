@@ -1,7 +1,7 @@
 """Клиенты, документы, привязка Telegram, сервисные запросы (PLAN Фаза 6, SPEC §10.1)."""
 
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
@@ -72,10 +72,18 @@ async def _today(container: Container) -> date:
 
 @router.get("/clients", response_model=list[ClientListItem])
 async def list_clients(
-    _: ClientReader, container: ContainerDep, q: Annotated[str | None, Query(max_length=100)] = None
+    _: ClientReader,
+    container: ContainerDep,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    test: Annotated[
+        Literal["only", "all"] | None,
+        Query(
+            description="ТЕСТ-1: без параметра тестовых компаний нет; only — только они; all — все"
+        ),
+    ] = None,
 ) -> list[ClientListItem]:
     async with container.session_factory() as session:
-        rows = await clients_repo.list_with_stats(session, q, 500)
+        rows = await clients_repo.list_with_stats(session, q, 500, test)
     today = await _today(container)
     return [
         ClientListItem(

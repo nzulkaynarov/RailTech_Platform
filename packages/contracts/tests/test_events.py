@@ -513,6 +513,8 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.erp.act.returned.v1",
         # W18A-P4: бланк своей компании и итог письма на бланке адресату (журнал отправки).
         "uz.railtech.erp.letterhead.updated.v1",
+        # ТЕСТ-1: отметка «Тестовая» компании-контрагента — реестр и письма без тестовых компаний.
+        "uz.railtech.erp.company.updated.v1",
         "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.crm.mail.failed.v1",
         # PD-BIZ: политика защиты данных для ИИ — проекция для «Заполнить из файла».

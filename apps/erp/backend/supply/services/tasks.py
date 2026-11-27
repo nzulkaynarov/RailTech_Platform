@@ -22,6 +22,7 @@ from typing import Any
 from django.db.models import F, Max, OuterRef, Subquery, Sum
 from inventory.access import StockError, can_manage_fulfillment, can_manage_supply, require_staff
 from inventory.services import stock
+from parties import test_companies
 from parties.models import PartnerApplication, PartnerApplicationStatus
 from supply.models import GoodsReceiptLine, OrderStatus, SupplierOrder, SupplierOrderShipmentNotice
 from supply.services import shortage
@@ -120,7 +121,10 @@ def _shortage_rows(user) -> list[dict]:
     from crm.services.projects import PROJECT_STAGES
 
     quotes = list(
-        Quote.objects.filter(deal__stage__code__in=PROJECT_STAGES, status__code=QuoteStatusCode.APPROVED)
+        test_companies.hide(
+            Quote.objects.filter(deal__stage__code__in=PROJECT_STAGES, status__code=QuoteStatusCode.APPROVED),
+            "deal__company",
+        )
         .order_by("deal_id", "-version")
         .distinct("deal_id")
     )
@@ -164,7 +168,7 @@ def _shipment_rows(user) -> list[dict]:
 
     left = {
         row["deal_id"]: row["left"]
-        for row in stock.active_reservations()
+        for row in test_companies.hide(stock.active_reservations(), "deal__company")
         .filter(deal__stage__code__in=PROJECT_STAGES, deal__fulfillment__isnull=False)
         .order_by()
         .values("deal_id")
@@ -224,7 +228,7 @@ def supply_tasks(user) -> list[dict]:
 
 def _supply_rows() -> list[dict]:
     rows: list[dict] = []
-    orders = SupplierOrder.objects.select_related("supplier")
+    orders = test_companies.hide(SupplierOrder.objects.all(), "supplier").select_related("supplier")
 
     for order in orders.filter(status=OrderStatus.DRAFT).order_by("created_at", "id")[:MAX_ROWS]:
         rows.append(_order_row(order, "send_order", order.created_at))
@@ -258,7 +262,9 @@ def _supply_rows() -> list[dict]:
             continue  # the shipment was received after the partner reported it
         rows.append(_order_row(order, "receive_goods", order.shipped_at, note=order.shipped_doc or None))
 
-    applications = PartnerApplication.objects.filter(status__in=APPLICATION_OPEN).order_by("created_at", "id")
+    applications = test_companies.hide(
+        PartnerApplication.objects.filter(status__in=APPLICATION_OPEN), "company"
+    ).order_by("created_at", "id")
     for application in applications[:MAX_ROWS]:
         since = (
             application.candidate_agreed_at

@@ -64,6 +64,7 @@ import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
 import { thumbnailOf } from "./fixtures/itemRef";
 import { markOf } from "./doNotWorkMarks";
+import { inScope } from "./testMarks";
 
 /**
  * Моки «Расчёт · Номенклатура и партнёры» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
@@ -1030,7 +1031,8 @@ export const erpCatalogHandlers = [
     const params = new URL(request.url).searchParams;
     const q = params.get("q");
     const rows = readErpCatalog()
-      .suppliers.filter(
+      .suppliers.filter((s) => inScope(s.id, params.get("test")))
+      .filter(
         (s) => contains(s.name, q) || contains(s.tin, q) || contains(s.registration_number, q),
       )
       .map(supplierRowOf);

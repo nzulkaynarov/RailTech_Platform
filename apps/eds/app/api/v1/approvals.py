@@ -1,7 +1,7 @@
 """Маршруты согласования: `/api/v1/approvals…` (eds.yaml, тег `approvals`); движок — `services/approvals.py`."""
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from rt_bus.sqlalchemy import AsyncBus
@@ -56,11 +56,12 @@ async def list_approvals(
     mine: bool = True,
     status: Annotated[list[RouteStatus] | None, Query()] = None,
     template: Annotated[list[ApprovalTemplate] | None, Query()] = None,
+    test: Annotated[Literal["only", "all"] | None, Query()] = None,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> ApprovalPage:
     return await approvals_read.list_page(
-        session, employee, mine=mine, statuses=status, templates=template, cursor=cursor, limit=limit
+        session, employee, mine=mine, statuses=status, templates=template, cursor=cursor, limit=limit, test=test
     )
 
 

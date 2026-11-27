@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from parties import test_companies
 from portal.models import BankDetailsChangeRequest, BankDetailsChangeStatus
 from portal.services.bank_details_change import is_stale, mask_bank_details
 
@@ -54,7 +55,9 @@ def row(item: BankDetailsChangeRequest, *, full: bool) -> dict:
 
 
 def queue(*, status_filter: str | None, full: bool) -> dict:
-    rows = BankDetailsChangeRequest.objects.select_related("company", "decided_by")
+    rows = test_companies.hide(BankDetailsChangeRequest.objects.all(), "company").select_related(
+        "company", "decided_by"
+    )  # ТЕСТ-1
     pending = rows.filter(status=BankDetailsChangeStatus.PENDING).count()
     if status_filter:
         rows = rows.filter(status=status_filter)

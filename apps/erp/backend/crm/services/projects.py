@@ -21,7 +21,7 @@ from typing import Any, Optional
 from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
-from parties import do_not_work
+from parties import do_not_work, test_companies
 
 from core.currency import BASE_CURRENCY
 
@@ -266,6 +266,8 @@ def _deal_number_q(text: str) -> Q:
 
 
 def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
+    if filters.deal_id is None and not filters.number:
+        qs = test_companies.hide(qs)  # ТЕСТ-1: список проектов без тестовых компаний; по номеру проект открывается
     if filters.deal_id is not None:
         qs = qs.filter(pk=filters.deal_id)
     if filters.number:

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetMarks, setMark } from "../../../mocks/doNotWorkMarks";
 import { markNotClient, resetNotClient } from "../../../mocks/notClient";
+import { setTest } from "../../../mocks/testMarks";
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -307,6 +308,29 @@ describe("Контрагенты: тип отношения", () => {
     expect(within(marked as HTMLElement).getByText("Не работаем")).toBeVisible();
 
     fireEvent.click(screen.getByText("Не работаем", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("table", { name: "Клиенты" })).getAllByRole("row"),
+      ).toHaveLength(2);
+    });
+    expect(
+      screen.getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
+    ).toBeVisible();
+  });
+});
+
+describe("Клиенты · тестовые компании (ТЕСТ-1)", () => {
+  it("тестовой компании нет в рабочем списке; вкладка «Тестовые» показывает только её", async () => {
+    // клиент 3 в ERP — компания 1003 (моки: 1000 + id клиента)
+    setTest("1003");
+    await open("manager@demo.example");
+    const table = await screen.findByRole("table", { name: "Клиенты" });
+    expect(
+      within(table).queryByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }),
+    ).toBeNull();
+    expect(within(table).getAllByRole("row").length).toBeGreaterThan(1);
+
+    fireEvent.click(screen.getByText("Тестовые", { selector: ".ant-segmented-item-label" }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("table", { name: "Клиенты" })).getAllByRole("row"),
