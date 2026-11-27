@@ -541,8 +541,8 @@ async def clear_counterparty_do_not_work(
     operation_id="setCounterpartyTest",
 )
 async def set_counterparty_test(id: CompanyId, authed: RequisitesWriter) -> CounterpartyCard:
-    """Отметить «Тестовая» (ТЕСТ-1): компания уходит из рабочих списков и счётчиков, видна на вкладке
-    «Тестовые»; ничего не удаляется. Право — как на реквизиты; повтор безопасен."""
+    """Отметить «Тестовая» (ТЕСТ-1): компания уходит из рабочих списков и счётчиков, видна на
+    вкладке «Тестовые»; ничего не удаляется. Право — как на реквизиты; повтор безопасен."""
     data = await ErpCompany(authed.call).data("POST", f"parties/organizations/{id}/test/")
     return to_card(data)
 
@@ -783,7 +783,7 @@ async def search_counterparties(
     limit: Annotated[int, Query(ge=1, le=20)] = 10,
     test: Annotated[
         Literal["only", "all"] | None,
-        Query(description="ТЕСТ-1: без параметра тестовых компаний нет; only — только они; all — все"),
+        Query(description="ТЕСТ-1: без параметра тестовых нет; only — только они; all — все"),
     ] = None,
 ) -> CounterpartyPickList:
     """Название или точный ИНН; `role` поднимает компании с ролью, остальных не скрывает."""

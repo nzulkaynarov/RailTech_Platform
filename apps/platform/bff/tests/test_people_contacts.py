@@ -586,12 +586,14 @@ async def test_test_mark_is_set_and_removed_in_erp(
     marked = await web.client.post("/api/v1/people/counterparties/9/test", headers=headers)
     assert marked.status_code == 200, marked.text
     check(marked, "/people/counterparties/{id}/test", "post")
-    assert marked.json()["is_test"] is True and post.called
+    assert marked.json()["is_test"] is True
+    assert post.called
 
     removed = await web.client.delete("/api/v1/people/counterparties/9/test", headers=headers)
     assert removed.status_code == 200, removed.text
     check(removed, "/people/counterparties/{id}/test", "delete")
-    assert removed.json()["is_test"] is False and delete.called
+    assert removed.json()["is_test"] is False
+    assert delete.called
 
 
 async def test_accountant_cannot_mark_a_test_company(web: Web) -> None:

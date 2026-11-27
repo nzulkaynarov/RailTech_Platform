@@ -5,6 +5,8 @@
 Ничего не удаляется.
 """
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -92,7 +94,5 @@ async def test_deal_list_and_summary_skip_test_companies_but_the_card_keeps_them
     assert total == 2  # ничего не удалено
 
 
-def _now():
-    from datetime import UTC, datetime
-
+def _now() -> datetime:
     return datetime.now(UTC)

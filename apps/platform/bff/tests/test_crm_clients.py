@@ -407,14 +407,12 @@ async def test_card_and_list_show_the_do_not_work_mark_from_erp(
 async def test_test_companies_are_out_of_the_list_unless_asked(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
-    """ТЕСТ-1: без `test` CRM тестовых не отдаёт; `test=only` (вкладка «Тестовые») уходит в CRM как есть."""
+    """ТЕСТ-1: без `test` CRM тестовых не отдаёт; `test=only` («Тестовые») уходит в CRM как есть."""
     crm.answer("GET", "clients", body=[client_item(21, is_test=True)])
     crm.answer("GET", "clients/21", body=client_detail(21, is_test=True))
     await web.login(["DIRECTOR"])
 
-    items = check(
-        await web.client.get(f"{BASE}?test=only"), "/crm/clients", "get"
-    ).json()["items"]
+    items = check(await web.client.get(f"{BASE}?test=only"), "/crm/clients", "get").json()["items"]
     assert [(row["id"], row["is_test"]) for row in items] == [(21, True)]
     assert crm.params("GET", "clients") == {"test": "only"}
     card = check(await web.client.get(f"{BASE}/21"), "/crm/clients/{id}", "get").json()

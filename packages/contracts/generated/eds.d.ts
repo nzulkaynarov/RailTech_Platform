@@ -6494,6 +6494,8 @@ export interface operations {
         mine?: boolean;
         status?: components["schemas"]["RouteStatus"][];
         template?: components["schemas"]["ApprovalTemplate"][];
+        /** @description ТЕСТ-1: без параметра документы тестовых компаний (отметка ERP) в списке не показываются; `only` — только они, `all` — все вместе. Открытие по номеру и по клиенту не сужается. */
+        test?: components["parameters"]["TestCompanies"];
         /** @description Непрозрачный курсор из `next_cursor`. При порядке `sort` курсор помнит значение поля (до 300 знаков темы), поэтому длиннее */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];

@@ -52,7 +52,7 @@ async def list_clients(
     q: Annotated[str | None, Query(max_length=100)] = None,
     test: Annotated[
         Literal["only", "all"] | None,
-        Query(description="ТЕСТ-1: без параметра тестовых компаний нет; only — вкладка «Тестовые»"),
+        Query(description="ТЕСТ-1: без параметра тестовых нет; only — вкладка «Тестовые»"),
     ] = None,
 ) -> ClientList:
     params: dict[str, str] = {}
@@ -60,7 +60,9 @@ async def list_clients(
         params["q"] = q.strip()
     if test:
         params["test"] = test
-    rows = await CrmProxy(authed.call).get_list(CrmClientItem, f"{API}/clients", params=params or None)
+    rows = await CrmProxy(authed.call).get_list(
+        CrmClientItem, f"{API}/clients", params=params or None
+    )
     logos = await logo_urls(authed, [r.erp_company_id for r in rows if r.erp_company_id])
     roles = await company_role_states(authed, [r.erp_company_id for r in rows if r.erp_company_id])
     items = [

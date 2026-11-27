@@ -15,7 +15,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from integration.models import CrmClientMapping
 from integration.tests.bus_support import published
-from inventory.tests.support import api, make_deal, make_world
+from inventory.tests.support import api, make_world
 from parties import test_companies
 from parties.models import Company, Contact
 from portal.desk import service_counterparty as counterparty
