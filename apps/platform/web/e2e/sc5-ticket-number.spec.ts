@@ -31,8 +31,10 @@ test.describe("СЦ-5: номера обращений на латинице", (
       await resize(page, width);
       // обращение создаёт сотрудник, открывает администратор
       await loginAndWait(page, "manager@demo.example");
-      await page.goto("/admin/org");
-      await page.getByRole("button", { name: "Написать администратору" }).click();
+      await page.goto("/admin/org?view=list");
+      await page
+        .getByRole("button", { name: /^(Написать администратору|Попросить возможность)$/ })
+        .click();
       const dialog = page.getByRole("dialog", { name: "Написать администратору" });
       await dialog.getByRole("textbox", { name: "Что случилось" }).fill("Нужен доступ");
       await dialog.getByRole("button", { name: "Отправить" }).click();

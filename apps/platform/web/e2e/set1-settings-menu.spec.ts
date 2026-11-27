@@ -148,16 +148,22 @@ test.describe("Меню настроек не прыгает", () => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin");
     await expect(page.locator(`${MENU} .pf-menu-group`)).toHaveCount(5);
-    // пункт, у которого видна только часть: нижний край списка режет его
-    const href = await page.evaluate<string | null>(`(() => {
-      const list = document.querySelector('${MENU} .pf-menu-groups');
-      const edge = list.getBoundingClientRect().bottom;
-      const cut = [...list.querySelectorAll('a.pf-menu-item')].find((a) => {
-        const r = a.getBoundingClientRect();
-        return r.top < edge - 4 && r.bottom > edge + 4;
-      });
-      return cut ? cut.getAttribute('href') : null;
-    })()`);
+    // пункт, у которого видна только часть: нижний край списка режет его. Высота окна подбирается шагами: от длины названий
+    // пунктов (одна строка или две) зависит, какой пункт упадёт на край.
+    let href: string | null = null;
+    for (const height of [790, 780, 770, 760, 750, 740, 730, 720, 710, 700]) {
+      await page.setViewportSize({ width: 1440, height });
+      href = await page.evaluate<string | null>(`(() => {
+        const list = document.querySelector('${MENU} .pf-menu-groups');
+        const edge = list.getBoundingClientRect().bottom;
+        const cut = [...list.querySelectorAll('a.pf-menu-item')].find((a) => {
+          const r = a.getBoundingClientRect();
+          return r.top < edge - 4 && r.bottom > edge + 4;
+        });
+        return cut ? cut.getAttribute('href') : null;
+      })()`);
+      if (href) break;
+    }
     expect(href, "в меню должен быть наполовину скрытый пункт").not.toBeNull();
     const before = (await snapshot(page)).scrollTop;
     // настоящий щелчок без прокрутки Playwright к пункту

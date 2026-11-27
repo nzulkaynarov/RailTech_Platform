@@ -18,7 +18,7 @@ test.describe("Карточка сотрудника: Telegram и замещен
     }) => {
       await page.setViewportSize({ width, height: HEIGHT });
       await loginAndWait(page, "admin@demo.example");
-      await spaGoto(page, "/admin/org");
+      await spaGoto(page, "/admin/org?view=list");
       await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
 
       // Список: привязан / не привязан / привязан, но не доходит (на 390 строки — карточки, поэтому поиск по странице)

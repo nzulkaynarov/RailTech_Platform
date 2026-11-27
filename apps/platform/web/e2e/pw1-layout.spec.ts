@@ -11,7 +11,7 @@ import { LAPTOP_WIDTHS, expectFitsFrame } from "./support/layout";
 const REGISTRIES = [
   { name: "catalog", path: "/erp/catalog" },
   { name: "catalog-waiting", path: "/erp/catalog?review=waiting" },
-  { name: "org", path: "/admin/org" },
+  { name: "org", path: "/admin/org?view=list" },
   { name: "zones", path: "/admin/zones" },
   { name: "people", path: "/chats/contacts" },
   { name: "inbox", path: "/eds/inbox?status=all" },
@@ -42,7 +42,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 /** Реестры с боковым окном строки: открывается щелчком по названию первой строки. */
 const WITH_PANEL = [
   { name: "catalog", path: "/erp/catalog", open: /^Открыть позицию/ },
-  { name: "org", path: "/admin/org", open: /^Открыть карточку/ },
+  { name: "org", path: "/admin/org?view=list", open: /^Открыть карточку/ },
   { name: "zones", path: "/admin/zones", open: /^Открыть зону/ },
 ] as const;
 
@@ -146,7 +146,7 @@ test.describe("Polish pw1 · раскладка", () => {
 
   test("«Только просмотр» один раз и без пересказа под заголовком", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    for (const path of ["/admin/org", "/admin/zones", "/admin/integrations"]) {
+    for (const path of ["/admin/org?view=list", "/admin/zones", "/admin/integrations"]) {
       await spaGoto(page, path);
       await expect(page.locator("main h1").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
@@ -167,7 +167,7 @@ test.describe("Polish pw1 · раскладка", () => {
 
   test("«Только просмотр» один раз и при открытой карточке сотрудника", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     await expect(page.locator("main h1").first()).toBeVisible();
     await page
       .locator("main table")
@@ -204,7 +204,7 @@ test.describe("Polish pw1 · раскладка", () => {
     await loginAndWait(page, "director@demo.example");
     for (const screen of [
       { name: "catalog", path: "/erp/catalog" },
-      { name: "org", path: "/admin/org" },
+      { name: "org", path: "/admin/org?view=list" },
       { name: "zones", path: "/admin/zones" },
       { name: "leads", path: "/crm/leads" },
       { name: "documents", path: "/eds/documents?scope=all" },

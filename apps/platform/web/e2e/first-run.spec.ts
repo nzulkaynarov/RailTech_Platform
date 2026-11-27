@@ -161,7 +161,7 @@ test.describe("Первый запуск: полный путь", () => {
     ).toBeVisible();
 
     // Баннер на других экранах Платформы
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     const banner = page.getByRole("region", { name: "Настройка Платформы" });
     await expect(banner).toContainText(/Настройка Платформы: готово \d+ из 10/);
     // «Продолжить настройку» ведёт на сам следующий шаг, а не в начало мастера (СЦ-3)
@@ -185,6 +185,7 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByLabel("Временный пароль", { exact: true })).toHaveCount(0);
     await expect(page.getByText(temporary)).toHaveCount(0);
     expect(page.url()).not.toContain(temporary);
+    await spaGoto(page, "/admin/org?view=list");
     await expect(page.getByRole("row", { name: /Тест Без Почты/ })).toContainText("Приглашён");
 
     // Шаг «Первый сотрудник» теперь сделан
@@ -249,7 +250,7 @@ test.describe("Первый запуск: полный путь", () => {
     await page.getByLabel("Пароль").fill(secret("pw"));
     await page.getByRole("button", { name: "Войти" }).click();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     const banner = page.getByRole("region", { name: "Настройка Платформы" });
     await expect(banner).toBeVisible();
 
@@ -277,7 +278,7 @@ test.describe("Первый запуск: полный путь", () => {
     // НАСТ-П1: шаги сохранены, но службы мок-стенда не подтверждены проверкой — «Всё готово» и «5 из 5» не пишем
     await expect(page.getByText("Всё готово: Платформа настроена.")).toHaveCount(0);
     await expect(page.getByText("Готово 5 из 5", { exact: true })).toHaveCount(0);
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
   });
@@ -290,7 +291,7 @@ test.describe("Первый запуск: полный путь", () => {
     await page.getByRole("button", { name: "Войти" }).click();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin/org?view=list");
     await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Пригласить сотрудника" })).toHaveCount(0);
@@ -352,7 +353,7 @@ test.describe("Первый запуск: axe и скриншоты", () => {
       await expectNoViolations(page, `wizard company ${String(width)}`);
       await settledScreenshot(page, "first-run-wizard-steps");
 
-      await spaGoto(page, "/admin/org");
+      await spaGoto(page, "/admin/org?view=list");
       await expect(page.getByRole("region", { name: "Настройка Платформы" })).toBeVisible();
       await expectNoViolations(page, `banner ${String(width)}`);
       await settledScreenshot(page, "first-run-banner");

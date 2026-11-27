@@ -19,7 +19,7 @@ const SCREENS = [
   { name: "catalog", path: "/erp/catalog" },
   { name: "payments", path: "/eds/payments" },
   { name: "stock", path: "/erp/stock" },
-  { name: "settings-employees", path: "/admin/org" },
+  { name: "settings-employees", path: "/admin/org?view=list" },
   { name: "settings-zones", path: "/admin/zones" },
   { name: "state", path: "/admin" },
   // Polish pw3: остальное из аудита 2026-11-24

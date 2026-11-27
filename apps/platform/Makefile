@@ -67,12 +67,16 @@ tokens-check: ## Копия токенов совпадает с packages/ui-tok
 # RBAC: матрица ролей, меню и поля с ограничением — из packages/contracts/platform-rbac.yaml (PLT-11).
 # Генератор лежит в scripts/ и запускается в окружении bff (pyyaml, jsonschema).
 .PHONY: rbac
-rbac: ## packages/contracts/platform-rbac.yaml → bff/app/rbac_generated.py и web/src/app/rbac.generated.ts
+rbac: ## platform-rbac.yaml → bff/app/rbac_generated.py и web/src/app/rbac.generated.ts; platform-capabilities.yaml → bff/app/capabilities_generated.py
 	cd $(BFF) && uv run python ../scripts/gen_rbac.py
+	cd $(BFF) && uv run python ../scripts/gen_capabilities.py
+	cd $(BFF) && uv run python ../scripts/gen_capability_mocks.py
 
 .PHONY: rbac-check
 rbac-check: ## Сгенерированные файлы RBAC совпадают с контрактом
 	cd $(BFF) && uv run python ../scripts/gen_rbac.py --check
+	cd $(BFF) && uv run python ../scripts/gen_capabilities.py --check
+	cd $(BFF) && uv run python ../scripts/gen_capability_mocks.py --check
 
 # Справка формата базы знаний: docs/kb — источник правды, копия лежит в web (контекст Docker-сборки web — apps/platform/web).
 .PHONY: kb-sync

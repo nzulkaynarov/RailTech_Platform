@@ -8,6 +8,7 @@ import { useGetProfile } from "../../shared/api/generated/platform-bff";
 import type { Profile } from "../../shared/api/generated/model";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../shared/ui/PageHeader";
+import { MyCapabilities } from "../capabilities/MyCapabilities";
 import { NotificationSettings } from "../profile-notifications/NotificationSettings";
 import { CalendarLinkSection } from "./CalendarLinkSection";
 import { DeputySection } from "./DeputySection";
@@ -21,21 +22,22 @@ import "./profile.css";
 /**
  * Профиль `/me` (W15-H6, UX-оценка P1-3): страница, а не окно. Фото, личные данные, «Telegram для уведомлений»,
  * подписки на уведомления бота и замещение. Данные принадлежат CRM (ADR-0015), сотрудник правит только свои; должность и
- * роли — только чтение. Вкладки «Все разделы · Личные данные · Уведомления · Замещение · Безопасность» — в адресе
+ * роли — только чтение. Вкладки «Все разделы · Личные данные · Мои возможности · Уведомления · Замещение · Безопасность» — в адресе
  * `?part=`; «Безопасность» — второй фактор входа (ДВ-4).
  */
-const PARTS = ["all", "general", "notifications", "deputy", "security"] as const;
+const PARTS = ["all", "general", "capabilities", "notifications", "deputy", "security"] as const;
 type Part = (typeof PARTS)[number];
 const PART_LABEL: Record<Part, string> = {
   all: "profile:tabs.all",
   general: "profile:tabs.general",
+  capabilities: "capabilities:mine.title",
   notifications: "audit:profile.notifications",
   deputy: "profile:deputy.title",
   security: "profile:tabs.security",
 };
 
 export function ProfilePage() {
-  const { t } = useTranslation(["profile", "audit"]);
+  const { t } = useTranslation(["profile", "audit", "capabilities"]);
   const { me } = useAuth();
   const profile = useGetProfile();
   const [params, setParams] = useSearchParams();
@@ -64,6 +66,11 @@ export function ProfilePage() {
   const renderPart = (key: Part, data: Profile) => (
     <div className="pf-profile-part">
       {key === "all" || key === "general" ? <IdentitySection me={me} profile={data} /> : null}
+      {key === "all" || key === "capabilities" ? (
+        <Section title={t("capabilities:mine.title")} testId="profile-capabilities">
+          <MyCapabilities />
+        </Section>
+      ) : null}
       {key === "all" || key === "general" || key === "notifications" ? (
         <TelegramSection profile={data} />
       ) : null}

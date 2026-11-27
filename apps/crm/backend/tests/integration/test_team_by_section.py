@@ -212,3 +212,15 @@ async def test_without_parameters_it_is_still_the_list_for_handing_over_a_lead(
     body = ask(client, "man@railtech.uz").json()
     assert {m["initials"] for m in body} == {"АА", "АК"}
     assert next(m for m in body if m["full_name"] == "Алия Каримова")["position"] == "Менеджер"
+
+
+async def test_granters_are_open_to_everyone_and_only_name_the_holders_of_staff_management(
+    client: TestClient, team: dict[str, int]
+) -> None:
+    """ДОСТ-1: «Нет доступа» называет, кто выдаёт; менеджер видит имена без ролей и почты."""
+    response = client.get(
+        "/api/v1/team/granters", headers=login(client, "man@railtech.uz", PASSWORD)
+    )
+
+    assert names(response) == ["Админ Админов"]
+    assert set(response.json()[0]) <= {"id", "full_name", "initials", "position"}
