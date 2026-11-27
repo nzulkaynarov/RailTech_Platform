@@ -30,6 +30,7 @@ from app.models.external_services import (
     ExternalServiceSwitch,
 )
 from app.repositories import external_services as repo
+from app.repositories import monitoring as monitoring_repo
 from app.schemas.external_services import (
     ExternalServiceDetailOut,
     ExternalServiceOut,
@@ -216,6 +217,8 @@ class _Context:
         self.fails = fails or {}
         self.flaps = flaps or {}
         self.stand = False
+        # Воркер очереди жив (по сердцебиению): подсказка при «проверки не идут» (ЗАВИС-1).
+        self.worker_alive: bool | None = None
 
     @classmethod
     async def load(cls, session: AsyncSession, now: datetime, keys: list[str]) -> "_Context":
@@ -225,7 +228,8 @@ class _Context:
         if ids:
             rows = await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))
             names = {int(uid): str(name) for uid, name in rows.all()}
-        return cls(
+        alive = await monitoring_repo.worker_alive(session, now)
+        ctx = cls(
             latest=await repo.latest_checks(session),
             day=await repo.status_counts(session, now - timedelta(hours=24)),
             week=await repo.status_counts(session, now - timedelta(days=7)),
@@ -240,6 +244,8 @@ class _Context:
             ),
             recovered=await repo.last_recovered(session, now - timedelta(days=30)),
         )
+        ctx.worker_alive = alive
+        return ctx
 
     def service(
         self, spec: reg.ServiceSpec, now: datetime
@@ -361,7 +367,7 @@ class _Context:
             cause=saved_cause if isinstance(saved_cause, str) else None,
         )
         if rules.stale(row.checked_at, spec.tiers, now, backing_off=row.status == "fail"):
-            summary, hint = rules.stale_summary(row.checked_at, now)
+            summary, hint = rules.stale_summary(row.checked_at, now, self.worker_alive)
             return (
                 rules.CheckResult(spec.key, "unknown", summary, None, hint, None, result.metrics),
                 row.checked_at,

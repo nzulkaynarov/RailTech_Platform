@@ -1,16 +1,18 @@
+> **История: не действует с 2026-11-27, действуют [`docs/COURSE.md`](../../COURSE.md) и [`docs/LIST.md`](../../LIST.md).**
+
 # Волна 16 — этап D1 «Рабочие экраны: директор и менеджер» (версия 0.13)
 Статус: действует · Владелец: архитектор · 2026-10-27
 
 Основание: стратегия §4 «Этап D» (путь заявки шаги 1–9 поверх доменов), SPEC-v3 §2–§3, §7.2, §7.3, §7.5; решение 2026-10-27 (D начинается с
-CRM, фронты удаляются по модулям после замены); UX-оценка [`../research/2026-10-27-ux-audit/README.md`](../research/2026-10-27-ux-audit/README.md)
+CRM, фронты удаляются по модулям после замены); UX-оценка [`../research/2026-10-27-ux-audit/README.md`](../../research/2026-10-27-ux-audit/README.md)
 P0-4, P0-5, P0-6, утечки L1–L3, L5, L6. API готовы: CRM (лиды, клиенты, переписка, передачи), EDS (письма, резолюции, документы, маршруты,
 волна 12), ERP (заявки, задания расчёта). Параллельно — волна 15 (оболочка, Admin, профиль, помощь): её зоны не трогать.
 
 ## 0. Промпт лида
 
 ```
-Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 16 по docs/runbooks/wave16-d1-work-screens.md. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/HANDOFF.md, этот runbook, docs/product/SPEC-v3.md (§2, §3, §6, §7.2, §7.3, §7.5, §9,
+Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 16 по docs/history/runbooks/wave16-d1-work-screens.md. Код сам не пишешь.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/history/HANDOFF.md, этот runbook, docs/product/SPEC-v3.md (§2, §3, §6, §7.2, §7.3, §7.5, §9,
 §11.2, Приложение Б), docs/research/2026-10-27-ux-audit/README.md (§2.2, §5 P0-4…P0-6), docs/architecture/platform-bff.md,
 docs/architecture/integration-map.md, docs/systems/platform/CONVENTIONS.md, docs/history/runbooks/wave12-eds-c1.md §2, packages/contracts/openapi/{crm,eds}.yaml.
 Исполнители — субагенты (Agent tool): D1-1 и D1-2 — model "opus" (контракт BFF и новые поля бэкендов), остальные — "sonnet"; не больше трёх
@@ -32,7 +34,7 @@ docs/architecture/integration-map.md, docs/systems/platform/CONVENTIONS.md, docs
 | **D1-5 Создать документ** | «+ Создать документ»: тип (служебная записка, заявление, отчёт, письмо), тема, кому (по умолчанию директор), текст, сумма и «нужно до», вложения, связь с проектом → «Отправить на согласование»; черновики; «Мои документы». Документ на бланке с PDF и шаблонами — волна документов D-DOC (ADR-0020), здесь — простой текст | BFF `eds`, web `modules/eds` |
 | **D1-6 Очередь и переходы** | Строки «Моей очереди», колокольчика и поиска для сообщений, лидов, писем, КП, служебок открывают новые экраны в боковом окне (снять «мост» H1 для них) | web, BFF `feeds` |
 | **D1-7 Гейт D1** | Сквозной сценарий на стенде с ботом-заглушкой: клиент пишет в бота → менеджер видит за ≤ 2 с, отвечает, создаёт заявку → директор накладывает резолюцию → ERP-задание; КП на одобрении → директор одобряет → ИСХ; служебка сотрудника → директор → бухгалтер; роль-универсал проходит всё; отчёт `docs/audits/d1_gate_report.md` | стенд, `docs/` |
-| **D1-8 Права CRM только из каталога** | Задача безопасности (B-014, B-007): права прямого API CRM сотрудника с ролями Платформы — только из матриц его ролей (тест по `platform-rbac.yaml`), базовая роль CRM — признак по матрице, `storage_key` убран из `MessageOut`; CRM `GET /team?section=&level=` — сотрудники по разделу, BFF кандидатов резолюции переходит на неё; EDS сверяет зону исполнителя резолюции (422 `assignee_zone_mismatch`) по `permissions.sections` из `identity.user.*`. Выкладка: [`deploy.md`](deploy.md), «Права CRM только из каталога» | CRM, `apps/eds`, BFF `eds_letters`, `packages/contracts` |
+| **D1-8 Права CRM только из каталога** | Задача безопасности (B-014, B-007): права прямого API CRM сотрудника с ролями Платформы — только из матриц его ролей (тест по `platform-rbac.yaml`), базовая роль CRM — признак по матрице, `storage_key` убран из `MessageOut`; CRM `GET /team?section=&level=` — сотрудники по разделу, BFF кандидатов резолюции переходит на неё; EDS сверяет зону исполнителя резолюции (422 `assignee_zone_mismatch`) по `permissions.sections` из `identity.user.*`. Выкладка: [`deploy.md`](../../runbooks/deploy.md), «Права CRM только из каталога» | CRM, `apps/eds`, BFF `eds_letters`, `packages/contracts` |
 
 Раунды: 1 — D1-1 ∥ D1-3 ∥ D1-5; 2 — D1-2 ∥ D1-4; 3 — D1-6; 4 — D1-7.
 

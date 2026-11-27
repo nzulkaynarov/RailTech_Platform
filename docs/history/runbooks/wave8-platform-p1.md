@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 8 — Платформа, фаза P1 (F0): каркас, вход через CRM, роли Платформы
 
@@ -11,7 +11,7 @@ Admin · Оргструктура) — в PR этого runbook'а.
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 8 «Платформа, фаза P1» по
 docs/history/runbooks/wave8-platform-p1.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
-docs/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/product/SPEC-v3.md (§4–§6, §10.1, §11),
+docs/history/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/product/SPEC-v3.md (§4–§6, §10.1, §11),
 docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md, docs/architecture/integration-map.md (§1.1, §4), docs/architecture/CONTRACTS.md §8, docs/systems/crm/CONVENTIONS.md.
 Работай по раундам §2: worktree .claude/worktrees/<задача> от свежего origin/main, зависимости — до запуска исполнителя,
 исполнители — субагенты (model sonnet, run_in_background=false) с промптом «преамбула wave7 §3 + раздел §4.x этого runbook'а»,

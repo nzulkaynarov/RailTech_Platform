@@ -209,6 +209,11 @@ async def test_web_request_with_email_gets_a_confirmation_letter_visible_in_the_
 
     assert harness.notices is not None
     assert await harness.notices.deliver(notice.id) == "queued"
+    async with sessions() as session:  # связь с письмом пишется вместе с его строкой (ЗАВИС-1)
+        [(ref_kind, ref_id)] = (
+            await session.execute(select(EmailLog.ref_kind, EmailLog.ref_id))
+        ).all()
+    assert (ref_kind, ref_id) == ("client_notice", str(notice.id))
     await harness.deliver_mail()
     [(to, subject, body)] = harness.transport.sent
     assert to == "a@rail.uz"

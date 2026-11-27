@@ -57,7 +57,7 @@
 - Настоящий Web Push при закрытом браузере — service worker, ключи VAPID, таблица подписок, HTTPS (на
   prod есть). Дублирует личное сообщение в Telegram. **Рекомендация: не делать, пока Telegram справляется.**
 
-Отражено: docs/systems/crm/CONVENTIONS.md §11; бэклог в `docs/PROGRESS.md`.
+Отражено: docs/systems/crm/CONVENTIONS.md §11; бэклог в `docs/history/PROGRESS.md`.
 
 ### Q-011. Контакты клиента — вариант (а)
 

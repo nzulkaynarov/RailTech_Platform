@@ -26,6 +26,21 @@ def hosting_hint(what: str, ask: str) -> str:
     return f"{what}. {HOSTING_WHO}. Отправьте ему: «{ask}»"
 
 
+def stuck_hint(what: str, ask: str, worker_alive: bool | None, *, stalled_note: str) -> str:
+    """Подсказка при зависшей очереди: воркер не работает — хостинг; воркер жив — задача зависла.
+
+    `worker_alive`: сердцебиение воркера есть (True), нет (False), неизвестно (None — как «нет»).
+    При живом воркере хостинг не винят: зависшую задачу система снимает сама, ждать несколько минут.
+    """
+    if worker_alive:
+        return (
+            f"{what}. Обработчик (воркер CRM) работает, но задача зависла: {stalled_note}. "
+            "Система снимает зависшие задачи сама в течение нескольких минут; нажмите «Проверить» "
+            "позже. Не помогло — сообщите тому, кто разворачивал Платформу"
+        )
+    return hosting_hint(f"{what}: обработчик (воркер CRM) не отвечает", ask)
+
+
 def hosting_ask(hint: str | None) -> str | None:
     """Что передать хостингу — из текста `hosting_hint`; нет такой фразы — None."""
     if not hint or HOSTING_WHO not in hint:

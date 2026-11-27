@@ -9,7 +9,7 @@
 
 ## 1. Цели и критерии приёмки (DoD)
 
-По `docs/ORCHESTRATOR.md` (§6, §9) и `docs/PROGRESS.md`:
+По `docs/ORCHESTRATOR.md` (§6, §9) и `docs/history/PROGRESS.md`:
 1. **Сквозной клиентский сценарий пути клиента без пробелов (M2-CAB-04):**
    - Вход в кабинет: Web (magic-link на e-mail) и Telegram Mini App (`init_data` / deep-link `deal_<id>`).
    - Публичная форма «Я новый клиент» (`/new-client`): имя, компания, телефон, сообщение, обязательное согласие на ПДн, антиспам-токен CRM.

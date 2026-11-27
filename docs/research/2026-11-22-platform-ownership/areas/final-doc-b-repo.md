@@ -110,7 +110,7 @@ Other stack facts:
   - 2026-10-31: Cabinet redesign with phone bottom navigation.
   - 2026-11-04: partner gets the Mini App; NOTIFY.
 - **No row** for PWA, tablet, Capacitor, a native app, or an employee Mini App. ADR-0011 §1: "Cabinet, Mini App и Telegram-бот остаются каналами клиента". The Platform is a web SPA.
-- **Plan** (`runbooks/plan-2026-11-12.md`): ГЛ-2 (:148), counter on "Главная" "в рейле и на телефоне"; Х-9 (:227), "боковое окно на телефоне" (BACKLOG B-020, `docs/BACKLOG.md:33`: move D1-3 and D1-5 onto the shell sheet and remove their own sheets). No tablet row.
+- **Plan** (`runbooks/plan-2026-11-12.md`): ГЛ-2 (:148), counter on "Главная" "в рейле и на телефоне"; Х-9 (:227), "боковое окно на телефоне" (BACKLOG B-020, `docs/history/BACKLOG.md:33`: move D1-3 and D1-5 onto the shell sheet and remove their own sheets). No tablet row.
 - **Who uses the phone:**
   - Director approves from the phone: `docs/research/2026-10-27-ux-audit/README.md:268` ("Мобильная версия обязательна (директор согласует с телефона)").
   - Clients and partners: Mini App.

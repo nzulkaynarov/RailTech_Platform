@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Ссылки на документацию целы и ведут в docs/ (DOCS-1, docs/ORCHESTRATOR.md §7). Логика — check_doc_links.py.
-# Заодно — ID строк docs/BACKLOG.md уникальны и по формату (scripts/backlog.py --check; DECISIONS 2026-10-28):
-# два PR с одной строкой B-… git сливает молча, здесь это красное.
+# Ссылки на документацию целы и ведут в docs/ (DOCS-1, docs/ORCHESTRATOR.md §3 п. 17) и управляющие документы не размылись:
+# «Курс» не длиннее 45 строк, «Список» и «Не сейчас» есть, второго файла-очереди в docs/ нет (КУРС-1, DECISIONS 2026-11-27).
+# Логика — check_doc_links.py.
 set -euo pipefail
-python3 "$(dirname "$0")/backlog.py" --check
 exec python3 "$(dirname "$0")/check_doc_links.py" "$@"

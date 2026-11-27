@@ -4,7 +4,7 @@
   цикла», п. 3) · Дата: 2026-11-03 · Основание: исследование
   [`research/2026-11-02-lifecycle`](../research/2026-11-02-lifecycle/README.md) — [`to-be.md`](../research/2026-11-02-lifecycle/to-be.md)
   §3–§4, [`as-is.md`](../research/2026-11-02-lifecycle/as-is.md) §5 разрывы 2–3 · Меняет [BUSINESS](../product/BUSINESS.md) §12
-- Реализация: L0-3 волны L0 (минимум для пилота), полная модель — MVP-T1 после пилота ([BACKLOG](../BACKLOG.md))
+- Реализация: L0-3 волны L0 (минимум для пилота), полная модель — MVP-T1 после пилота ([BACKLOG](../history/BACKLOG.md))
 
 ## Контекст
 

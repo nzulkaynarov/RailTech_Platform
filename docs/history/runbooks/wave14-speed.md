@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 14 — скорость: тесты, CI, слияние и деплой (версия 0.12)
 Статус: действует · Владелец: архитектор · 2026-10-27
@@ -42,7 +42,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 14 «Скорость» по docs/history/runbooks/wave14-speed.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/HANDOFF.md, этот runbook, docs/systems/infra/ci.md,
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/history/HANDOFF.md, этот runbook, docs/systems/infra/ci.md,
 .github/workflows/ci.yml и deploy.yml, scripts/ci_local.sh. Исполнители — субагенты (Agent tool) model "sonnet", не больше трёх
 одновременно, не больше одного набора тестов ERP за раз (ERP_TEST_NS=<задача>); worktree .claude/worktrees/<задача> от свежего
 origin/main; каждая git-команда — git -C <абсолютный путь worktree>; тело PR — во временный файл с уникальным именем. Правка ci.yml,
