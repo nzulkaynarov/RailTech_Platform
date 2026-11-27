@@ -105,8 +105,7 @@ function RequestItem({ row, canWrite }: { row: ClientRequestRow; canWrite: boole
             ? t(`requestStatus.${row.cabinet_status}`)
             : t(`clientSees.${row.client_sees}`),
         })}{" "}
-        ·{" "}
-        {fmt.date(row.created_at)}
+        · {fmt.date(row.created_at)}
       </span>
       {row.transfer === "pending" ? (
         <span className="pf-hint">{t("card.transfer.pending")}</span>

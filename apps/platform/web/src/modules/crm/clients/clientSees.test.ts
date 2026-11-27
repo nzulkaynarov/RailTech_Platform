@@ -44,10 +44,13 @@ const requestContract = parse(
 ) as RequestStatuses;
 
 describe("«В кабинете клиента» у заявки — то же слово, что в списке «Заявки» Кабинета", () => {
-  it.each(["ru", "uz", "en"] as const)("%s: тексты совпадают с client-request-statuses.yaml", (lng) => {
-    const expected = Object.fromEntries(
-      Object.entries(requestContract.statuses).map(([key, value]) => [key, value.text[lng]]),
-    );
-    expect(resources[lng].clients.requestStatus).toEqual(expected);
-  });
+  it.each(["ru", "uz", "en"] as const)(
+    "%s: тексты совпадают с client-request-statuses.yaml",
+    (lng) => {
+      const expected = Object.fromEntries(
+        Object.entries(requestContract.statuses).map(([key, value]) => [key, value.text[lng]]),
+      );
+      expect(resources[lng].clients.requestStatus).toEqual(expected);
+    },
+  );
 });
