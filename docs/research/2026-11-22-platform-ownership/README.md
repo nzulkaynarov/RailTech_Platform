@@ -1747,7 +1747,7 @@
 
 ## 12. Приложение. Доказательства
 
-Сокращения: `web` = `apps/platform/web/src`, `bff` = `apps/platform/bff/app`, `rbac` = `packages/contracts/platform-rbac.yaml`, `DEC` = `docs/DECISIONS.md`, `NAV` = `docs/product/NAVIGATION.md`, `plan` = `docs/runbooks/plan-2026-11-12.md`, `STD` = `docs/architecture/ui-standard.md`, `PF` = `docs/architecture/platform-frontend.md`, `crm` = `apps/crm/backend/app`, `erp` = `apps/erp/backend`, `eds` = `apps/eds/app`. Срез кода: строки 1–62 — основная ветка, коммит 2ecd40446; строки 63–106 — коммит a87c49a92; строки 107–147 — коммит 2d57c5104.
+Сокращения: `web` = `apps/platform/web/src`, `bff` = `apps/platform/bff/app`, `rbac` = `packages/contracts/platform-rbac.yaml`, `DEC` = `docs/DECISIONS.md`, `NAV` = `docs/product/NAVIGATION.md`, `plan` = `docs/history/runbooks/plan-2026-11-12.md`, `STD` = `docs/architecture/ui-standard.md`, `PF` = `docs/architecture/platform-frontend.md`, `crm` = `apps/crm/backend/app`, `erp` = `apps/erp/backend`, `eds` = `apps/eds/app`. Срез кода: строки 1–62 — основная ветка, коммит 2ecd40446; строки 63–106 — коммит a87c49a92; строки 107–147 — коммит 2d57c5104.
 
 **Коды строк плана, упомянутые в отчёте и таблице:** UI-0…UI-10 — внедрение стандарта интерфейса; ЕД-3, ЕД-4 — общие детали человека и позиции; ЕД-6 — «выбирать, а не вписывать»; ЕД-7 — проход по карточкам «одно место для каждого сведения»; ГЛ-0…ГЛ-3 — переработка Главной; СЦ-3 — страница готовности; СЦ-7 — тексты без «позже»; СЦ-9 — «следующий шаг — задача человека»; ДОК-9, ДОК-10 — один редактор и библиотека шаблонов; ДОК-11 — карточка документа; ДОК-15 — шаблоны электронных писем в «Уведомления»; Х-7, Х-9 — «Сообщение», «Поручение» и «Чаты»; Х-8 — мастера быстрой настройки; Х-15 — сортировка по столбцу; Х-19 — визы в очереди; П-1 — правила областей экрана; ДВ-4б — второй фактор.
 
@@ -1872,7 +1872,7 @@
 | 114 | Решение 18.11: что берём и что нет; подтверждение 21.11; формул в описании процессов нет; строки плана о видах и упоминаниях | `DEC:349,360`; `docs/research/2026-11-18-flexible-ui-assessment.md` §2.3, §2.5, §3; `docs/adr/0031-processes-as-data.md:36`; `plan:258-260` |
 | 115 | Настройки столбцов таблицы хранятся в браузере | `web/shared/ui/DataTable/tableSettings.ts:5,53` |
 | 116 | Реестр файлов с версиями и контрольной суммой; документы клиентов с извлечённым текстом | `eds/models/files.py:12-42`; `crm/models/clients.py:31,105,135` |
-| 117 | Извлечение текста: кто пользуется; в учёте Word идёт через службу, Excel и CSV — текстом, PDF и фото — файлом; записанный долг | `crm/integrations/docling.py`; `crm/services/documents.py`; `erp/ai/services/payloads.py:25-44,60-66`; `docs/BACKLOG.md:124`; `docs/research/2026-11-22-connectors/README.md` §0, §1 |
+| 117 | Извлечение текста: кто пользуется; в учёте Word идёт через службу, Excel и CSV — текстом, PDF и фото — файлом; записанный долг | `crm/integrations/docling.py`; `crm/services/documents.py`; `erp/ai/services/payloads.py:25-44,60-66`; `docs/history/BACKLOG.md:124`; `docs/research/2026-11-22-connectors/README.md` §0, §1 |
 | 118 | Поиск по смыслу — только база знаний бота; модель и размерность | `crm/models/kb.py:5,20-31,81-97`; `crm/domain/embedding_profile.py:3,27,32`; `infra/ai/litellm.models.yaml:64-66` |
 | 119 | Поиск Платформы опрашивает системы; своей базы у серверной части Платформы нет | `bff/api/search.py`; `docs/architecture/platform-bff.md:38` |
 | 120 | Шина: событие с данными, подписанная доставка, повторы, «мёртвые», защита от дублей; 86 схем событий; NATS — вторая версия | `docs/architecture/rt-bus.md:6-15,54-56,186-208,244,304`; `docs/adr/0014-integration-bus-rt-bus.md:19`; `packages/contracts/events/` |
@@ -1886,7 +1886,7 @@
 | 128 | Наборы компонентов Платформы и Кабинета; общие значения оформления; каналы клиента | `apps/platform/web/package.json:42,48,51`; `apps/cabinet/package.json`; `packages/ui-tokens/tokens.json:30`; `docs/adr/0018-themes-semantic-tokens.md`; `docs/adr/0011-unified-platform-frontend.md` |
 | 129 | Пороги ширины и правило панели «рядом» | `web/app/shell/useViewport.ts:3-7,45-54,61-77`; `web/app/shell/AppShell.tsx:367-368,375`; `PF:99-100` |
 | 130 | Телефон: нижняя панель; лист каркаса только в двух разделах; «Настройки» в панели; ссылка карты на «три–пять разделов» и «Настройки — в меню профиля» | `web/app/shell/AppShell.tsx:119-122,241-257,375-560`; `web/app/shell/shell.css:79-98`; `web/modules/registry.ts:13`; `web/modules/erp/module.ts:17,28`; `NAV:162` |
-| 131 | Нижний лист: общий и четыре копии | `web/shared/ui/Sheet.tsx:29-41`; `web/shared/ui/ContextPanel.tsx:265`; `web/modules/crm/messages/Dialog.tsx:155`; `eds/documents/DocumentSheet.tsx:32`; `eds/decision/DecisionSlot.tsx:69`; `eds/inbox/ResolutionPanel.tsx:222`; `docs/BACKLOG.md:33` |
+| 131 | Нижний лист: общий и четыре копии | `web/shared/ui/Sheet.tsx:29-41`; `web/shared/ui/ContextPanel.tsx:265`; `web/modules/crm/messages/Dialog.tsx:155`; `eds/documents/DocumentSheet.tsx:32`; `eds/decision/DecisionSlot.tsx:69`; `eds/inbox/ResolutionPanel.tsx:222`; `docs/history/BACKLOG.md:33` |
 | 132 | Безопасные зоны и высота экрана | `apps/platform/web/index.html:5`; `apps/cabinet/index.html:6`; `web/modules/eds/decision/decision.css:265`; `eds/inbox/inbox.css:263`; `web/modules/crm/messages/messages.css:16` |
 | 133 | Высота элементов и зона нажатия | `web/app/theme.ts:44`; `packages/ui-tokens/tokens.json:30`; `apps/cabinet/src/components/ui/button.tsx:23-31`; `apps/cabinet/src/components/shell/BottomNav.tsx:14-15,41,71-89,151` |
 | 134 | Раскладка по ширине блока: правило и правка формы письма от 22.11 | `PF:115`; `web/modules/eds/new/new.css`; `web/shared/ui/ui.css` |
@@ -1900,7 +1900,7 @@
 | 141 | Проверка на входе сервера инструментов учёта: пропуск на каждом запросе, одноразовый номер гасится на вызове инструмента | `erp/integration/mcp/gate.py:1-13` |
 | 142 | Правка формы письма от 22.11: один файл стилей, автоматический тест и снимок на ширине 1700 | коммит 09ab830e2: `web/modules/eds/new/new.css`; `apps/platform/web/e2e/letter-form-docked.spec.ts` |
 | 143 | Markdown с шапкой уже используется для базы знаний бота | `docs/kb/FORMAT.md:17`; `crm/services/kb/markdown_convert.py` |
-| 144 | Долг «PDF и фото уходят в модель файлом»: 1–2 PR по исследованию коннекторов; срок «до массовых загрузок заводов»; правило владельца и юриста от 11.11 | `docs/research/2026-11-22-connectors/README.md:31,73,147`; `docs/BACKLOG.md:124`; `DEC:311` |
+| 144 | Долг «PDF и фото уходят в модель файлом»: 1–2 PR по исследованию коннекторов; срок «до массовых загрузок заводов»; правило владельца и юриста от 11.11 | `docs/research/2026-11-22-connectors/README.md:31,73,147`; `docs/history/BACKLOG.md:124`; `DEC:311` |
 | 145 | По тексту документов клиентов — поиск только по словам | `crm/models/clients.py:29-31,137` |
 | 146 | Привязки к ширине окна в стилях: 40 строк в 25 файлах, из них 5 — не про ширину | `web/shared/ui/ui.css:602` и стили модулей |
 | 147 | Telegram — для решений | `plan:148` |

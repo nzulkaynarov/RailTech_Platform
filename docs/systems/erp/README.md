@@ -27,4 +27,4 @@ ERP поднимается только корневым `make up` (`infra/compo
 
 ## Что сделано и что дальше
 
-Здесь не ведётся: журнал задач и PR — `docs/PROGRESS.md`, где мы и что дальше — `docs/HANDOFF.md`, хвосты — `docs/BACKLOG.md`.
+Здесь не ведётся: журнал задач и PR — `docs/history/PROGRESS.md`, где мы и что дальше — `docs/history/HANDOFF.md`, хвосты — `docs/history/BACKLOG.md`.

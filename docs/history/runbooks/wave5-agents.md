@@ -1,9 +1,9 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волна 5 — прогоны глазами M1 и M2, документы, правила процесса (FIX-50…54)
 
 Когда применять: волны 0–4 закрыты (последний docs-PR #103), M3 разморожена, стенд `make up` поднят от свежего `main`.
-Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` (строки FIX-50…54 и «Реестр находок»), статусы — `docs/PROGRESS.md`,
+Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` (строки FIX-50…54 и «Реестр находок»), статусы — `docs/history/PROGRESS.md`,
 правила — `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
 
 Цель волны — **гейты M1 и M2 владельцем**: прогон глазами на стенде против настоящего ERP, со скриншотами и axe в PR, дефекты —
@@ -15,8 +15,8 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 5: FIX-50…54. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/history/runbooks/wave5-agents.md целиком,
-docs/runbooks/stand.md, docs/PROGRESS.md, docs/product/BUSINESS.md (§4 путь клиента, §11 роли), CLAUDE.md приложений.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/history/HANDOFF.md, docs/history/runbooks/wave5-agents.md целиком,
+docs/runbooks/stand.md, docs/history/PROGRESS.md, docs/product/BUSINESS.md (§4 путь клиента, §11 роли), CLAUDE.md приложений.
 Работай по раундам §4: worktree от свежего origin/main, исполнители субагентами (model sonnet) с промптом «§5.0 + §5.5x»,
 ревью свежим субагентом, gh pr merge --auto --merge <n>. Перед раундом — одна проверка своих PR
 (gh pr view <n> --json state,mergeable,mergeStateStatus,statusCheckRollup, без логов). После каждого «жду» — фоновый монитор
@@ -101,7 +101,7 @@ FIX-54 и дефекты — `fix/<система>-5x-…` (§3). `ERP_TEST_NS` 
 - Стенд общий: make up/down не запускаешь, .env не читаешь и не правишь, docker compose — только logs и exec (чтение).
 - Токены, коды и ссылки входа из писем (логи erp-backend) — только в браузер; в PR, скриншотах, отчётах, коммитах их нет.
 - Секретов и персональных данных в репозитории нет; тестовые данные — явно фейковые, с префиксом задачи.
-- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы и их тестовые компании не трогай. docs/PROGRESS.md не правь.
+- Параллельно работают: {ПАРАЛЛЕЛЬНО}. Их файлы и их тестовые компании не трогай. docs/history/PROGRESS.md не правь.
 - Коммиты: Conventional Commits на русском, суффикс ({ID}), трейлер Co-Authored-By: Claude <noreply@anthropic.com>.
 - Финал: gh pr create (заголовок «{ID}: …»; тело — что, как проверено, скриншоты, дефекты, открытые вопросы), ссылка — и стоп.
 ```

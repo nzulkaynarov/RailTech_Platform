@@ -1,7 +1,7 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Волна 12 — этап C1 «Сервис EDS» (версия 0.12)
-Статус: выполнен (волна закрыта 2026-10-26, итог — `docs/PROGRESS.md` «Этап C1: EDS») · Владелец: архитектор · 2026-10-26
+Статус: выполнен (волна закрыта 2026-10-26, итог — `docs/history/PROGRESS.md` «Этап C1: EDS») · Владелец: архитектор · 2026-10-26
 
 Основание: ADR-0015 (EDS — отдельный сервис, границы доменов), ADR-0013 (стек), ADR-0014 (шина), ADR-0012 (роли как данные),
 стратегия §3.3, §4 «Этап C», §7; SPEC-v3 §2.1–§2.4, §3.2, §7.3, §10.4; карта интеграции §7 (EDS-01, EDS-02, EDS-03).
@@ -13,7 +13,7 @@
 
 ```
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 12 «Сервис EDS» по docs/history/runbooks/wave12-eds-c1.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/HANDOFF.md, этот runbook целиком,
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §4.2, §7), docs/history/HANDOFF.md, этот runbook целиком,
 ADR-0012…0016, docs/strategy/2026-10-23-platform-architecture-strategy.md (§3.3, §3.4, §4 «Этап C»), docs/product/SPEC-v3.md
 (§2.1–§2.4, §3.2, §7.3, §10.4), docs/architecture/CONTRACTS.md, docs/architecture/rt-bus.md, docs/architecture/integration-map.md §7,
 docs/architecture/sso-token.md, docs/systems/eds/README.md, docs/systems/platform/CONVENTIONS.md (как образец правил кода FastAPI).

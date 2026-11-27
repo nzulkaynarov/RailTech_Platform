@@ -20,7 +20,7 @@
 | M0-INF-02 | `packages/contracts`: OpenAPI ERP v0 (три пространства: internal, portal, integration), `events.schema.json`, `mcp-tools.json`, `docs/architecture/sso-token.md` — из `docs/architecture/CONTRACTS.md`; `make contracts` валидирует и генерирует клиенты (orval для CRM, openapi-typescript для ERP/Cabinet) | — | CI падает на расхождении контракта и сгенерированного |
 | M0-INF-03 | `infra/compose`: один PostgreSQL с базами `crm` (pgvector) и `erp`, Redis, LiteLLM, Langfuse, RustFS (бакеты `crm`, `erp`), Caddy на три `*.localhost`; `.env.example` с комментариями | M0-INF-01 | `make up` → все `/health` 200 |
 | M0-INF-04 | CI: один workflow, матрица по путям (`apps/crm/**`, `apps/erp/**`, `apps/cabinet/**`, `packages/**`, `infra/**`), job'ы lint → unit → integration (Postgres service) → build; `legacy/b2b` исключён из всех проверок | M0-INF-01 | зелёный прогон на пустом изменении |
-| M0-DOC-01 | ADR 0001–0007 из пакета → `docs/adr/` со статусом proposed; `docs/PROGRESS.md` с таблицей вех; `docs/systems/erp/CONVENTIONS.md` и `docs/systems/cabinet/CONVENTIONS.md` заготовки (конвенции из B2B минус удалённое) | — | владелец проставляет accepted |
+| M0-DOC-01 | ADR 0001–0007 из пакета → `docs/adr/` со статусом proposed; `docs/history/PROGRESS.md` с таблицей вех; `docs/systems/erp/CONVENTIONS.md` и `docs/systems/cabinet/CONVENTIONS.md` заготовки (конвенции из B2B минус удалённое) | — | владелец проставляет accepted |
 | M0-INF-05 | `packages/ui-tokens`: цвета, шрифт, радиусы, плотность; подключение в AntD-тему CRM и в Tailwind-конфиг ERP/Cabinet | — | один файл токенов, обе темы читают его |
 
 ### M1 — ERP выделена из B2B
@@ -149,7 +149,7 @@ Runbook'и: волна 9 — роли (`wave9-roles.md`), волна 10 — эт
 
 На 2026-10-20: **M0 закрыта**. **M1** и **M2** — **готово к гейту**, не закрыты: аудит `main @ e0f089e`
 (`docs/audits/2026-10-18-main-e0f089e.md`) нашёл 11 проблем P0 в коде, влитом без PR и CI (15 задач M1–M3, 17 вливаний
-после PR #43). Исправления по аудиту идут волнами FIX-00…FIX-54 (порядок и статусы — `docs/PROGRESS.md`, раздел «Исправления
+после PR #43). Исправления по аудиту идут волнами FIX-00…FIX-54 (порядок и статусы — `docs/history/PROGRESS.md`, раздел «Исправления
 по аудиту»): **волны 0–4 закрыты** 2026-10-18…20 (последний docs-PR #103); волна 2b (FIX-2xa #81, FIX-25 #84) и M5-INF-01
 (#80, #95) влиты; **волна 5** (FIX-50…54, `docs/history/runbooks/wave5-agents.md`) — прогоны глазами на стенде, документы и правила
 процесса; после неё гейты M1 и M2 владельцем. **M3 разморожена 2026-10-20** (волна 3 закрыта); её остаток (M3-ERP-05,

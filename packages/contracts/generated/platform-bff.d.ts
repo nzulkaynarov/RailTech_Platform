@@ -13321,7 +13321,7 @@ export interface components {
       valid_until: string | null;
       /**
        * Format: date
-       * @description До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/BACKLOG.md`)
+       * @description До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/history/BACKLOG.md`)
        */
       supplier_price_until: string | null;
     };

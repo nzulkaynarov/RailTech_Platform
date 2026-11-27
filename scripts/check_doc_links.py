@@ -7,6 +7,10 @@
    apps/platform/docs, ORCHESTRATOR.md в корне, docs/{ARCHITECTURE,MIGRATION-MAP,BUSINESS,CONTRACTS}.md,
    packages/contracts/sso-token.md, ссылки «CLAUDE.md §N» (правила кода — в docs/systems/<x>/CONVENTIONS.md).
 
+4. «Курс» не размылся (КУРС-1, 2026-11-27): docs/COURSE.md не длиннее COURSE_MAX_LINES строк; docs/LIST.md (единственная
+   очередь) и docs/LATER.md существуют; новый файл .md в docs/ вне docs/history/ со словом «plan», «план», «очеред»,
+   «wave», «волна», «backlog» в имени не проходит (вторая очередь прячется именно под такими именами).
+
 Запуск: scripts/check-doc-links.sh (из корня). Код возврата 1 — есть битые ссылки.
 """
 from __future__ import annotations
@@ -47,6 +51,42 @@ MENTION = re.compile(r"(?<![\w/.\-@:])((?:docs|apps|packages|infra)/[\w./\-]*?[\
 CODE_FENCE = re.compile(r"```.*?```", re.S)
 
 
+COURSE_MAX_LINES = 45
+REQUIRED_DOCS = ("docs/COURSE.md", "docs/LIST.md", "docs/LATER.md")
+QUEUE_NAME = re.compile(r"^(plan|план|очеред|wave|волн|backlog)", re.I)
+# Уже существовавшие справочные файлы с такими именами: стратегия 2026-11-01 и отчёты гейтов — снимки на дату.
+QUEUE_NAME_ALLOW = frozenset({
+    "docs/strategy/2026-11-01-plan-refresh.md",
+    "docs/audits/wave11b_gate_b_report.md",
+    "docs/audits/wave11c_gate_report.md",
+    "docs/audits/wave13c_bus_measure.md",
+    "docs/audits/wave15_gate_report.md",
+})
+
+
+def guard_errors(files: list[str], line_count) -> list[str]:
+    """Проверки против размывания курса. `files` — отслеживаемые пути, `line_count(path)` — число строк файла."""
+    errors: list[str] = []
+    present = set(files)
+    for req in REQUIRED_DOCS:
+        if req not in present:
+            errors.append(f"{req}: нет файла — управляющие документы: Курс, Список «Что мешает работать», «Не сейчас»")
+    if "docs/COURSE.md" in present:
+        n = line_count("docs/COURSE.md")
+        if n > COURSE_MAX_LINES:
+            errors.append(f"docs/COURSE.md: {n} строк, не больше {COURSE_MAX_LINES} (один экран; лишнее — в LIST.md или LATER.md)")
+    for f in files:
+        if not f.startswith("docs/") or f.startswith(("docs/history/", "docs/screens/")) or not f.endswith(".md"):
+            continue
+        if f in QUEUE_NAME_ALLOW:
+            continue
+        stem = os.path.basename(f)[:-3]
+        if any(QUEUE_NAME.match(tok) for tok in re.split(r"[\W_]+", stem) if tok):
+            errors.append(f"{f}: имя файла похоже на ещё одну очередь или план — очередь одна, docs/LIST.md; "
+                          "отложенное — docs/LATER.md; закрытое — docs/history/")
+    return errors
+
+
 def tracked() -> list[str]:
     out = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
     return [f for f in out if not f.startswith(SKIP_PREFIX) and f.endswith(TEXT_EXT) and os.path.isfile(f)]
@@ -76,7 +116,7 @@ def main() -> int:
                 full = os.path.normpath(os.path.join(os.path.dirname(path), p))
                 if not os.path.exists(full):
                     errors.append(f"{path}:{lineno(m.start())}: битая ссылка ({target})")
-        if path.startswith(HISTORY) or path.startswith("docs/PROGRESS.md") or path == "scripts/check_doc_links.py":
+        if path.startswith(HISTORY) or path.startswith("docs/history/PROGRESS.md") or path == "scripts/check_doc_links.py":
             continue
         for rx, hint in STALE:
             if "ORCHESTRATOR" in rx.pattern and os.path.dirname(path) == "docs":
@@ -92,6 +132,11 @@ def main() -> int:
                 continue
             if not os.path.exists(p):
                 errors.append(f"{path}:{lineno(m.start())}: нет файла {p}")
+    everything = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
+    errors += guard_errors(
+        [f for f in everything if os.path.isfile(f)],
+        lambda p: len(open(p, encoding="utf-8").read().splitlines()),
+    )
     for e in errors:
         print(e)
     if errors:

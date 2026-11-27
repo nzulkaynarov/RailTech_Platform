@@ -36,7 +36,7 @@ export interface QuoteInternal {
    */
   valid_until: string | null;
   /**
-   * До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/BACKLOG.md`)
+   * До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/history/BACKLOG.md`)
    * @nullable
    */
   supplier_price_until: string | null;

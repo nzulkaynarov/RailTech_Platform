@@ -38,7 +38,7 @@ worktree», «Git — только в своём worktree») и `CLAUDE.md` ко
    - git-хуки: `ls "$(git -C .claude/worktrees/<задача> rev-parse --path-format=absolute --git-path hooks)"` — есть
      `pre-commit` и `commit-msg`; нет — `make hooks` в корне (один раз на клон, действует во всех worktree);
    - Docker для ERP, EDS, rt-bus, rt-docs, `ci_local.sh`: `docker info`;
-   - рядом не больше двух наборов тестов ERP и одного стенда волны (HANDOFF §5): `docker ps --format '{{.Names}}' | grep -E '^rt-'`.
+   - рядом не больше двух наборов тестов ERP и одного стенда волны (`docs/history/HANDOFF.md` §5): `docker ps --format '{{.Names}}' | grep -E '^rt-'`.
 6. Исполнителю в промпт — абсолютный путь worktree, ветка, `ERP_TEST_NS=<задача>`.
 
 ## После слияния

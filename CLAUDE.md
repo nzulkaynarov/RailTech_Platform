@@ -4,9 +4,11 @@
 (бэк-офис) со своими базами, связанные шиной `rt_bus`; фронтенды — **Платформа** (все сотрудники) и **Cabinet** (клиент).
 
 **Вся документация — в `docs/`, одна правда** (`docs/README.md` — карта «тема → документ» и «С чего начать» по ролям).
-Что читать агенту — по его уровню, `docs/ORCHESTRATOR.md` §7 п. 1: архитектор и лид — ORCHESTRATOR, `docs/HANDOFF.md`,
-PROGRESS, QUESTIONS, DECISIONS; исполнитель — то, что в его промпте, всегда с `docs/systems/<система>/CONVENTIONS.md` своей зоны. Правила процесса (коммиты с трейлером, ветки и PR,
-запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR, `docs/PROGRESS.md` ведёт лид) — ORCHESTRATOR §4 и §7.
+**Курс — `docs/COURSE.md`, единственная очередь — `docs/LIST.md` («Что мешает работать»), отложенное — `docs/LATER.md`.** Читать
+их первыми; «готово» — на проде и пройдено там, а не «PR влит». Что читать агенту — по его уровню, `docs/ORCHESTRATOR.md` §7 п. 1:
+архитектор и лид — COURSE, LIST, ORCHESTRATOR, QUESTIONS, DECISIONS; исполнитель — то, что в его промпте, всегда с
+`docs/systems/<система>/CONVENTIONS.md` своей зоны. Правила процесса (коммиты с трейлером, ветки и PR, запрет `push`/`merge` в
+`main`, одна сессия — одна система, скриншоты в PR, ход работ — в `docs/LIST.md`, который ведёт архитектор) — ORCHESTRATOR §4 и §7.
 
 ```
 apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (без своего фронтенда: интерфейс сотрудников — Платформа)
@@ -17,7 +19,7 @@ apps/eds/            домен EDS: FastAPI · SQLAlchemy · Procrastinate (б�
 packages/contracts/  машиночитаемые контракты: OpenAPI, схемы событий, MCP, RBAC
 packages/ui-tokens/  токены дизайна для AntD и shadcn
 infra/               compose, caddy, ai (LiteLLM), db, deploy
-docs/                вся документация: ORCHESTRATOR, HANDOFF, strategy, product, architecture, systems, adr, runbooks, history
+docs/                вся документация: COURSE, LIST, LATER, ORCHESTRATOR, strategy, product, architecture, systems, adr, runbooks, history
 ```
 
 Инварианты (подробно — `docs/ORCHESTRATOR.md` §3): одна система — один главный пользователь; общих таблиц нет, интеграции —
@@ -66,8 +68,8 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
    ошибки (`gh api …/actions/jobs/<id>/logs | grep` по `✘`, `Error:`, `failed`, `FAILED`), чтобы знать, что воспроизводить;
    остальной лог не читать, прогон не перезапускать (пока действует «Временное правило владельца 2026-10-28» ниже, логи упавших заданий своего PR читаются целиком).
    Конфликт с `main` — merge `origin/main` в ветку локально, повтор по п. 3, push.
-6. `docs/PROGRESS.md` правит только лид — одним docs-PR после раунда (решение владельца 2026-10-20: строки PROGRESS
-   в каждом PR давали конфликты и лишние прогоны CI). Исполнитель пишет статус, хвосты и вопросы в описание PR;
+6. Очередь — `docs/LIST.md`, её правит только архитектор (решение владельца 2026-11-27; журнал PROGRESS закрыт — `docs/history/`).
+   Исполнитель пишет статус, хвосты и вопросы в описание PR и называет строку списка;
    `QUESTIONS.md`, ADR, runbook и прочие документы задачи — по-прежнему в её PR.
 
 Не делать (с поправками на «Временное правило владельца 2026-10-28» ниже): использовать CI, чтобы узнать, проходят ли тесты; push «на всякий случай» или ради промежуточной

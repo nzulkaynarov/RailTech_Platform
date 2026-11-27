@@ -1,4 +1,4 @@
-> **История.** Заменено: docs/HANDOFF.md и docs/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
+> **История.** Заменено: docs/history/HANDOFF.md и docs/history/PROGRESS.md (волна закрыта); действующие runbook'и волн — docs/runbooks/. Не используется для решений.
 
 # Runbook: волна 2b (FIX-2xa, FIX-25) ∥ M5-INF-01 — один лид, три исполнителя
 
@@ -19,7 +19,7 @@ docs/history/runbooks/wave2b-m5-agents.md. Код сам не пишешь: ст
 2. Исполнителю — его раздел §4 целиком + преамбула §3. Исполнитель PR не сливает.
 3. Ревью каждого PR — по «готово, когда»; блокеры — тому же исполнителю; затем `gh pr merge --auto --merge <n>`.
    FIX-25: обе половины сливаешь в ветку fix/erp-25-portal-030 (merge, без rebase), PR один — с контрактом.
-4. CI не запускай, не опрашивай и не жди. Конфликт в docs/PROGRESS.md после чужого слияния — merge origin/main в ветку
+4. CI не запускай, не опрашивай и не жди. Конфликт в docs/history/PROGRESS.md после чужого слияния — merge origin/main в ветку
    локально, push, автослияние уже стоит.
 5. Вопросы — строка в docs/QUESTIONS.md и решение по рекомендации; отклонение от контракта или ARCHITECTURE — стоп и
    вопрос архитектору в отчёте.
@@ -44,7 +44,7 @@ docs/history/runbooks/wave2b-m5-agents.md. Код сам не пишешь: ст
   `ClientRequestCreate` необязателен. `Act.deal` теперь в `required`.
 - Cabinet генерирует `src/api/portal.d.ts` из контракта (`npm run gen:api-types`), `make check-cabinet` сверяет файл
   с контрактом — в ветке FIX-25 он красный до перегенерации.
-- Хвосты ревью волны 2 для FIX-25 — строки FIX-21…24 и FIX-2xb в `docs/PROGRESS.md` («Что осталось»).
+- Хвосты ревью волны 2 для FIX-25 — строки FIX-21…24 и FIX-2xb в `docs/history/PROGRESS.md` («Что осталось»).
 - **M5-INF-01**: раскладка серверов — `docs/runbooks/servers.md` (VPS 1 `app` 8 ГБ — приложения, Caddy, Redis, RustFS,
   LiteLLM; VPS 2 `db` 2 ГБ — PostgreSQL 17 и бэкапы; лимиты памяти по сервисам там же). `infra/compose/base.yml` — общий,
   `dev.yml` — стенд; комментарий в `base.yml` обещает `make up-prod` (base + prod) и профиль `backup`. `prod.yml`, `db.yml`,
@@ -81,7 +81,7 @@ Docker (11,7 ГБ): волны 3–4 держат до трёх наборов E
 worktree (§2 runbook'а docs/history/runbooks/wave2b-m5-agents.md). Прочитай CLAUDE.md корня («Среда разработки, тесты и CI»)
 и CLAUDE.md своего приложения. Итерации — только затронутые тесты; перед коммитом — make check-<приложение> (и
 make contracts, если менялся контракт); коммить только зелёное; перед push — scripts/ci_local.sh <задания>. Затем push и
-PR (описание — что и почему, «готово, когда» по пунктам), строка задачи в docs/PROGRESS.md — «готово к слиянию» со
+PR (описание — что и почему, «готово, когда» по пунктам), строка задачи в docs/history/PROGRESS.md — «готово к слиянию» со
 ссылкой на PR и хвостами в «Что осталось». После PR — стоп и отчёт лиду; CI не запускать, не опрашивать, не ждать; PR не
 сливать. Контракт не менять — расхождение: строка в docs/QUESTIONS.md и вопрос лиду. Секретов, паролей, токенов, ссылок
 входа и данных клиентов в коде, PR и комментариях нет — репозиторий публичный. Платных вызовов моделей нет.

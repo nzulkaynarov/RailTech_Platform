@@ -5,7 +5,7 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
 не дольше 10 минут (`docs/history/runbooks/wave14-speed.md`): задания приложения идут параллельно, а запускается только то, что затронуто правкой.
 
 - **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI; там же
-  `scripts/backlog.py --check` — ID строк `docs/BACKLOG.md` уникальны и по формату (два PR с одним ID git сливает молча; 2026-10-28).
+  защита курса (КУРС-1, 2026-11-27): `docs/COURSE.md` ≤ 45 строк, есть `LIST.md` и `LATER.md`, нового файла-очереди (`plan`, `план`, `очеред`, `wave`, `волна`, `backlog` в имени) вне `docs/history/` нет.
 - **Помощь и «Что нового»** (W-REL, 2026-10-28) — там же, в задании gitleaks: `python3 -m unittest discover -s scripts/tests` (сборщик
   «Что нового» `scripts/release_notes.py` и мягкая проверка) и на PR `scripts/help_freshness.py --base origin/<база>` — PR меняет код
   экрана из `screens` статьи `docs/kb/help`, а статью не трогает, или экран менялся без строки «Для пользователей» в описании —
