@@ -57,6 +57,12 @@ for (const width of [1440, 390] as const) {
       await expect(sheet.getByText("Заявка создана")).toBeVisible();
       await settledScreenshot(page, "letter-request-created");
       await expectNoViolations(page, `заявка из письма создана ${String(width)}`);
+
+      // форма закрыта: второй заявки по этому письму не создать, причина рядом с серой кнопкой
+      await sheet.getByRole("button", { name: "Закрыть" }).last().click();
+      await expect(sheet).toBeHidden();
+      await expect(page.getByRole("button", { name: "Заявка клиента" })).toBeDisabled();
+      await expect(page.getByText("Заявка по письму уже создана.")).toBeVisible();
     });
 
     test("подключение партнёра из письма: форма с компанией, заявка в очереди", async ({

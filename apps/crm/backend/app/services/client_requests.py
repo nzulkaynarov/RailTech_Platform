@@ -24,7 +24,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode
 from app.domain.client_requests import may_create_request
-from app.domain.consent import MANUAL_CONSENT_VERSION
 from app.domain.erp_handoff import PENDING
 from app.domain.errors import (
     ConflictError,
@@ -47,7 +46,7 @@ from app.security.principal import Principal
 from app.services import deals as deals_service
 from app.services import lead_parts, stages
 from app.services.clients import _bind_identities, _require_consent
-from app.services.lead_consent import LeadConsentService
+from app.services.lead_consent import LeadConsentService, apply_manual_consent
 from app.services.leads import ChatsChanged, notify_chats
 from app.services.request_contacts import _email, _phone
 from app.services.request_contacts import request_contact as _contact
@@ -139,6 +138,9 @@ class ClientRequestService:
         if repeat is not None:
             return repeat
         client = await _client_of_company(session, company, company.country, who)
+        again = await _same_letter_request(session, client, body)
+        if again is not None:
+            return again
         if client.erp_company_id is None:
             lead = await _latest_lead(session, client.id)
             if lead is None or lead.consent_given_at is None:
@@ -163,6 +165,9 @@ class ClientRequestService:
         repeat = await _existing(session, body.request_key, client_id=client.id)
         if repeat is not None:
             return repeat
+        again = await _same_letter_request(session, client, body)
+        if again is not None:
+            return again
         lead = await _latest_lead(session, client.id)
         if client.erp_company_id is None:
             # Клиент ещё не в ERP: задача передаст его — нужно согласие лида (ERP его не
@@ -441,13 +446,41 @@ async def _same_request(
     )
 
 
+async def _same_letter_request(
+    session: AsyncSession, client: Client, body: RequestCreate
+) -> _Done | None:
+    """A not failed request of this client made from the same letter file: a second press (a new
+    `request_key` after the form was closed) returns it instead of a second request (ВХОД-1)."""
+    deal = await session.scalar(
+        select(Deal)
+        .where(
+            Deal.client_id == client.id,
+            Deal.request_letter_file_id == body.letter_file_id,
+            Deal.request_key.is_not(None),
+            Deal.erp_request_status.in_(("pending", "done")),
+        )
+        .order_by(Deal.id)
+        .limit(1)
+    )
+    if deal is None:
+        return None
+    return _Done(
+        RequestCreated(
+            client_id=client.id,
+            deal_id=deal.id,
+            lead_id=deal.lead_id,
+            erp_request_status=deal.erp_request_status or "pending",
+            created=False,
+        )
+    )
+
+
 async def _letter_lead(
     session: AsyncSession, client: Client, body: RequestCreate, who: Principal
 ) -> Lead:
     """Лид по письму компании: заявка клиента без лида не может уйти в ERP (передаче нужны лид и
     согласие). Письмо — основание, согласие отмечено «письмом» на время заявки."""
     contact = body.contact
-    moment = datetime.now(UTC)
     lead = Lead(
         display_name=((contact.full_name or "").strip() or client.name)[:255],
         language="ru",
@@ -460,9 +493,6 @@ async def _letter_lead(
         company_name=client.name[:255],
         need_summary=body.summary.strip()[:4000],
         client_id=client.id,
-        consent_given_at=moment,
-        consent_version=MANUAL_CONSENT_VERSION,
-        consent_method="email",
     )
     session.add(lead)
     await session.flush()
@@ -474,8 +504,18 @@ async def _letter_lead(
         "lead.create",
         "lead",
         lead.id,
-        after={"source": lead.source, "client_id": client.id, "basis": "letter"},
+        after={
+            "source": lead.source,
+            "client_id": client.id,
+            "basis": "letter",
+            "letter_file_id": str(body.letter_file_id),
+        },
     )
+    # Consent by letter goes the same way as the employee's mark: lead feed note and audit (D-8).
+    given = body.consent
+    basis = f"основание — письмо, файл {body.letter_file_id}"
+    note = f"{given.comment.strip()}; {basis}" if given and given.comment else basis
+    await apply_manual_consent(session, who, lead, given.method if given else "email", note)
     await events.publish(session, "lead.updated", lead_id=lead.id)
     return lead
 

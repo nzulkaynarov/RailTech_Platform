@@ -30,6 +30,8 @@ export function LetterIntake({ letter }: { letter: LetterCard }) {
   const refresh = useRefreshLetters();
   const [open, setOpen] = useState<Kind | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Заявка создана из этой карточки: письмо ещё не обновилось (номер ЗВ даёт ERP позже), а вторая заявка не нужна
+  const [requestMade, setRequestMade] = useState(false);
 
   const mine = (letter.instructions ?? []).find(
     (i) => i.role === "responsible" && i.status === "in_work" && i.person.id === me.id,
@@ -41,6 +43,7 @@ export function LetterIntake({ letter }: { letter: LetterCard }) {
   const reason = (kind: Kind): string | null => {
     if (!can[kind]) return t(`intake.reason.noRight.${kind}`);
     if (NOT_WORKED.has(letter.status)) return t(`intake.reason.status.${letter.status}`);
+    if (kind === "request" && requestMade && !letter.request) return t("intake.reason.requestMade");
     if (kind === "request" && letter.request) {
       return t("intake.reason.hasRequest", { number: letter.request.number });
     }
@@ -50,6 +53,7 @@ export function LetterIntake({ letter }: { letter: LetterCard }) {
   const partnerReason = reason("partner");
 
   const finish = async (kind: Kind, id: string) => {
+    if (kind === "request") setRequestMade(true);
     if (mine) {
       await completeInstruction(mine.id, {
         handed_to: { kind: kind === "request" ? "client_request" : "partner_application", id },

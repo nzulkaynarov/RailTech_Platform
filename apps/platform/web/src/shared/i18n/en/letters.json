@@ -1312,7 +1312,8 @@
         "rejected": "The resolution on the letter was rejected: a request cannot be created.",
         "returned": "The letter was returned for rework: a request cannot be created."
       },
-      "hasRequest": "The letter already has request {{number}}."
+      "hasRequest": "The letter already has request {{number}}.",
+      "requestMade": "A request was already created from this letter."
     }
   },
   "outcome": {

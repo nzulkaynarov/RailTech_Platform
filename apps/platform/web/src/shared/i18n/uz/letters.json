@@ -1312,7 +1312,8 @@
         "rejected": "Xat böyiça rezolyutsiya rad etilgan: ariza yaratib bölmaydi.",
         "returned": "Xat qayta işlaşga qaytarilgan: ariza yaratib bölmaydi."
       },
-      "hasRequest": "Bu xat böyiça {{number}} arizasi allaqaçon bor."
+      "hasRequest": "Bu xat böyiça {{number}} arizasi allaqaçon bor.",
+      "requestMade": "Bu xat böyiça ariza allaqaçon yaratilgan."
     }
   },
   "outcome": {
