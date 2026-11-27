@@ -49,6 +49,7 @@ from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcPriceBasis, CalcTask
 from ..models import CalcZone as Zone
 from ..models import Deal, Quote, QuoteItem
+from . import calc_partner_price
 
 logger = logging.getLogger(__name__)
 
@@ -211,13 +212,24 @@ class _Context:
     reserved: dict[int, int] = field(default_factory=dict)
     #: Главное фото карточек строк (ЕД-4): одна выборка на расчёт.
     photos: dict[int, int] = field(default_factory=dict)
+    #: РАСЧ-1: цены партнёров по (карточка, валюта строки) — действующие от дешёвой и последняя истёкшая.
+    partners: dict[tuple[int, Optional[str]], tuple[list, Any]] = field(default_factory=dict)
 
 
-def _context(items: list[QuoteItem]) -> _Context:
+def _context(items: list[QuoteItem], *, with_partners: bool = False) -> _Context:
     from inventory.services import stock
 
     ids = [it.product_id for it in items if it.product_id]
+    partners: dict[tuple[int, Optional[str]], tuple[list, Any]] = {}
+    by_target: dict[Optional[str], set[int]] = {}
+    for it in items if with_partners else ():
+        if it.product_id and not it.product.is_service:
+            by_target.setdefault(_target_currency(it), set()).add(it.product_id)
+    for target, pids in by_target.items():
+        found = calc_partner_price.candidates(pids, own_company_id=_own_company_id(), target=target)
+        partners.update({(pid, target): value for pid, value in found.items()})
     return _Context(
+        partners=partners,
         own=_own_offers(ids),
         suppliers=_supplier_offers(ids),
         stock=stock.availability(ids),
@@ -336,6 +348,49 @@ def _stock_payload(item: QuoteItem, zone: str, ctx: _Context, on_hand: Optional[
     return {"on_hand": info["on_hand"], "free": info["free"], "cell": info["cell"], "reserved": info["reserved"]}
 
 
+def _option_payload(option, *, chosen: bool) -> dict:
+    offer = option.offer
+    return {
+        "offer_id": offer.pk,
+        "supplier": offer.supplier.name,
+        "price": _money(option.price),
+        "currency": option.currency,
+        "price_date": option.price_date.isoformat(),
+        "valid_until": offer.valid_until.isoformat() if offer.valid_until else None,
+        "freshness": option.freshness,
+        "chosen": chosen,
+    }
+
+
+def _partner_payload(item: QuoteItem, ctx: _Context) -> Optional[dict]:
+    """РАСЧ-1: откуда закупка строки и из каких цен партнёров можно выбрать. `source` — цена партнёра, которая сейчас
+    стоит в строке (закупку после этого не правили руками); `options` — короткий список действующих цен; `expired` —
+    последняя истёкшая цена, когда действующих нет («запросить цену»)."""
+    if not item.product_id:
+        return None
+    options, expired = ctx.partners.get((item.product_id, _target_currency(item)), ([], None))
+    current = next(
+        (
+            o
+            for o in options
+            if item.offer_id == o.offer.pk
+            and o.price == item.frozen_base_price
+            and o.currency == (item.frozen_currency.code.upper() if item.frozen_currency_id else o.currency)
+        ),
+        None,
+    )
+    return {
+        "source": _option_payload(current, chosen=True) if current is not None else None,
+        "options": [_option_payload(o, chosen=o is current) for o in options[: calc_partner_price.MAX_OPTIONS]],
+        "expired": (
+            {"supplier": expired.supplier.name, "valid_until": expired.valid_until.isoformat()}
+            if expired is not None and not options
+            else None
+        ),
+        "can_request": not options,
+    }
+
+
 def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dict[str, bool], editable: bool) -> dict:
     """Строка расчёта. Видимость себестоимости (решение архитектора по Q-D2-1-2): закупку и себестоимость строки
     видит держатель `quote.view_cost_margin` или права визы зоны этой строки (гл. инженер — ставку и дни бригады своих
@@ -358,6 +413,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         }
     product = item.product if item.product_id else None
     services = zone == Zone.SERVICES
+    partner_price = _partner_payload(item, ctx) if offer_visible and not services else None
     return {
         "id": item.id,
         "position": item.position,
@@ -383,6 +439,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "unit_code": item.unit_code or None,
         "stock": _stock_payload(item, zone, ctx, on_hand),
         "supplier": supplier,
+        "partner_price": partner_price,
         "lead_days": item.lead_time_days or None,
         "purchase_price": _money(item.frozen_base_price) if zone_cost and not services else None,
         "purchase_currency": (
@@ -761,7 +818,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
 
     quote = calc_quote(deal)
     items = _billable(quote)
-    ctx = _context(items)
+    ctx = _context(items, with_partners=True)
     show_cost = has_perm(user, Permission.QUOTE_VIEW_COST_MARGIN.value)
     rights = zone_rights(user)
     editable = quote is not None and quote_edit_lock_code(quote) is None
@@ -871,7 +928,11 @@ def start(deal_id: int, user) -> dict:
                     event_code="calc.started",
                     event_params={"letter_number": task.label},
                 )
-                _link_catalog(calc_quote(deal))
+                started = calc_quote(deal)
+                _link_catalog(started)
+                if started is not None:
+                    _prefill_linked(started)
+                    _recalc(started)
     return _sheet(deal, task, user)
 
 
@@ -950,20 +1011,67 @@ def _currency(code: Optional[str]):
     return currency
 
 
+def _target_currency(item: QuoteItem) -> Optional[str]:
+    """Код валюты закупки строки (валюта себестоимости КП); не задана — None (цена остаётся в своей валюте)."""
+    return item.frozen_currency.code.upper() if item.frozen_currency_id else None
+
+
+def _apply_option(item: QuoteItem, option) -> None:
+    """Закупка строки из выбранной цены партнёра: цена в валюте строки, предложение и срок (РАСЧ-1)."""
+    offer = option.offer
+    item.frozen_base_price = option.price
+    item.frozen_currency = _currency(option.currency)
+    item.offer = offer
+    item.lead_time_days = offer.in_stock_lead_time_days or offer.order_lead_time_days or 0
+
+
 def _prefill_from_offer(item: QuoteItem, product) -> None:
-    """Закупка и срок по карточке: своё предложение (склад), иначе лучший внешний поставщик."""
+    """Закупка и срок по карточке: своё предложение (склад), иначе самая низкая действующая цена партнёра (РАСЧ-1:
+    сравнение по курсу, цена в валюте строки; истёкшая цена молча не берётся)."""
     if product is None or item.frozen_base_price:
         return
     own = _own_offers([product.id]).get(product.id)
-    offer = own if own is not None and own.base_price > 0 else _supplier_offers([product.id]).get(product.id)
-    if offer is None:
+    if own is not None and own.base_price > 0:
+        item.frozen_base_price = own.base_price
+        if own.currency_id:
+            item.frozen_currency_id = own.currency_id
+        item.lead_time_days = own.in_stock_lead_time_days or own.order_lead_time_days or 0
         return
-    item.frozen_base_price = offer.base_price
-    if offer.currency_id:
-        item.frozen_currency_id = offer.currency_id
-    if offer.supplier_id != _own_company_id():
-        item.offer = offer
-    item.lead_time_days = offer.in_stock_lead_time_days or offer.order_lead_time_days or 0
+    found = calc_partner_price.candidates([product.id], own_company_id=_own_company_id(), target=_target_currency(item))
+    options, _expired = found.get(product.id, ([], None))
+    chosen = calc_partner_price.best(options)
+    if chosen is not None:
+        _apply_option(item, chosen)
+
+
+def _choose_partner_offer(item: QuoteItem, offer_id) -> None:
+    """Человек выбрал другую цену из короткого списка строки (РАСЧ-1): только действующая цена партнёра по карточке строки."""
+    if not item.product_id:
+        raise CalcError("OFFER_NOT_AVAILABLE", 400)
+    found = calc_partner_price.candidates(
+        [item.product_id], own_company_id=_own_company_id(), target=_target_currency(item)
+    )
+    options, _expired = found.get(item.product_id, ([], None))
+    chosen = next((o for o in options if str(o.offer.pk) == str(offer_id)), None)
+    if chosen is None:
+        raise CalcError("OFFER_NOT_AVAILABLE", 409)
+    _apply_option(item, chosen)
+
+
+def _prefill_linked(quote: Quote) -> None:
+    """Строки, которым карточку каталога привязали после добавления (точное совпадение), и ещё без закупки, — берут цену
+    партнёра так же, как при выборе карточки. Введённую закупку и услуги не трогает."""
+    items = list(
+        quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, product__isnull=False, frozen_base_price=0)
+        .select_related("product", "frozen_currency", "offer")
+        .order_by("position")
+    )
+    for item in items:
+        if item.product.is_service or item.offer_id:
+            continue
+        _prefill_from_offer(item, item.product)
+        if item.frozen_base_price:
+            item.save(skip_recalculate=True)
 
 
 def _reset_visa(calc: Optional[CalcLine]) -> bool:
@@ -1101,6 +1209,7 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
         )
         created.append(item.id)
     _link_catalog(quote)
+    _prefill_linked(quote)
     _recalc(quote)
     _log(
         deal,
@@ -1231,6 +1340,7 @@ _EDITABLE = (
     "client_price",
     "markup_pct",
     "product_id",
+    "offer_id",
     "kind",
 )
 
@@ -1312,6 +1422,11 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         item.unit_code, item.unit = _unit(changes["unit_code"])
     if "lead_days" in changes:
         item.lead_time_days = int(changes["lead_days"] or 0)
+    if "offer_id" in changes:
+        if zone == Zone.SERVICES:
+            raise CalcError("SERVICE_COST_FROM_CREW", 400)
+        _require(user, Permission.QUOTE_EDIT_PRICING.value)
+        _choose_partner_offer(item, changes["offer_id"])
     if "purchase_price" in changes or "purchase_currency" in changes:
         if zone == Zone.SERVICES:
             raise CalcError("SERVICE_COST_FROM_CREW", 400)

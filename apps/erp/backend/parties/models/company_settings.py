@@ -1,5 +1,7 @@
 """CompanySettings — машинные настройки компании (payment_terms_days и т.п.)."""
 
+from decimal import Decimal
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -69,8 +71,11 @@ class CompanySettings(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+        default=Decimal("20.00"),
         verbose_name=_("Маржа по умолчанию (%)"),
-        help_text=_("Наценка на себестоимость, подставляемая в новый КП"),
+        help_text=_(
+            "Наценка на себестоимость, подставляемая в новый КП и в цену клиенту строки расчёта (РАСЧ-1); по умолчанию 20 %"
+        ),
     )
     default_offer_validity_days = models.PositiveIntegerField(
         null=True,

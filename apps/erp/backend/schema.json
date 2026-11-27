@@ -42680,6 +42680,15 @@
                         ],
                         "nullable": true
                     },
+                    "partner_price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerPrice"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "РАСЧ-1: источник закупки и выбор цены партнёра; null — услуга, строка без карточки или нет права"
+                    },
                     "lead_days": {
                         "type": "integer",
                         "nullable": true
@@ -42753,6 +42762,7 @@
                     "lead_days",
                     "markup_pct",
                     "name",
+                    "partner_price",
                     "position",
                     "product_draft",
                     "product_id",
@@ -42938,6 +42948,109 @@
                         "description": "docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ"
                     }
                 }
+            },
+            "CalcPartnerExpired": {
+                "type": "object",
+                "properties": {
+                    "supplier": {
+                        "type": "string"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                },
+                "required": [
+                    "supplier",
+                    "valid_until"
+                ]
+            },
+            "CalcPartnerOption": {
+                "type": "object",
+                "properties": {
+                    "offer_id": {
+                        "type": "integer"
+                    },
+                    "supplier": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "description": "За единицу в валюте строки (по курсу)"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "price_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Дата цены: подтверждение или последнее изменение"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "freshness": {
+                        "$ref": "#/components/schemas/FreshnessEnum"
+                    },
+                    "chosen": {
+                        "type": "boolean",
+                        "description": "Эта цена стоит в закупке строки"
+                    }
+                },
+                "required": [
+                    "chosen",
+                    "currency",
+                    "freshness",
+                    "offer_id",
+                    "price",
+                    "price_date",
+                    "supplier",
+                    "valid_until"
+                ]
+            },
+            "CalcPartnerPrice": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerOption"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Цена партнёра, по которой взята закупка; null — закупку ввели руками или её нет"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CalcPartnerOption"
+                        },
+                        "description": "Короткий список действующих цен, от дешёвой"
+                    },
+                    "expired": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerExpired"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Последняя истёкшая цена, когда действующих нет (молча не берётся)"
+                    },
+                    "can_request": {
+                        "type": "boolean",
+                        "description": "Действующей цены нет — предложить «Запросить цену»"
+                    }
+                },
+                "required": [
+                    "can_request",
+                    "expired",
+                    "options",
+                    "source"
+                ]
             },
             "CalcPrevious": {
                 "type": "object",
@@ -45293,7 +45406,7 @@
                         "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
                         "nullable": true,
                         "title": "Маржа по умолчанию (%)",
-                        "description": "Наценка на себестоимость, подставляемая в новый КП"
+                        "description": "Наценка на себестоимость, подставляемая в новый КП и в цену клиенту строки расчёта (РАСЧ-1); по умолчанию 20 %"
                     },
                     "default_offer_validity_days": {
                         "type": "integer",
@@ -53984,6 +54097,15 @@
                     "email"
                 ]
             },
+            "FreshnessEnum": {
+                "enum": [
+                    "ok",
+                    "expiring",
+                    "stale"
+                ],
+                "type": "string",
+                "description": "* `ok` - ok\n* `expiring` - expiring\n* `stale` - stale"
+            },
             "Fulfillment": {
                 "type": "object",
                 "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
@@ -57973,6 +58095,11 @@
                         "minLength": 3,
                         "maxLength": 3
                     },
+                    "offer_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (цена в валюте строки по курсу)"
+                    },
                     "crew_rate": {
                         "type": "string",
                         "format": "decimal",
@@ -58469,7 +58596,7 @@
                         "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
                         "nullable": true,
                         "title": "Маржа по умолчанию (%)",
-                        "description": "Наценка на себестоимость, подставляемая в новый КП"
+                        "description": "Наценка на себестоимость, подставляемая в новый КП и в цену клиенту строки расчёта (РАСЧ-1); по умолчанию 20 %"
                     },
                     "min_margin_percent": {
                         "type": "string",
