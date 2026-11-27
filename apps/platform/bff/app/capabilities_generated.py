@@ -248,7 +248,7 @@ DATA: Final[dict[str, Any]] = json.loads(
        "key": "read",
        "text": {
         "ru": "читать переписку, где участвуешь или которая назначена твоей области",
-        "uz": "öz ishtirokingdagi yoki sohangizga biriktirilgan yozişmani oqiş",
+        "uz": "öz iştirokingdagi yoki sohangizga biriktirilgan yozişmani oqiş",
         "en": "read conversations you take part in or that belong to your area"
        },
        "gates": [
