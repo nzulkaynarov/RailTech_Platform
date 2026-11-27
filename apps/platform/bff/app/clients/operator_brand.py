@@ -12,7 +12,11 @@ import httpx
 
 from app.clients.erp_company import LOGO_IMAGE_TYPES, MAX_LOGO_FILE_BYTES
 
-_LOGO_PATH = re.compile(r"^/media/companies/\d+/logo/[^/?#]+$")
+# Прямой путь файла в media (прежний) и адрес портала `/api/portal/v1/operator/logo?v=<версия>`,
+# который сейчас отдаёт ERP.
+_LOGO_PATH = re.compile(
+    r"^(?:/media/companies/\d+/logo/[^/?#]+|/api/portal/v1/operator/logo\?v=[0-9a-f]{1,32})$"
+)
 _TIMEOUT = httpx.Timeout(5.0)
 
 

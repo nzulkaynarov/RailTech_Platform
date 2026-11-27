@@ -293,6 +293,10 @@ def test_request_created_event_has_source_cabinet(portal_client, client_company,
     assert response.status_code == 201
     created = response.json()
 
+    deal = Deal.objects.get(pk=created["id"])
+    assert (
+        deal.title.startswith("Нужны трубы") and deal.portal_summary.text == created["summary"]
+    )  # те же поля, что у менеджера
     assert len(bus_support.published("request.created")) == 1, "одно событие на запрос"
     data = bus_support.only("request.created")["data"]
     assert data["payload"]["source"] == "cabinet"

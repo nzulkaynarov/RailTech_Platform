@@ -48,15 +48,23 @@ async def get_setup_state(request: Request, response: Response) -> SetupState:
     )
 
 
-@router.get("/setup/logo", response_class=Response, operation_id="getOperatorLogo")
+@router.get(
+    "/setup/logo",
+    response_class=Response,
+    status_code=status.HTTP_200_OK,
+    operation_id="getOperatorLogo",
+)
 async def get_operator_logo(settings: SettingsDep) -> Response:
     """Логотип своей компании для экрана входа и рейла (ДВ-3), без сессии.
 
-    Нет логотипа — 404, Платформа рисует буквы названия.
+    Нет логотипа — 204 без тела (не ошибка: Платформа спрашивает логотип на каждой странице,
+    а 404 засоряет консоль), Платформа рисует буквы названия.
     """
     file = await fetch_operator_logo(settings.erp_url)
     if file is None:
-        raise PlatformError("NOT_FOUND", "Логотипа нет.", status_code=404)
+        return Response(
+            status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "public, max-age=60"}
+        )
     return Response(
         content=file.content,
         media_type=file.headers["content-type"].split(";")[0].strip(),

@@ -119,6 +119,12 @@
     "rejected": "Отклонено",
     "quote_expired": "Срок КП истёк"
   },
+  "requestStatus": {
+    "new": "Новая",
+    "in_progress": "В работе",
+    "quoted": "Есть предложение",
+    "closed": "Закрыта"
+  },
   "transferErrors": {
     "erp_unavailable": "нет ответа",
     "erp_request_conflict": "данные заявки изменились после отправки — создайте заявку заново",

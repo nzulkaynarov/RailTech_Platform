@@ -352,6 +352,10 @@ def test_request_created_is_emitted_once_with_source_crm_and_deal_in_request_sta
     resp = handoff(api, payload())
     deal = Deal.objects.get(pk=resp.json()["erp_request_id"])
 
+    # ПРАВДА-2: заявка передачи в Кабинете — суть, а не «Заявка: <компания>»
+    assert deal.title == "Поставка рельсов Р65, 500 тонн"
+    assert deal.portal_summary.text == "Поставка рельсов Р65, 500 тонн"
+
     created = list(events("request.created"))
     assert len(created) == 1
     body = created[0]["data"]

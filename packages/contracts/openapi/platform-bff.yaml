@@ -815,8 +815,8 @@ paths:
       description: >-
         Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа
         своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками
-        (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`:
-        Платформа показывает буквы названия.
+        (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 204 без тела (не ошибка, чтобы
+        консоль браузера не засорялась на каждой странице): Платформа показывает буквы названия.
       security: []
       responses:
         '200':
@@ -826,8 +826,14 @@ paths:
               schema:
                 type: string
                 format: binary
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '204':
+          description: Логотипа нет — тело пустое, Платформа рисует буквы названия компании
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+                maxLength: 0
 
   /setup/admin:
     post:
@@ -31743,7 +31749,7 @@ components:
     ClientRequestRow:
       type: object
       additionalProperties: false
-      required: [deal, number, title, summary, step, project, client_sees, urgency, transfer, transfer_error, created_at, letter_file_id]
+      required: [deal, number, title, summary, step, project, client_sees, cabinet_status, urgency, transfer, transfer_error, created_at, letter_file_id]
       properties:
         deal: {type: integer, description: 'Заявка CRM (для «Повторить отправку в ERP»)'}
         number: {type: [string, 'null'], description: 'ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN из ERP; `null` — заявка ещё не дошла до ERP'}
@@ -31752,6 +31758,12 @@ components:
         step: {$ref: '#/components/schemas/StepCode'}
         project: {type: boolean, description: 'Заявка стала проектом (КП принято)'}
         client_sees: {$ref: '#/components/schemas/ClientSees'}
+        cabinet_status:
+          type: [string, 'null']
+          enum: [new, in_progress, quoted, closed, null]
+          description: >-
+            Слово статуса заявки в списке «Заявки» Кабинета (`packages/contracts/client-request-statuses.yaml`); `null` — заявка стала
+            проектом, тогда слова проекта — `client_sees`. Карточка компании пишет «В кабинете клиента» именно им.
         urgency: {type: [string, 'null'], enum: [normal, urgent, null]}
         transfer:
           type: [string, 'null']

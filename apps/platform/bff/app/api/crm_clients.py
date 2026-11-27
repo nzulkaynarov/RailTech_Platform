@@ -28,6 +28,7 @@ from app.crm_clients_view import (
 )
 from app.crm_leads_view import invitation_of
 from app.deps import Authed, require
+from app.eds_projects import ErpProjects
 from app.errors import PlatformError
 from app.row_roles import company_role_states
 from app.schemas_crm_leads import (
@@ -96,7 +97,25 @@ async def get_client(id: ClientId, authed: Reader) -> ClientCard:
         _part(proxy, TypeAdapter(list[CrmDeal]), f"{API}/deals", client_id=id),
         _part(proxy, TypeAdapter(list[CrmDocument]), f"{API}/documents", client_id=id),
     )
-    return client_card(detail, contacts, deals, documents)
+    card = client_card(detail, contacts, deals, documents)
+    await _erp_words_for_projects(authed, card)
+    return card
+
+
+async def _erp_words_for_projects(authed: Authed, card: ClientCard) -> None:
+    """У проекта слово «что видит клиент» берём у ERP, а не из зеркала CRM.
+
+    Зеркало знает только стадию: после «Принять редакцию» в Кабинете оно всё ещё говорило
+    «Согласуйте редакцию договора». Нет прав или ERP не ответила — остаётся слово зеркала.
+    """
+    rows = [r for r in card.requests if r.project and r.number]
+    if not rows:
+        return
+    projects = ErpProjects(authed.call)
+    words = await asyncio.gather(*(projects.client_status_by_number(r.number or "") for r in rows))
+    for row, word in zip(rows, words, strict=True):
+        if word is not None:
+            row.client_sees = word
 
 
 RequestId = Annotated[int, Path(ge=1)]

@@ -1,0 +1,24 @@
+# Статус ЗАЯВКИ (ещё не проекта) в Кабинете клиента — слово в бейдже списка «Заявки» (Cabinet `status.request.*`).
+# Один источник для Кабинета и карточки компании в Платформе («В кабинете клиента: …»): ПРАВДА-2, класс «ложный статус».
+# Статус проекта (договор, оплата, исполнение) — в client-statuses.yaml.
+# Проверки: Cabinet — i18n совпадает с `statuses`; BFF Платформы — `by_external_stage` и тексты карточки; ERP —
+# `portal.projections.request_status` даёт тот же статус для стадий из `by_external_stage`.
+version: 1
+
+statuses:
+  new:
+    text: {ru: "Новая", uz: "Yangi", en: "New"}
+  in_progress:
+    text: {ru: "В работе", uz: "Işda", en: "In progress"}
+  quoted:
+    text: {ru: "Есть предложение", uz: "Taklif bor", en: "Quote ready"}
+  closed:
+    text: {ru: "Закрыта", uz: "Yopilgan", en: "Closed"}
+
+# Стадия сделки у CRM (`external_stage`, события ERP) → статус заявки в Кабинете, пока заявка не стала проектом.
+# `null` — события ERP ещё не было (заявка только передана).
+by_external_stage:
+  request: new
+  quoting: in_progress
+  quote_sent: quoted
+  lost: closed

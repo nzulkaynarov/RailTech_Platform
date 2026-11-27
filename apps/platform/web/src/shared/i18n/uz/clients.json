@@ -119,6 +119,12 @@
     "rejected": "Rad etildi",
     "quote_expired": "Tijorat taklifi muddati tugadi"
   },
+  "requestStatus": {
+    "new": "Yangi",
+    "in_progress": "Işda",
+    "quoted": "Taklif bor",
+    "closed": "Yopilgan"
+  },
   "transferErrors": {
     "erp_unavailable": "javob yöq",
     "erp_request_conflict": "yuborilgandan keyin ariza maʼlumotlari özgardi — arizani qayta yarating",

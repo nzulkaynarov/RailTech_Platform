@@ -100,8 +100,12 @@ function RequestItem({ row, canWrite }: { row: ClientRequestRow; canWrite: boole
       {row.summary ? <p className="pf-crm-wrap pf-fp-sub">{row.summary}</p> : null}
       <RequestSteps stage={stageOf(row)} {...(row.number ? { number: row.number } : {})} />
       <span className="pf-hint">
-        {t("card.clientSees", { text: t(`clientSees.${row.client_sees}`) })} ·{" "}
-        {fmt.date(row.created_at)}
+        {t("card.clientSees", {
+          text: row.cabinet_status
+            ? t(`requestStatus.${row.cabinet_status}`)
+            : t(`clientSees.${row.client_sees}`),
+        })}{" "}
+        · {fmt.date(row.created_at)}
       </span>
       {row.transfer === "pending" ? (
         <span className="pf-hint">{t("card.transfer.pending")}</span>

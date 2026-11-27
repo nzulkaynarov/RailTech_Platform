@@ -25,6 +25,7 @@ from catalog.published import project_many, published_products
 from crm.models import Deal
 
 from ..services import events
+from ..services.request_deal import create_request_deal
 from ..services.stages import deal_stage, initial_fsm_stage
 from ..services.summary import (
     delivery_lines,
@@ -206,14 +207,13 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
     primary_contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
     request_stage = initial_fsm_stage()
 
-    deal = Deal(
+    deal = create_request_deal(
         company=company,
+        summary=summary,
         contact=primary_contact,
         stage=request_stage,
-        title=f"Заявка: {company.name}",
         notes=summary,
     )
-    deal.save()
 
     for idx, item in enumerate(lines_raw):
         if not isinstance(item, dict):

@@ -26,6 +26,7 @@ from ..exceptions import IntegrationNotFound
 from ..models import CrmClientMapping, CrmContactMapping, CrmUserMapping
 from . import events, stages
 from .handoff import _advisory_lock, _create_contacts
+from .request_deal import create_request_deal
 
 logger = logging.getLogger(__name__)
 
@@ -68,18 +69,17 @@ def create_client_request(crm_client_id: int, data: Dict[str, Any]) -> Tuple[Dic
         company = mapping.company
         owner = data["owner"]
         summary = data["need"]["summary"].strip()
-        deal = Deal(
+        deal = create_request_deal(  # название и суть — как у заявки из Кабинета (ПРАВДА-2)
             company=company,
+            summary=summary,
             contact=_contact(company, data),
             manager=manager_for(owner.get("crm_user_id")),
             stage=stages.initial_fsm_stage(),
-            title=f"Заявка: {company.name}",
             notes=summary,
             process="v3",
             urgency=data["urgency"],
             crm_request_id=data["crm_request_id"],
         )
-        deal.save()
         for idx, text in enumerate(data["need"].get("product_interest") or []):
             PortalRequestLine.objects.create(deal=deal, text=str(text).strip(), sort_order=idx + 1)
         letter_file_id = data.get("letter_file_id")
