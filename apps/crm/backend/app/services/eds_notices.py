@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.notices import ErpEventNotices
 from app.models.auth import User
-from app.services import staff_notifications
+from app.services import staff_notifications, test_delivery
 
 logger = structlog.get_logger(__name__)
 
@@ -186,6 +186,9 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         skipped = len(set(data.get("recipients") or [])) - len(recipients)
         if not recipients:
             logger.info("eds_notice_no_recipients", kind=kind, number=number, skipped=skipped)
@@ -225,6 +228,9 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         if not recipients:
             logger.info("eds_signing_notice_no_recipients", notice_key=data.get("notice_key"))
             return 0
@@ -253,6 +259,9 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         if not recipients:
             logger.info(
                 "eds_document_notice_no_recipients", kind=kind, notice_key=data.get("notice_key")

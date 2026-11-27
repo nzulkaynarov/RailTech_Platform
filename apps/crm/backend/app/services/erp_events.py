@@ -14,6 +14,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import cast
 
 import structlog
 from pydantic import ValidationError
@@ -34,7 +35,7 @@ from app.repositories import events
 from app.schemas.settings_base import LANGUAGES
 from app.security.audit import Actor
 from app.services import deals as deals_service
-from app.services import staff_notifications
+from app.services import staff_notifications, test_delivery
 from app.services.erp_acceptance_code import AcceptanceCodeDelivery
 from app.services.erp_bot_messages import (
     client_message,
@@ -277,6 +278,7 @@ class ErpEventsService:
             recipients = await _cabinet_request_recipients(
                 session, client, env.payload.manager_crm_user_id
             )
+            recipients = await test_delivery.allowed(session, recipients, test=client.is_test)
             text = f"Заявка клиента {client.name} из кабинета · ждёт резолюции директора"
             number = env_deal.number if env_deal else None
             staff_notifications.add_in(
@@ -297,6 +299,19 @@ class ErpEventsService:
                 notices.append(
                     {"kind": "staff", "user_id": target_user_id, "text": staff_alert_text}
                 )
+        if (
+            client.is_test
+        ):  # ТЕСТ-2: сотрудникам — только с включённым показом тестовых; клиенту — как всегда
+            on = set(
+                await test_delivery.allowed(
+                    session,
+                    [cast(int, n["user_id"]) for n in notices if n.get("kind") == "staff"],
+                    test=True,
+                )
+            )
+            notices = [
+                n for n in notices if n.get("kind") != "staff" or cast(int, n["user_id"]) in on
+            ]
         if notices:
             self._notices.add(session, event.id, notices)
         return True

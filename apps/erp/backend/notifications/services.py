@@ -104,20 +104,24 @@ def notify_user(
         event_code=event_code,
         event_params=event_params or {},
     )
-    # ТЕСТ-2: уведомление по сделке тестовой компании не «выскакивает» живым пушем — оно видно в списке и на колокольчике
-    # у тех, у кого включено «Показывать тестовые» (опрос BFF добавляет `?test=all`), у остальных скрыто.
-    if push and not _of_test_company(deal):
-        push_notification_ws(notification)
+    if push:
+        push_notification_ws(notification)  # шлюз ТЕСТ-2 — внутри
     return notification
 
 
-def _of_test_company(deal) -> bool:
+def of_test_company(notification: Notification) -> bool:
+    """ТЕСТ-2: уведомление по сделке тестовой компании."""
+    deal = notification.deal if notification.deal_id else None
     return bool(deal is not None and deal.company_id and deal.company.is_test)
 
 
 def push_notification_ws(notification: Notification):
-    """Push a notification to the user via WebSocket channel layer."""
-    if not notification.user_id:
+    """Push a notification to the user via WebSocket channel layer.
+
+    Единственная точка живой доставки (ТЕСТ-2, шлюз): уведомление по сделке тестовой компании живым пушем не идёт никому — в
+    колокольчике оно хранится и видно только при «Показывать тестовые» (`?test=all` от BFF), опрос BFF подхватывает его за
+    секунды. Все места, что шлют уведомления, обязаны идти через эту функцию (охранный тест `test_delivery_guard`)."""
+    if not notification.user_id or of_test_company(notification):
         return
     try:
         channel_layer = get_channel_layer()

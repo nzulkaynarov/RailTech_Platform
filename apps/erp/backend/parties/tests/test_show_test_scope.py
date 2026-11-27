@@ -70,15 +70,23 @@ def test_counters_follow_the_request_scope(world):
     assert (suffix, test_companies.cache_suffix()) == (":test", "")  # агрегаты в кэше разделены по признаку
 
 
+class _Layer:
+    def __init__(self):
+        self.groups: list[str] = []
+
+    async def group_send(self, group, message):
+        self.groups.append(group)
+
+
 def test_notifications_of_test_companies_need_the_switch_and_do_not_push_live(world, monkeypatch):
-    pushed: list[int] = []
-    monkeypatch.setattr("notifications.services.push_notification_ws", lambda n: pushed.append(n.pk))
+    layer = _Layer()
+    monkeypatch.setattr("notifications.services.get_channel_layer", lambda: layer)
     real, fake = _deal(world["real"], "Рабочая"), _deal(world["fake"], "Пробная")
     user = world["supply"]
     notify_user(user=user, title="Рабочая", message="m", deal=real)
     test_one = notify_user(user=user, title="Пробная", message="m", deal=fake)
     assert test_one is not None and Notification.objects.filter(user=user).count() == 2
-    assert pushed == [Notification.objects.get(title="Рабочая").pk]  # живой пуш по тестовой компании не идёт
+    assert layer.groups == [f"notifications_{user.pk}"]  # живой пуш только по рабочей сделке
 
     client = api(user)
     assert [row["title"] for row in _rows(client.get("/api/v1/notifications/"))] == ["Рабочая"]
@@ -90,6 +98,46 @@ def test_notifications_of_test_companies_need_the_switch_and_do_not_push_live(wo
     assert Notification.objects.get(title="Пробная").is_read is False
     client.patch("/api/v1/notifications/mark_all_read/?test=all")
     assert Notification.objects.get(title="Пробная").is_read is True
+
+
+def test_every_push_goes_through_the_one_gate_even_without_notify_user(world, monkeypatch):
+    """Места, что создают уведомление сами (задание на расчёт и др.), проходят тот же шлюз: тестовая сделка — без пуша."""
+    from django.utils import timezone
+
+    from crm.models import CalcTask
+    from crm.services import calc_tasks
+
+    layer = _Layer()
+    monkeypatch.setattr("notifications.services.get_channel_layer", lambda: layer)
+    for company in (world["real"], world["fake"]):
+        deal = _deal(company, "Сделка")
+        task = CalcTask.objects.create(
+            deal=deal, resolution_text="Рассчитать", due=timezone.now().date(), decided_at=timezone.now()
+        )
+        calc_tasks._notify_assignee(world["supply"].pk, deal, task)
+    assert layer.groups == [f"notifications_{world['supply'].pk}"]
+    hidden = api(world["supply"]).get("/api/v1/notifications/")
+    assert len(_rows(hidden)) == 1  # уведомление по тестовой сделке скрыто без переключателя
+    assert len(_rows(api(world["supply"]).get("/api/v1/notifications/?test=all"))) == 2
+
+
+def test_live_push_is_sent_only_from_the_central_function():
+    """Охрана: прямой `group_send` в канал уведомлений — только в `notifications/services.py` (+ потребители и тесты)."""
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parents[2]
+    allowed = {"notifications/services.py"}
+    found = set()
+    for path in root.rglob("*.py"):
+        rel = path.relative_to(root).as_posix()
+        if "/tests/" in f"/{rel}" or rel.startswith("tests/") or "migrations" in rel or rel.endswith("conftest.py"):
+            continue
+        if re.search(r"\bgroup_send\(", path.read_text(encoding="utf-8")) and "notifications_" in path.read_text(
+            encoding="utf-8"
+        ):
+            found.add(rel)
+    assert found <= allowed, f"живой пуш мимо шлюза: {sorted(found - allowed)}"
 
 
 def test_scope_does_not_leak_into_the_next_request(world):
