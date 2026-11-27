@@ -70,7 +70,7 @@ afterEach(() => {
 describe("Карточка сотрудника · Telegram", () => {
   it("в списке три состояния: привязан, не привязан, сообщения не доходят", async () => {
     signIn("admin@demo.example");
-    renderAt("/admin/org");
+    renderAt("/admin/org?view=list");
 
     const linked = await screen.findByRole("row", { name: /Демо Менеджеров/ });
     expect(within(linked).getByText("Telegram")).toBeVisible();

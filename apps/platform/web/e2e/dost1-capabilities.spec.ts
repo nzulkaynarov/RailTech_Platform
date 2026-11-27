@@ -107,7 +107,6 @@ test.describe("Что может этот человек", () => {
     // выдача прав — прежняя: ссылка ведёт к форме ролей на этой же карточке
     await card.getByRole("button", { name: "Изменить через роли (до следующего шага)" }).click();
     await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeVisible();
-    await settledScreenshot(page, "card");
   });
 
   test("у директора ссылки «Изменить через роли» нет", async ({ page }) => {
