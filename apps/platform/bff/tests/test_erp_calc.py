@@ -305,7 +305,8 @@ async def test_sheet_for_supply_has_cost_and_supplier_prices(
     assert goods["cost"] == "90000000.00"
     assert goods["markup_pct"] == "10.0"
     assert goods["margin_pct"] == "9.1"
-    assert goods["price_mode"] == "margin" and goods["margin_target_pct"] == "9.1"
+    assert goods["price_mode"] == "margin"
+    assert goods["margin_target_pct"] == "9.1"
     assert goods["margin_below"] is False
     assert goods["supplier"]["offer_price"] == "90000000.00"
     assert body["totals"] == {

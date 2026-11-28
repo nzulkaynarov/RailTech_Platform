@@ -12,7 +12,6 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from catalog.models import SupplierOffer
 from core.models import ExchangeRate
 from crm.models import CalcLine, CalcPriceBasis, Quote, QuoteItem
 from crm.services.quotes.pricing import QuoteCalculationService, margin_price

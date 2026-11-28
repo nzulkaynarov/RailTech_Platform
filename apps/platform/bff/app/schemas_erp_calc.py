@@ -196,10 +196,11 @@ class CalcLine(BaseModel):
     crew_days: str | None
     cost: str | None = None
     client_price: str
-    #: РАСЧ-3: как поставлена цена — `margin` (считается сама от маржи), `manual` (введена, не пересчитывается),
-    #: `legacy` (строка до РАСЧ-3)
+    #: РАСЧ-3: как поставлена цена — `margin` (считается сама от маржи), `manual` (введена,
+    #: не пересчитывается), `legacy` (строка до РАСЧ-3)
     price_mode: Literal["margin", "manual", "legacy"] = "legacy"
-    #: РАСЧ-3: маржа строки «от маржи» (своя или целевая) и «вернуть N %» у ручной цены — только `cost_margin`
+    #: РАСЧ-3: маржа строки «от маржи» (своя или целевая) и «вернуть N %» у ручной цены —
+    #: только `cost_margin`
     margin_target_pct: str | None = None
     markup_pct: str | None = None
     margin_pct: str | None = None
