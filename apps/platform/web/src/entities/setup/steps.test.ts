@@ -6,8 +6,10 @@ import {
   bankDetailsMissing,
   needsSetup,
   nextStep,
+  progress,
   staysOnCompany,
   stepAfter,
+  visibleSteps,
 } from "./steps";
 
 function checklist(
@@ -99,5 +101,27 @@ describe("шаги чек-листа", () => {
     expect(needsSetup(checklist(["unknown", "unknown", "unknown", "unknown", "unknown"]))).toBe(
       false,
     );
+  });
+});
+
+describe("шаг «Права подписи» (ПОДПИСЬ-1)", () => {
+  const signing = (extra: Parameters<typeof visibleSteps>[1]) =>
+    visibleSteps(checklist([]), extra).find((s) => s.key === "signing");
+
+  it("нет права выдавать полномочия или ответ не пришёл — строки нет", () => {
+    expect(signing({ cabinetUrl: "https://c.example" })).toBeUndefined();
+  });
+
+  it("реестр проверен: есть действующее — «Готово», нет — «Сделать»", () => {
+    expect(signing({ signing: true })?.verdict).toBe("done");
+    expect(signing({ signing: false })?.verdict).toBe("todo");
+  });
+
+  it("проверить не удалось — строка остаётся словом «Не удалось проверить», не готовая и не «Дальше»", () => {
+    const steps = visibleSteps(checklist([]), { signing: "unknown" });
+    const row = steps.find((s) => s.key === "signing");
+    expect(row?.verdict).toBe("unknown");
+    expect(progress(steps).next?.key).not.toBe("signing");
+    expect(progress(steps).done).toBeLessThan(progress(steps).total);
   });
 });
