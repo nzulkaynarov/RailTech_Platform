@@ -87,7 +87,9 @@ describe("Расчёт · закупка по цене партнёра (РАС�
     await openCalc("supply@demo.example");
     const source = within(lineRow(RAIL)).getByTestId("partner-source");
     fireEvent.click(within(source).getByRole("button", { name: /Другая цена/ }));
-    expect(await screen.findByRole("option", { name: /ООО «Демо Металл» · .*до/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: /ООО «Демо Металл» · .*до/ }),
+    ).toBeInTheDocument();
   });
 
   it("маржа ниже порога — предупреждение у «Расчёт готов» и метка у строки, кнопку оно не блокирует", async () => {

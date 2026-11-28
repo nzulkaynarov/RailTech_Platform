@@ -1,19 +1,31 @@
-from django.db import migrations, models
+from django.db import migrations, models, transaction
+
+
+def _own_company_id():
+    """Id компании-владельца или None; сбой поиска (в т.ч. SQL-ошибка) не должен ронять транзакцию миграции."""
+    from core.tenant import own_company_id
+
+    try:
+        with transaction.atomic():  # savepoint: упавший запрос откатывается отдельно от миграции
+            return own_company_id()
+    except Exception:  # noqa: BLE001 - владелец не определён: «внешний» поставщик неизвестен
+        return None
 
 
 def backfill(apps, schema_editor):
-    """Строки с выбранной ценой внешнего партнёра считались взятыми из неё (как до флага)."""
-    from core.tenant import own_company_id
+    """Флаг ставится только там, где закупка строки всё ещё равна цене и валюте внешнего предложения.
 
+    Строка с рукой правленной закупкой (до РАСЧ-1 правка не снимала `offer`) остаётся False: ложное «Партнёр · до …»
+    хуже отсутствующего. Владелец не определён — не ставим ничего (сомнение = False)."""
     CalcLine = apps.get_model("sales", "CalcLine")
-    lines = CalcLine.objects.filter(item__offer__isnull=False)
-    try:
-        own = own_company_id()
-    except Exception:  # noqa: BLE001 - нет владельца (пустая база): переносить нечего
-        own = None
-    if own:
-        lines = lines.exclude(item__offer__supplier_id=own)
-    lines.update(partner_priced=True)
+    own = _own_company_id()
+    if not own:
+        return
+    CalcLine.objects.filter(
+        item__offer__isnull=False,
+        item__frozen_base_price=models.F("item__offer__base_price"),
+        item__frozen_currency_id=models.F("item__offer__currency_id"),
+    ).exclude(item__offer__supplier_id=own).update(partner_priced=True)
 
 
 class Migration(migrations.Migration):
