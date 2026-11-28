@@ -9,5 +9,4 @@ export type CapabilityWarningCode =
 export const CapabilityWarningCode = {
   only_decider: "only_decider",
   nobody_decides: "nobody_decides",
-  visa_without_signing: "visa_without_signing",
 } as const;

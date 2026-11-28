@@ -11,7 +11,7 @@ import { MoneyText } from "../../shared/ui/MoneyText";
 import { LevelTag } from "./LevelTag";
 import { useKindNames } from "./useKindNames";
 import { WarningsList } from "./WarningsList";
-import { pickText } from "./model";
+import { pickText, stepLabel } from "./model";
 
 import "./capabilities.css";
 
@@ -123,13 +123,16 @@ function MatrixTable({
                 >
                   <Link
                     className="pf-cap-person"
+                    title={employee.person.name}
                     to={hrefOf(employee.person.id)}
                     aria-label={t("matrix.open", { name: employee.person.name })}
                   >
                     {employee.person.name}
                   </Link>
                   {employee.person.position ? (
-                    <span className="pf-cap-person-roles">{employee.person.position}</span>
+                    <span className="pf-cap-person-roles" title={employee.person.position}>
+                      {employee.person.position}
+                    </span>
                   ) : null}
                 </div>
               ))}
@@ -140,9 +143,7 @@ function MatrixTable({
               <div role="row" className="pf-cap-line pf-cap-grouprow">
                 <div role="columnheader" className="pf-cap-cell pf-cap-groupcell">
                   {pickText(group.name, language)}
-                  <span className="pf-cap-group-step pf-hint">
-                    {pickText(group.step, language)}
-                  </span>
+                  <span className="pf-cap-group-step pf-hint">{stepLabel(group, language)}</span>
                 </div>
               </div>
               {group.capabilities.map((cap) => (
@@ -163,7 +164,12 @@ function MatrixTable({
                           <LevelTag level={level} partial={cell?.partial ?? false} />
                         )}
                         {only.has(`${employee.person.id}:${cap.key}`) ? (
-                          <span className="pf-cap-only-mark">{t("matrix.onlyMark")}</span>
+                          <span
+                            className="pf-cap-only-mark"
+                            role="img"
+                            aria-label={t("matrix.onlyMark")}
+                            title={t("matrix.onlyMark")}
+                          />
                         ) : null}
                       </div>
                     );

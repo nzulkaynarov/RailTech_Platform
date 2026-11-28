@@ -203,7 +203,10 @@
   font-weight: 400;
 }
 .pf-cap-person {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-weight: 600;
   color: var(--rt-color-primary-text);
   text-decoration: none;
@@ -218,16 +221,41 @@
 }
 .pf-cap-person-roles {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-top: 2px;
   font-size: 12px;
   font-weight: 400;
   color: var(--rt-color-text-secondary);
 }
 .pf-cap-only-mark {
-  display: block;
-  margin-top: 2px;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--rt-color-warning-text);
+  vertical-align: middle;
+}
+.pf-cap-warn-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--rt-color-primary-text);
+  cursor: pointer;
+  font: inherit;
+}
+.pf-cap-warn-toggle:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+.pf-cap-warn-list {
+  margin: 0 0 8px;
+  padding-left: 18px;
   font-size: 12px;
-  color: var(--rt-color-warning-text);
+  line-height: 18px;
+  color: var(--rt-color-text-secondary);
 }
 .pf-cap-legend {
   display: flex;
@@ -237,4 +265,11 @@
   margin: 0 0 12px;
   color: var(--rt-color-text-secondary);
   font-size: 12px;
+}
+
+.pf-cap-warn {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--rt-color-text-secondary);
 }

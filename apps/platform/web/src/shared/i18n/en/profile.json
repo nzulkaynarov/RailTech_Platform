@@ -37,8 +37,6 @@
     "position": "Position",
     "positionHint": "Set by an administrator.",
     "noPosition": "not set",
-    "roles": "Roles",
-    "rolesHint": "Roles decide which sections you can open.",
     "phone": "Phone",
     "phoneHint": "For example, +998 90 123-45-67",
     "phoneInvalid": "Check the number: add the country code, for example +998 90 123-45-67.",

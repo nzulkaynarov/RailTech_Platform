@@ -47,6 +47,8 @@ class Employee(BaseModel):
     erp_sync_error: str | None = None
     # СУЩ-3: фото сотрудника (адрес на BFF с версией); отключённому не отдаётся — инициалы
     avatar_url: str | None = None
+    # ДОСТ-1п: служебная учётная запись — в списке с меткой, в командных экранах её нет
+    is_service: bool = False
     # ТЕСТ-2: у сотрудника включено «Показывать тестовые» — в списке одна малая отметка
     show_test: bool = False
 
@@ -82,6 +84,7 @@ class EmployeeUpdate(BaseModel):
     role_ids: list[RoleId] | None = None
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
     is_active: bool | None = None
+    is_service: bool | None = None
     transfer_to_user_id: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
     # СОТР-1: замещение за сотрудника (тот же период, что в профиле); явный `null` снимает его
     deputy: DeputyUpdate | None = None
@@ -97,7 +100,7 @@ class EmployeeUpdate(BaseModel):
             raise ValueError("укажите хотя бы одно поле")
         if "deputy" in self.model_fields_set and len(self.model_fields_set) > 1:
             raise ValueError("замещение ставится отдельным запросом, без других полей")
-        for name in ("role_ids", "position", "is_active", "transfer_to_user_id"):
+        for name in ("role_ids", "position", "is_active", "is_service", "transfer_to_user_id"):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError("поле не может быть пустым")
         return self
@@ -179,6 +182,7 @@ def to_employee(user: dict[str, Any], names: Mapping[str, str] | None = None) ->
         avatar_url=avatar_url(user["id"], version if isinstance(version, int) else None)
         if user.get("is_active", True)
         else None,
+        is_service=bool(user.get("is_service")),
         show_test=bool(user.get("show_test")),
     )
 

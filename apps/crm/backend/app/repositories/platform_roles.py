@@ -101,11 +101,15 @@ async def set_user_roles(
 async def count_active_holders(
     session: AsyncSession, role_id: int, *, excluding: int | None = None
 ) -> int:
-    """Активные сотрудники с ролью (для инварианта «≥ 1 администратор и директор»)."""
+    """Активные не служебные сотрудники с ролью (для инварианта «≥ 1 администратор и директор»)."""
     stmt = (
         select(func.count(func.distinct(User.id)))
         .join(UserPlatformRole, UserPlatformRole.user_id == User.id)
-        .where(UserPlatformRole.role_id == role_id, User.is_active.is_(True))
+        .where(
+            UserPlatformRole.role_id == role_id,
+            User.is_active.is_(True),
+            User.is_service.is_(False),
+        )
     )
     if excluding is not None:
         stmt = stmt.where(User.id != excluding)

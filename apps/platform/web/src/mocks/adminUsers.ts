@@ -353,6 +353,7 @@ export const adminUsersHandlers = [
             status: body.is_active ? (pending.has(current.id) ? "invited" : "active") : "disabled",
           }),
     };
+    if (body.is_service !== undefined) next.is_service = body.is_service;
     if (body.position !== undefined) {
       if (body.position.trim()) next.position = body.position.trim();
       else delete next.position;

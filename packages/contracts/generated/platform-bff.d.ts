@@ -10446,7 +10446,7 @@ export interface components {
     };
     CapabilityWarning: {
       /** @enum {string} */
-      code: "only_decider" | "nobody_decides" | "visa_without_signing";
+      code: "only_decider" | "nobody_decides";
       capability?: string;
       person?: components["schemas"]["CapabilityPerson"];
       has_deputy?: boolean;
@@ -11987,6 +11987,8 @@ export interface components {
       erp_sync_error?: string;
       /** @description Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы */
       avatar_url?: string;
+      /** @description Служебная учётная запись (ДОСТ-1п): тестовый или технический вход. В списке сотрудников она с меткой «Служебная», а в таблице «Кто что может», расчёте «единственный, кто решает» и счётчиках команды её нет. По умолчанию `false` */
+      is_service?: boolean;
       /** @description ТЕСТ-2. У сотрудника включено «Показывать тестовые» (одна малая отметка в «Сотрудники и возможности») */
       show_test?: boolean;
     };
@@ -12104,6 +12106,8 @@ export interface components {
       role_ids?: components["schemas"]["RoleId"][];
       position?: string;
       is_active?: boolean;
+      /** @description Служебная учётная запись (ДОСТ-1п) — не показывать в команде */
+      is_service?: boolean;
       /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
       transfer_to_user_id?: string;
       /** @description Замещение за сотрудника (СОТР-1) (администратор, раздел `admin` на запись): тот же период и правила, что у `setDeputy` (себя нельзя — 422 `deputy_is_self`, период не в прошлом и не длиннее года); явный `null` снимает замещение. Попадает в журнал как `user.deputy_set` / `user.deputy_cleared` от имени администратора. Только отдельным запросом: вместе с другими полями — 422. */

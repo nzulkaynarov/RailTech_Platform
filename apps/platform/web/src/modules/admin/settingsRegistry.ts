@@ -54,11 +54,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "people",
     path: "/admin/org",
     access: ADMIN,
-    name: {
-      ru: "Сотрудники и возможности",
-      uz: "Xodimlar va imkoniyatlar",
-      en: "Staff and capabilities",
-    },
+    name: { ru: "Сотрудники", uz: "Xodimlar", en: "Employees" },
     description: {
       ru: "Кто что может, приглашения, роли, вход и Telegram",
       uz: "Kim nimani qila oladi, taklif, rollar, kiriş, Telegram",

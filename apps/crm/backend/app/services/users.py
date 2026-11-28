@@ -194,14 +194,22 @@ class UserService:
                 held=held,
                 requested=requested,
                 deactivating=patch.is_active is False,
+                user_service=user.is_service,
+                becoming_service=patch.is_service is True,
             )
             patch = resolve_patch(held, requested, patch)
             if patch.roles is not None:
                 check_roles(patch.roles)
             new_roles = None if patch.roles is None else sorted(set(patch.roles))
             roles_changed = new_roles is not None and new_roles != roles
-            loses_admin = "admin" in roles and (
-                (new_roles is not None and "admin" not in new_roles) or patch.is_active is False
+            loses_admin = (
+                "admin" in roles
+                and not user.is_service
+                and (
+                    (new_roles is not None and "admin" not in new_roles)
+                    or patch.is_active is False
+                    or patch.is_service is True
+                )
             )
             if loses_admin and await repo.count_active_admins(session, excluding=user_id) == 0:
                 raise LastAdminError("the last active admin cannot lose the admin role")
@@ -486,7 +494,7 @@ class UserService:
         _check_password(password, email)
         async with self._sessions() as session, session.begin():
             await repo.lock_admin_set(session)
-            if await repo.count_active_admins(session) > 0:
+            if await repo.count_active_admins(session, include_service=True) > 0:
                 raise ConflictError("admin already exists", reason=Reason.SETUP_DONE)
             try:
                 user_id = await _upsert_admin(
@@ -609,6 +617,8 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.position = patch.position or None
     if patch.language is not None:
         user.language = patch.language
+    if patch.is_service is not None:
+        user.is_service = patch.is_service
 
 
 async def close_sessions(session: AsyncSession, user_id: int) -> datetime:

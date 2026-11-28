@@ -19419,7 +19419,7 @@ components:
       additionalProperties: false
       required: [code]
       properties:
-        code: {type: string, enum: [only_decider, nobody_decides, visa_without_signing]}
+        code: {type: string, enum: [only_decider, nobody_decides]}
         capability: {type: string}
         person: {$ref: '#/components/schemas/CapabilityPerson'}
         has_deputy: {type: boolean}
@@ -21696,6 +21696,11 @@ components:
         avatar_url:
           type: string
           description: 'Фото сотрудника (СУЩ-3) — адрес на BFF `/staff/{id}/avatar?v=<версия>`; нет фото или сотрудник отключён — поля нет, показываются инициалы'
+        is_service:
+          type: boolean
+          description: >-
+            Служебная учётная запись (ДОСТ-1п): тестовый или технический вход. В списке сотрудников она с меткой «Служебная»,
+            а в таблице «Кто что может», расчёте «единственный, кто решает» и счётчиках команды её нет. По умолчанию `false`
         show_test:
           type: boolean
           description: ТЕСТ-2. У сотрудника включено «Показывать тестовые» (одна малая отметка в «Сотрудники и возможности»)
@@ -21942,6 +21947,9 @@ components:
           maxLength: 120
         is_active:
           type: boolean
+        is_service:
+          type: boolean
+          description: Служебная учётная запись (ДОСТ-1п) — не показывать в команде
         transfer_to_user_id:
           type: string
           pattern: '^[1-9][0-9]*$'

@@ -137,8 +137,11 @@ async def _company(authed: Authed) -> tuple[list[Person], Extras]:
     users = await CrmUsers(authed.call).list_all()
     roles = _role_views(await CrmRoles(authed.call).list_all())
     names = {str(u["id"]): str(u.get("full_name") or "") for u in users}
+    # Служебные записи (ДОСТ-1п) в командных экранах не участвуют.
     people = [
-        _person(u, roles, names) for u in users if status_of(u) != "disabled" and role_refs(u)
+        _person(u, roles, names)
+        for u in users
+        if status_of(u) != "disabled" and role_refs(u) and not u.get("is_service")
     ]
     people.sort(key=lambda p: (p.name.casefold(), p.id))
     return prepare(people), await _extras(authed)

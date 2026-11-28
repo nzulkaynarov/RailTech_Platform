@@ -48,11 +48,16 @@
     "onlyMark": "the only one who decides"
   },
   "warnings": {
-    "title": "Worth a look",
+    "summaryOnly_one": "{{count}} decision rests on one person",
+    "summaryOnly_few": "{{count}} decisions rest on one person",
+    "summaryOnly_many": "{{count}} decisions rest on one person",
+    "summaryOnly_other": "{{count}} decisions rest on one person",
+    "summaryNobody": "no one decides: {{count}}",
+    "show": "Show",
+    "hide": "Hide",
     "only_decider": "“{{capability}}”: only {{person}} decides, no deputy.",
     "only_decider_deputy": "“{{capability}}”: only {{person}} decides; a deputy is set for absences.",
-    "nobody_decides": "“{{capability}}”: nobody decides.",
-    "visa_without_signing": "{{person}} signs off contracts but has no signing authority."
+    "nobody_decides": "“{{capability}}”: nobody decides."
   },
   "card": {
     "heading": "What this person can do",

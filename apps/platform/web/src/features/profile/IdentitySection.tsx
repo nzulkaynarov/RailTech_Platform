@@ -1,8 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Form, Input, Select, Tag } from "antd";
+import { Alert, App, Button, Form, Input, Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
 
 import type { Language, Me, Profile } from "../../shared/api/generated/model";
 import {
@@ -46,7 +45,6 @@ function baselineOf(profile: Profile): Values {
 export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
   const { t } = useTranslation("profile");
   const { t: tShell } = useTranslation("shell");
-  const { t: tCap } = useTranslation("capabilities");
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
@@ -183,14 +181,6 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
             <dd>
               {profile.position ?? t("data.noPosition")}
               <div className="pf-hint">{t("data.positionHint")}</div>
-            </dd>
-            <dt>{t("data.roles")}</dt>
-            <dd>
-              {me.roles.map((role) => (
-                <Tag key={role.id}>{role.name}</Tag>
-              ))}
-              <div className="pf-hint">{t("data.rolesHint")}</div>
-              <Link to="/me?part=capabilities">{tCap("mine.title")}</Link>
             </dd>
           </dl>
           <Form<Values>

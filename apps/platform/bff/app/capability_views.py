@@ -158,7 +158,7 @@ def has_deputy(person: Person, today: date) -> bool:
 def warnings(
     everyone: Sequence[Person], extras: Extras, today: date, *, only: str | None = None
 ) -> list[CapabilityWarning]:
-    """«Единственный, кто решает», «никто не решает», «визирует договоры, а права подписи нет»."""
+    """«Единственный, кто решает» и «никто не решает». Виза без права подписи — не проблема."""
     found: list[CapabilityWarning] = []
     for cap in CAPABILITIES:
         key = cap["key"]
@@ -177,17 +177,6 @@ def warnings(
                     has_deputy=has_deputy(holders[0], today),
                 )
             )
-    if extras.signing_known:
-        for person in everyone:
-            if only is not None and person.id != only:
-                continue
-            visas = person.states["contract"].level == "decide"
-            if visas and not extras.signing.get(person.id):
-                found.append(
-                    CapabilityWarning(
-                        code="visa_without_signing", capability="contract", person=person.ref()
-                    )
-                )
     return found
 
 

@@ -14,8 +14,8 @@ async function h1(page: Page, name: string): Promise<void> {
 }
 
 async function openMatrix(page: Page): Promise<void> {
-  await spaGoto(page, "/admin/org");
-  await h1(page, "Сотрудники и возможности");
+  await spaGoto(page, "/admin/org?view=matrix");
+  await h1(page, "Сотрудники");
   await expect(page.getByTestId("cap-matrix")).toBeVisible();
 }
 
@@ -42,8 +42,8 @@ test.describe("Кто что может", () => {
     // подпись и «отвечает за» — отдельно от возможностей
     await expect(table.getByTestId("cap-row-signing")).toBeVisible();
     await expect(table.getByTestId("cap-row-zones")).toBeVisible();
-    // предупреждения по фактам
-    await expect(page.getByTestId("cap-warnings")).toBeVisible();
+    // виза без права подписи — не предупреждение (в демо-данных других предупреждений нет)
+    await expect(page.getByTestId("cap-warnings")).toHaveCount(0);
 
     await page.getByText("Списком", { exact: true }).click();
     await expect(
@@ -89,8 +89,8 @@ test.describe("Что может этот человек", () => {
     await expect(
       card.getByRole("heading", { level: 3, name: "Что может этот человек" }),
     ).toBeVisible();
-    await expect(card.getByTestId("cap-summary")).toContainText("Что делает");
-    await expect(card.getByTestId("cap-summary")).toContainText("Чего не может");
+    await expect(card.getByText("Что делает")).toHaveCount(0);
+    await expect(card.getByTestId("cap-warnings")).toHaveCount(0);
     // «Договор» у менеджера — смотреть; раскрыть: действия «подготовка» выключены
     const contract = card.locator('[data-capability="contract"]');
     await expect(contract.getByText("Смотреть")).toBeVisible();
@@ -137,7 +137,7 @@ test.describe("Мои возможности", () => {
     await spaGoto(page, "/me?part=capabilities");
     const mine = page.getByTestId("my-capabilities");
     await expect(mine).toBeVisible();
-    await expect(mine).toContainText("Что я делаю");
+    await expect(mine).not.toContainText("Что я делаю");
     await expect(mine.locator('[data-capability="leads"]').getByText("Работать")).toBeVisible();
     await expect(mine.locator('[data-capability="staff"]').getByText("Нет")).toBeVisible();
     // свои подпись и зоны читает любой сотрудник (у менеджера в демо — доверенность на письма и КП)

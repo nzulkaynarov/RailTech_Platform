@@ -244,6 +244,8 @@ async def update_employee(
         payload["position"] = (body.position or "").strip()
     if "is_active" in body.model_fields_set:
         payload["is_active"] = body.is_active
+    if "is_service" in body.model_fields_set:
+        payload["is_service"] = body.is_service
     if "deputy" in body.model_fields_set:
         # Период и правила — как у профиля; решает CRM (себя нельзя, период не в прошлом).
         if body.deputy is None:

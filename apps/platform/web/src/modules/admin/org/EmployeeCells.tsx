@@ -65,8 +65,12 @@ export function TelegramTag({ state }: { state: Employee["telegram"] }) {
 
 /** Доступ к учёту (только если выдаётся или не выдан) и Telegram для уведомлений словами в строке списка. */
 export function AccessTags({ employee }: { employee: Employee }) {
+  const { t } = useTranslation("modules");
   return (
     <span className="pf-org-tags">
+      {employee.is_service ? (
+        <StatusTag tone="default">{t("admin.org.service.tag")}</StatusTag>
+      ) : null}
       <ErpTag employee={employee} />
       <TelegramTag state={employee.telegram} />
     </span>

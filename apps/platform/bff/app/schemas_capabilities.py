@@ -16,7 +16,7 @@ from app.schemas_zones import ZoneText
 CapabilityLevel = Literal["none", "view", "work", "decide"]
 ActionLevel = Literal["view", "work", "decide"]
 ZoneRole = Literal["responsible", "deputy", "curator"]
-WarningCode = Literal["only_decider", "nobody_decides", "visa_without_signing"]
+WarningCode = Literal["only_decider", "nobody_decides"]
 
 
 class CapabilityText(BaseModel):

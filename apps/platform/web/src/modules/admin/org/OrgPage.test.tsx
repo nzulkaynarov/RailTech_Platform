@@ -62,9 +62,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     signIn("admin@demo.example");
     renderAt("/admin/org?panel=open");
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Сотрудники и возможности" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     expect(
       await screen.findByRole("link", { name: "Открыть карточку: Демо Менеджеров" }),
     ).toBeVisible();
@@ -75,6 +73,25 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       within(screen.getByRole("row", { name: /Демо Отключённый/ })).getByText("Отключён"),
     ).toBeVisible();
     expect(await within(await panelEl()).findByText("Объект не выбран")).toBeVisible();
+  });
+
+  it("служебная запись (ДОСТ-1п): в списке с меткой, в счётчике нет; администратор снимает и ставит пометку в карточке", async () => {
+    signIn("admin@demo.example");
+    const items = readEmployees();
+    writeEmployees(items.map((e) => (e.id === "u-demo-supply" ? { ...e, is_service: true } : e)));
+    renderAt("/admin/org?panel=open&employee=u-demo-supply");
+
+    const row = await screen.findByRole("row", { name: /Демо Снабженцев/ });
+    expect(within(row).getByText("Служебная")).toBeVisible();
+    expect(screen.getByText("Сотрудников: 9")).toBeVisible();
+    const box = await within(await panelEl()).findByRole("checkbox", {
+      name: /Служебная учётная запись/,
+    });
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => {
+      expect(screen.getByText("Сотрудников: 10")).toBeVisible();
+    });
   });
 
   it("фото сотрудников (СУЩ-3): в таблице круг с фото из профиля, у отключённого и без фото — инициалы", async () => {

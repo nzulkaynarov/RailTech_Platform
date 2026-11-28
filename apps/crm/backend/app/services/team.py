@@ -36,14 +36,19 @@ def checked_section(section: str) -> str:
     return section
 
 
-async def by_section(session: AsyncSession, section: str, level: Level) -> list[TeamMember]:
-    """Активные сотрудники, у которых раздел на уровне не ниже `level`; по имени."""
+async def by_section(
+    session: AsyncSession, section: str, level: Level, *, skip_service: bool = False
+) -> list[TeamMember]:
+    """Активные сотрудники, у которых раздел на уровне не ниже `level`; по имени.
+
+    `skip_service` — без служебных учётных записей (ДОСТ-1п): так выбирают «к кому идти».
+    """
     checked_section(section)
     users = await users_repo.list_users(session)
     held = await prepo.roles_by_user(session)
     members: list[TeamMember] = []
     for user in users:
-        if not user.is_active:
+        if not user.is_active or (skip_service and user.is_service):
             continue
         access = merge_access(RoleGrant(ref.access) for ref in role_refs(held.get(user.id, [])))
         if _RANK.get(access.get(section, ""), 0) >= _RANK[level]:

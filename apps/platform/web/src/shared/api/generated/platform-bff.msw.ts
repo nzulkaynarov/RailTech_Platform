@@ -17759,6 +17759,7 @@ export const getListEmployeesResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   ...overrideResponse,
@@ -17809,6 +17810,7 @@ export const getCreateEmployeeResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
@@ -17857,6 +17859,7 @@ export const getInviteEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
@@ -17903,6 +17906,7 @@ export const getResendInviteResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
@@ -17949,6 +17953,7 @@ export const getRetryEmployeeErpSyncResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
@@ -17998,6 +18003,7 @@ export const getIssueTemporaryPasswordResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
@@ -18046,6 +18052,7 @@ export const getGetEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
@@ -18092,6 +18099,7 @@ export const getUpdateEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  is_service: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
@@ -18516,11 +18524,7 @@ export const getGetCapabilityMatrixResponseMock = (
   zones_known: faker.datatype.boolean(),
   warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      code: faker.helpers.arrayElement([
-        "only_decider",
-        "nobody_decides",
-        "visa_without_signing",
-      ] as const),
+      code: faker.helpers.arrayElement(["only_decider", "nobody_decides"] as const),
       capability: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
@@ -18732,11 +18736,7 @@ export const getGetEmployeeCapabilitiesResponseMock = (
   ]),
   warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      code: faker.helpers.arrayElement([
-        "only_decider",
-        "nobody_decides",
-        "visa_without_signing",
-      ] as const),
+      code: faker.helpers.arrayElement(["only_decider", "nobody_decides"] as const),
       capability: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,
@@ -18964,11 +18964,7 @@ export const getGetMyCapabilitiesResponseMock = (
   ]),
   warnings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
-      code: faker.helpers.arrayElement([
-        "only_decider",
-        "nobody_decides",
-        "visa_without_signing",
-      ] as const),
+      code: faker.helpers.arrayElement(["only_decider", "nobody_decides"] as const),
       capability: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         undefined,

@@ -157,6 +157,8 @@ class UserOut(BaseModel):
     erp_sync: ErpSyncStatus = "not_applicable"
     erp_sync_error: str | None = None
     position: str | None = None
+    # Служебная учётная запись (ДОСТ-1п): не показывается в командных экранах.
+    is_service: bool = False
     # Язык интерфейса сотрудника (CRM-01b): ru|uz|en, по умолчанию ru.
     language: Language = "ru"
     # Профиль, который правит сам сотрудник (W15-H6): телефон, пояс, подпись для писем, ник Telegram
@@ -343,6 +345,8 @@ class UserUpdate(BaseModel):
     # Должность (SPEC-v3 §4.3): пустая строка очищает.
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
     language: Language | None = None
+    # Служебная учётная запись (ДОСТ-1п): тестовый или технический вход, не показывается в команде.
+    is_service: bool | None = None
     # Замещение (СОТР-1): администратор ставит или снимает его за сотрудника, который не может сам.
     # Правила те же, что у `PUT /me/deputy` (`services/staff_deputy`): три поля вместе, себя нельзя.
     deputy_user_id: int | None = Field(default=None, gt=0)

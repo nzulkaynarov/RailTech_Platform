@@ -37,8 +37,6 @@
     "position": "Lavozim",
     "positionHint": "Administrator belgilaydi.",
     "noPosition": "körsatilmagan",
-    "roles": "Rollar",
-    "rolesHint": "Qaysi bölimlar sizga oçiqligini rollar belgilaydi.",
     "phone": "Telefon",
     "phoneHint": "Masalan, +998 90 123-45-67",
     "phoneInvalid": "Raqamni tekşiring: mamlakat kodini kiriting, masalan +998 90 123-45-67.",

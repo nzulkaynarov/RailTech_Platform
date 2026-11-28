@@ -72,11 +72,11 @@ export function OrgPage({ objectId }: { objectId?: string }) {
     );
   }, [items, query, status]);
 
-  // «Кто что может» (ДОСТ-1) — вид по умолчанию; `?view=list` — прежний список.
-  const view: "matrix" | "list" = params.get("view") === "list" ? "list" : "matrix";
+  // Список — вид по умолчанию; «Кто что может» (ДОСТ-1) — второй вкладкой, `?view=matrix`.
+  const view: "matrix" | "list" = params.get("view") === "matrix" ? "matrix" : "list";
   const setView = (next: "matrix" | "list") => {
     const query = new URLSearchParams(params);
-    if (next === "list") query.set("view", "list");
+    if (next === "matrix") query.set("view", "matrix");
     else query.delete("view");
     void navigate(`${PATH}?${query.toString()}`, { replace: true });
   };
@@ -84,7 +84,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   const keep = (next: URLSearchParams) => {
     const tab = params.get("tab");
     if (tab) next.set("tab", tab);
-    if (view === "list") next.set("view", "list");
+    if (view === "matrix") next.set("view", "matrix");
     return `${PATH}?${next.toString()}`;
   };
   const employeeHref = (id: string) => keep(new URLSearchParams({ employee: id, panel: "open" }));
@@ -198,8 +198,8 @@ export function OrgPage({ objectId }: { objectId?: string }) {
               value={view}
               onChange={setView}
               options={[
-                { value: "matrix", label: t("capabilities:view.matrix") },
                 { value: "list", label: t("capabilities:view.list") },
+                { value: "matrix", label: t("capabilities:view.matrix") },
               ]}
             />
             {editable ? (
@@ -229,7 +229,9 @@ export function OrgPage({ objectId }: { objectId?: string }) {
                 actions={
                   list.data ? (
                     <span className="pf-hint" aria-live="polite">
-                      {t("modules:admin.org.count", { count: filtered.length })}
+                      {t("modules:admin.org.count", {
+                        count: filtered.filter((employee) => !employee.is_service).length,
+                      })}
                     </span>
                   ) : undefined
                 }

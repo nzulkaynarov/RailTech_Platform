@@ -57,6 +57,7 @@ def to_out(view: UserView) -> UserOut:
             for r in view.platform_role_refs
         ],
         position=view.position,
+        is_service=view.is_service,
         language=view.language,
         erp_sync=view.erp_sync,
         erp_sync_error=view.erp_sync_error,
@@ -129,6 +130,7 @@ async def update_user(
         platform_role_ids=body.platform_role_ids,
         position=body.position,
         language=body.language,
+        is_service=body.is_service,
     )
     if await container.user_service.adds_roles(user_id, patch):
         await container.second_factor_service.require_step_up(who.user_id, x_step_up_token)

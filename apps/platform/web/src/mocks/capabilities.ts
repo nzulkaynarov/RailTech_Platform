@@ -236,7 +236,7 @@ interface Row {
 
 function company(): Row[] {
   return readEmployees()
-    .filter((e) => e.status !== "disabled" && e.role_ids.length > 0)
+    .filter((e) => e.status !== "disabled" && e.role_ids.length > 0 && !e.is_service)
     .map((employee) => {
       const roles = rolesOfEmployee(employee);
       return { employee, roles, states: evaluate(roles) };
@@ -249,7 +249,7 @@ function deputyOf(employee: MockEmployee): Pick<EmployeeCapabilities, "deputy"> 
   return deputy ? { deputy } : {};
 }
 
-function warningsOf(rows: readonly Row[], signing: Map<string, CapabilityAuthority[]>) {
+function warningsOf(rows: readonly Row[]) {
   const found: CapabilityWarning[] = [];
   for (const cap of CATALOG.capabilities) {
     if (cap.key === "exceptional" || !cap.levels.some((l) => l.level === "decide")) continue;
@@ -267,13 +267,6 @@ function warningsOf(rows: readonly Row[], signing: Map<string, CapabilityAuthori
       });
     }
   }
-  for (const row of rows)
-    if (row.states["contract"]?.level === "decide" && !signing.get(row.employee.id))
-      found.push({
-        code: "visa_without_signing",
-        capability: "contract",
-        person: personOf(row.employee),
-      });
   return found;
 }
 
@@ -366,9 +359,7 @@ function cardOf(
     zones_known: known.zones,
     zones: known.zones ? (zones.get(person.id) ?? []) : [],
     ...(deputy ? { deputy } : {}),
-    warnings: everyone
-      ? warningsOf(everyone, signing).filter((w) => w.person?.id === person.id)
-      : [],
+    warnings: everyone ? warningsOf(everyone).filter((w) => w.person?.id === person.id) : [],
     free_for_all: CATALOG.free_for_all,
   };
 }
@@ -408,7 +399,7 @@ export const capabilitiesHandlers = [
       })),
       signing_known: true,
       zones_known: true,
-      warnings: warningsOf(rows, signing),
+      warnings: warningsOf(rows),
       free_for_all: CATALOG.free_for_all,
     };
     return HttpResponse.json(body);
