@@ -1,7 +1,9 @@
 import { screen } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { renderUi } from "../../test/renderUi";
+import { server } from "../../test/server";
 import { Forbidden } from "./Forbidden";
 
 describe("Forbidden", () => {
@@ -27,5 +29,36 @@ describe("Forbidden", () => {
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(screen.getByRole("heading", { level: 3 })).toBeVisible();
     expect(document.title).toBe("Витрина");
+  });
+
+  it("уровень «смотреть» по возможности, которой нужно «работать»: называет уровень, а не «нет совсем»", async () => {
+    server.use(
+      http.get("*/me/capabilities", () =>
+        HttpResponse.json({
+          groups: [
+            {
+              key: "g",
+              rows: [
+                {
+                  key: "admin",
+                  name: { ru: "Сотрудники и возможности", uz: "", en: "" },
+                  level: "view",
+                  levels: [
+                    { level: "work", actions: [{ key: "edit", gates: ["admin:full"], on: false }] },
+                  ],
+                },
+              ],
+            },
+          ],
+          grantors: [],
+        }),
+      ),
+    );
+    renderUi(<Forbidden rule={{ resource: "admin", level: "full" }} />);
+    expect(
+      await screen.findByText(
+        /Возможность «Сотрудники и возможности» у вас есть, но только чтобы смотреть; здесь нужно работать\./,
+      ),
+    ).toBeVisible();
   });
 });

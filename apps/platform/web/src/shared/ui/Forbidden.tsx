@@ -40,6 +40,10 @@ export function Forbidden({ roles, embedded = false, rule }: ForbiddenProps) {
       : null;
   const name = missing ? pickText(missing.name, i18n.language) : "";
   const level = missing ? t(`capabilities:levelVerb.${missing.needed}`) : "";
+  const current = missing ? t(`capabilities:levelVerb.${missing.current}`) : "";
+  // Возможность есть, но уровня не хватает: «только смотреть», а не «возможности нет».
+  const partial =
+    missing !== null && missing.current !== "none" && missing.current !== missing.needed;
   useDocumentTitle(embedded ? undefined : t("forbidden.heading"));
   const grantors = mine.data?.grantors;
   const who =
@@ -49,7 +53,7 @@ export function Forbidden({ roles, embedded = false, rule }: ForbiddenProps) {
         ? t("capabilities:denied.nobody")
         : t("capabilities:denied.grantors", { names: grantors.map((p) => p.name).join(", ") });
   const text = missing
-    ? `${t("capabilities:denied.need", { name })} ${who}`
+    ? `${t(partial ? "capabilities:denied.needPartial" : "capabilities:denied.need", { name, needed: level, current })} ${who}`
     : roles && roles.length > 0
       ? t("forbidden.textRoles", { roles: roles.join(", ") })
       : t("forbidden.text");

@@ -118,10 +118,11 @@
   },
   "denied": {
     "title": "“{{name}}” is not granted to you",
-    "need": "You do not have the capability “{{name}}”.",
+    "need": "To {{needed}} here you need the capability “{{name}}”.",
+    "needPartial": "You have “{{name}}”, but only to {{current}}; here you need to {{needed}}.",
     "who": "Capabilities are granted by the administrator.",
     "ask": "Ask for a capability",
-    "askBody": "Please grant me the capability “{{name}}” (level: {{level}}).",
+    "askBody": "Please let me {{level}} here: capability “{{name}}”.",
     "grantors": "Capabilities are granted by: {{names}}.",
     "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator.",
     "action": "This action is not available to you.",

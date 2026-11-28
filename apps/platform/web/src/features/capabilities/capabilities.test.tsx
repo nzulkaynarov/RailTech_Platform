@@ -143,13 +143,13 @@ describe("Нет возможности", () => {
         name: "«Сотрудники и возможности» вам не выдано",
       }),
     ).toBeVisible();
-    expect(screen.getByText(/У вас нет возможности «Сотрудники и возможности»\./)).toBeVisible();
+    expect(screen.getByText(/Чтобы здесь смотреть, нужна возможность «Сотрудники и возможности»\./)).toBeVisible();
     // кто выдаёт: в демо-данных «Сотрудники и возможности — работать» держит администратор
     expect(screen.getByText(/Выдают возможности: .*Демо Админов/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Попросить возможность" }));
     expect(
       await screen.findByDisplayValue(
-        "Прошу выдать мне возможность «Сотрудники и возможности» (уровень: смотреть).",
+        "Прошу разрешить мне здесь смотреть: возможность «Сотрудники и возможности».",
       ),
     ).toBeInTheDocument();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
