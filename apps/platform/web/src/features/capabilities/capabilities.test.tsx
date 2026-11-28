@@ -29,9 +29,7 @@ describe("Кто что может", () => {
     renderApp("/admin/org?view=matrix");
 
     const table = await screen.findByRole("table", { name: "Что может каждый сотрудник" });
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Сотрудники" }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     for (const group of [
       "Лиды и клиенты",
       "Заявки и расчёт",

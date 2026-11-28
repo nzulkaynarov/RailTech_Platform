@@ -48,10 +48,15 @@
     "onlyMark": "the only one who decides"
   },
   "warnings": {
-    "title": "Worth a look:",
+    "summaryOnly_one": "{{count}} decision rests on one person",
+    "summaryOnly_few": "{{count}} decisions rest on one person",
+    "summaryOnly_many": "{{count}} decisions rest on one person",
+    "summaryOnly_other": "{{count}} decisions rest on one person",
+    "summaryNobody": "no one decides: {{count}}",
+    "show": "Show",
+    "hide": "Hide",
     "only_decider": "“{{capability}}”: only {{person}} decides, no deputy.",
     "only_decider_deputy": "“{{capability}}”: only {{person}} decides; a deputy is set for absences.",
-    "more": "and {{count}} more",
     "nobody_decides": "“{{capability}}”: nobody decides."
   },
   "card": {
