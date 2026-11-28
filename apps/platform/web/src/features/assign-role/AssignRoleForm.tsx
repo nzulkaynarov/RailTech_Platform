@@ -101,14 +101,10 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
             value={position}
             maxLength={120}
             autoComplete="off"
-            aria-describedby={`${positionId}-hint`}
             onChange={(event) => {
               setDraftPosition(event.target.value);
             }}
           />
-          <p id={`${positionId}-hint`} className="pf-hint" style={{ margin: "4px 0 0" }}>
-            {t("admin.org.form.positionHint")}
-          </p>
         </div>
         <RoleCheckboxes
           roles={roles}

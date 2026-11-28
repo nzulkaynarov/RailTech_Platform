@@ -71,16 +71,13 @@ export function ZonesBlock({
       {items.length === 0 ? (
         <p className="pf-hint">{t("card.responsibleEmpty")}</p>
       ) : (
-        <>
-          <ul>
-            {items.map((zone) => (
-              <li key={`${zone.id}-${zone.role}`}>
-                {pickText(zone.name, i18n.language)} · {t(`card.responsibleRole.${zone.role}`)}
-              </li>
-            ))}
-          </ul>
-          <p className="pf-hint">{t("card.responsibleNote")}</p>
-        </>
+        <ul>
+          {items.map((zone) => (
+            <li key={`${zone.id}-${zone.role}`}>
+              {pickText(zone.name, i18n.language)} · {t(`card.responsibleRole.${zone.role}`)}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

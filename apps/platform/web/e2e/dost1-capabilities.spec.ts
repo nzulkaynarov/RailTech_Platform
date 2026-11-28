@@ -33,9 +33,13 @@ test.describe("Кто что может", () => {
       "КП и договор",
       "Оплата и документы",
     ]) {
-      await expect(table.getByRole("columnheader", { name: new RegExp(group) })).toBeVisible();
+      await expect(table.getByRole("button", { name: new RegExp(group) })).toBeVisible();
     }
+    // область раскрывается в возможности
+    await expect(table.getByRole("rowheader", { name: "Договор", exact: true })).toHaveCount(0);
+    await table.getByRole("button", { name: /КП и договор/ }).click();
     await expect(table.getByRole("rowheader", { name: "Договор", exact: true })).toBeVisible();
+    await table.getByRole("button", { name: /Оплата и документы/ }).click();
     // бухгалтер решает по оплатам, менеджер — нет
     const payments = table.locator('[data-capability="payments"]');
     await expect(payments.getByText("Решать").first()).toBeVisible();
@@ -77,7 +81,7 @@ test.describe("Кто что может", () => {
 });
 
 test.describe("Что может этот человек", () => {
-  test("карточка: итог словами, строки раскрываются в действия, выдача — прежняя, ролями", async ({
+  test("окно: короткий итог и «Открыть», выдача — прежняя, ролями; страница человека — таблица и блоки", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 1100 });
@@ -91,8 +95,16 @@ test.describe("Что может этот человек", () => {
     ).toBeVisible();
     await expect(card.getByText("Что делает")).toHaveCount(0);
     await expect(card.getByTestId("cap-warnings")).toHaveCount(0);
+    await expect(card.getByTestId("cap-summary").locator("[data-line]").first()).toBeVisible();
+    await expect(card.getByTestId("cap-rows")).toHaveCount(0);
+    // выдача прав — прежняя: форма ролей в этом же окне
+    await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeVisible();
+
+    await card.getByRole("link", { name: "Открыть" }).click();
+    const full = page.getByTestId("cap-page");
+    await expect(full.getByRole("heading", { level: 1, name: "Демо Менеджеров" })).toBeVisible();
     // «Договор» у менеджера — смотреть; раскрыть: действия «подготовка» выключены
-    const contract = card.locator('[data-capability="contract"]');
+    const contract = full.locator('[data-capability="contract"]');
     await expect(contract.getByText("Смотреть")).toBeVisible();
     await contract.getByRole("button").click();
     await expect(
@@ -100,21 +112,10 @@ test.describe("Что может этот человек", () => {
     ).toBeVisible();
     await expect(contract.locator(".pf-cap-action-off").first()).toBeVisible();
     await expect(contract.getByText(/Из роли:/)).toBeVisible();
-    // подпись, «отвечает за», замещение — честные блоки
-    await expect(card.getByTestId("cap-signing")).toBeVisible();
-    await expect(card.getByTestId("cap-zones")).toBeVisible();
-    await expect(card.getByTestId("cap-deputy")).toBeVisible();
-    // выдача прав — прежняя: ссылка ведёт к форме ролей на этой же карточке
-    await card.getByRole("button", { name: "Изменить через роли (до следующего шага)" }).click();
-    await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeVisible();
-  });
-
-  test("у директора ссылки «Изменить через роли» нет", async ({ page }) => {
-    await loginAndWait(page, "director@demo.example");
-    await openMatrix(page);
-    await page.getByRole("link", { name: "Открыть: Демо Менеджеров" }).click();
-    await expect(page.locator(PANEL).getByTestId("cap-card")).toBeVisible();
-    await expect(page.getByTestId("cap-change-link")).toHaveCount(0);
+    // подпись, «отвечает за», замещение — честные блоки справа
+    await expect(full.getByTestId("cap-signing")).toBeVisible();
+    await expect(full.getByTestId("cap-zones")).toBeVisible();
+    await expect(full.getByTestId("cap-deputy")).toBeVisible();
   });
 
   for (const width of WIDTHS) {
@@ -127,6 +128,50 @@ test.describe("Что может этот человек", () => {
       await settledScreenshot(page, "card-open");
     });
   }
+  for (const width of WIDTHS) {
+    test(`axe: страница человека ${String(width)}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await spaGoto(page, "/admin/org/u-demo-manager");
+      await expect(page.getByTestId("cap-page")).toBeVisible();
+      await expect(page.getByTestId("cap-rows")).toBeVisible();
+      await expectNoViolations(page, `person page ${String(width)}`);
+      await settledScreenshot(page, "person-page");
+    });
+  }
+
+  test("таблица на 8 человек помещается в 1512 без горизонтальной прокрутки и в один экран", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await loginAndWait(page, "admin@demo.example");
+    const roles = ["1", "2", "3", "4", "5", "6", "3", "6"];
+    const items = roles.map((role, i) => ({
+      id: `u-x${String(i)}`,
+      name: `Сотрудник Номер${String(i)} Длиннофамильный`,
+      initials: "СН",
+      email: `x${String(i)}@demo.example`,
+      position: "Старший специалист по работе с ключевыми клиентами",
+      role_ids: [role],
+      access: { crm: true, erp: true },
+      status: "active",
+      telegram_linked: true,
+      telegram: "linked",
+      erp_sync: "ok",
+    }));
+    await page.evaluate(
+      `window.localStorage.setItem("rt-pf-mock-employees", ${JSON.stringify(JSON.stringify(items))});`,
+    );
+    await spaGoto(page, "/admin/org?view=matrix");
+    await expect(page.getByTestId("cap-matrix")).toBeVisible();
+    const wrap = page.getByRole("region", { name: "Что может каждый сотрудник" });
+    const scrolls = await page.evaluate(
+      `(() => { const el = document.querySelector('[role="region"][aria-label="Что может каждый сотрудник"]'); return el.scrollWidth > el.clientWidth; })()`,
+    );
+    expect(scrolls).toBe(false);
+    const box = await wrap.boundingBox();
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(982);
+  });
 });
 
 test.describe("Мои возможности", () => {

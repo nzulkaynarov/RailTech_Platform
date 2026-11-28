@@ -1,5 +1,4 @@
 import { Alert, Button, Checkbox, Skeleton } from "antd";
-import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import { rolesAccess } from "../../entities/role/roles";
@@ -40,15 +39,11 @@ export function RoleCheckboxes({
   note,
 }: RoleCheckboxesProps) {
   const { t } = useTranslation(["modules", "shell"]);
-  const hintId = useId();
-  const describedBy = [hintId, note?.id].filter(Boolean).join(" ");
+  const describedBy = note?.id;
   const order = roles.map((role) => role.id);
   return (
     <fieldset className="pf-roles" aria-describedby={describedBy} disabled={disabled}>
       <legend className="pf-roles-legend">{t("modules:admin.org.form.rolesLegend")}</legend>
-      <p id={hintId} className="pf-hint" style={{ margin: "0 0 8px" }}>
-        {t("modules:admin.org.form.rolesHint")}
-      </p>
       {loading ? (
         <Skeleton active paragraph={{ rows: 4 }} title={false} />
       ) : error ? (
