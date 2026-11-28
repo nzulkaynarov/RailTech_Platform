@@ -14,6 +14,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { projectRef } from "./api";
+import { reasonText } from "./errors";
 import { useApplyCard } from "./useProjectMutations";
 
 /** Подтверждение доставки: изображение, PDF или документ до 20 МБ — как у вложений ERP (`validate_document_upload`). */
@@ -96,7 +97,13 @@ function DeliveryDialog({
         onClose();
       },
       onError: (error) => {
-        setFailure(error instanceof ApiError ? error.message : t("card.delivery.failed"));
+        setFailure(
+          error instanceof ApiError && (error.status === 403 || error.status === 409)
+            ? reasonText(t, error)
+            : error instanceof ApiError
+              ? error.message
+              : t("card.delivery.failed"),
+        );
       },
     },
   });

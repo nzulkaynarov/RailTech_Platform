@@ -107,7 +107,9 @@ describe("Расчёт по заявке", () => {
     const rail = lineRow("Перевод стрелочный Р65 марки 1/11");
     expect(within(rail).getByText("Товар под заказ")).toBeVisible();
     expect(within(rail).getByText("На складе · 1")).toBeVisible();
-    expect(within(rail).getByText(/ООО «Вымышленная Сталь» · 45 дн\./)).toBeVisible();
+    expect(
+      within(rail).getByText(/ООО «Вымышленная Сталь» · до 31\.12\.2026 · 45 дн\./),
+    ).toBeVisible();
     expect(
       within(rail).getByLabelText("Закупка за единицу для «Перевод стрелочный Р65 марки 1/11»"),
     ).toBeEnabled();

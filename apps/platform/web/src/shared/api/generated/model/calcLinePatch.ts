@@ -33,6 +33,11 @@ export interface CalcLinePatch {
   purchase_price?: DecimalString;
   /** @pattern ^[A-Z]{3}$ */
   purchase_currency?: string;
+  /**
+   * РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (в валюте строки по курсу)
+   * @pattern ^[0-9]+$
+   */
+  offer_id?: string;
   crew_rate?: DecimalString | null;
   crew_days?: DecimalString | null;
   /** Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5) */

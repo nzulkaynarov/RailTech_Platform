@@ -134,6 +134,9 @@ import type {
   CalcLineVisa,
   CalcParseJob,
   CalcParseResult,
+  CalcPartnerExpired,
+  CalcPartnerOption,
+  CalcPartnerPrice,
   CalcPreviousPage,
   CalcQuote,
   CalcRequestCard,
@@ -30165,6 +30168,64 @@ export const getGetCalcSheetResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getGetCalcSheetResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCalcSheetResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCalcSheetResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getGetCalcSheetResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getGetCalcSheetResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCalcSheetResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -30256,6 +30317,10 @@ export const getGetCalcSheetResponseMock = (
       reserved: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     },
     supplier: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcSupplierMock() }, null]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getGetCalcSheetResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -30279,6 +30344,11 @@ export const getGetCalcSheetResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -30292,6 +30362,15 @@ export const getGetCalcSheetResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -30458,6 +30537,61 @@ export const getStartCalcResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getStartCalcResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getStartCalcResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getStartCalcResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcPartnerOptionMock() }, null]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getStartCalcResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getStartCalcResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -30549,6 +30683,10 @@ export const getStartCalcResponseMock = (
       reserved: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     },
     supplier: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcSupplierMock() }, null]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getStartCalcResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -30572,6 +30710,11 @@ export const getStartCalcResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -30585,6 +30728,15 @@ export const getStartCalcResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -30748,6 +30900,64 @@ export const getAddCalcLinesResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getAddCalcLinesResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getAddCalcLinesResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getAddCalcLinesResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getAddCalcLinesResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getAddCalcLinesResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getAddCalcLinesResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -30839,6 +31049,10 @@ export const getAddCalcLinesResponseMock = (
       reserved: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     },
     supplier: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcSupplierMock() }, null]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getAddCalcLinesResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -30862,6 +31076,11 @@ export const getAddCalcLinesResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -30875,6 +31094,15 @@ export const getAddCalcLinesResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31038,6 +31266,64 @@ export const getUpdateCalcLineResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcLineResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCalcLineResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCalcLineResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getUpdateCalcLineResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getUpdateCalcLineResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcLineResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -31132,6 +31418,10 @@ export const getUpdateCalcLineResponseMock = (
       { ...getUpdateCalcLineResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getUpdateCalcLineResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -31155,6 +31445,11 @@ export const getUpdateCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31168,6 +31463,15 @@ export const getUpdateCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31331,6 +31635,64 @@ export const getDeleteCalcLineResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getDeleteCalcLineResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getDeleteCalcLineResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getDeleteCalcLineResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getDeleteCalcLineResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getDeleteCalcLineResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getDeleteCalcLineResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -31425,6 +31787,10 @@ export const getDeleteCalcLineResponseMock = (
       { ...getDeleteCalcLineResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getDeleteCalcLineResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -31448,6 +31814,11 @@ export const getDeleteCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31461,6 +31832,15 @@ export const getDeleteCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31624,6 +32004,64 @@ export const getSignCalcLineResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getSignCalcLineResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getSignCalcLineResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getSignCalcLineResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getSignCalcLineResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getSignCalcLineResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getSignCalcLineResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -31715,6 +32153,10 @@ export const getSignCalcLineResponseMock = (
       reserved: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     },
     supplier: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcSupplierMock() }, null]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getSignCalcLineResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -31738,6 +32180,11 @@ export const getSignCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31751,6 +32198,15 @@ export const getSignCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31914,6 +32370,64 @@ export const getUpdateCalcTermsResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcTermsResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCalcTermsResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCalcTermsResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getUpdateCalcTermsResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getUpdateCalcTermsResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcTermsResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -32008,6 +32522,10 @@ export const getUpdateCalcTermsResponseMock = (
       { ...getUpdateCalcTermsResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getUpdateCalcTermsResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -32031,6 +32549,11 @@ export const getUpdateCalcTermsResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32044,6 +32567,15 @@ export const getUpdateCalcTermsResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32207,6 +32739,64 @@ export const getMarkCalcReadyResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getMarkCalcReadyResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkCalcReadyResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkCalcReadyResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getMarkCalcReadyResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getMarkCalcReadyResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkCalcReadyResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -32298,6 +32888,10 @@ export const getMarkCalcReadyResponseMock = (
       reserved: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     },
     supplier: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcSupplierMock() }, null]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getMarkCalcReadyResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -32321,6 +32915,11 @@ export const getMarkCalcReadyResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32334,6 +32933,15 @@ export const getMarkCalcReadyResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32497,6 +33105,64 @@ export const getNewCalcQuoteVersionResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getNewCalcQuoteVersionResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getNewCalcQuoteVersionResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -32591,6 +33257,10 @@ export const getNewCalcQuoteVersionResponseMock = (
       { ...getNewCalcQuoteVersionResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -32614,6 +33284,11 @@ export const getNewCalcQuoteVersionResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([
       { ...getNewCalcQuoteVersionResponseCalcLineVisaMock() },
       null,
@@ -32630,6 +33305,15 @@ export const getNewCalcQuoteVersionResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32793,6 +33477,64 @@ export const getLoseCalcRequestResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getLoseCalcRequestResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getLoseCalcRequestResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getLoseCalcRequestResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getLoseCalcRequestResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -32887,6 +33629,10 @@ export const getLoseCalcRequestResponseMock = (
       { ...getLoseCalcRequestResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getLoseCalcRequestResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -32910,6 +33656,11 @@ export const getLoseCalcRequestResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32923,6 +33674,15 @@ export const getLoseCalcRequestResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -33208,6 +33968,64 @@ export const getCopyCalcLinesResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getCopyCalcLinesResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCopyCalcLinesResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getCopyCalcLinesResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getCopyCalcLinesResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getCopyCalcLinesResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getCopyCalcLinesResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -33307,6 +34125,10 @@ export const getCopyCalcLinesResponseMock = (
           { ...getCopyCalcLinesResponseCalcSupplierMock() },
           null,
         ]),
+        partner_price: faker.helpers.arrayElement([
+          { ...getCopyCalcLinesResponseCalcPartnerPriceMock() },
+          null,
+        ]),
         lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
         purchase_price: faker.helpers.arrayElement([
           faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -33333,6 +34155,11 @@ export const getCopyCalcLinesResponseMock = (
           faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
           null,
         ]),
+        margin_pct: faker.helpers.arrayElement([
+          faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+          null,
+        ]),
+        margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
         visa: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcLineVisaMock() }, null]),
         can_edit: faker.datatype.boolean(),
       }),
@@ -33347,6 +34174,15 @@ export const getCopyCalcLinesResponseMock = (
         faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
         null,
       ]),
+      margin_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      threshold_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       vat_included: false,
     },
     visas: {
@@ -33925,6 +34761,64 @@ export const getReserveCalcLineResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getReserveCalcLineResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getReserveCalcLineResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getReserveCalcLineResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getReserveCalcLineResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -34019,6 +34913,10 @@ export const getReserveCalcLineResponseMock = (
       { ...getReserveCalcLineResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getReserveCalcLineResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -34042,6 +34940,11 @@ export const getReserveCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -34055,6 +34958,15 @@ export const getReserveCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -34218,6 +35130,64 @@ export const getReleaseCalcLineReservationResponseCalcSupplierMock = (
   ...overrideResponse,
 });
 
+export const getReleaseCalcLineReservationResponseCalcPartnerOptionMock = (
+  overrideResponse: Partial<CalcPartnerOption> = {},
+): CalcPartnerOption => ({
+  ...{
+    offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    price_date: faker.date.past().toISOString().slice(0, 10),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+    chosen: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseCalcPartnerExpiredMock = (
+  overrideResponse: Partial<CalcPartnerExpired> = {},
+): CalcPartnerExpired => ({
+  ...{
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    valid_until: faker.date.past().toISOString().slice(0, 10),
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseCalcPartnerPriceMock = (
+  overrideResponse: Partial<CalcPartnerPrice> = {},
+): CalcPartnerPrice => ({
+  ...{
+    source: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcPartnerOptionMock() },
+      null,
+    ]),
+    options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        offer_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        price_date: faker.date.past().toISOString().slice(0, 10),
+        valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        freshness: faker.helpers.arrayElement(["ok", "expiring", "stale"] as const),
+        chosen: faker.datatype.boolean(),
+      }),
+    ),
+    expired: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcPartnerExpiredMock() },
+      null,
+    ]),
+    can_request: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getReleaseCalcLineReservationResponseCalcLineVisaMock = (
   overrideResponse: Partial<CalcLineVisa> = {},
 ): CalcLineVisa => ({
@@ -34318,6 +35288,10 @@ export const getReleaseCalcLineReservationResponseMock = (
       { ...getReleaseCalcLineReservationResponseCalcSupplierMock() },
       null,
     ]),
+    partner_price: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcPartnerPriceMock() },
+      null,
+    ]),
     lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
     purchase_price: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
@@ -34341,6 +35315,11 @@ export const getReleaseCalcLineReservationResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([
       { ...getReleaseCalcLineReservationResponseCalcLineVisaMock() },
       null,
@@ -34357,6 +35336,15 @@ export const getReleaseCalcLineReservationResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {

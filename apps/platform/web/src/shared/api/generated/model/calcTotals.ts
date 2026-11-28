@@ -13,5 +13,11 @@ export interface CalcTotals {
   purchase?: DecimalString;
   /** Наценка итого — только группе `cost_margin` */
   markup_pct?: DecimalString | null;
+  /** Маржа итого на цену, % — только группе `cost_margin` */
+  margin_pct?: DecimalString | null;
+  /** Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
+  threshold_pct?: DecimalString | null;
+  /** Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
+  margin_below?: boolean;
   vat_included: false;
 }

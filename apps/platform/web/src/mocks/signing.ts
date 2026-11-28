@@ -728,7 +728,11 @@ export const signingHandlers = [
     if (!me.keeper) return forbidden();
     const director = personOf("u-demo-director") ?? null;
     return HttpResponse.json({
-      has_authorities: read().length > 0,
+      // как EDS: считается действующее на сегодня (не отозванное, не истёкшее, не будущее)
+      has_authorities: read().some((item) => {
+        const status = statusOf(item, companyToday());
+        return status === "active" || status === "expiring";
+      }),
       signatory_name: director?.name ?? null,
       signatory_position: "Директор",
       director,
