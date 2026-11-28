@@ -110,7 +110,11 @@ def margin_price(cost, margin, discount_percent, step, quantum) -> Decimal:
     if cost <= 0:
         return Decimal("0")
     margin = min(max(Decimal(margin), Decimal("0")), MARGIN_MAX)
-    raw = cost / (Decimal("1") - margin / Decimal("100")) * (Decimal("1") - Decimal(discount_percent or 0) / Decimal("100"))
+    raw = (
+        cost
+        / (Decimal("1") - margin / Decimal("100"))
+        * (Decimal("1") - Decimal(discount_percent or 0) / Decimal("100"))
+    )
     unit = Decimal(step) if step and Decimal(step) > quantum else quantum
     return ((raw / unit).to_integral_value(rounding=ROUND_CEILING) * unit).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
@@ -256,8 +260,9 @@ class QuoteCalculationService:
         продавца-компании (поменялась целевая маржа или шаг округления).
 
         Отправленные и зафиксированные КП не трогаются; ручные цены не пересчитываются. Возвращает число КП."""
-        from crm.constants import QuoteStatusCode
         from sales.models.calc_lines import CalcPriceBasis
+
+        from crm.constants import QuoteStatusCode
 
         found = Quote.objects.filter(
             frozen_at__isnull=True,

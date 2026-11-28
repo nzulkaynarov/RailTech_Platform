@@ -130,7 +130,9 @@ def test_exchange_rate_refresh_reprices_live_draft_lines(prices, django_capture_
     assert again["cost"] == "88200000.00" and again["client_price"] == "110250000.00"
 
 
-def test_target_margin_change_reprices_drafts_but_not_sent_quote(prices, django_capture_on_commit_callbacks):  # noqa: F811
+def test_target_margin_change_reprices_drafts_but_not_sent_quote(
+    prices, django_capture_on_commit_callbacks
+):  # noqa: F811
     _settings(prices, target_margin_percent=20)
     line = _add(prices, product_id=prices["product"].pk)
     with django_capture_on_commit_callbacks(execute=True):
@@ -163,7 +165,9 @@ def test_quote_off_draft_keeps_its_prices(prices):  # noqa: F811
 # ── ручная цена и маржа строки ──────────────────────────────────────────────────────────────────────────────────
 
 
-def test_typed_price_is_manual_never_recalculated_and_can_return_to_margin(prices, django_capture_on_commit_callbacks):  # noqa: F811
+def test_typed_price_is_manual_never_recalculated_and_can_return_to_margin(
+    prices, django_capture_on_commit_callbacks
+):  # noqa: F811
     _settings(prices, target_margin_percent=20)
     line = _add(prices, product_id=prices["product"].pk)
     manual = _patch(prices, line["id"], {"client_price": "99000000"})

@@ -942,7 +942,10 @@ export const erpCalcHandlers = [
         422,
         "VALIDATION_FAILED",
         "Наценку и маржу правит сотрудник с доступом к себестоимости.",
-        { reason: "cost_forbidden", fields: [patch.margin_pct !== undefined ? "margin_pct" : "price_mode"] },
+        {
+          reason: "cost_forbidden",
+          fields: [patch.margin_pct !== undefined ? "margin_pct" : "price_mode"],
+        },
       );
     }
     if (patch.margin_pct !== undefined) {

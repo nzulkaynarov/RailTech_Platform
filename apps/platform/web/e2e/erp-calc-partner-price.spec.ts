@@ -88,17 +88,17 @@ test("цена от маржи: правило под таблицей, «Цен
 
   // Закупка в долларах: 4 000 USD × 12 100 = 48 400 000 → /0,8 = 60 500 000
   const cable = "Кабель силовой медный с изоляцией из сшитого полиэтилена 3×95+1×50, барабан 500 м";
-  await expect(
-    page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`),
-  ).toHaveValue(/60\s500\s000/);
+  await expect(page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`)).toHaveValue(
+    /60\s500\s000/,
+  );
 
   // Закупка выросла — цена от маржи следует за ней сама, без правки цены
   const purchase = page.getByLabel(`Закупка за единицу для «${cable}»`);
   await purchase.fill("5000");
   await purchase.blur();
-  await expect(
-    page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`),
-  ).toHaveValue(/75\s625\s000/);
+  await expect(page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`)).toHaveValue(
+    /75\s625\s000/,
+  );
 
   await page.getByTestId("price-manual").getByRole("button").click();
   await expect(page.getByTestId("price-manual")).toHaveCount(0);

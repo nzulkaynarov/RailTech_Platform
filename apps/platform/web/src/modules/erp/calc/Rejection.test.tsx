@@ -82,7 +82,9 @@ describe("Расчёт · цена клиенту и маржа (РАСЧ-3)", (
     fireEvent.blur(price());
     const mark = await screen.findByTestId("price-manual");
     expect(mark).toHaveTextContent("Цена вручную");
-    fireEvent.click(within(mark).getByRole("button", { name: `Вернуть цену строки «${name}» к марже` }));
+    fireEvent.click(
+      within(mark).getByRole("button", { name: `Вернуть цену строки «${name}» к марже` }),
+    );
     await waitFor(() => {
       expect(screen.queryByTestId("price-manual")).toBeNull();
     });

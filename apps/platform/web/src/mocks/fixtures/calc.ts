@@ -296,7 +296,9 @@ function wideCalc(base: MockCalc): MockCalc {
     crewRate: null,
     crewDays: null,
     client: i === 11 || i === 8 ? 0 : client,
-    ...(i === 11 || i === 8 ? {} : { priceMode: i === 2 ? ("manual" as const) : ("margin" as const) }),
+    ...(i === 11 || i === 8
+      ? {}
+      : { priceMode: i === 2 ? ("manual" as const) : ("margin" as const) }),
     visa: null,
   }));
   return {
