@@ -174,7 +174,9 @@ test.describe("Что может этот человек", () => {
     await spaGoto(page, "/admin/org?view=matrix");
     await expect(page.getByTestId("cap-matrix")).toBeVisible();
     const wrap = page.getByRole("region", { name: "Что может каждый сотрудник" });
-    const scrolls = await wrap.evaluate("(el) => el.scrollWidth > el.clientWidth");
+    const scrolls = await page.evaluate(
+      `(() => { const el = document.querySelector('[role="region"][aria-label="Что может каждый сотрудник"]'); return el.scrollWidth > el.clientWidth; })()`,
+    );
     expect(scrolls).toBe(false);
     const box = await wrap.boundingBox();
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(982);
