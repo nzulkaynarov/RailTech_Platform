@@ -137,7 +137,7 @@ async def _company(authed: Authed) -> tuple[list[Person], Extras]:
     users = await CrmUsers(authed.call).list_all()
     roles = _role_views(await CrmRoles(authed.call).list_all())
     names = {str(u["id"]): str(u.get("full_name") or "") for u in users}
-    # Служебные учётные записи (ДОСТ-1п) в командных экранах не участвуют: ни в таблице, ни в «единственный».
+    # Служебные записи (ДОСТ-1п) в командных экранах не участвуют: ни в таблице, ни в «единственный».
     people = [
         _person(u, roles, names)
         for u in users
