@@ -8,11 +8,12 @@
 from __future__ import annotations
 
 import pytest
-from crm.constants import DealStageCode, QuoteStatusCode
 from integration.tests.world import add_quote, make_company, make_deal
 from portal import projections
 from portal.models import PortalNotice
 from sales.models import Quote
+
+from crm.constants import DealStageCode, QuoteStatusCode
 
 pytestmark = pytest.mark.django_db
 
