@@ -20,8 +20,8 @@
   "partialHint": "Bu satrning bir qism harakatlari öçirilgan",
   "legend": {
     "label": "Belgilar",
-    "partial": "«hammasi emas» — bir qism harakatlar öçirilgan",
-    "only": "qaror qiladigan yagona odam"
+    "partial": "«hammasi emas» — qismi öçirilgan",
+    "only": "yagona qaror qiluvçi"
   },
   "matrix": {
     "label": "Har bir xodim nimani qila oladi",
@@ -41,7 +41,7 @@
     "unlimited": "çegarasiz",
     "upTo": "{{amount}} gaçha",
     "open": "Açiş: {{name}}",
-    "onlyMark": "qaror qiladigan yagona odam"
+    "onlyMark": "yagona qaror qiluvçi"
   },
   "warnings": {
     "summaryOnly_one": "{{count}} qaror bir odamga tayanadi",

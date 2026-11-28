@@ -4,12 +4,12 @@ import type { EmployeeCapabilities } from "../../shared/api/generated/model";
 import { areaLevel, fitItems, ITEMS_MAX, LINE_MAX, soft, summaryItems } from "./areas";
 
 const text = (ru: string) => ({ ru, uz: ru, en: ru });
-const row = (key: string, level: string) =>
+const row = (key: string, level: string, partial = false) =>
   ({
     key,
     name: text(key),
     level,
-    partial: false,
+    partial,
     levels: [],
     from_roles: [],
     others: [],
@@ -64,6 +64,25 @@ describe("сводка по областям", () => {
     expect(lines["decides"]).toEqual(["КП"]);
     expect(lines["responsible"]).toEqual(["продажи"]);
     expect(lines["lacks"]).toEqual(["оплата и документы"]);
+  });
+
+  it("область с «не всё» в строке не называется целиком — только своими возможностями", () => {
+    const partialData = {
+      zones_known: false,
+      zones: [],
+      groups: [
+        {
+          key: "c",
+          name: text("КП и договор"),
+          step: text("3"),
+          rows: [row("КП", "decide"), row("Договор", "decide", true)],
+        },
+      ],
+    } as unknown as EmployeeCapabilities;
+    const lines = Object.fromEntries(summaryItems(partialData, "ru").map((l) => [l.key, l.items]));
+    expect(lines["decides"]).toEqual(["КП", "договор"]);
+    expect(lines["decides"]).not.toContain("КП и договор");
+    expect(lines["does"]).toEqual(["КП", "договор"]);
   });
 
   it("строка не длиннее 90 знаков и шести названий; остаток — «и ещё N»", () => {

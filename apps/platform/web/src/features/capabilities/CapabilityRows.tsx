@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 
 import type { CapabilityRow, EmployeeCapabilities } from "../../shared/api/generated/model";
 import { LevelTag } from "./LevelTag";
+import { areaLevel } from "./areas";
 import { pickText } from "./model";
 
 import "./capabilities.css";
 
 /**
- * Строки возможностей по шагам сделки: название, уровень тегом, «не всё», откуда получено. Строка раскрывается в действия
+ * Области сделки с высшим уровнем человека и строки возможностей: название, уровень тегом, «не всё», откуда получено. Строка раскрывается в действия
  * («что входит»): включённые обычным текстом, выключенные — зачёркнутым и словом «нет». Только чтение (ДОСТ-1).
  */
 export function CapabilityRows({
@@ -28,7 +29,10 @@ export function CapabilityRows({
           className="pf-cap-group"
           aria-label={pickText(group.name, i18n.language)}
         >
-          <h3 className="pf-cap-group-title">{pickText(group.name, i18n.language)}</h3>
+          <h3 className="pf-cap-group-title">
+            <span>{pickText(group.name, i18n.language)}</span>
+            <LevelTag level={areaLevel(group.rows)} />
+          </h3>
           <ul className="pf-cap-rows">
             {group.rows.map((row) => (
               <Row key={row.key} row={row} showOthers={showOthers} language={i18n.language} t={t} />

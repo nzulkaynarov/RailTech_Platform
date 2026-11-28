@@ -34,11 +34,12 @@ export interface SummaryItems {
 interface Row {
   name: CapabilityText;
   level: CapabilityLevel;
+  partial: boolean;
 }
 
 /**
  * Итог словами по ОБЛАСТЯМ сделки, а не по возможностям: «Ведёт», «Решает», «Отвечает за» (если зоны есть), «Не может».
- * Область, где у человека всё на нужном уровне, называется целиком; иначе — её возможностями. Пустая строка не выдаётся;
+ * Область, где у человека всё на нужном уровне и ни одна строка не «не всё», называется целиком; иначе — её возможностями. Пустая строка не выдаётся;
  * нет данных (зоны не читались) — нет строки.
  */
 export function summaryItems(data: EmployeeCapabilities, language: string): SummaryItems[] {
@@ -46,12 +47,16 @@ export function summaryItems(data: EmployeeCapabilities, language: string): Summ
   const decides: string[] = [];
   const lacks: string[] = [];
   for (const group of data.groups) {
-    const rows: Row[] = group.rows.map((row) => ({ name: row.name, level: row.level }));
+    const rows: Row[] = group.rows.map((row) => ({
+      name: row.name,
+      level: row.level,
+      partial: row.partial,
+    }));
     const area = soft(pickText(group.name, language));
     const collect = (into: string[], test: (level: CapabilityLevel) => boolean) => {
       const hit = rows.filter((row) => test(row.level));
       if (hit.length === 0) return;
-      if (hit.length === rows.length) into.push(area);
+      if (hit.length === rows.length && !hit.some((row) => row.partial)) into.push(area);
       else for (const row of hit) into.push(soft(pickText(row.name, language)));
     };
     collect(does, (level) => rank(level) >= rank("work"));

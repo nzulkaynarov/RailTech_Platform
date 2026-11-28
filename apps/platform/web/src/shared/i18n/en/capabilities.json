@@ -20,8 +20,8 @@
   "partialHint": "Some actions of this row are switched off",
   "legend": {
     "label": "Legend",
-    "partial": "“not all” — some actions are switched off",
-    "only": "the only one who decides"
+    "partial": "“not all” — some off",
+    "only": "sole decider"
   },
   "matrix": {
     "label": "What each employee can do",
@@ -41,7 +41,7 @@
     "unlimited": "no limit",
     "upTo": "up to {{amount}}",
     "open": "Open: {{name}}",
-    "onlyMark": "the only one who decides"
+    "onlyMark": "sole decider"
   },
   "warnings": {
     "summaryOnly_one": "{{count}} decision rests on one person",
