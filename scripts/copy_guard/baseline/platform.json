@@ -463,7 +463,6 @@
  "L|platform|apps/platform/web/src/shared/i18n/ru/payments.json|payments:bankDetails.text|ru|jobtitle|администратор",
  "L|platform|apps/platform/web/src/shared/i18n/ru/payments.json|payments:confirm.consequence.full.step3|ru|vendor|telegram",
  "L|platform|apps/platform/web/src/shared/i18n/ru/payments.json|payments:proofs.source.BOT|ru|vendor|telegram",
- "L|platform|apps/platform/web/src/shared/i18n/ru/profile.json|profile:data.positionHint|ru|jobtitle|администратор",
  "L|platform|apps/platform/web/src/shared/i18n/ru/profile.json|profile:forgot.errors.TOO_MANY_REQUESTS|ru|jobtitle|администратору",
  "L|platform|apps/platform/web/src/shared/i18n/ru/profile.json|profile:forgot.lead|ru|jobtitle|администратору",
  "L|platform|apps/platform/web/src/shared/i18n/ru/profile.json|profile:forgot.lead|ru|vendor|telegram",
