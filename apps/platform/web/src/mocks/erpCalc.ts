@@ -22,6 +22,7 @@ import { stockOfLine } from "./erpStock";
 import { UNITS } from "./fixtures/erpCatalog";
 import { mockFlag } from "./fixtures/messages";
 import { buildMe, readSession } from "./mockSession";
+import { readProfile } from "./profileStore";
 import { itemRefOf } from "./fixtures/itemRef";
 
 /**
@@ -504,6 +505,7 @@ function row(calc: MockCalc): CalcRequestRow {
     assignees: calc.assignees,
     path: `/erp/calc/${encodeURIComponent(calc.number)}`,
     crm_client_id: CRM_CLIENT_ID,
+    ...(calc.testCompany ? { is_test: true } : {}),
   };
 }
 
@@ -598,6 +600,7 @@ export const erpCalcHandlers = [
             ? calc.stage !== "CALCULATION"
             : true,
       )
+      .filter((calc) => !calc.testCompany || readProfile(held.user.id).showTest === true)
       .filter((calc) => !onlyMine || mine(calc, held.user))
       .filter(
         (calc) =>

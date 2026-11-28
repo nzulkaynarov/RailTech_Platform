@@ -204,6 +204,40 @@ describe("форма «Создать заявку»: правила до отп
   });
 });
 
+describe("новая компания без лида и без карточки клиента: согласие отмечает сотрудник (D-8)", () => {
+  const ctx: RequestContext = {
+    lead: null,
+    leadChannel: null,
+    leadTelegram: null,
+    consentGiven: false,
+    contacts: [],
+  };
+  const filled = {
+    ...emptyRequestForm(),
+    company: { id: "9001", name: "ООО Демо", inn: null, crmClientId: null },
+    fullName: "Демо",
+    phone: "+998900000077",
+    summary: "Колодки",
+    letter: { name: "zapiska.pdf", status: "done" as const, id: "f-1", kind: "call_note" as const },
+  };
+
+  it("без отметки форма не уходит: ошибка у поля согласия", () => {
+    expect(validateRequest(filled, ctx)).toEqual({ consent: "consent" });
+  });
+
+  it("с отметкой «по телефону» в теле — способ телефон, а не письмо", () => {
+    const state = { ...filled, consentMarked: true, consentMethod: "phone" as const };
+    expect(validateRequest(state, ctx)).toEqual({});
+    const payload = toRequestPayload(state, ctx, "11111111-1111-4111-8111-111111111111");
+    expect(payload.consent).toEqual({ method: "phone", comment: null });
+  });
+
+  it("клиент с карточкой — отметка не нужна", () => {
+    const state = { ...filled, company: null, clientId: 4 };
+    expect(validateRequest(state, { ...ctx, consentGiven: true })).toEqual({});
+  });
+});
+
 describe("«Создать заявку» из лида и из клиента (D1-2b)", () => {
   it("лид «Просит КП»: поля из переписки, письмо директору, «Что произойдёт»; заявка — в карточке клиента", async () => {
     const panel = await openForm("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
@@ -236,7 +270,7 @@ describe("«Создать заявку» из лида и из клиента (
     expect(within(panel).getByText(String(created?.requests[0]?.number))).toBeVisible();
     expect(within(panel).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
-      `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
+      `/erp/calc/${encodeURIComponent(String(created?.requests[0]?.number))}`,
     );
   });
 
@@ -529,6 +563,8 @@ describe("компания и человек выбираются, а не вп�
     expect(within(remainingList(panel)).getByText(/Выберите компанию/)).toBeInTheDocument();
     // компания есть среди контрагентов, но не клиент CRM — её выбирают, заявка сделает её клиентом
     await pickCompany(company, "ГНИ", "ГНИ Мирабадского района");
+    // ВХОД-1: без карточки клиента форма говорит, что карточка заведётся с заявкой, а не падает на отправке
+    expect(within(panel).getByText(/ещё нет карточки клиента/)).toBeVisible();
 
     open(panel, "Контакт");
     const person = within(panel).getByLabelText("Человек из карточки компании");

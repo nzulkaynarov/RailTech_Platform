@@ -5,7 +5,7 @@
 умолчанию (`?test=only` — только они, `?test=all` — все); открытие по номеру и карточка не сужаются.
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import datetime
 from typing import Any
 
@@ -54,6 +54,21 @@ async def apply(session: AsyncSession, data: CompanyUpdated) -> bool:
 def mode(params: Mapping[str, Any] | str | None) -> str:
     value = params if isinstance(params, str) or params is None else params.get("test")
     return value if value in (ONLY, ALL) else ""
+
+
+async def marked(session: AsyncSession, wanted: str | None, ids: Iterable[int | None]) -> frozenset[int]:
+    """ТЕСТ-2: тестовые компании среди `ids` строк страницы — для метки «Тестовая».
+
+    Только при `?test=all` или `only`: без параметра тестовых строк в выдаче нет, запрос не нужен."""
+    if not mode(wanted):
+        return frozenset()
+    found = {i for i in ids if i is not None}
+    if not found:
+        return frozenset()
+    rows = await session.scalars(
+        select(CompanyMark.erp_company_id).where(CompanyMark.erp_company_id.in_(found), CompanyMark.is_test.is_(True))
+    )
+    return frozenset(rows)
 
 
 def scope(column: Any, wanted: str | None) -> ColumnElement[bool] | None:

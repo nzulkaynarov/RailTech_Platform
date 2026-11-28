@@ -28,7 +28,7 @@ from app.integrations.erp import HandoffPayload, HandoffResult, InviteResult
 from app.integrations.erp_requests import ClientRequestPayload, ClientRequestResult
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
-from app.models.leads import Lead, TelegramIdentity
+from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.models.qualification import Escalation
 from app.repositories import crm
 from app.schemas.client_requests import RequestCreate
@@ -37,6 +37,7 @@ from app.services.client_requests import ClientRequestService
 from app.services.erp_handoff import ErpHandoffService
 from app.services.erp_requests import ErpRequestService
 from tests.integration.crm_helpers import make_user
+from tests.integration.roles_helpers import audit_rows
 
 pytestmark = pytest.mark.integration
 
@@ -648,6 +649,232 @@ async def test_repeat_for_a_client_with_the_same_request_key_returns_the_same_re
 
     assert {r.deal_id for r in results} == {results[0].deal_id}
     assert len(queue.calls) == 1
+
+
+async def test_letter_of_a_company_without_a_client_card_makes_the_card_and_the_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ВХОД-1: компания без карточки клиента и без лида — карточка заводится, заявка уходит."""
+    who = await _manager(sessions)
+    queue = Queue()
+    body = _body(
+        consent={"method": "email"},
+        contact={"full_name": "Пётр Снабженец", "email": "p@example.test"},
+    )
+
+    created = await _service(sessions, queue).create_for_company(who, body)
+
+    assert created.created
+    assert queue.calls == [(created.deal_id, created.client_id, who.user_id)]
+    async with sessions() as session:
+        client = await session.get(Client, created.client_id)
+        deal = await session.get(Deal, created.deal_id)
+        assert client is not None
+        assert deal is not None
+        assert (client.name, client.inn, client.owner_user_id) == (
+            "ООО Пример Логистик",
+            "301234567",
+            who.user_id,
+        )
+        assert (deal.erp_request_status, deal.request_letter_file_id) == ("pending", LETTER)
+        lead = await session.get(Lead, deal.lead_id)
+        assert lead is not None
+        assert (lead.source, lead.client_id, lead.stage) == ("email", client.id, "customer")
+        assert (lead.consent_method, lead.consent_given_at is not None) == ("email", True)
+        contact = await session.get(ClientContact, deal.request_contact_id)
+        assert contact is not None
+        assert (contact.full_name, contact.email) == ("Пётр Снабженец", "p@example.test")
+
+
+async def test_letter_request_reuses_the_card_found_by_inn_and_a_consenting_lead(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Карточка уже есть (ИНН) — вторая не заводится; лид с согласием уже есть — второго нет."""
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+    first = await _service(sessions).create_from_lead(who, lead_id, _body())
+
+    again = await _service(sessions).create_for_company(
+        who, _body(company={"name": "Другое написание", "inn": "301234567"})
+    )
+
+    assert again.client_id == first.client_id
+    async with sessions() as session:
+        clients = (await session.scalars(select(Client).where(Client.inn == "301234567"))).all()
+        leads = (await session.scalars(select(Lead).where(Lead.client_id == first.client_id))).all()
+        assert len(clients) == 1
+        assert [lead.id for lead in leads] == [lead_id], "второй лид по письму не заводится"
+
+
+async def test_letter_request_for_a_client_already_in_erp_needs_no_lead(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    async with sessions() as session, session.begin():
+        session.add(Client(name="ООО Клиент ERP", inn="777000111", erp_company_id=501))
+
+    created = await _service(sessions).create_for_company(
+        who,
+        _body(
+            company={"name": "ООО Клиент ERP", "inn": "777000111"},
+            contact={"full_name": "Пётр", "phone": "+998901234567"},
+        ),
+    )
+
+    async with sessions() as session:
+        deal = await session.get(Deal, created.deal_id)
+        assert deal is not None
+        assert deal.lead_id is None
+        assert (await session.scalars(select(Lead))).all() == []
+
+
+async def test_letter_request_repeat_with_the_same_key_is_the_same_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    queue = Queue()
+    body = _body(
+        consent={"method": "email"}, contact={"full_name": "Пётр", "phone": "+998901234567"}
+    )
+
+    results = await asyncio.gather(
+        _service(sessions, queue).create_for_company(who, body),
+        _service(sessions, queue).create_for_company(who, body),
+    )
+
+    assert {r.deal_id for r in results} == {results[0].deal_id}
+    assert len(queue.calls) == 1
+    assert len(await _requests_of(sessions, body.request_key)) == 1
+    async with sessions() as session:
+        assert len((await session.scalars(select(Client))).all()) == 1
+
+
+async def test_second_press_after_the_form_was_closed_returns_the_same_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ВХОД-1: форма закрыта и открыта снова (новый `request_key`) — по тому же письму та же
+    заявка, а не вторая в ERP."""
+    who = await _manager(sessions)
+    queue = Queue()
+    contact = {"full_name": "Пётр", "phone": "+998901234567"}
+    consent = {"method": "email"}
+
+    first = await _service(sessions, queue).create_for_company(
+        who, _body(contact=contact, consent=consent)
+    )
+    second = await _service(sessions, queue).create_for_company(
+        who, _body(contact=contact, consent=consent, summary="Другой текст")
+    )
+    third = await _service(sessions, queue).create_for_client(
+        who, first.client_id, _body(company=None, contact=contact)
+    )
+
+    assert (second.deal_id, second.created) == (first.deal_id, False)
+    assert (third.deal_id, third.created) == (first.deal_id, False)
+    assert len(queue.calls) == 1
+    async with sessions() as session:
+        assert len((await session.scalars(select(Deal))).all()) == 1
+        assert len((await session.scalars(select(Lead))).all()) == 1
+
+
+async def test_consent_by_letter_is_recorded_like_the_employee_mark(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """D-8: согласие «письмом» — запись в ленте лида и аудит `lead.consent_recorded` от имени
+    создавшего заявку, с письмом-основанием; аудит `lead.create` называет письмо."""
+    who = await _manager(sessions)
+
+    created = await _service(sessions).create_for_company(
+        who,
+        _body(consent={"method": "email"}, contact={"full_name": "Пётр", "phone": "+998901234567"}),
+    )
+
+    assert created.lead_id is not None
+    rows = await audit_rows(sessions, "lead.consent_recorded")
+    assert len(rows) == 1
+    assert rows[0].entity_id == str(created.lead_id)
+    assert rows[0].actor_user_id == who.user_id
+    assert rows[0].after is not None
+    assert rows[0].after["consent_method"] == "email"
+    assert str(LETTER) in rows[0].after["comment"]
+    (created_row,) = await audit_rows(sessions, "lead.create")
+    assert created_row.after is not None
+    assert created_row.after["letter_file_id"] == str(LETTER)
+    async with sessions() as session:
+        lead = await session.get(Lead, created.lead_id)
+        assert lead is not None
+        assert (lead.consent_method, lead.consent_given_at is not None) == ("email", True)
+        notes = await session.scalars(select(LeadNote).where(LeadNote.lead_id == lead.id))
+        assert any("получено письмом" in n.text for n in notes)
+
+
+async def test_request_for_a_new_company_without_the_consent_mark_is_a_field_error(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """The service never invents the legal basis: no mark of the employee, nothing is created."""
+    who = await _manager(sessions)
+
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions).create_for_company(
+            who, _body(contact={"full_name": "Пётр", "phone": "+998901234567"})
+        )
+
+    assert caught.value.details["field"] == "consent"
+    async with sessions() as session:
+        assert (await session.scalars(select(Client))).all() == []
+        assert (await session.scalars(select(Lead))).all() == []
+
+
+async def test_phone_consent_of_a_new_company_makes_a_phone_lead_without_the_word_letter(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+
+    created = await _service(sessions).create_for_company(
+        who,
+        _body(
+            consent={"method": "phone", "comment": "по звонку"},
+            contact={"full_name": "Пётр", "phone": "+998901234567"},
+        ),
+    )
+
+    rows = await audit_rows(sessions, "lead.consent_recorded")
+    assert [r.after["consent_method"] for r in rows if r.after] == ["phone"]
+    assert rows[0].after is not None
+    assert "письм" not in rows[0].after["comment"]
+    (created_row,) = await audit_rows(sessions, "lead.create")
+    assert created_row.after is not None
+    assert (created_row.after["source"], created_row.after["basis"]) == ("phone", "file")
+    async with sessions() as session:
+        lead = await session.get(Lead, created.lead_id)
+        assert lead is not None
+        assert (lead.source, lead.consent_method) == ("phone", "phone")
+        notes = await session.scalars(select(LeadNote).where(LeadNote.lead_id == lead.id))
+        assert not any("письм" in n.text for n in notes)
+
+
+async def test_letter_request_without_a_company_is_a_field_error(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+
+    with pytest.raises(ValidationFailedError) as caught:
+        await _service(sessions).create_for_company(who, _body(company=None))
+
+    assert caught.value.details["field"] == "company"
+
+
+async def test_letter_request_without_erp_connector_creates_nothing(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    service = ClientRequestService(sessions, backoffice_mode=_local, enqueue=Queue())
+
+    with pytest.raises(ConflictError):
+        await service.create_for_company(who, _body())
+
+    async with sessions() as session:
+        assert (await session.scalars(select(Client))).all() == []
 
 
 async def test_request_key_of_another_lead_is_rejected(

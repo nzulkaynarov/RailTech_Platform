@@ -77,6 +77,70 @@ def test_handoff_to_a_company_with_contacts_stays_held_for_checking(api):
     assert Contact.objects.get(company=existing, email="ivan@client.uz").can_act is False
 
 
+def _age(company, days=400):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    Company.objects.filter(pk=company.pk).update(created_at=timezone.now() - timedelta(days=days))
+
+
+def _bank_account(company):
+    from parties.models import CompanyBankAccount
+
+    from core.models import Currency
+
+    currency, _ = Currency.objects.get_or_create(code="UZS", defaults={"name": "Сум"})
+    return CompanyBankAccount.objects.create(
+        company=company, currency=currency, holder_name="ООО", account="20208000100000000001"
+    )
+
+
+def _supplier_order(company):
+    from supply.models import SupplierOrder
+
+    return SupplierOrder.objects.create(supplier=company, number="PO-HOSTILE-1", number_year=2026, number_seq=1)
+
+
+def _price_request(company):
+    from supply.models import PriceRequest
+
+    return PriceRequest.objects.create(supplier=company)
+
+
+def _portal_message(company):
+    from portal.models import PortalMessage
+
+    return PortalMessage.objects.create(company=company, direction="client", text="Здравствуйте")
+
+
+@pytest.mark.parametrize(
+    "make_data",
+    [None, _bank_account, _supplier_order, _price_request, _portal_message],
+    ids=["old_empty", "bank_account", "supplier_order", "price_request", "cabinet_message"],
+)
+def test_handoff_to_an_old_company_stays_held_even_without_contacts(api, make_data):
+    """Враждебный вход: давняя компания без контактов (с данными или без) — не «завели только что»; ИНН из лида её не открывает."""
+    old = Company.objects.create(name="ООО Давняя", inn="999000333")
+    if make_data is not None:
+        make_data(old)
+    _age(old)
+    response = handoff(api, payload(crm_client_id=4003, inn="999000333"))
+
+    assert response.json()["invite"]["error"] == "COMPANY_LINKED_BY_INN"
+    assert response.json()["invite"]["sent_via"] == []
+    contact = Contact.objects.filter(company=old, email="ivan@client.uz").first()
+    assert contact is None or contact.can_act is False
+
+
+def test_handoff_to_a_fresh_company_with_data_stays_held(api):
+    """Свежая, но уже с банковским счётом — не пустая: данные есть, значит, проверять есть что."""
+    fresh = Company.objects.create(name="ООО Свежая", inn="999000444")
+    _bank_account(fresh)
+    response = handoff(api, payload(crm_client_id=4004, inn="999000444"))
+    assert response.json()["invite"]["error"] == "COMPANY_LINKED_BY_INN"
+
+
 @pytest.fixture
 def world(settings):
     world = build_world()

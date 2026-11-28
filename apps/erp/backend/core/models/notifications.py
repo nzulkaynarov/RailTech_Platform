@@ -16,8 +16,32 @@ class NotificationType(AbstractLookup):
         verbose_name_plural = _("Справочник: Типы уведомлений")
 
 
+class NotificationManager(models.Manager):
+    """Шлюз доставки (ТЕСТ-2): единственный путь создания уведомлений.
+
+    Уведомление по записи тестовой компании сотруднику без «Показывать тестовые» не создаётся (возвращается несохранённая
+    строка, пуш её пропускает). Вид уведомления о сделке без `deal=` — ошибка: в тестах исключение, в проде запись в
+    журнал и пропуск (чтобы тестовая запись не утекла)."""
+
+    def create(self, **kwargs):
+        from notifications.gate import deliverable
+
+        probe = self.model(**kwargs)
+        if not deliverable(probe):
+            return probe
+        return super().create(**kwargs)
+
+    def bulk_create(self, objs, *args, **kwargs):
+        from notifications.gate import deliverable
+
+        kept = [obj for obj in objs if deliverable(obj)]
+        return super().bulk_create(kept, *args, **kwargs)
+
+
 class Notification(models.Model):
     """Системные уведомления."""
+
+    objects = NotificationManager()
 
     AUDIENCE_USER = "USER"
     AUDIENCE_PLATFORM_ADMIN = "PLATFORM_ADMIN"

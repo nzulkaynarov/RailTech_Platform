@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
@@ -32,7 +33,7 @@ from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from parties.company_admin import ensure_company_admin
-from parties.models import Company, CompanyRelationship, CompanyType, Contact, PartnerApplication
+from parties.models import Company, CompanyType, Contact
 from portal.desk.company_roles import ensure_client_role
 from portal.models import PortalRequestLine
 from portal.services.invitation import invite_contact
@@ -116,15 +117,30 @@ def _consent(company: Company, consent: Dict[str, Any]) -> None:
     company.save(update_fields=["consent_given_at", "consent_version"])
 
 
+# Окно «завели только что в мастере заявки»: компания старше — это чужая запись, а не оболочка (Q-FIX31-5).
+BLANK_SHELL_WINDOW = timedelta(hours=1)
+
+
 def _is_blank_shell(company: Company) -> bool:
-    """Пустая оболочка: у компании нет контактов (и архивных), сделок, сопоставления с CRM, отношений и заявок партнёра."""
-    return not (
-        company.contacts.exists()
-        or Deal.objects.filter(company=company).exists()
-        or CrmClientMapping.objects.filter(company=company).exists()
-        or CompanyRelationship.objects.filter(company=company).exists()
-        or PartnerApplication.objects.filter(company=company).exists()
-    )
+    """Оболочка: компанию завели только что (в пределах окна) и у неё нет НИЧЕГО.
+
+    Проверяется по классу, а не по списку: любая обратная связь Компании (контакты, сделки, сопоставление CRM, отношения,
+    заявки партнёра, банковские счета, письма и сообщения Кабинета, документы, заказы и запросы цен поставщику, участники
+    и всё, что добавится потом) делает её «найденной по ИНН». Служебные записи истории изменений (pghistory) не в счёт.
+    """
+    if timezone.now() - company.created_at > BLANK_SHELL_WINDOW:
+        return False
+    for rel in company._meta.get_fields(include_hidden=True):
+        if not (rel.auto_created and not rel.concrete and (rel.one_to_many or rel.one_to_one or rel.many_to_many)):
+            continue
+        model = rel.related_model
+        if model._meta.app_label == "pghistory" or model.__name__.endswith("Event"):
+            continue
+        if model._meta.auto_created is Company:  # собственные M2M компании (типы): роль не «данные»
+            continue
+        if model._base_manager.filter(**{rel.field.name: company}).exists():
+            return False
+    return True
 
 
 def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Tuple[Company, bool]:

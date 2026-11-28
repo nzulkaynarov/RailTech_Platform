@@ -327,6 +327,7 @@ def apply_director_decision(
             message,
             type_code="SUCCESS",
             link=_link(quote),
+            deal=quote.deal,
             event_code="quote.director_approved",
             event_params={"number": number, "outgoing_number": quote.outgoing_number, "sent_via": sent_via},
         )
@@ -345,6 +346,7 @@ def apply_director_decision(
             f"КП #{number} возвращено директором на доработку. {quote.director_comment}".strip(),
             type_code="WARNING",
             link=_link(quote),
+            deal=quote.deal,
             event_code="quote.approval_returned",
             event_params={"number": number, "comment": quote.director_comment},
         )
@@ -363,6 +365,7 @@ def apply_director_decision(
             f"КП #{number} отклонено директором. {quote.director_comment}".strip(),
             type_code="WARNING",
             link=_link(quote),
+            deal=quote.deal,
             event_code="quote.director_rejected",
             event_params={"number": number, "comment": quote.director_comment},
         )

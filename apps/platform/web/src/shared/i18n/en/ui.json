@@ -302,5 +302,9 @@
     "checkedAgo": "checked {{when}}",
     "never": "not checked yet",
     "check": "Check"
+  },
+  "testTag": {
+    "label": "Test",
+    "hint": "A test company: shown to you because showing test companies is on in your profile."
   }
 }

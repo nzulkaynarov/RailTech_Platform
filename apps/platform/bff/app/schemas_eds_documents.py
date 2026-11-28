@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.feeds.models import Sources
+from app.test_tag import TestTagged
 
 COMPANY_TZ = ZoneInfo("Asia/Tashkent")
 
@@ -102,7 +103,7 @@ class EdsFile(BaseModel):
     size: int
 
 
-class EdsDocumentRow(BaseModel):
+class EdsDocumentRow(TestTagged):
     kind: RegistryKind
     id: str
     number: str | None

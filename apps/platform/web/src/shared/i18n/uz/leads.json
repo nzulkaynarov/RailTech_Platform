@@ -53,7 +53,8 @@
     "triage": "Saralaş",
     "triageLabel": "{{name}} — «Javob kutmoqda»da saralaş",
     "reopen": "Qayta oçiş",
-    "openRequest": "Arizani ochiş",
+    "openRequest": "Arizani oçiş",
+    "openClient": "Mijozni oçiş",
     "another": "Yana bir ariza"
   },
   "paging": {

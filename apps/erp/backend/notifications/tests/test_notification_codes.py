@@ -17,6 +17,13 @@ def info_type(db):
 
 
 @pytest.fixture
+def deal(db):
+    from crm.models import Deal, DealStage
+
+    return Deal.objects.create(title="Сделка", stage=DealStage.objects.get(code="DRAFT"))
+
+
+@pytest.fixture
 def user(db):
     from accounts.models import CustomUser
 
@@ -24,11 +31,12 @@ def user(db):
 
 
 @pytest.mark.django_db
-def test_notify_user_stores_code_and_params(info_type, user):
+def test_notify_user_stores_code_and_params(info_type, user, deal):
     notification = notify_user(
         user=user,
         title="Счёт выставлен",
         message="По сделке #7 выставлен счёт INV-1",
+        deal=deal,
         event_code="invoice.issued",
         event_params={"deal_id": 7, "number": "INV-1"},
         push=False,
@@ -63,11 +71,17 @@ def test_platform_admin_alert_carries_code(info_type):
 
 
 @pytest.mark.django_db
-def test_serializer_exposes_code_and_params(info_type, user):
+def test_serializer_exposes_code_and_params(info_type, user, deal):
     from notifications.serializers import NotificationSerializer
 
     notification = notify_user(
-        user=user, title="t", message="m", event_code="act.issued", event_params={"number": "ACT-1"}, push=False
+        user=user,
+        title="t",
+        message="m",
+        deal=deal,
+        event_code="act.issued",
+        event_params={"number": "ACT-1"},
+        push=False,
     )
     data = NotificationSerializer(notification).data
 

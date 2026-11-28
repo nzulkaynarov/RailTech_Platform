@@ -33,6 +33,8 @@ class ProvisionPayload:
     # Системные роли ERP из CRM (`SystemRoleCode`, FIX-63): `None` — поле не отправляется (ERP роли
     # не трогает), `()` — снять все ранее выданные из CRM.
     role_codes: tuple[str, ...] | None = None
+    # ТЕСТ-2: «Показывать тестовые» — ERP шлёт записи тестовых компаний только таким сотрудникам
+    show_test: bool | None = None
 
     def as_json(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -45,6 +47,8 @@ class ProvisionPayload:
         }
         if self.role_codes is not None:
             body["role_codes"] = list(self.role_codes)
+        if self.show_test is not None:
+            body["show_test"] = self.show_test
         return body
 
 

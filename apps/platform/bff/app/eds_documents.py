@@ -309,6 +309,7 @@ class _RawRegistryItem(BaseModel):
     undelivered: bool = False
     awaiting_signature: bool = False
     signer: EdsPerson | None = None
+    is_test: bool = False
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -510,6 +511,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "undelivered": item.undelivered,
                     "awaiting_signature": item.awaiting_signature,
                     "signer": item.signer,
+                    "is_test": item.is_test,
                 }
             )
         )

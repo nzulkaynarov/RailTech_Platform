@@ -221,5 +221,11 @@
     "notEnrolled": "This action is confirmed with a code from the app, and sign-in with a code is not on for you yet.",
     "toProfile": "Open profile",
     "close": "Close"
+  },
+  "showTest": {
+    "title": "Test companies",
+    "label": "Show test companies and their documents",
+    "hint": "Test companies and their documents are shown to you with a “Test” tag.",
+    "saved": "Setting saved"
   }
 }

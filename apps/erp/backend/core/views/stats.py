@@ -40,7 +40,7 @@ class PageStatsView(APIView):
         from crm.models import Deal, Quote
         from notifications.models import Notification
 
-        cache_key = f"page_stats_{request.user.id}"
+        cache_key = f"page_stats_{request.user.id}{test_companies.cache_suffix()}"
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
@@ -222,7 +222,8 @@ class PlatformDashboardView(APIView):
     def get(self, request):
         from django.core.cache import cache
 
-        cached = cache.get("platform_dashboard_v1")
+        cache_key = f"platform_dashboard_v1{test_companies.cache_suffix()}"
+        cached = cache.get(cache_key)
         if cached:
             return Response(cached)
 
@@ -243,7 +244,7 @@ class PlatformDashboardView(APIView):
             "attention": attention,
             "recent_activity": self._get_recent_activity(),
         }
-        cache.set("platform_dashboard_v1", data, timeout=60)
+        cache.set(cache_key, data, timeout=60)
         return Response(data)
 
     @staticmethod

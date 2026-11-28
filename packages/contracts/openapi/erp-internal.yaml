@@ -24896,6 +24896,9 @@ components:
         manager_name:
           type: string
           nullable: true
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: заявка тестовой компании; приходит только при `?test=all`'
       required:
       - client_name
       - created_at
@@ -34923,11 +34926,16 @@ components:
           format: date-time
           readOnly: true
           title: Дата создания
+        is_test:
+          type: boolean
+          readOnly: true
+          description: 'ТЕСТ-2: уведомление по сделке тестовой компании'
       required:
       - created_at
       - event_code
       - event_params
       - id
+      - is_test
       - message
       - title
     NotificationMarkedRead:
@@ -39961,6 +39969,9 @@ components:
           nullable: true
         company_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: проект тестовой компании; приходит только при `?test=all`'
         created_at:
           type: string
           format: date-time
@@ -40214,6 +40225,9 @@ components:
           nullable: true
         company_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: проект тестовой компании; приходит только при `?test=all`'
         created_at:
           type: string
           format: date-time
@@ -41840,6 +41854,9 @@ components:
           type: integer
         client_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`'
         currency:
           type: string
           nullable: true
@@ -42127,6 +42144,9 @@ components:
           type: integer
         client_name:
           type: string
+        is_test:
+          type: boolean
+          description: 'ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`'
         currency:
           type: string
           nullable: true

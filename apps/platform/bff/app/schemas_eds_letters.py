@@ -27,6 +27,7 @@ from app.feeds.models import PersonRef, Sources, StepCode
 from app.feeds.numbers import deal_kind, deal_step, outgoing_document_path, request_path
 from app.schemas import initials_of
 from app.schemas_request_files import RequestFile, parse_request_files
+from app.test_tag import TestTagged
 
 LetterStatus = Literal[
     "awaiting_resolution",
@@ -89,7 +90,7 @@ class LetterSenderRef(BaseModel):
     date: dt.date | None
 
 
-class LetterRow(BaseModel):
+class LetterRow(TestTagged):
     id: str
     number: str
     subject: str
@@ -952,6 +953,7 @@ class _EdsRow(BaseModel):
     on_control: bool = False
     overdue: bool = False
     executor: _Person | None = None
+    is_test: bool = False
 
 
 class _EdsPage(BaseModel):
@@ -998,6 +1000,7 @@ def to_page(raw: Any) -> LetterPage:
                 on_control=row.on_control,
                 overdue=row.overdue,
                 executor=person(row.executor) if row.executor else None,
+                is_test=row.is_test,
             )
             for row in page.items
         ],

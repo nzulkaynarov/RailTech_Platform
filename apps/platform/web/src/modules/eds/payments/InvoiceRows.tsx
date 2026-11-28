@@ -124,7 +124,11 @@ export function InvoiceRows({
               <InvoiceStatus status={row.status} />
             </div>
             <p className="pf-dec-card-subject">
-              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+              <CompanyCell
+                name={row.client_name}
+                logoUrl={row.client_logo_url ?? null}
+                test={row.is_test}
+              />
             </p>
             <p className="pf-hint">
               {row.project_number} · <Amount row={row} />
@@ -170,7 +174,13 @@ export function InvoiceRows({
       width: null,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.client_name,
-      cell: (row) => <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />,
+      cell: (row) => (
+        <CompanyCell
+          name={row.client_name}
+          logoUrl={row.client_logo_url ?? null}
+          test={row.is_test}
+        />
+      ),
     },
     {
       id: "amount",

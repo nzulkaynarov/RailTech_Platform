@@ -6,6 +6,8 @@ import type { ObjectKind } from "./objectKind";
 import type { StepCode } from "./stepCode";
 
 export interface ObjectRef {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   kind: ObjectKind;
   /** Бизнес-номер SPEC-v3 §2.2 или код (для интеграции — её ключ) */
   number: string;

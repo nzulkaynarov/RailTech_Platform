@@ -211,7 +211,7 @@
       "contacts": "Telefon va poçta — «Odamlar»da",
       "canAct": "Tasdiqlay oladi",
       "canActNamed": "Tasdiqlay oladi: {{name}}",
-      "canActFailed": "Huquqni saqlab bo‘lmadi. Qayta urining."
+      "canActFailed": "Huquqni saqlab bölmadi. Qayta urining."
     },
     "accounts": {
       "title": "Bank hisoblari",

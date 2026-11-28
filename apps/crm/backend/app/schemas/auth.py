@@ -164,6 +164,7 @@ class UserOut(BaseModel):
     phone: str | None = None
     timezone: str = "Asia/Tashkent"
     email_signature: str | None = None
+    show_test: bool = False
     tg_username: str | None = None
     avatar_version: int | None = None
     deputy_user_id: int | None = None
@@ -219,6 +220,8 @@ class MePatch(BaseModel):
     phone: str | None = Field(default=None, max_length=40)
     timezone: str | None = Field(default=None, max_length=64)
     email_signature: str | None = Field(default=None, max_length=2000)
+    # ТЕСТ-2: показывать тестовые компании и их документы (свой профиль, в журнал).
+    show_test: bool | None = None
     # Закрыть приветствие и тур первого входа; снять флаг нельзя, поэтому только `true`.
     onboarding_done: Literal[True] | None = None
     # «Что нового» (W-REL): дата записи (`2026-10-28`), до которой показано окно и открыт раздел.

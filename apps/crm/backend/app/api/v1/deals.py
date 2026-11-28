@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import test_scope
 from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError
 from app.models.auth import User
@@ -63,7 +64,9 @@ def filtered(
         stmt = stmt.where(Deal.owner_user_id == owner_user_id)
     if client_id is not None:
         stmt = stmt.where(Deal.client_id == client_id)
-    else:  # ТЕСТ-1: общий список без сделок тестовых компаний; карточка клиента показывает свои
+    elif (
+        not test_scope.show_all()
+    ):  # ТЕСТ-1: общий список без сделок тестовых компаний; ТЕСТ-2: если не включено
         stmt = stmt.where(or_(Deal.client_id.is_(None), Client.is_test.is_(False)))
     zone = ZoneInfo(tz)
     if closed_from:

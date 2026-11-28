@@ -73,7 +73,7 @@ def dashboard_callback(request, context):
     re-evaluate on render.
     """
     lang = translation.get_language() or "ru"
-    cache_key = f"{DASHBOARD_CACHE_KEY_PREFIX}:{lang}"
+    cache_key = f"{DASHBOARD_CACHE_KEY_PREFIX}:{lang}{test_companies.cache_suffix()}"
     payload = cache.get(cache_key)
     if payload is None:
         payload = _compute_dashboard_payload()

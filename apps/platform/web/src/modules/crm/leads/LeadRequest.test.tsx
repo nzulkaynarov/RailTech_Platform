@@ -46,7 +46,7 @@ describe("карточка лида: заявка, созданная из ли�
     expect(line).toHaveTextContent("Заявка ПР-2026-018 создана");
     expect(within(line).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
-      expect.stringContaining("/crm/clients/3"),
+      "/erp/calc/%D0%9F%D0%A0-2026-018",
     );
     expect(within(element).queryByRole("link", { name: "Создать заявку" })).toBeNull();
     const another = within(element).getByRole("link", { name: "Ещё одна заявка" });
@@ -56,8 +56,13 @@ describe("карточка лида: заявка, созданная из ли�
   it("номера ещё нет и передача не прошла — без выдуманного номера", async () => {
     withRequest({ deal: 302, number: null, transfer: "failed" });
     const element = await panel("L-2033");
-    expect(await within(element).findByTestId("lead-request")).toHaveTextContent(
-      "Заявка создана, но не передана в учёт",
+    const line = await within(element).findByTestId("lead-request");
+    expect(line).toHaveTextContent("Заявка создана, но не передана в учёт");
+    // Номера нет — ссылки «Открыть заявку» тоже нет: подпись не обещает того, куда не ведёт.
+    expect(within(line).queryByRole("link", { name: "Открыть заявку" })).toBeNull();
+    expect(within(line).getByRole("link", { name: "Открыть клиента" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/crm/clients/3"),
     );
   });
 

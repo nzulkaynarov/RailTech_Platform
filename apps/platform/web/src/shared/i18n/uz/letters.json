@@ -1292,6 +1292,30 @@
     "prefilled": "{{number}} dan töldirildi: muxbir, poçta va mavzuni tekşiring.",
     "continue": "Javobni davom ettiriş"
   },
+  "intake": {
+    "requestTitle": "{{number}}: mijoz arizasi",
+    "title": "Xatdan yaratiş",
+    "request": "Mijoz arizasi",
+    "partner": "Hamkorni ulaş",
+    "done": {
+      "request": "{{number}} xati böyiça mijoz arizasi yaratildi",
+      "partner": "{{number}} xati böyiça hamkorni ulaş arizasi yaratildi"
+    },
+    "reason": {
+      "noRight": {
+        "request": "«Mijozlar» bölimiga ruxsat yöq: ariza yaratib bölmaydi.",
+        "partner": "Taʼminotga ruxsat yöq: ulaş arizasini yaratib bölmaydi."
+      },
+      "status": {
+        "closed": "Xat javobsiz yopilgan: avval uni işga qaytaring.",
+        "duplicate": "Xat takror deb belgilangan: arizani birinçi xatdan yarating.",
+        "rejected": "Xat böyiça rezolyutsiya rad etilgan: ariza yaratib bölmaydi.",
+        "returned": "Xat qayta işlaşga qaytarilgan: ariza yaratib bölmaydi."
+      },
+      "hasRequest": "Bu xat böyiça {{number}} arizasi allaqaçon bor.",
+      "requestMade": "Bu xat böyiça ariza allaqaçon yaratilgan."
+    }
+  },
   "outcome": {
     "more": "Yana",
     "cancel": "Bekor qiliş",

@@ -328,6 +328,7 @@ class CrmLeadsFake:
         if (m, p) in (
             ("POST", "leads/2041/actions/create_request"),
             ("POST", "clients/12/actions/create_request"),
+            ("POST", "clients/actions/create_request_for_company"),
         ):
             return httpx.Response(201, json=created())
         if (m, p) == ("GET", "leads/2041/messages/90/attachments/0"):

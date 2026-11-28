@@ -54,6 +54,7 @@
     "triageLabel": "Triage {{name}} in “Awaiting reply”",
     "reopen": "Reopen",
     "openRequest": "Open request",
+    "openClient": "Open client",
     "another": "Another request"
   },
   "paging": {
