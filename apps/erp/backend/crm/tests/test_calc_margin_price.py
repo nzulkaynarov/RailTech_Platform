@@ -229,11 +229,41 @@ def test_lines_before_rasch3_keep_their_prices(prices, django_capture_on_commit_
     assert _line(prices, item.pk)["price_mode"] in ("legacy", "manual")
 
 
-def test_rounding_step_setting_is_validated(prices):  # noqa: F811
+@pytest.fixture
+def company_admin(prices):  # noqa: F811
+    from accounts.models import CustomUser
+
+    return CustomUser.objects.create_superuser(username="root-margin", email="root-margin@demo.test", password="x")
+
+
+@pytest.mark.parametrize("field", ["price_rounding_step", "target_margin_percent"])
+@pytest.mark.parametrize("value", [None, "", "abc", "NaN", "Infinity", "-5", "-0.01", "95.01", "150", "100", "1e9999"])
+def test_pricing_settings_reject_hostile_values(prices, company_admin, field, value):  # noqa: F811
     from accounts.services.company_settings import update_company_settings
 
-    owner = prices["supply"]
-    bad = update_company_settings(owner, prices["seller"], {"price_rounding_step": "-5"})
-    assert bad[1] in ("BAD_NUMBER", "NOT_COMPANY_OWNER")
-    none = update_company_settings(owner, prices["seller"], {"price_rounding_step": None})
-    assert none[1] in ("BAD_NUMBER", "NOT_COMPANY_OWNER")
+    if field == "price_rounding_step" and value in ("95.01", "100", "150"):
+        pytest.skip("the rounding step is not a percentage")
+    row = prices["seller"].settings
+    before = getattr(row, field)
+    _, error = update_company_settings(company_admin, prices["seller"], {field: value})
+    assert error == "BAD_NUMBER"
+    row.refresh_from_db()
+    assert getattr(row, field) == before
+
+
+@pytest.mark.parametrize("value", ["0", "20", "95", "37.5"])
+def test_target_margin_accepts_the_engine_range(prices, company_admin, value):  # noqa: F811
+    from accounts.services.company_settings import update_company_settings
+
+    _, error = update_company_settings(company_admin, prices["seller"], {"target_margin_percent": value})
+    assert error is None
+    assert prices["seller"].settings.__class__.objects.get(pk=prices["seller"].settings.pk).target_margin_percent == D(
+        value
+    )
+
+
+def test_non_owner_cannot_change_pricing_settings(prices):  # noqa: F811
+    from accounts.services.company_settings import update_company_settings
+
+    _, error = update_company_settings(prices["supply"], prices["seller"], {"price_rounding_step": "-5"})
+    assert error == "NOT_COMPANY_OWNER"

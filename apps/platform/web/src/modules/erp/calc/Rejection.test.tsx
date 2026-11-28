@@ -90,6 +90,6 @@ describe("Расчёт · цена клиенту и маржа (РАСЧ-3)", (
     });
     // 90 000 000 / (1 − 20 %) = 112 500 000
     expect(price().value).toMatch(/^112\s500\s000/);
-    expect(screen.getByTestId("price-rule")).toHaveTextContent("маржа 20 %");
+    expect(screen.getByTestId("price-rule")).toHaveTextContent("Округление до");
   });
 });

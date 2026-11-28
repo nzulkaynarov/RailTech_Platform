@@ -207,8 +207,7 @@
     "manual": "Narx qölda",
     "backToMargin": "{{pct}} % ga qaytariş",
     "backToMarginLabel": "«{{name}}» qatori narxini marjaga qaytariş",
-    "rule": "Narx = tannarx / (1 − marja {{margin}} %), {{step}} gaça yuqoriga yaxlitlanadi. KP yuborilgunça özi qayta hisoblanadi; qölda kiritilgan narx qayta hisoblanmaydi.",
-    "ruleNoRound": "Narx = tannarx / (1 − marja {{margin}} %). KP yuborilgunça özi qayta hisoblanadi; qölda kiritilgan narx qayta hisoblanmaydi."
+    "rule": "{{step}} gaça yaxlitlanadi"
   },
   "add": {
     "button": "Qator qöşiş",

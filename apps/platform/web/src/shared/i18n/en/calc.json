@@ -207,8 +207,7 @@
     "manual": "Manual price",
     "backToMargin": "back to {{pct}} %",
     "backToMarginLabel": "Return the price of line “{{name}}” to margin",
-    "rule": "Price = cost / (1 − margin {{margin}} %), rounded up to {{step}}. Recalculates itself until the quote is sent; a manual price is never recalculated.",
-    "ruleNoRound": "Price = cost / (1 − margin {{margin}} %). Recalculates itself until the quote is sent; a manual price is never recalculated."
+    "rule": "Rounded up to {{step}}"
   },
   "add": {
     "button": "Add line",

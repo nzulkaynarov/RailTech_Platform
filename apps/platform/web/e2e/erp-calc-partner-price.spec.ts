@@ -82,7 +82,7 @@ test("цена от маржи: правило под таблицей, «Цен
   await loginAndWait(page, "supply@demo.example");
   await page.setViewportSize({ width: 1512, height: 982 });
   await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-121")}`);
-  await expect(page.getByTestId("price-rule")).toContainText("маржа 20 %");
+  await expect(page.getByTestId("price-rule")).toContainText("Округление до");
   await expect(page.getByTestId("price-rule")).toContainText("до 1");
   await expect(page.getByTestId("price-manual")).toHaveCount(1);
 

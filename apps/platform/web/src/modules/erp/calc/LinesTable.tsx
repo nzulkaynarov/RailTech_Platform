@@ -739,18 +739,14 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
  * клиенту · маржа · виза. Правит строку тот, у кого право её зоны (`can_edit`): товар — снабженец, услуга —
  * гл. инженер (ставка бригады и дни). Себестоимость и наценка — только при `rights.cost`. На телефоне — карточки.
  */
-/** РАСЧ-3: как считается цена — одна строка под таблицей; цифры из «Продажи» (видит тот, кому положена маржа). */
+/** РАСЧ-3: короткая подпись под таблицей — шаг округления (макет 111 v63); без шага подписи нет. */
 function PriceRule({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
-  const { totals } = sheet;
-  if (!totals.target_pct) return null;
-  const margin = Number(totals.target_pct).toLocaleString(undefined, { maximumFractionDigits: 1 });
-  const step = Number(totals.rounding_step ?? 0);
+  const step = Number(sheet.totals.rounding_step ?? 0);
+  if (!(step > 0)) return null;
   return (
     <p className="pf-hint pf-calc-rule" data-testid="price-rule">
-      {step > 0
-        ? t("lines.rule", { margin, step: step.toLocaleString(undefined) })
-        : t("lines.ruleNoRound", { margin })}
+      {t("lines.rule", { step: step.toLocaleString(undefined) })}
     </p>
   );
 }

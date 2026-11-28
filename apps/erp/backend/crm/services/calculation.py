@@ -1010,9 +1010,12 @@ def start(deal_id: int, user) -> dict:
 
 def _mark_margin_priced(quote: Quote) -> None:
     """РАСЧ-3: строки нового расчёта (из заявки) считаются от маржи — у каждой строки есть строка расчёта с этим основанием."""
-    missing = list(quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, calc__isnull=True))
+    items = quote.items.filter(display_type=QuoteItem.DisplayType.ITEM)
+    missing = list(items.filter(calc__isnull=True))
     if missing:
         CalcLine.objects.bulk_create([CalcLine(item=it, price_basis=CalcPriceBasis.MARGIN) for it in missing])
+    # Строка, у которой строка расчёта уже есть (подсказка похожей карточки, СЦ-10), тоже новая — основание пустое.
+    CalcLine.objects.filter(item__in=items, price_basis="").update(price_basis=CalcPriceBasis.MARGIN)
 
 
 def _empty_draft(deal: Deal, user) -> Quote:
