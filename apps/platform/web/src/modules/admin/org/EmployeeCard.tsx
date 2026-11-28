@@ -78,10 +78,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             : []),
         ]}
       />
-      <CapabilityCard
-        employeeId={employee.id}
-        {...(canEdit && !disabled ? { rolesTargetId: `pf-roles-${employee.id}` } : {})}
-      />
+      <CapabilityCard employeeId={employee.id} />
       {attention === "pending" ? (
         <Alert type="info" showIcon message={t("admin.org.card.erpPending")} />
       ) : null}

@@ -20,14 +20,13 @@
   "partialHint": "Some actions of this row are switched off",
   "legend": {
     "label": "Legend",
-    "partial": "“not all” — some actions are switched off",
-    "only": "the only one who decides"
+    "partial": "“not all” — some off",
+    "only": "sole decider"
   },
   "matrix": {
     "label": "What each employee can do",
-    "hint": "Click a name to open the person.",
-    "readOnly": "The table shows what employees can do today. Rights are granted through roles — in the person card.",
-    "capability": "Capability",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
     "unavailable": "Could not load the table. Refresh the page.",
     "retry": "Retry",
     "empty": {
@@ -37,15 +36,12 @@
     "apart": "Apart from capabilities",
     "signs": "Signs",
     "responsible": "Responsible for",
-    "deputy": "Covers for",
     "noSigning": "—",
     "noZones": "—",
     "unlimited": "no limit",
     "upTo": "up to {{amount}}",
     "open": "Open: {{name}}",
-    "cell": "{{capability}}: {{level}}",
-    "cellPartial": "{{capability}}: {{level}}, not all",
-    "onlyMark": "the only one who decides"
+    "onlyMark": "sole decider"
   },
   "warnings": {
     "summaryOnly_one": "{{count}} decision rests on one person",
@@ -61,13 +57,16 @@
   },
   "card": {
     "heading": "What this person can do",
-    "positionNote": "The position is a label; it does not affect capabilities.",
     "summary": {
-      "does": "Does",
+      "does": "Handles",
       "decides": "Decides",
       "responsible": "Responsible for",
       "lacks": "Cannot"
     },
+    "summaryMore": "and {{count}} more",
+    "open": "Open",
+    "back": "All employees",
+    "changeRoles": "Change roles",
     "nothing": "Nothing yet",
     "rows": "Capabilities along the deal",
     "from": "From role: {{roles}}",
@@ -84,7 +83,6 @@
       "curator": "curator"
     },
     "responsibleEmpty": "Not assigned to any area",
-    "responsibleNote": "An area is only recorded for now: it does not route tasks.",
     "signingTitle": "Signs",
     "signingEmpty": "No signing authority",
     "signingUntil": "until {{date}}",
@@ -93,22 +91,19 @@
     "deputyNone": "No deputy",
     "deputyLine": "{{name}} · {{from}} — {{to}}",
     "deputyPasses": "Approvals, resolutions and quote approval pass over. Signing and payment confirmation do not.",
-    "change": "Change through roles (until the next step)",
-    "changeHint": "Rights are granted as before — through roles. Separate switches will come in the next step.",
     "unavailable": "Could not load capabilities. Refresh the page.",
     "retry": "Retry",
     "free": "Everyone, without granting: {{text}}"
   },
   "mine": {
     "title": "My capabilities",
-    "lead": "What you can do in the Platform today. Rights are granted by the administrator.",
     "ask": "Ask for a capability",
     "askBody": "I need the capability “{{name}}”: “{{level}}”.",
     "summary": {
-      "does": "What I do",
-      "decides": "What I decide",
-      "responsible": "What I am responsible for",
-      "lacks": "What I cannot do"
+      "does": "I handle",
+      "decides": "I decide",
+      "responsible": "I am responsible for",
+      "lacks": "I cannot"
     },
     "signingTitle": "I sign",
     "responsibleTitle": "I am responsible for",

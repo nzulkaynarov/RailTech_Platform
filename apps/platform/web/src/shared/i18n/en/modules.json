@@ -649,9 +649,7 @@
       },
       "form": {
         "rolesLegend": "Platform roles",
-        "rolesHint": "A person can have several roles: access and queues add up.",
         "positionLabel": "Position",
-        "positionHint": "Text for the card and lists; it does not affect permissions.",
         "save": "Save roles",
         "saved": "Saved",
         "needRole": "Pick at least one role. To close access completely, disable the employee.",

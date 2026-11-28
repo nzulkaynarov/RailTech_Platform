@@ -649,9 +649,7 @@
       },
       "form": {
         "rolesLegend": "Platforma rollari",
-        "rolesHint": "Bir kişiga bir neçta rol beriş mumkin: kiriş va navbatlar qöşiladi.",
         "positionLabel": "Lavozim",
-        "positionHint": "Kartoçka va röyxatlar uçun matn, huquqlarga taʼsir qilmaydi.",
         "save": "Rollarni saqlaş",
         "saved": "Saqlandi",
         "needRole": "Kamida bitta rolni tanlang. Kirişni butunlay yopiş uçun xodimni öçiring.",

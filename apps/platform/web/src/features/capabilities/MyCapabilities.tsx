@@ -6,10 +6,15 @@ import { Link } from "react-router";
 import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
 import { useGetMyCapabilities } from "../../shared/api/generated/platform-bff";
 import { CapabilityRows } from "./CapabilityRows";
+import { SummaryBox } from "./SummaryBox";
 import { DeputyBlock, SigningBlock, ZonesBlock } from "./PersonBlocks";
 import { pickText } from "./model";
 
 import "./capabilities.css";
+
+const openTable = () => {
+  document.getElementById("pf-cap-table-mine")?.scrollIntoView({ block: "start" });
+};
 
 /**
  * «Мои возможности» в профиле (ДОСТ-1): те же данные, что в карточке человека у администратора, про самого сотрудника — только
@@ -41,35 +46,51 @@ export function MyCapabilities() {
   }
   const data = query.data;
   return (
-    <div data-testid="my-capabilities">
-      <p className="pf-hint" style={{ margin: "0 0 12px" }}>
-        {t("mine.lead")}
-      </p>
-      <CapabilityRows data={data} />
-      <ZonesBlock title={t("mine.responsibleTitle")} known={data.zones_known} items={data.zones} />
-      <SigningBlock
-        title={t("mine.signingTitle")}
-        known={data.signing_known}
-        items={data.signing}
-      />
-      <DeputyBlock
-        title={t("mine.deputyTitle")}
-        deputy={data.deputy}
-        noneText={t("mine.deputyNone")}
-      />
-      <p className="pf-hint" style={{ marginTop: 16 }}>
-        {t("card.free", { text: pickText(data.free_for_all, i18n.language) })}
-      </p>
-      <p style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "16px 0 0" }}>
-        <Button
-          onClick={() => {
-            setAsking(true);
-          }}
-        >
-          {t("mine.ask")}
-        </Button>
-        <Link to="/dashboard/queue">{t("mine.openTasks")}</Link>
-      </p>
+    <div data-testid="my-capabilities" className="pf-cap-page">
+      <section className="pf-cap-box">
+        <SummaryBox data={data} person="first" onMore={openTable} />
+      </section>
+      <div className="pf-cap-cols">
+        <section className="pf-cap-box" id="pf-cap-table-mine">
+          <CapabilityRows data={data} />
+          <p className="pf-hint" style={{ margin: "12px 0 0" }}>
+            {t("card.free", { text: pickText(data.free_for_all, i18n.language) })}
+          </p>
+        </section>
+        <div className="pf-cap-side">
+          <div className="pf-cap-box">
+            <ZonesBlock
+              title={t("mine.responsibleTitle")}
+              known={data.zones_known}
+              items={data.zones}
+            />
+          </div>
+          <div className="pf-cap-box">
+            <SigningBlock
+              title={t("mine.signingTitle")}
+              known={data.signing_known}
+              items={data.signing}
+            />
+          </div>
+          <div className="pf-cap-box">
+            <DeputyBlock
+              title={t("mine.deputyTitle")}
+              deputy={data.deputy}
+              noneText={t("mine.deputyNone")}
+            />
+          </div>
+          <p style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: 0 }}>
+            <Button
+              onClick={() => {
+                setAsking(true);
+              }}
+            >
+              {t("mine.ask")}
+            </Button>
+            <Link to="/dashboard/queue">{t("mine.openTasks")}</Link>
+          </p>
+        </div>
+      </div>
       {asking ? (
         <WriteToAdminModal
           open

@@ -173,15 +173,9 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
           ) : null}
           <dl className="pf-profile-readonly">
             <dt>{t("data.email")}</dt>
-            <dd>
-              {profile.email}
-              <div className="pf-hint">{t("data.emailHint")}</div>
-            </dd>
+            <dd>{profile.email}</dd>
             <dt>{t("data.position")}</dt>
-            <dd>
-              {profile.position ?? t("data.noPosition")}
-              <div className="pf-hint">{t("data.positionHint")}</div>
-            </dd>
+            <dd>{profile.position ?? t("data.noPosition")}</dd>
           </dl>
           <Form<Values>
             form={form}

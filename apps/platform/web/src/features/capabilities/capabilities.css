@@ -273,3 +273,176 @@
   line-height: 18px;
   color: var(--rt-color-text-secondary);
 }
+
+/* Итог словами: до четырёх коротких строк */
+.pf-cap-sum {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 32px;
+  margin: 0;
+}
+.pf-cap-sum-compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.pf-cap-sum dt {
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.pf-cap-sum dd {
+  margin: 0;
+  line-height: 22px;
+}
+.pf-cap-sum-compact > div {
+  display: flex;
+  gap: 8px;
+}
+.pf-cap-sum-compact dt {
+  flex: 0 0 auto;
+  font-size: 13px;
+  line-height: 22px;
+}
+.pf-cap-sum-compact dt::after {
+  content: ":";
+}
+.pf-cap-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--rt-color-primary-text);
+  cursor: pointer;
+  font: inherit;
+}
+.pf-cap-more:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+
+/* Страница человека и «Мои возможности»: слева таблица по областям, справа три блока */
+.pf-cap-page {
+  display: grid;
+  gap: 16px;
+}
+.pf-cap-box {
+  padding: 16px;
+  border: 1px solid var(--rt-color-surface-split);
+  border-radius: 8px;
+  background: var(--rt-color-surface-card);
+}
+.pf-cap-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+.pf-cap-side {
+  display: grid;
+  gap: 16px;
+}
+.pf-cap-side .pf-cap-block {
+  margin-top: 0;
+}
+@media (max-width: 1100px) {
+  .pf-cap-cols,
+  .pf-cap-sum {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pf-cap-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.pf-cap-head-main {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.pf-cap-head h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+/* Таблица по областям: строка области раскрывается в возможности */
+.pf-cap-matrix {
+  --pf-cap-first: 210px;
+  /* Столбцы делят ширину поровну; уже 112 px на человека — прокрутка самой таблицы, а не страницы */
+  width: 100%;
+  min-width: calc(var(--pf-cap-first) + var(--pf-cap-cols, 1) * 112px);
+}
+.pf-cap-line {
+  grid-template-columns: var(--pf-cap-first) repeat(var(--pf-cap-cols, 1), minmax(112px, 1fr));
+}
+.pf-cap-areabtn {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+.pf-cap-areabtn:focus-visible {
+  outline: 2px solid var(--rt-color-primary-default);
+  outline-offset: 2px;
+}
+.pf-cap-chevron {
+  flex: 0 0 auto;
+  width: 10px;
+  color: var(--rt-color-text-secondary);
+}
+.pf-cap-areahead {
+  font-weight: 600;
+}
+.pf-cap-caprow .pf-cap-cell {
+  background: var(--rt-color-surface-subtle);
+}
+.pf-cap-caphead {
+  padding-left: 34px;
+  font-weight: 400;
+}
+.pf-cap-short {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
+.pf-cap-legend-end {
+  margin-left: auto;
+}
+.pf-cap-matrix-wrap {
+  max-height: none;
+}
+
+/* Таблица: компактные клетки, «не всё» в той же строке */
+.pf-cap-matrix .pf-cap-cell {
+  padding: 8px;
+}
+.pf-cap-matrix [role="columnheader"].pf-cap-cell {
+  padding-left: 8px;
+}
+.pf-cap-matrix .pf-cap-levelwrap {
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.pf-cap-matrix .pf-cap-level {
+  padding: 0 6px;
+}
+.pf-cap-matrix .pf-cap-partial {
+  font-size: 11px;
+}
+.pf-cap-matrix .pf-cap-only-mark {
+  margin-left: 4px;
+}
+.pf-cap-matrix {
+  --pf-cap-first: 190px;
+}
