@@ -552,7 +552,7 @@
     "not_delivered": "Dalolatnoma yetkazib berilgandan keyin çiqariladi: tovar hali yetkazilmagan.",
     "goods_not_shipped": "Tovar ombordan hali jönatilmagan: yetkazib beriş belgilari jönatilgandan keyin mavjud.",
     "delivery_transition_not_allowed": "Yetkazib beriş allaqaçon boşqa holatda. Sahifani yangilang.",
-    "fulfillment_not_ready": "Loyiha bo‘yiça bajarilış hali yoq: u şartnomadan keyin paydo boladi.",
+    "fulfillment_not_ready": "Loyiha böyiça bajarilış hali yoq: u şartnomadan keyin paydo boladi.",
     "no_invoice": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi: hisob hali yöq.",
     "contract_exists": "Şartnoma loyihasi allaqaçon şakllantirilgan.",
     "contract_create_not_allowed": "Ruxsat yetarli emas.",
