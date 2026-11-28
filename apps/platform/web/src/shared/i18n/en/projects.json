@@ -551,6 +551,8 @@
     "act_already_exists": "The project already has an act.",
     "not_delivered": "The act is issued after delivery: the goods are not delivered yet.",
     "goods_not_shipped": "The goods are not shipped from the warehouse yet: delivery marks are available after shipping.",
+    "delivery_transition_not_allowed": "The delivery is already in another status. Refresh the page.",
+    "fulfillment_not_ready": "There is no fulfilment for the project yet: it appears after the contract.",
     "no_invoice": "The act is issued against an issued invoice: there is none yet.",
     "contract_exists": "The contract draft is already created.",
     "contract_create_not_allowed": "Insufficient permissions.",
