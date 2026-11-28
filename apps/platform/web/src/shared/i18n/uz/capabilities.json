@@ -118,10 +118,10 @@
   },
   "denied": {
     "title": "«{{name}}» sizga berilmagan",
-    "need": "Bu bölimni açiş uçun «{{name}}» imkoniyati kerak: {{level}}. Hozir sizda — «{{current}}».",
+    "need": "Sizda «{{name}}» imkoniyati yöq.",
     "who": "Imkoniyatlarni administrator beradi.",
     "ask": "Imkoniyat söraş",
-    "askBody": "«{{name}}» imkoniyati kerak: {{level}}.",
+    "askBody": "Menga «{{name}}» imkoniyatini bering (daraja: {{level}}).",
     "grantors": "Imkoniyatlarni beradiganlar: {{names}}.",
     "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing.",
     "action": "Bu amal sizga mavjud emas.",

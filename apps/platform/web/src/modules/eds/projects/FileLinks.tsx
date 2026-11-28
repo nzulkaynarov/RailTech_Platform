@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FileNotReadyError, downloadFile } from "../../../shared/api/download";
-import { reasonText } from "./errors";
+import { useReasonText } from "./errors";
 
 export interface FileItem {
   url: string;
@@ -19,6 +19,7 @@ export interface FileItem {
 export function FileLinks({ items }: { items: readonly (FileItem | null)[] }) {
   const { t } = useTranslation("projects");
   const { message } = App.useApp();
+  const describe = useReasonText();
   const [busy, setBusy] = useState<string | null>(null);
   const shown = items.filter((item): item is FileItem => item !== null);
   if (shown.length === 0) return null;
@@ -29,7 +30,7 @@ export function FileLinks({ items }: { items: readonly (FileItem | null)[] }) {
       await downloadFile(item.url, item.name);
     } catch (error) {
       void message.error(
-        error instanceof FileNotReadyError ? t("files.generating") : reasonText(t, error),
+        error instanceof FileNotReadyError ? t("files.generating") : await describe(error, false),
       );
     } finally {
       setBusy(null);

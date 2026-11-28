@@ -118,10 +118,10 @@
   },
   "denied": {
     "title": "“{{name}}” is not granted to you",
-    "need": "To open this section you need the capability “{{name}}”: {{level}}. Now you have “{{current}}”.",
+    "need": "You do not have the capability “{{name}}”.",
     "who": "Capabilities are granted by the administrator.",
     "ask": "Ask for a capability",
-    "askBody": "I need the capability “{{name}}”: {{level}}.",
+    "askBody": "Please grant me the capability “{{name}}” (level: {{level}}).",
     "grantors": "Capabilities are granted by: {{names}}.",
     "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator.",
     "action": "This action is not available to you.",

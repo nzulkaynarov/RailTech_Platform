@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { server } from "../../../test/server";
 import { panelEl, renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
 
 setupProjectTests();
@@ -67,5 +69,23 @@ describe("Проект: отметки доставки", () => {
     expect(card).toHaveTextContent("Отгружено");
     expect(within(card).queryByRole("button", { name: "Доставлено" })).toBeNull();
     expect(within(card).queryByRole("button", { name: "Отправлено, в пути" })).toBeNull();
+  });
+
+  it("отказ 403 по отметке говорит законченной фразой с именами тех, кто выдаёт", async () => {
+    signIn("supply@demo.example");
+    server.use(
+      http.post("*/eds/projects/:ref/delivery", () =>
+        HttpResponse.json({ code: "FORBIDDEN", message: "x", source: "bff" }, { status: 403 }),
+      ),
+    );
+    renderAt(PR97);
+    const card = await execution();
+    await openDialog(card, "Отправлено, в пути", "Отправлено клиенту, в пути");
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /^У вас нет такой возможности\. Её выдают: .*Демо Админов.*\.$/,
+      );
+    });
   });
 });

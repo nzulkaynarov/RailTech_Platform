@@ -49,7 +49,7 @@ export function Forbidden({ roles, embedded = false, rule }: ForbiddenProps) {
         ? t("capabilities:denied.nobody")
         : t("capabilities:denied.grantors", { names: grantors.map((p) => p.name).join(", ") });
   const text = missing
-    ? `${t("capabilities:denied.need", { name, level, current: t(`capabilities:level.${missing.current}`) })} ${who}`
+    ? `${t("capabilities:denied.need", { name })} ${who}`
     : roles && roles.length > 0
       ? t("forbidden.textRoles", { roles: roles.join(", ") })
       : t("forbidden.text");

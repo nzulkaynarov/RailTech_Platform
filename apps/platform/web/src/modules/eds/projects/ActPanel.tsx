@@ -12,7 +12,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ActionToggle } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { fileUrl, projectRef } from "./api";
-import { reasonText } from "./errors";
+import { useFailedText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm, ScanForm } from "./forms";
 import { actStateKey } from "./model";
@@ -31,6 +31,7 @@ function ActBody({
   onDone?: (() => void) | undefined;
 }) {
   const { t } = useTranslation("projects");
+  const failedText = useFailedText();
   const { date } = useFormat();
   const { message } = App.useApp();
   const apply = useApplyCard(objectId);
@@ -43,7 +44,7 @@ function ActBody({
 
   const fail = (e: unknown) => {
     setPending(null);
-    setError(t("errors.failed", { reason: reasonText(t, e) }));
+    failedText(e, setError);
   };
   const done = (next: ProjectCard, key: string) => {
     setPending(null);
@@ -216,13 +217,14 @@ function ActBody({
 /** Кнопка строки «Акт»: выпустить акт, когда договор и поставка это позволяют (тот же вызов, что был во вкладке окна). */
 export function ActIssueButton({ objectId }: { objectId: string }) {
   const { t } = useTranslation("projects");
+  const failedText = useFailedText();
   const { message } = App.useApp();
   const apply = useApplyCard(objectId);
   const [error, setError] = useState<string | null>(null);
   const run = useActEdsProjectAct({
     mutation: {
       onError: (e) => {
-        setError(t("errors.failed", { reason: reasonText(t, e) }));
+        failedText(e, setError);
       },
     },
   });
