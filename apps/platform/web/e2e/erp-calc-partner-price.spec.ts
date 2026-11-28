@@ -76,3 +76,30 @@ test("расчёт на 12 строк: цены партнёров, истёкш
     await expectNoViolations(page, `расчёт на 12 строк, ${String(width)} px`);
   }
 });
+
+// РАСЧ-3 на MSW: цена строк считается от маржи сама, введённая вручную помечена и возвращается к марже одной кнопкой.
+test("цена от маржи: правило под таблицей, «Цена вручную» и «вернуть N %»", async ({ page }) => {
+  await loginAndWait(page, "supply@demo.example");
+  await page.setViewportSize({ width: 1512, height: 982 });
+  await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-121")}`);
+  await expect(page.getByTestId("price-rule")).toContainText("Округление до");
+  await expect(page.getByTestId("price-rule")).toContainText("до 1");
+  await expect(page.getByTestId("price-manual")).toHaveCount(1);
+
+  // Закупка в долларах: 4 000 USD × 12 100 = 48 400 000 → /0,8 = 60 500 000
+  const cable = "Кабель силовой медный с изоляцией из сшитого полиэтилена 3×95+1×50, барабан 500 м";
+  await expect(page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`)).toHaveValue(
+    /60\s500\s000/,
+  );
+
+  // Закупка выросла — цена от маржи следует за ней сама, без правки цены
+  const purchase = page.getByLabel(`Закупка за единицу для «${cable}»`);
+  await purchase.fill("5000");
+  await purchase.blur();
+  await expect(page.getByLabel(`Цена клиенту без НДС за единицу для «${cable}»`)).toHaveValue(
+    /75\s625\s000/,
+  );
+
+  await page.getByTestId("price-manual").getByRole("button").click();
+  await expect(page.getByTestId("price-manual")).toHaveCount(0);
+});

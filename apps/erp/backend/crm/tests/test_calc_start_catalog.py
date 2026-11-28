@@ -88,6 +88,18 @@ def test_similar_card_is_hinted_not_duplicated(world, published, django_assert_m
     assert line["quantity"] == 12.5
 
 
+def test_hinted_line_is_still_margin_priced(world, published):
+    """СЦ-10 × РАСЧ-3: подсказка создаёт строку расчёта раньше разметки — цена всё равно «от маржи», не «наценка»."""
+    published("Рельс Р65 ГОСТ Р 51685")
+    _request(world, "Рельс Р65, длина 25 м", quantity=1)
+
+    _start(world)
+
+    calc = CalcLine.objects.get(item=_item(world, "Рельс Р65, длина 25 м"))
+    assert calc.catalog_hint_id is not None
+    assert calc.price_basis == "margin"
+
+
 def test_different_codes_are_not_hinted(world, published):
     published("Рельс Р50 длина 25 м")
     _request(world, "Рельс Р65, длина 25 м", quantity=1)

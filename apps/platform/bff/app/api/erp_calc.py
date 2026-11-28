@@ -466,12 +466,13 @@ async def update_line(
             status_code=422,
             details={"reason": "cost_forbidden", "fields": cost_fields},
         )
-    if "markup_pct" in patch and "cost_margin" not in authed.fields:
+    margin_fields = sorted({"markup_pct", "margin_pct", "price_mode"} & set(patch))
+    if margin_fields and "cost_margin" not in authed.fields:
         raise PlatformError(
             "VALIDATION_FAILED",
-            "Наценку правит сотрудник с доступом к себестоимости.",
+            "Наценку и маржу правит сотрудник с доступом к себестоимости.",
             status_code=422,
-            details={"reason": "cost_forbidden", "fields": ["markup_pct"]},
+            details={"reason": "cost_forbidden", "fields": margin_fields},
         )
     if patch.get("product_id") is not None:
         patch["product_id"] = int(patch["product_id"])

@@ -86,7 +86,12 @@ KIND_FROM_ERP: dict[str, NumberingKind] = {
     "DOC": "letter",
 }
 KIND_TO_ERP: dict[str, str] = {kind: code for code, kind in KIND_FROM_ERP.items()}
-MARGIN_FIELDS = ("default_margin_percent", "min_margin_percent", "target_margin_percent")
+MARGIN_FIELDS = (
+    "default_margin_percent",
+    "min_margin_percent",
+    "target_margin_percent",
+    "price_rounding_step",
+)
 COST_MARGIN_GROUP = "cost_margin"
 
 _PREFIX = r"^[A-Za-z0-9_-]*$"
@@ -512,6 +517,7 @@ class QuoteDefaults(BaseModel):
     default_margin_percent: str | None = None
     min_margin_percent: str | None = None
     target_margin_percent: str | None = None
+    price_rounding_step: str | None = None
     default_offer_validity_days: int | None
     payment_terms_days: int | None
     remind_overdue_invoices: bool
@@ -571,6 +577,7 @@ class QuoteDefaultsUpdate(Patch):
     default_margin_percent: str | None = Field(default=None, pattern=r"^-?[0-9]+(\.[0-9]+)?$")
     min_margin_percent: str | None = Field(default=None, pattern=r"^-?[0-9]+(\.[0-9]+)?$")
     target_margin_percent: str | None = Field(default=None, pattern=r"^-?[0-9]+(\.[0-9]+)?$")
+    price_rounding_step: str | None = Field(default=None, pattern=r"^[0-9]+(\.[0-9]+)?$")
     default_offer_validity_days: int | None = Field(default=None, ge=0)
     payment_terms_days: int | None = Field(default=None, ge=0)
     remind_overdue_invoices: bool | None = None

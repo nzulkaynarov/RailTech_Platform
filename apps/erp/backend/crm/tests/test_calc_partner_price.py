@@ -157,14 +157,13 @@ def test_partner_source_survives_exchange_rate_change(prices):
     assert [o["chosen"] for o in part["options"]] == [True, False] and part["can_request"] is False
 
 
-def test_client_price_is_purchase_plus_default_margin(prices):
+def test_client_price_is_cost_over_one_minus_target_margin(prices):
+    """РАСЧ-3: цену ставит целевая маржа («Продажи»), а не наценка по умолчанию; подробности — test_calc_margin_price."""
     line = _add(prices, product_id=prices["product"].pk)
-    quote = Quote.objects.get(deal=prices["deal"])
-    assert quote.margin_percent == Decimal("20.00"), "наценка по умолчанию из настроек «Продажи»"
     item = QuoteItem.objects.get(pk=line["id"])
-    assert item.final_price_excl_vat == (item.landed_cost * Decimal("1.2")).quantize(Decimal("0.01"))
+    assert item.final_price_excl_vat == Decimal("112000000.00"), "84 000 000 / (1 − 25 %), шаг 1 000 уже ровный"
+    assert line["margin_pct"] == "25.0" and line["price_mode"] == "margin"
     assert Decimal(line["client_price"]) > Decimal(line["cost"])
-    assert line["markup_pct"] == "20.0"
 
 
 def test_configured_default_margin_is_used(prices):
@@ -184,12 +183,12 @@ def test_delivery_term_is_taken_from_the_chosen_partner_price(prices):
 
 def test_margin_below_threshold_is_flagged_on_line_and_totals_but_does_not_block(prices):
     settings_row = prices["seller"].settings
-    settings_row.default_margin_percent = Decimal("3.20")
+    settings_row.target_margin_percent = Decimal("10.00")
     settings_row.min_margin_percent = Decimal("12.00")
     settings_row.save()
     line = _add(prices, product_id=prices["product"].pk)
-    assert line["margin_below"] is True and line["margin_pct"] == "3.1", "маржа на цену, не наценка на себестоимость"
-    assert line["markup_pct"] == "3.2"
+    assert line["margin_below"] is True and line["margin_pct"] == "10.0", "маржа на цену, не наценка на себестоимость"
+    assert line["markup_pct"] == "11.1"
     sheet = _api(prices["supply"]).get(_url(prices, "")).json()
     assert (
         sheet["totals"]["margin_below"] is True and sheet["totals"]["threshold_pct"] == "15.0"
@@ -199,7 +198,7 @@ def test_margin_below_threshold_is_flagged_on_line_and_totals_but_does_not_block
 
 def test_margin_at_default_is_not_flagged(prices):
     settings_row = prices["seller"].settings
-    settings_row.default_margin_percent = Decimal("30.00")
+    settings_row.target_margin_percent = Decimal("30.00")
     settings_row.min_margin_percent = Decimal("12.00")
     settings_row.save()
     line = _add(prices, product_id=prices["product"].pk)

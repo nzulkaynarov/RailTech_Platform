@@ -124,7 +124,18 @@ class CompanySettings(models.Model):
         decimal_places=2,
         default=25,
         verbose_name=_("Целевая маржа (%)"),
-        help_text=_("Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП."),
+        help_text=_(
+            "Желаемая валовая маржа (на цене). РАСЧ-3: по ней расчёт сам ставит цену клиенту "
+            "(себестоимость / (1 − маржа)); зелёная зона в конструкторе КП."
+        ),
+    )
+    price_rounding_step = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=1000,
+        validators=[MinValueValidator(0)],
+        verbose_name=_("Шаг округления цены, сум"),
+        help_text=_("РАСЧ-3: цена клиенту в сумах округляется вверх до шага; 0 — без округления"),
     )
 
     # ── Договор из шаблона (ДОК-10, DECISIONS 2026-11-23): правила — данные, не код ──────────

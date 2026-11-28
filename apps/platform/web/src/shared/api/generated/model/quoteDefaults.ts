@@ -30,8 +30,10 @@ export interface QuoteDefaults {
   default_margin_percent?: DecimalString | null;
   /** Минимальная маржа, % — поле группы `cost_margin` */
   min_margin_percent?: DecimalString;
-  /** Целевая маржа, % — поле группы `cost_margin` */
+  /** Целевая маржа, % — поле группы `cost_margin`; по ней расчёт сам ставит цену клиенту (РАСЧ-3) */
   target_margin_percent?: DecimalString;
+  /** Шаг округления цены клиенту вверх, сум; 0 — без округления (РАСЧ-3) — поле группы `cost_margin` */
+  price_rounding_step?: DecimalString;
   /**
    * Срок действия КП, дней
    * @minimum 0

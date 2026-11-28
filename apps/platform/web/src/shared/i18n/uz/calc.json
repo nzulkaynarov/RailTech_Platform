@@ -145,9 +145,9 @@
       "stock": "Ombor",
       "purchase": "Xarid",
       "client": "Mijozga, söm",
-      "markup": "Ustama, %",
       "visa": "Viza",
-      "action": "Amal"
+      "action": "Amal",
+      "margin": "Marja, %"
     },
     "kind": {
       "goods": "Tovar",
@@ -195,7 +195,6 @@
     "reserveLabel": "«{{name}}» uçun {{count}} zaxiralaş",
     "release": "Zaxirani olib taşlaş",
     "releaseLabel": "«{{name}}» qatori zaxirasini olib taşlaş",
-    "markupLabel": "Ustama, %: {{name}}",
     "currencyLabel": "«{{name}}» uçun xarid valyutasi",
     "mpn": "Işlab çiqaruvçi artikuli",
     "hint": "Öxşaş: {{name}}",
@@ -203,7 +202,12 @@
     "hintTakeLabel": "Tanlaş: «{{name}}»",
     "hintNew": "Yangi pozitsiya",
     "hintNewLabel": "Yangi pozitsiya: «{{name}}»",
-    "hintFirst": "avval pozitsiyani tanlang"
+    "hintFirst": "avval pozitsiyani tanlang",
+    "marginLabel": "Marja, %: {{name}}",
+    "manual": "Narx qölda",
+    "backToMargin": "{{pct}} % ga qaytariş",
+    "backToMarginLabel": "«{{name}}» qatori narxini marjaga qaytariş",
+    "rule": "{{step}} gaça yaxlitlanadi"
   },
   "add": {
     "button": "Qator qöşiş",
@@ -331,7 +335,7 @@
     "client_price_below_cost": "Mijoz narxi xarid narxidan past.",
     "markup_out_of_range": "Ustama 0–500 % çegarasidan taşqarida.",
     "zone_not_permitted": "Ruxsat yetarli emas.",
-    "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim özgartiradi.",
+    "cost_forbidden": "Xarid narxi, ustama va marjani tannarxga ruxsati bor xodim tahrirlaydi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
     "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta uriniş.",
     "other": "Saqlanmadi: {{message}}",
@@ -343,7 +347,10 @@
     "comment_required": "Izoh kiriting.",
     "request_not_closable": "Arizani endi yopib bölmaydi: u yopilgan yoki loyihaga aylangan.",
     "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang.",
-    "offer_not_available": "Hamkor narxi endi amal qilmaydi: boşqasini tanlang yoki narx sörang."
+    "offer_not_available": "Hamkor narxi endi amal qilmaydi: boşqasini tanlang yoki narx sörang.",
+    "margin_out_of_range": "Marja 0–95 % çegarasidan taşqarida.",
+    "price_mode_unknown": "Narx usuli tanilmadi.",
+    "one_price_input": "Bitta narsani kiriting: narx yoki marja."
   },
   "load": {
     "retry": "Qayta uriniş",

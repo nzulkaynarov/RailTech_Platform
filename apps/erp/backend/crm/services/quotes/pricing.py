@@ -6,8 +6,10 @@ unchanged. Depends only on the leaf ``_shared`` helpers, so no circular import w
 the lifecycle / bulk / access submodules.
 """
 
-from decimal import ROUND_HALF_UP, Decimal
+from dataclasses import dataclass
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 from core.currency import BASE_CURRENCY, line_amount
@@ -64,6 +66,85 @@ def resolve_effective_margin(item, quote_margin_percent=None) -> Decimal:
     return Decimal("0")
 
 
+#: РАСЧ-3: запасные значения, когда у КП нет компании-продавца или её настроек (как в модели настроек).
+DEFAULT_TARGET_MARGIN = Decimal("25")
+DEFAULT_ROUNDING_STEP = Decimal("1000")
+#: Маржа на цене не может быть 100 % и выше: цена = себестоимость / (1 − маржа).
+MARGIN_MAX = Decimal("95")
+
+
+@dataclass(frozen=True)
+class PricePolicy:
+    """Правила цены «от маржи» компании-продавца: целевая маржа (на цене, %) и шаг округления вверх (сум; 0 — нет)."""
+
+    target_margin: Decimal = DEFAULT_TARGET_MARGIN
+    rounding_step: Decimal = DEFAULT_ROUNDING_STEP
+    quantum: Decimal = Decimal("1")  # наименьшая доля валюты КП: 1 сум или 0,01
+
+
+def resolve_price_policy(quote) -> PricePolicy:
+    """Целевая маржа и шаг округления из настроек «Продажи» компании КП; одна выборка на пересчёт."""
+    from accounts.models import CompanySettings
+
+    company_id = _quote_owner_company_id(quote)
+    row = CompanySettings.objects.filter(company_id=company_id).first() if company_id else None
+    code = (quote.quote_currency.code if quote.quote_currency_id else BASE_CURRENCY).upper()
+    if code != BASE_CURRENCY:
+        # Шаг округления задан в сумах: в другой валюте КП цена округляется вверх только до копейки.
+        return PricePolicy(
+            target_margin=Decimal(row.target_margin_percent) if row else DEFAULT_TARGET_MARGIN,
+            rounding_step=Decimal("0"),
+            quantum=Decimal("0.01"),
+        )
+    if row is None:
+        return PricePolicy()
+    return PricePolicy(target_margin=Decimal(row.target_margin_percent), rounding_step=Decimal(row.price_rounding_step))
+
+
+def margin_price(cost, margin, discount_percent, step, quantum) -> Decimal:
+    """Цена клиенту за единицу «от маржи» (РАСЧ-3): себестоимость / (1 − маржа), скидка строки, округление вверх.
+
+    `quantum` — наименьшая доля валюты КП (1 сум или 0,01); в сумах цена округляется вверх до `step` (0 — только до
+    `quantum`). Округление всегда вверх, поэтому маржа после него не ниже заданной. Нет себестоимости — цены нет (0)."""
+    cost = Decimal(cost or 0)
+    if cost <= 0:
+        return Decimal("0")
+    margin = min(max(Decimal(margin), Decimal("0")), MARGIN_MAX)
+    raw = (
+        cost
+        / (Decimal("1") - margin / Decimal("100"))
+        * (Decimal("1") - Decimal(discount_percent or 0) / Decimal("100"))
+    )
+    unit = Decimal(step) if step and Decimal(step) > quantum else quantum
+    return ((raw / unit).to_integral_value(rounding=ROUND_CEILING) * unit).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+
+def line_calc(item):
+    """Строка расчёта позиции (`CalcLine`) или None; без запроса, если её подгрузили `select_related("calc")`."""
+    try:
+        return item.calc
+    except ObjectDoesNotExist:
+        return None
+
+
+def margin_priced(item) -> bool:
+    """Цена строки считается от маржи: строка расчёта «от маржи» и цену не вводили руками."""
+    from sales.models.calc_lines import CalcPriceBasis
+
+    calc = line_calc(item)
+    return calc is not None and calc.price_basis == CalcPriceBasis.MARGIN and item.client_price_fixed is None
+
+
+def line_target_margin(item, policy: PricePolicy) -> Decimal:
+    """Маржа строки «от маржи»: своя у строки или целевая компании."""
+    calc = line_calc(item)
+    if calc is not None and calc.margin_percent is not None:
+        return Decimal(calc.margin_percent)
+    return policy.target_margin
+
+
 class QuoteCalculationService:
     """
     Centralized engine for financial calculations.
@@ -71,7 +152,9 @@ class QuoteCalculationService:
     """
 
     @staticmethod
-    def calculate_item_prices(item: QuoteItem, commit=True, basis=..., margin_percent=None, rate=None):
+    def calculate_item_prices(
+        item: QuoteItem, commit=True, basis=..., margin_percent=None, rate=None, policy: PricePolicy | None = None
+    ):
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
@@ -130,6 +213,20 @@ class QuoteCalculationService:
             item.final_price_excl_vat = Decimal(item.client_price_fixed).quantize(
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
+        elif margin_priced(item):
+            # РАСЧ-3: цена от маржи пересчитывается сама, пока КП не отправлено (одна точка для любого входа: закупка,
+            # курс, цена партнёра, маржа, скидка). С согласования и отправки цена остаётся той, что ушла дальше.
+            from sales.services.quote_fx import rates_are_live
+
+            if rates_are_live(item.quote):
+                policy = policy or resolve_price_policy(item.quote)
+                item.final_price_excl_vat = margin_price(
+                    item.landed_cost,
+                    line_target_margin(item, policy),
+                    item.discount_percent,
+                    policy.rounding_step,
+                    policy.quantum,
+                )
         else:
             effective_margin = resolve_effective_margin(item, margin_percent)
             margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
@@ -158,6 +255,31 @@ class QuoteCalculationService:
         return resolve_quote_rate_map(quote, line_currency_codes(items))
 
     @classmethod
+    def reprice_live_margin_quotes(cls, currency_code: str | None = None, company_id: int | None = None) -> int:
+        """Пересчитать живые черновики КП со строками «от маржи»: с закупкой в этой валюте (курс обновился) или
+        продавца-компании (поменялась целевая маржа или шаг округления).
+
+        Отправленные и зафиксированные КП не трогаются; ручные цены не пересчитываются. Возвращает число КП."""
+        from sales.models.calc_lines import CalcPriceBasis
+
+        from crm.constants import QuoteStatusCode
+
+        found = Quote.objects.filter(
+            frozen_at__isnull=True,
+            status__code=QuoteStatusCode.DRAFT,
+            items__calc__price_basis=CalcPriceBasis.MARGIN,
+            items__client_price_fixed__isnull=True,
+        )
+        if currency_code:
+            found = found.filter(items__frozen_currency__code__iexact=currency_code)
+        if company_id:
+            found = found.filter(seller_company_id=company_id)
+        ids = list(found.distinct().values_list("pk", flat=True))
+        for quote_id in ids:
+            cls.recalculate_quote(quote_id)
+        return len(ids)
+
+    @classmethod
     @transaction.atomic
     def recalculate_quote(cls, quote_id: int):
         """
@@ -169,7 +291,8 @@ class QuoteCalculationService:
         quote = (
             Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis", "status").get(pk=quote_id)
         )
-        items = list(quote.items.select_related("product__domain_type", "frozen_currency").all())
+        items = list(quote.items.select_related("product__domain_type", "frozen_currency", "calc").all())
+        policy = resolve_price_policy(quote)
 
         # 0. Resolve the FX rate map ONCE for all distinct line cost currencies and freeze
         #    newly-resolved rates into quote.fx_snapshot (persisted in step 4 below).
@@ -188,6 +311,7 @@ class QuoteCalculationService:
                 basis=quote.delivery_basis,
                 margin_percent=quote.margin_percent,
                 rate=rate_map.get(line_code, Decimal("1")),
+                policy=policy,
             )
             if not (_fits(item.landed_cost) and _fits(item.final_price_excl_vat)):
                 # Сумма строки после пересчёта по курсу не влезает в поле (≥ 10¹²): строку не пишем — иначе падает

@@ -346,7 +346,12 @@ function fxOverview(state: CompanyMock, currency = "USD") {
 function quoteFor(caller: Caller, quote: CompanyMock["quote"]) {
   return caller.margins
     ? quote
-    : omit(quote, ["default_margin_percent", "min_margin_percent", "target_margin_percent"]);
+    : omit(quote, [
+        "default_margin_percent",
+        "min_margin_percent",
+        "target_margin_percent",
+        "price_rounding_step",
+      ]);
 }
 
 const isKind = (value: unknown): value is ReferenceKind =>
@@ -532,7 +537,12 @@ export const adminCompanyHandlers = [
   ),
   http.patch("*/admin/company/quote-defaults", ({ request }) =>
     write<QuoteDefaultsUpdate>(request, (body, s, caller) => {
-      const margins = ["default_margin_percent", "min_margin_percent", "target_margin_percent"];
+      const margins = [
+        "default_margin_percent",
+        "min_margin_percent",
+        "target_margin_percent",
+        "price_rounding_step",
+      ];
       const blocked = Object.keys(body).filter((k) => margins.includes(k));
       if (blocked.length > 0 && !caller.margins) {
         return fail(
@@ -562,6 +572,7 @@ export const adminCompanyHandlers = [
         "default_margin_percent",
         "min_margin_percent",
         "target_margin_percent",
+        "price_rounding_step",
       ] as const) {
         const value = body[key];
         if (value !== undefined && value !== null && !DECIMAL.test(value))

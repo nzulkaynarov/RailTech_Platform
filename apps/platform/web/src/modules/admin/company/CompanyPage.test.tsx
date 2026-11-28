@@ -654,6 +654,19 @@ describe("Условия КП: маржа — группа cost_margin", () => {
     expect(readCompanyMock().quote.min_margin_percent).toBe("6");
   });
 
+  it("РАСЧ-3: цену ставит целевая маржа, шаг округления рядом; наценки по умолчанию на экране нет", async () => {
+    await openTab("quote");
+    expect(await screen.findByLabelText("Целевая маржа, %")).toHaveDisplayValue(/^20/);
+    expect(screen.queryByLabelText("Маржа по умолчанию, %")).toBeNull();
+    const step = screen.getByLabelText("Шаг округления цены, сум");
+    expect(step).toHaveDisplayValue(/^1\s?000/);
+    fireEvent.change(step, { target: { value: "5000" } });
+    fireEvent.click(await button("Сохранить условия"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.price_rounding_step).toBe("5000");
+    expect(readCompanyMock().quote.default_margin_percent).toBe("18.00");
+  });
+
   it("сроки цен партнёров и напоминаний об акте — настройки, а не константы (задача «Н3c»)", async () => {
     await openTab("quote");
     const expiring = await screen.findByLabelText(
@@ -674,6 +687,7 @@ describe("Условия КП: маржа — группа cost_margin", () => {
     await openTab("quote", "admin@demo.example");
     await screen.findByLabelText("Срок действия КП, дней");
     expect(screen.queryByLabelText("Минимальная маржа, %")).toBeNull();
+    expect(screen.queryByLabelText("Шаг округления цены, сум")).toBeNull();
     expect(screen.getByText(/Поля маржи скрыты/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Срок действия КП, дней"), { target: { value: "21" } });

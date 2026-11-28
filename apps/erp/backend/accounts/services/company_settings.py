@@ -17,9 +17,22 @@ from .document_profile import is_company_owner
 
 logger = logging.getLogger(__name__)
 
+
+def _margin_max() -> Decimal:
+    from crm.services.quotes.pricing import MARGIN_MAX  # lazy: crm imports accounts
+
+    return MARGIN_MAX
+
+
 # Scalar fields the OWNER may flat-write. FK fields (delivery_basis / cost_currency)
 # are resolved by CODE separately; `company` / timestamps are immutable.
-_DECIMAL_FIELDS = ("default_vat_rate", "default_margin_percent", "min_margin_percent", "target_margin_percent")
+_DECIMAL_FIELDS = (
+    "default_vat_rate",
+    "default_margin_percent",
+    "min_margin_percent",
+    "target_margin_percent",
+    "price_rounding_step",
+)
 _TEXT_FIELDS = ("doc_number_prefix",)
 
 
@@ -81,12 +94,21 @@ def update_company_settings(
         if field in data:
             raw = data.get(field)
             if raw in (None, ""):
+                if field in ("price_rounding_step", "target_margin_percent"):
+                    return None, "BAD_NUMBER"  # РАСЧ-3: поля обязательные; «без округления» — 0
                 setattr(settings_row, field, None)
             else:
                 try:
-                    setattr(settings_row, field, Decimal(str(raw)))
+                    number = Decimal(str(raw))
                 except (InvalidOperation, ValueError):
                     return None, "BAD_NUMBER"
+                if not number.is_finite():
+                    return None, "BAD_NUMBER"
+                if field == "price_rounding_step" and (number < 0 or number > Decimal("1000000000")):
+                    return None, "BAD_NUMBER"
+                if field == "target_margin_percent" and (number < 0 or number > _margin_max()):
+                    return None, "BAD_NUMBER"  # та же граница, что у движка цены и PATCH margin_pct
+                setattr(settings_row, field, number)
             changed.append(field)
 
     # `payment_terms_days` — PositiveSmallIntegerField: потолок 32767 (D2-0, Q-D20-1.1; раньше поле молча игнорировалось).

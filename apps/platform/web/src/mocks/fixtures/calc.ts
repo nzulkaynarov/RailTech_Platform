@@ -46,6 +46,10 @@ export interface MockLine {
   crewRate: number | null;
   crewDays: number | null;
   client: number;
+  /** РАСЧ-3: `margin` — цена считается от маржи сама, `manual` — введена и не пересчитывается; нет — строка до РАСЧ-3. */
+  priceMode?: "margin" | "manual";
+  /** РАСЧ-3: своя маржа строки, %; нет — целевая маржа компании. */
+  marginPct?: number;
   visa: { by: string; at: string; zone: "goods" | "services" } | null;
 }
 
@@ -286,11 +290,15 @@ function wideCalc(base: MockCalc): MockCalc {
     })(),
     leadDays: lead,
     partner: partner(i),
-    purchase: i === 11 || i === 8 ? 0 : purchase,
-    currency: "UZS",
+    // Кабель — закупка в долларах (4 000 USD за единицу), шкаф — цена введена вручную (РАСЧ-3)
+    purchase: i === 11 || i === 8 ? 0 : i === 1 ? 4_000 : purchase,
+    currency: i === 1 ? "USD" : "UZS",
     crewRate: null,
     crewDays: null,
     client: i === 11 || i === 8 ? 0 : client,
+    ...(i === 11 || i === 8
+      ? {}
+      : { priceMode: i === 2 ? ("manual" as const) : ("margin" as const) }),
     visa: null,
   }));
   return {

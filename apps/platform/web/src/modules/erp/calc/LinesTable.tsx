@@ -549,25 +549,60 @@ function Remove({ line, actions }: { line: CalcLine; actions: Actions }) {
   );
 }
 
+/** Процент для подписи: «20», «12,5» — без лишнего «.0». */
+const pct = (value: string | null | undefined, locale: string) =>
+  Number(value ?? 0).toLocaleString(locale, { maximumFractionDigits: 1 });
+
+/**
+ * Цена клиенту (РАСЧ-3). Строка «от маржи» считается сама; введённая вручную цена помечается «Цена вручную» и не
+ * пересчитывается, «вернуть N %» снова считает её от маржи (N — маржа строки или целевая; видит и жмёт тот, кому
+ * положена маржа).
+ */
 function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
-  const { t } = useTranslation("calc");
+  const { t, i18n } = useTranslation("calc");
+  const manual = line.price_mode === "manual";
+  const target = line.margin_target_pct;
   return (
-    <NumberCell
-      value={line.client_price}
-      label={t("lines.clientLabel", { name: line.name })}
-      disabled={!line.can_edit || actions.pending}
-      onCommit={(next) => {
-        actions.patch(line, { client_price: next });
-      }}
-    />
+    <span className="pf-calc-price">
+      <NumberCell
+        value={line.client_price}
+        label={t("lines.clientLabel", { name: line.name })}
+        disabled={!line.can_edit || actions.pending}
+        onCommit={(next) => {
+          actions.patch(line, { client_price: next });
+        }}
+      />
+      {manual ? (
+        <span className="pf-calc-manual" data-testid="price-manual">
+          {t("lines.manual")}
+          {line.can_edit && target ? (
+            <>
+              {" · "}
+              <Button
+                type="link"
+                size="small"
+                className="pf-calc-manual-back"
+                disabled={actions.pending}
+                aria-label={t("lines.backToMarginLabel", { name: line.name })}
+                onClick={() => {
+                  actions.patch(line, { price_mode: "margin" });
+                }}
+              >
+                {t("lines.backToMargin", { pct: pct(target, i18n.language) })}
+              </Button>
+            </>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
 /**
- * Наценка строки (D26G-5): видна с доступом к себестоимости; правится там же, где цена клиенту. Введённая наценка —
- * цена из неё, округлённая до сума; введённая цена — хранится как есть, наценка пересчитывается из неё.
+ * Маржа строки (РАСЧ-3): на цену, видна с доступом к себестоимости. Введённая маржа — своя маржа строки: строка остаётся
+ * «от маржи» и считается сама (цена вверх до шага округления). У строки с ценой вручную показывает фактическую маржу.
  */
-function Markup({
+function Margin({
   line,
   actions,
   threshold,
@@ -590,7 +625,7 @@ function Markup({
   if (!line.can_edit || line.cost === null || line.cost === undefined) {
     return (
       <span className="pf-num">
-        {line.markup_pct ?? "—"}
+        {line.margin_pct ?? "—"}
         {low}
       </span>
     );
@@ -598,11 +633,11 @@ function Markup({
   return (
     <>
       <NumberCell
-        value={line.markup_pct ?? null}
-        label={t("lines.markupLabel", { name: line.name })}
+        value={line.margin_pct ?? null}
+        label={t("lines.marginLabel", { name: line.name })}
         disabled={actions.pending}
         onCommit={(next) => {
-          actions.patch(line, { markup_pct: next });
+          actions.patch(line, { margin_pct: next });
         }}
       />
       {low}
@@ -659,7 +694,7 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
   const { t } = useTranslation("calc");
   const totals = sheet.totals;
   const purchase = totals.purchase;
-  const markup = totals.markup_pct;
+  const margin = totals.margin_pct;
   if (mobile) {
     return (
       <div className="pf-calc-totals-mobile">
@@ -674,9 +709,9 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
         <span>
           {t("lines.columns.client")}: <MoneyText value={totals.client} />
         </span>
-        {markup !== undefined && markup !== null ? (
+        {margin !== undefined && margin !== null ? (
           <span>
-            {t("lines.columns.markup")}: <span className="pf-num">{markup}</span>
+            {t("lines.columns.margin")}: <span className="pf-num">{margin}</span>
           </span>
         ) : null}
       </div>
@@ -693,7 +728,7 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
       <td className="pf-col-num">
         <MoneyText value={totals.client} currency={false} strong />
       </td>
-      <td className="pf-col-num">{markup ?? "—"}</td>
+      <td className="pf-col-num">{margin ?? "—"}</td>
       <td colSpan={2} />
     </tr>
   );
@@ -701,9 +736,21 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
 
 /**
  * Таблица строк расчёта на всю ширину (SPEC-v3 §7.4): позиция и тип · кол-во · склад · поставщик и срок · закупка ·
- * клиенту · наценка · виза. Правит строку тот, у кого право её зоны (`can_edit`): товар — снабженец, услуга —
+ * клиенту · маржа · виза. Правит строку тот, у кого право её зоны (`can_edit`): товар — снабженец, услуга —
  * гл. инженер (ставка бригады и дни). Себестоимость и наценка — только при `rights.cost`. На телефоне — карточки.
  */
+/** РАСЧ-3: короткая подпись под таблицей — шаг округления (макет 111 v63); без шага подписи нет. */
+function PriceRule({ sheet }: { sheet: CalcSheet }) {
+  const { t } = useTranslation("calc");
+  const step = Number(sheet.totals.rounding_step ?? 0);
+  if (!(step > 0)) return null;
+  return (
+    <p className="pf-hint pf-calc-rule" data-testid="price-rule">
+      {t("lines.rule", { step: step.toLocaleString(undefined) })}
+    </p>
+  );
+}
+
 export function LinesTable({
   sheet,
   onRequestPrice,
@@ -762,8 +809,8 @@ export function LinesTable({
                 <ClientPrice line={line} actions={actions} />
                 {showMarkup ? (
                   <>
-                    <span className="pf-hint">{t("lines.columns.markup")}</span>
-                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
+                    <span className="pf-hint">{t("lines.columns.margin")}</span>
+                    <Margin line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
                   </>
                 ) : null}
               </div>
@@ -774,6 +821,7 @@ export function LinesTable({
           ))}
         </ul>
         <Totals sheet={sheet} mobile />
+        <PriceRule sheet={sheet} />
         {matchModal}
       </>
     );
@@ -798,7 +846,7 @@ export function LinesTable({
                 {t("lines.columns.client")}
               </th>
               <th scope="col" className="pf-col-num">
-                {t("lines.columns.markup")}
+                {t("lines.columns.margin")}
               </th>
               <th scope="col">{t("lines.columns.visa")}</th>
               <th scope="col">
@@ -832,7 +880,7 @@ export function LinesTable({
                 </td>
                 <td className="pf-col-num">
                   {showMarkup ? (
-                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
+                    <Margin line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
                   ) : (
                     "—"
                   )}
@@ -851,6 +899,7 @@ export function LinesTable({
           </tfoot>
         </table>
       </ScrollRegion>
+      <PriceRule sheet={sheet} />
       {matchModal}
     </>
   );

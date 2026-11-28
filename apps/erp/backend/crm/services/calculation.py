@@ -251,6 +251,8 @@ class _Context:
     partners: dict[tuple[int, Optional[str]], tuple[list, Any]] = field(default_factory=dict)
     #: РАСЧ-1: порог маржи, % (None — не задан); строки ниже него получают предупреждение.
     threshold: Optional[Decimal] = None
+    #: РАСЧ-3: целевая маржа и шаг округления компании — для «вернуть N %» и подписи правил цены.
+    policy: Optional[Any] = None
 
 
 def _context(items: list[QuoteItem], *, with_partners: bool = False) -> _Context:
@@ -424,6 +426,25 @@ def _partner_payload(item: QuoteItem, ctx: _Context) -> Optional[dict]:
     }
 
 
+def _price_mode(item: QuoteItem, calc: Optional[CalcLine]) -> str:
+    """Как поставлена цена строки (РАСЧ-3): `margin` — считается сама от маржи; `manual` — человек ввёл цену, она не
+    пересчитывается; `legacy` — строка до РАСЧ-3 (наценка или цена как была), цена не меняется сама."""
+    if calc is not None and calc.price_basis == CalcPriceBasis.MARGIN:
+        return "manual" if item.client_price_fixed is not None else "margin"
+    if calc is not None and calc.price_basis == CalcPriceBasis.CLIENT and item.client_price_fixed is not None:
+        return "manual"
+    return "legacy"
+
+
+def _margin_target(item: QuoteItem, calc: Optional[CalcLine], ctx: _Context) -> Optional[str]:
+    """Маржа, к которой строка «от маржи» стремится и к которой возвращает «вернуть N %»: своя у строки или целевая
+    компании. У строки до РАСЧ-3 — null."""
+    if _price_mode(item, calc) == "legacy" or ctx.policy is None:
+        return None
+    value = calc.margin_percent if calc is not None and calc.margin_percent is not None else ctx.policy.target_margin
+    return f"{Decimal(value):.1f}"
+
+
 def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dict[str, bool], editable: bool) -> dict:
     """Строка расчёта. Видимость себестоимости (решение архитектора по Q-D2-1-2): закупку и себестоимость строки
     видит держатель `quote.view_cost_margin` или права визы зоны этой строки (гл. инженер — ставку и дни бригады своих
@@ -494,6 +515,8 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         ),
         "cost": _money(item.landed_cost) if zone_cost else None,
         "client_price": _money(item.final_price_excl_vat),
+        "price_mode": _price_mode(item, calc),
+        "margin_target_pct": _margin_target(item, calc, ctx) if show_cost else None,
         "markup_pct": _markup(item.landed_cost, item.final_price_excl_vat) if show_cost else None,
         "margin_pct": _fmt1(_margin(item.landed_cost, item.final_price_excl_vat)) if show_cost else None,
         "margin_below": (
@@ -858,6 +881,10 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     items = _billable(quote)
     ctx = _context(items, with_partners=True)
     ctx.threshold = _threshold(task, quote)
+    if quote is not None:
+        from .quotes.pricing import resolve_price_policy
+
+        ctx.policy = resolve_price_policy(quote)
     show_cost = has_perm(user, Permission.QUOTE_VIEW_COST_MARGIN.value)
     rights = zone_rights(user)
     editable = quote is not None and quote_edit_lock_code(quote) is None
@@ -919,6 +946,8 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "markup_pct": _markup(purchase, client) if show_cost else None,
             "margin_pct": _fmt1(_margin(purchase, client)) if show_cost else None,
             "threshold_pct": (f"{ctx.threshold:.1f}" if ctx.threshold is not None else None) if show_cost else None,
+            "target_pct": f"{ctx.policy.target_margin:.1f}" if show_cost and ctx.policy is not None else None,
+            "rounding_step": f"{ctx.policy.rounding_step:.0f}" if show_cost and ctx.policy is not None else None,
             "margin_below": _below(_margin(purchase, client), ctx.threshold) if show_cost else False,
             "vat_included": False,
         },
@@ -973,9 +1002,20 @@ def start(deal_id: int, user) -> dict:
                 started = calc_quote(deal)
                 _link_catalog(started)
                 if started is not None:
+                    _mark_margin_priced(started)
                     _prefill_linked(started)
                     _recalc(started)
     return _sheet(deal, task, user)
+
+
+def _mark_margin_priced(quote: Quote) -> None:
+    """РАСЧ-3: строки нового расчёта (из заявки) считаются от маржи — у каждой строки есть строка расчёта с этим основанием."""
+    items = quote.items.filter(display_type=QuoteItem.DisplayType.ITEM)
+    missing = list(items.filter(calc__isnull=True))
+    if missing:
+        CalcLine.objects.bulk_create([CalcLine(item=it, price_basis=CalcPriceBasis.MARGIN) for it in missing])
+    # Строка, у которой строка расчёта уже есть (подсказка похожей карточки, СЦ-10), тоже новая — основание пустое.
+    CalcLine.objects.filter(item__in=items, price_basis="").update(price_basis=CalcPriceBasis.MARGIN)
 
 
 def _empty_draft(deal: Deal, user) -> Quote:
@@ -1251,7 +1291,10 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
             item.unit_code, item.unit = product.uom.code, product.uom.name[:32]
         if quote.cost_currency_default_id:
             item.frozen_currency_id = quote.cost_currency_default_id
-        calc = CalcLine(kind=CalcLineKind.SERVICE if row.kind == CalcLineKind.SERVICE else CalcLineKind.GOODS)
+        calc = CalcLine(
+            kind=CalcLineKind.SERVICE if row.kind == CalcLineKind.SERVICE else CalcLineKind.GOODS,
+            price_basis=CalcPriceBasis.MARGIN,  # РАСЧ-3: новая строка считается от маржи
+        )
         _prefill_from_offer(item, product, calc)
         item.save(skip_recalculate=True)
         calc.item = item
@@ -1388,6 +1431,8 @@ _EDITABLE = (
     "crew_days",
     "client_price",
     "markup_pct",
+    "margin_pct",
+    "price_mode",
     "product_id",
     "offer_id",
     "kind",
@@ -1544,17 +1589,35 @@ def _has_currency(code: str) -> bool:
 
 
 def _apply_price(item: QuoteItem, calc: CalcLine, changes: dict, user) -> None:
-    """Цена клиенту строки после правки (D26G-5). Введённая цена — источник истины: хранится как есть
-    (`client_price_fixed`), наценка — производная. Введённая наценка — цена считается из неё и округляется до сума
-    (в валюте КП не UZS — до 0,01) и тоже хранится. Правка закупки без цены: у строки «от наценки» цена
-    пересчитывается от той же наценки, у строки «от цены» цена остаётся, а наценка пересчитывается."""
-    pricing = "client_price" in changes or "markup_pct" in changes
+    """Цена клиенту строки после правки. РАСЧ-3: новая строка — «от маржи» (цену считает движок
+    `QuoteCalculationService`: себестоимость / (1 − маржа), округление вверх, пересчёт при любом изменении до отправки
+    КП). Введённая цена — «цена вручную»: хранится как есть (`client_price_fixed`) и не пересчитывается; `price_mode:
+    margin` («вернуть N %») снимает её; `margin_pct` — своя маржа строки, строка остаётся «от маржи». Строки до РАСЧ-3
+    (D26G-5) ведут себя как раньше: введённая наценка — цена из неё, правка закупки у строки «от наценки» пересчитывает
+    цену от той же наценки, у строки «от цены» цена остаётся."""
+    from .quotes.pricing import MARGIN_MAX
+
+    pricing = any(key in changes for key in ("client_price", "markup_pct", "margin_pct", "price_mode"))
     if not pricing and item.client_price_fixed is None:
         return
     if pricing:
         _require(user, Permission.QUOTE_EDIT_PRICING.value)
     item.refresh_from_db()
-    if "markup_pct" in changes:
+    if "margin_pct" in changes:
+        margin = Decimal(str(changes["margin_pct"])).quantize(_CENT, rounding=ROUND_HALF_UP)
+        if margin < 0 or margin > MARGIN_MAX:
+            raise CalcError("MARGIN_OUT_OF_RANGE", 400)
+        calc.margin_percent = margin
+        calc.price_basis = CalcPriceBasis.MARGIN
+        item.client_price_fixed = None
+        item.margin_percent = None
+    elif "price_mode" in changes:
+        if changes["price_mode"] != "margin":
+            raise CalcError("PRICE_MODE_UNKNOWN", 400)
+        calc.price_basis = CalcPriceBasis.MARGIN
+        item.client_price_fixed = None
+        item.margin_percent = None
+    elif "markup_pct" in changes:
         markup = Decimal(str(changes["markup_pct"])).quantize(_CENT, rounding=ROUND_HALF_UP)
         item.client_price_fixed = _price_for(item, markup)
         item.margin_percent = markup
@@ -1574,7 +1637,7 @@ def _apply_price(item: QuoteItem, calc: CalcLine, changes: dict, user) -> None:
             item.margin_percent = _markup_for(item, item.client_price_fixed)
         except CalcError:
             pass  # закупка выше цены или пуста — наценка справочная, цена клиенту не меняется
-    calc.save(update_fields=["price_basis", "updated_at"])
+    calc.save(update_fields=["price_basis", "margin_percent", "updated_at"])
     item.save()
 
 
@@ -1852,6 +1915,7 @@ def new_version(deal_id: int, user) -> dict:
                 crew_rate=line.crew_rate,
                 crew_days=line.crew_days,
                 price_basis=line.price_basis,
+                margin_percent=line.margin_percent,
                 partner_priced=line.partner_priced,
             )
     _log_quote(

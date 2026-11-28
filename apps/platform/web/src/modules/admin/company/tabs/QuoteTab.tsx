@@ -20,7 +20,11 @@ import { decimalInputProps } from "../../../../shared/lib/numberInput";
 
 type Values = Partial<QuoteDefaults>;
 
-const MARGINS = ["default_margin_percent", "min_margin_percent", "target_margin_percent"] as const;
+/**
+ * РАСЧ-3: цену клиенту ставит одна цифра — целевая маржа; шаг округления рядом. Поле «Маржа по умолчанию»
+ * (`default_margin_percent`) с экрана убрано: колонка остаётся до чистки, значение не переносится.
+ */
+const MARGINS = ["min_margin_percent", "target_margin_percent", "price_rounding_step"] as const;
 
 /**
  * Условия нового КП разнесены по страницам своих дел (ДОК-13, решение владельца 2026-11-20): «Продажи» — срок, оплата,
@@ -145,7 +149,7 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
         label: `${row.name} · ${t("quote.edition", { n: row.edition })}`,
       }));
   // Без права на группу `cost_margin` BFF не присылает поля маржи совсем.
-  const marginsVisible = defaults.default_margin_percent !== undefined;
+  const marginsVisible = defaults.target_margin_percent !== undefined;
 
   const update = useUpdateQuoteDefaults({
     mutation: {
@@ -222,19 +226,27 @@ function QuoteForm({ defaults, group }: { defaults: QuoteDefaults; group: QuoteG
           </Form.Item>
         ) : null}
         {group === "sales" && marginsVisible
-          ? MARGINS.map((name) => (
-              <Form.Item key={name} name={name} label={<UnitLabel label={t(`quote.${name}`)} />}>
-                <InputNumber
-                  suffix={unitOf(t(`quote.${name}`))}
-                  stringMode
-                  min="0"
-                  max="100"
-                  step="0.5"
-                  {...decimal}
-                  {...NUMBER}
-                />
-              </Form.Item>
-            ))
+          ? MARGINS.map((name) => {
+              const step = name === "price_rounding_step";
+              return (
+                <Form.Item
+                  key={name}
+                  name={name}
+                  label={<UnitLabel label={t(`quote.${name}`)} />}
+                  extra={name === "min_margin_percent" ? undefined : t(`quote.${name}Hint`)}
+                >
+                  <InputNumber
+                    suffix={unitOf(t(`quote.${name}`))}
+                    stringMode
+                    min="0"
+                    max={step ? "1000000000" : "100"}
+                    step={step ? "100" : "0.5"}
+                    {...decimal}
+                    {...NUMBER}
+                  />
+                </Form.Item>
+              );
+            })
           : null}
         {shows("default_offer_validity_days") ? (
           <Form.Item

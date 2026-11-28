@@ -362,7 +362,10 @@
       "services": "Xizmatlar"
     },
     "partner_base_roles": "Hamkorlar uçun hujjatlar",
-    "partner_base_rolesHint": "Hamkor nomzod şu hujjatlar paketini oladi; matn tasdiqlangan şablonlardan olinadi."
+    "partner_base_rolesHint": "Hamkor nomzod şu hujjatlar paketini oladi; matn tasdiqlangan şablonlardan olinadi.",
+    "price_rounding_step": "Narxni yaxlitlaş qadami, söm",
+    "target_margin_percentHint": "Narx = tannarx / (1 − marja)",
+    "price_rounding_stepHint": "Yuqoriga; 0 — yaxlitlaşsiz"
   },
   "charges": {
     "title": "TT xarajat moddalari",

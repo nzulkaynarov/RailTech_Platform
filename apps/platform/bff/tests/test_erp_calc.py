@@ -81,6 +81,8 @@ def line(**extra: Any) -> dict[str, Any]:
         "crew_days": None,
         "cost": "90000000.00",
         "client_price": "99000000.00",
+        "price_mode": "margin",
+        "margin_target_pct": "9.1",
         "markup_pct": "10.0",
         "margin_pct": "9.1",
         "margin_below": False,
@@ -142,6 +144,8 @@ def sheet(**extra: Any) -> dict[str, Any]:
             "purchase": "189000000.00",
             "client": "208800000.00",
             "markup_pct": "10.5",
+            "target_pct": "9.1",
+            "rounding_step": "1000",
             "vat_included": False,
         },
         "visas": {
@@ -301,12 +305,16 @@ async def test_sheet_for_supply_has_cost_and_supplier_prices(
     assert goods["cost"] == "90000000.00"
     assert goods["markup_pct"] == "10.0"
     assert goods["margin_pct"] == "9.1"
+    assert goods["price_mode"] == "margin"
+    assert goods["margin_target_pct"] == "9.1"
     assert goods["margin_below"] is False
     assert goods["supplier"]["offer_price"] == "90000000.00"
     assert body["totals"] == {
         "client": "208800000.00",
         "purchase": "189000000.00",
         "markup_pct": "10.5",
+        "target_pct": "9.1",
+        "rounding_step": "1000",
         "vat_included": False,
     }
 
@@ -672,6 +680,19 @@ async def test_markup_without_cost_margin_is_refused_and_with_it_is_proxied(
     assert refused.status_code == 422
     check(refused, "/erp/calc/{number}/lines/{line_id}", "patch")
     assert refused.json()["details"] == {"reason": "cost_forbidden", "fields": ["markup_pct"]}
+    assert erp_data_calls(erp) == []
+
+
+@pytest.mark.parametrize(("field", "value"), [("margin_pct", "30"), ("price_mode", "margin")])
+async def test_line_margin_and_return_to_margin_need_cost_margin(
+    web: Web, erp: respx.MockRouter, check: ContractChecker, field: str, value: str
+) -> None:
+    """РАСЧ-3: своя маржа строки и «вернуть N %» — только группе `cost_margin`, как наценка."""
+    await web.login(["ENGINEER"])
+    refused = await call(web, "PATCH", f"/erp/calc/{ENCODED}/lines/8", {field: value})
+    assert refused.status_code == 422
+    check(refused, "/erp/calc/{number}/lines/{line_id}", "patch")
+    assert refused.json()["details"] == {"reason": "cost_forbidden", "fields": [field]}
     assert erp_data_calls(erp) == []
 
 

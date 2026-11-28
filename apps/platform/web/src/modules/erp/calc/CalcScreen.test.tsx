@@ -121,9 +121,9 @@ describe("Расчёт по заявке", () => {
     ).toBeEnabled();
     expect(within(rail).getByText("сум")).toBeVisible();
     expect(
-      within(rail).getByLabelText<HTMLInputElement>("Наценка, %: Перевод стрелочный Р65 марки 1/11")
+      within(rail).getByLabelText<HTMLInputElement>("Маржа, %: Перевод стрелочный Р65 марки 1/11")
         .value,
-    ).toMatch(/^15([.,]0+)?$/);
+    ).toMatch(/^13([.,]0+)?$/);
     expect(
       within(rail).getByRole("button", {
         name: "Подтвердить строку «Перевод стрелочный Р65 марки 1/11»",

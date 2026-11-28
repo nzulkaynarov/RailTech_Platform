@@ -1051,6 +1051,7 @@ def settings_json(**extra: Any) -> dict[str, Any]:
         "default_margin_percent": "18.00",
         "min_margin_percent": "5.00",
         "target_margin_percent": "20.00",
+        "price_rounding_step": "1000.00",
         "default_offer_validity_days": 14,
         "payment_terms_days": None,
         "remind_overdue_invoices": False,
@@ -1104,7 +1105,12 @@ async def test_quote_defaults_administrator_does_not_get_margin_fields(
 
     check(response, "/admin/company/quote-defaults", "get")
     body = response.json()
-    assert not {"default_margin_percent", "min_margin_percent", "target_margin_percent"} & set(body)
+    assert not {
+        "default_margin_percent",
+        "min_margin_percent",
+        "target_margin_percent",
+        "price_rounding_step",
+    } & set(body)
     assert body["default_vat_rate"] == "12.00"
     assert "18.00" not in response.text
 

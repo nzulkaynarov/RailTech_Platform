@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { CalcLinePatchKind } from "./calcLinePatchKind";
+import type { CalcLinePatchPriceMode } from "./calcLinePatchPriceMode";
 import type { DecimalString } from "./decimalString";
 
 export interface CalcLinePatch {
@@ -44,6 +45,10 @@ export interface CalcLinePatch {
   client_price?: DecimalString;
   /** Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
   markup_pct?: DecimalString;
+  /** РАСЧ-3: своя маржа строки, % (0–95; одно из `client_price`, `markup_pct`, `margin_pct`, `price_mode`): строка остаётся «от маржи» и считается сама. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
+  margin_pct?: DecimalString;
+  /** РАСЧ-3: `margin` — «вернуть N %»: ручная цена снимается, цена снова считается от маржи. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
+  price_mode?: CalcLinePatchPriceMode;
   /**
    * @nullable
    * @pattern ^[0-9]+$

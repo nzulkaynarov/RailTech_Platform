@@ -179,9 +179,24 @@ const below = (cost: number, price: number) => {
 };
 const signed = (line: MockLine) => line.visa !== null && line.visa.zone === zoneOf(line);
 
+/** Курсы мока к суму (РАСЧ-3: себестоимость строки в сумах). */
+const MOCK_RATES: Record<string, number> = { USD: 12_100 };
+/** РАСЧ-3: целевая маржа и шаг округления компании в моке — как в «Продажи». */
+export const MOCK_TARGET_MARGIN = 20;
+export const MOCK_ROUNDING_STEP = 1000;
+
 function costOf(line: MockLine): number {
   if (line.kind === "service") return (line.crewRate ?? 0) * (line.crewDays ?? 0);
-  return line.purchase;
+  return line.purchase * (MOCK_RATES[line.currency ?? "UZS"] ?? 1);
+}
+
+/** Цена клиенту за единицу: «от маржи» считается сама — себестоимость / (1 − маржа) вверх до шага (как ERP). */
+function priceOf(line: MockLine): number {
+  if (line.priceMode !== "margin") return line.client;
+  const cost = costOf(line);
+  if (cost <= 0) return 0;
+  const margin = (line.marginPct ?? MOCK_TARGET_MARGIN) / 100;
+  return Math.ceil(cost / (1 - margin) / MOCK_ROUNDING_STEP) * MOCK_ROUNDING_STEP;
 }
 
 function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
@@ -275,7 +290,8 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     lead_days: line.leadDays,
     crew_rate: zoneCost && line.crewRate !== null ? money(line.crewRate) : null,
     crew_days: zoneCost && line.crewDays !== null ? line.crewDays.toFixed(1) : null,
-    client_price: money(line.client),
+    client_price: money(priceOf(line)),
+    price_mode: line.priceMode ?? "legacy",
     ...(zoneCost
       ? {
           purchase_price: zone === "goods" ? money(line.purchase) : null,
@@ -285,9 +301,12 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
       : {}),
     ...(cost
       ? {
-          markup_pct: markup(unit, line.client),
-          margin_pct: marginOn(unit, line.client),
-          margin_below: below(unit, line.client),
+          margin_target_pct: line.priceMode
+            ? (line.marginPct ?? MOCK_TARGET_MARGIN).toFixed(1)
+            : null,
+          markup_pct: markup(unit, priceOf(line)),
+          margin_pct: marginOn(unit, priceOf(line)),
+          margin_below: below(unit, priceOf(line)),
         }
       : {}),
     visa: signed(line) && line.visa ? { by: line.visa.by, at: line.visa.at } : null,
@@ -448,7 +467,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
   const editable = editableOf(calc);
   const lines = calc.lines.map((line) => presentLine(line, user, editable));
   const purchase = calc.lines.reduce((sum, line) => sum + costOf(line) * line.quantity, 0);
-  const client = calc.lines.reduce((sum, line) => sum + line.client * line.quantity, 0);
+  const client = calc.lines.reduce((sum, line) => sum + priceOf(line) * line.quantity, 0);
   const missing = lines.filter((line) => line.visa === null).length;
   const blocker = !calc.started
     ? "not_started"
@@ -509,6 +528,8 @@ function present(calc: MockCalc, user: Me): CalcSheet {
             markup_pct: markup(purchase, client),
             margin_pct: marginOn(purchase, client),
             threshold_pct: MOCK_THRESHOLD.toFixed(1),
+            target_pct: MOCK_TARGET_MARGIN.toFixed(1),
+            rounding_step: String(MOCK_ROUNDING_STEP),
             margin_below: below(purchase, client),
           }
         : {}),
@@ -782,6 +803,7 @@ export const erpCalcHandlers = [
         id: nextId,
         purchase: product?.purchase ?? line.purchase,
         client: 0,
+        priceMode: "margin",
         visa: null,
       });
     }
@@ -830,6 +852,7 @@ export const erpCalcHandlers = [
         crewRate: null,
         crewDays: null,
         client: 0,
+        priceMode: "margin",
         visa: null,
       });
     }
@@ -911,6 +934,33 @@ export const erpCalcHandlers = [
         if (!line.purchase) line.purchase = product.purchase;
       }
     }
+    if (
+      (patch.margin_pct !== undefined || patch.price_mode !== undefined) &&
+      !fields(user).has("cost_margin")
+    ) {
+      return failure(
+        422,
+        "VALIDATION_FAILED",
+        "Наценку и маржу правит сотрудник с доступом к себестоимости.",
+        {
+          reason: "cost_forbidden",
+          fields: [patch.margin_pct !== undefined ? "margin_pct" : "price_mode"],
+        },
+      );
+    }
+    if (patch.margin_pct !== undefined) {
+      const margin = Number(patch.margin_pct);
+      if (margin < 0 || margin > 95) {
+        return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+          source: "erp",
+          reason: "margin_out_of_range",
+          fields: ["margin_pct"],
+        });
+      }
+      line.marginPct = margin;
+      line.priceMode = "margin";
+    }
+    if (patch.price_mode === "margin") line.priceMode = "margin";
     if (patch.markup_pct !== undefined) {
       if (!fields(user).has("cost_margin")) {
         return failure(
@@ -935,6 +985,7 @@ export const erpCalcHandlers = [
       }
       // D26G-5: цена из наценки — до сума, как ERP
       line.client = Math.round(cost * (1 + markupPct / 100));
+      delete line.priceMode;
     }
     if (patch.client_price !== undefined) {
       const price = Number(patch.client_price);
@@ -948,6 +999,7 @@ export const erpCalcHandlers = [
         });
       }
       line.client = price;
+      line.priceMode = "manual";
     }
     line.visa = null;
     write(calcs);
@@ -992,7 +1044,7 @@ export const erpCalcHandlers = [
         "Сначала выберите позицию каталога или «Новая позиция».",
       );
     }
-    if (costOf(line) <= 0 || line.client <= 0) {
+    if (costOf(line) <= 0 || priceOf(line) <= 0) {
       return conflict("line_incomplete", "Сначала заполните закупку и цену клиенту.");
     }
     line.visa = { by: user.name, at: new Date().toISOString(), zone: zoneOf(line) };
