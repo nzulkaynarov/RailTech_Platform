@@ -106,7 +106,7 @@ export function EmployeeCapabilitiesPage({ id }: { id: string }) {
           ← {t("card.back")}
         </Link>
         <header className="pf-cap-head">
-          <PersonAvatar name={name} photoUrl={employee?.avatar_url} size={48} />
+          <PersonAvatar name={name} photoUrl={employee?.avatar_url} size={40} />
           <div className="pf-cap-head-main">
             <h1>{name}</h1>
             <p className="pf-hint" style={{ margin: 0 }}>
