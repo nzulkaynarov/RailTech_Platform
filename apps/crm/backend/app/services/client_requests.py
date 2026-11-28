@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from typing import Final
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -135,6 +135,15 @@ class ClientRequestService:
     async def _for_company_tx(
         self, session: AsyncSession, who: Principal, body: RequestCreate, company: RequestCompanyIn
     ) -> _Done:
+        # Parallel submissions of one form: the second waits for the first to commit and sees its
+        # request; otherwise it makes its own client card and trips over the first request's key.
+        await session.execute(
+            select(
+                func.pg_advisory_xact_lock(
+                    func.hashtextextended(f"company_request:{body.request_key}", 0)
+                )
+            )
+        )
         repeat = await _existing(session, body.request_key)
         if repeat is not None:
             return repeat
