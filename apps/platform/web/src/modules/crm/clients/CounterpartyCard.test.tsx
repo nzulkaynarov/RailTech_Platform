@@ -564,3 +564,32 @@ describe("Роли контрагента и «Не клиент»", () => {
     expect(within(panel).queryByRole("button", { name: "Не клиент" })).toBeNull();
   });
 });
+
+/** КЛИЕНТ-1: «Может подтверждать» у контакта клиента — тот же переключатель, что у партнёра; без права в Кабинете просмотр. */
+describe("Карточка контрагента: «Может подтверждать» клиентского контакта", () => {
+  it("менеджер клиентов включает и снимает право у каждого контакта", async () => {
+    const panel = await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
+    fireEvent.click(await within(panel).findByRole("tab", { name: "Обзор" }));
+    const switches = await within(panel).findAllByRole("switch");
+    expect(switches.length).toBeGreaterThanOrEqual(2);
+    const [first, second] = switches as [HTMLElement, HTMLElement];
+    expect(first).toBeChecked();
+    expect(second).not.toBeChecked();
+
+    fireEvent.click(second);
+    await waitFor(() => {
+      expect(second).toBeChecked();
+    });
+    fireEvent.click(first);
+    await waitFor(() => {
+      expect(first).not.toBeChecked();
+    });
+  });
+
+  it("сотрудник без права на реквизиты видит право, но не меняет", async () => {
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    fireEvent.click(await within(panel).findByRole("tab", { name: "Обзор" }));
+    const [first] = await within(panel).findAllByRole("switch");
+    expect(first).toBeDisabled();
+  });
+});

@@ -71,6 +71,7 @@ function baseCardOf(id: string): CounterpartyCard | null {
               position: "Менеджер по продажам",
               is_primary: true,
               has_cabinet: false,
+              can_act: canActOf(`9${id}`, false),
               has_phone: Boolean(supplier.phone),
               has_email: Boolean(supplier.email),
             },
@@ -117,6 +118,7 @@ function baseCardOf(id: string): CounterpartyCard | null {
       position: contact.position ?? null,
       is_primary: index === 0,
       has_cabinet: false,
+      can_act: canActOf(String(contact.id), index === 0),
       has_phone: true,
       has_email: true,
     })),
@@ -159,6 +161,12 @@ function guard(write = false) {
     : failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
 }
 
+/** КЛИЕНТ-1: «Может подтверждать» контактов в памяти мока; первый контакт нового клиента — с правом (как заводит передача). */
+const rights = new Map<string, boolean>();
+function canActOf(personId: string, fallback: boolean): boolean {
+  return rights.get(personId) ?? fallback;
+}
+
 function cardOf(id: string): CounterpartyCard | null {
   const card = baseCardOf(id);
   if (!card) return null;
@@ -175,6 +183,17 @@ function cardOf(id: string): CounterpartyCard | null {
 
 export const counterpartyHandlers = [
   ...pictureHandlers(cardOf),
+  http.patch("*/people/contacts/:id/cabinet-right", async ({ params, request }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const body = (await request.json()) as { can_act: boolean };
+    const id = String(params["id"]);
+    rights.set(id, body.can_act);
+    return HttpResponse.json({ id, can_act: body.can_act });
+  }),
   http.patch("*/people/counterparties/:id", async ({ params, request }) => {
     const denied = guard();
     if (denied) return denied;

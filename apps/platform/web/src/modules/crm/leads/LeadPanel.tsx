@@ -25,6 +25,7 @@ import { leadActionRules } from "../common/leadActions";
 import { ContactsBlock } from "./ContactsBlock";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { TestTag } from "../../../shared/ui/TestTag";
+import { calcPath } from "../../erp/calc/api";
 import { clientPath } from "../common/params";
 
 import "../crm.css";
@@ -45,6 +46,22 @@ function originText(t: TFunction, card: LeadCard): string {
   return parts.join(" · ");
 }
 
+/** Канал приглашения словами: известные — «Почта», «Telegram», «Почта и Telegram»; незнакомое значение — «другой канал»,
+ * сырой код («both», «none») в интерфейс не попадает (КЛИЕНТ-1). */
+function noticeChannelWord(t: TFunction, channel: string): string {
+  return ["email", "telegram", "both"].includes(channel)
+    ? t(`clients:card.resendChannels.${channel}`)
+    : channelLabel(t, channel);
+}
+
+/** «Заявка RQ-… создана» — по номеру ERP; без номера — без выдумок: «Заявка создана» или «не передана в учёт». */
+function requestMadeText(t: TFunction, request: NonNullable<LeadCard["request"]>): string {
+  if (request.transfer === "failed") return t("leads:request.madeFailed");
+  return request.number
+    ? t("leads:request.made", { number: request.number })
+    : t("leads:request.madeNoNumber");
+}
+
 /** Итог уведомления клиенту (подтверждение заявки, приглашение) одной строкой: статус, канал, причина отказа. */
 function noticeText(t: TFunction, fmt: Format, notice: LeadNotice | ClientInvitation): string {
   const parts = [
@@ -57,11 +74,7 @@ function noticeText(t: TFunction, fmt: Format, notice: LeadNotice | ClientInvita
         : t(`leads:card.notice.${notice.status}`),
   ];
   if (notice.channel) {
-    const known = ["email", "telegram", "both"].includes(notice.channel);
-    const channel = known
-      ? t(`clients:card.resendChannels.${notice.channel}`)
-      : channelLabel(t, notice.channel);
-    parts.push(t("leads:card.notice.channel", { channel }));
+    parts.push(t("leads:card.notice.channel", { channel: noticeChannelWord(t, notice.channel) }));
   }
   return parts.join(" · ");
 }
@@ -174,13 +187,50 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
                 <LinkButton
                   type="link"
                   size="small"
-                  style={{ padding: 0 }}
+                  style={{
+                    padding: 0,
+                    height: "auto",
+                    whiteSpace: "normal",
+                    textAlign: "left",
+                    overflowWrap: "anywhere",
+                  }}
                   to={clientPath(card.client.id)}
                 >
                   {card.client.name}
                 </LinkButton>
               ) : null,
             },
+            ...(card.request && card.client
+              ? [
+                  {
+                    label: t("leads:card.request"),
+                    value: (
+                      <span data-testid="lead-request">
+                        {requestMadeText(t, card.request)}{" "}
+                        {card.request.number ? (
+                          <LinkButton
+                            type="link"
+                            size="small"
+                            style={{ padding: 0 }}
+                            to={calcPath(card.request.number)}
+                          >
+                            {t("leads:actions.openRequest")}
+                          </LinkButton>
+                        ) : (
+                          <LinkButton
+                            type="link"
+                            size="small"
+                            style={{ padding: 0 }}
+                            to={clientPath(card.client.id)}
+                          >
+                            {t("leads:actions.openClient")}
+                          </LinkButton>
+                        )}
+                      </span>
+                    ),
+                  },
+                ]
+              : []),
             ...(card.partner_application != null
               ? [
                   {
@@ -266,10 +316,10 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
       <div className="pf-crm-actions" data-sheet={sheet}>
         {canCreate ? (
           <LinkButton
-            type="primary"
+            {...(card.request ? {} : { type: "primary" as const })}
             to={`/crm/leads?lead=${card.lead}&create=1&panel=open&tab=card`}
           >
-            {t("leads:actions.create")}
+            {t(card.request ? "leads:actions.another" : "leads:actions.create")}
           </LinkButton>
         ) : null}
         {handable ? <HandOverButton lead={card.lead} name={card.name} /> : null}

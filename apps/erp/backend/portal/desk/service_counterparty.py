@@ -111,6 +111,7 @@ def card(company: Company, client_ids: set, user) -> dict:
                 "position": person.position or None,
                 "is_primary": person.is_primary,
                 "has_cabinet": bool(person.can_act or person.is_admin),
+                "can_act": bool(person.can_act),
                 "has_phone": bool(person.phone),
                 "has_email": bool(person.email),
                 "photo_version": pictures.version(person.photo),

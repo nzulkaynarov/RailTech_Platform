@@ -52,7 +52,10 @@
     "openChat": "Open the conversation",
     "triage": "Triage",
     "triageLabel": "Triage {{name}} in “Awaiting reply”",
-    "reopen": "Reopen"
+    "reopen": "Reopen",
+    "openRequest": "Open request",
+    "openClient": "Open client",
+    "another": "Another request"
   },
   "paging": {
     "label": "Lead pages",
@@ -116,7 +119,8 @@
     },
     "none": "—",
     "partner": "Handed over as partner",
-    "partnerOpen": "Partner application"
+    "partnerOpen": "Partner application",
+    "request": "Request"
   },
   "newLead": {
     "title": "New lead",
@@ -183,5 +187,10 @@
     "spam": "Spam",
     "test": "Test",
     "duplicate": "Duplicate"
+  },
+  "request": {
+    "made": "Request {{number}} created",
+    "madeNoNumber": "Request created",
+    "madeFailed": "Request created but not passed to accounting yet"
   }
 }

@@ -1,0 +1,7 @@
+/* «Может подтверждать» (КЛИЕНТ-1): переключатель и подпись в одну строку, длинная подпись переносится */
+.pf-contact-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}

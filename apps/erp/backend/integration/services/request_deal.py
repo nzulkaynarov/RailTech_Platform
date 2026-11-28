@@ -24,5 +24,8 @@ def create_request_deal(*, company, summary: str, **fields: Any) -> Deal:
     """Сохраняет сделку-заявку: название — суть одной строкой, полный текст — `PortalRequestSummary`."""
     deal = Deal(company=company, title=short_title(summary) or f"Заявка: {company.name}", **fields)
     deal.save()
+    from portal.desk.company_roles import ensure_client_role  # локально: portal.desk тянет integration
+
+    ensure_client_role(company)  # заявка делает компанию клиентом через одну функцию ролей (КЛИЕНТ-1)
     PortalRequestSummary.objects.create(deal=deal, text=summary)
     return deal

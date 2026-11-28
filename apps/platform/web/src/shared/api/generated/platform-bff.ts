@@ -128,6 +128,8 @@ import type {
   CompanyProfile,
   CompanyProfileUpdate,
   ContactPhoto,
+  ContactRight,
+  ContactRightIn,
   ContractTemplate,
   ContractTemplateConflictResponse,
   ContractTemplateIn,
@@ -64430,6 +64432,135 @@ export const useDeleteCounterpartyLogo = <
   TContext
 > => {
   return useMutation(getDeleteCounterpartyLogoMutationOptions(options), queryClient);
+};
+
+export const getSetContactCabinetRightUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/contacts/${id}/cabinet-right`;
+};
+
+/**
+ * КЛИЕНТ-1. ERP `PATCH parties/people/{id}/cabinet-right/`: без права контакт в Кабинете только смотрит КП и договор. Право — как на реквизиты контрагента (`crm.clients` или `erp.stock` — полный доступ; в ERP `deal.manage` или `supply.manage`). Изменение пишется в журнал ERP; повтор безопасен.
+ * @summary Контакт клиента: «Может подтверждать»
+ */
+export const setContactCabinetRight = async (
+  id: CompanyItemRef,
+  contactRightIn: ContactRightIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ContactRight> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ContactRight>(getSetContactCabinetRightUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contactRightIn),
+  });
+};
+
+export const getSetContactCabinetRightMutationKey = () => ["setContactCabinetRight"] as const;
+
+export const getSetContactCabinetRightMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setContactCabinetRight>>,
+    TError,
+    SetContactCabinetRightMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setContactCabinetRight>>,
+  TError,
+  SetContactCabinetRightMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetContactCabinetRightMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setContactCabinetRight>>,
+    SetContactCabinetRightMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setContactCabinetRight(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetContactCabinetRightMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setContactCabinetRight>>
+>;
+export type SetContactCabinetRightMutationBody = ContactRightIn;
+export type SetContactCabinetRightMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetContactCabinetRightMutationVariables = { id: CompanyItemRef; data: ContactRightIn };
+
+/**
+ * @summary Контакт клиента: «Может подтверждать»
+ */
+export const useSetContactCabinetRight = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setContactCabinetRight>>,
+      TError,
+      SetContactCabinetRightMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setContactCabinetRight>>,
+  TError,
+  SetContactCabinetRightMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetContactCabinetRightMutationOptions(options), queryClient);
 };
 
 export const getGetContactPhotoUrl = (id: CompanyItemRef, params?: GetContactPhotoParams) => {

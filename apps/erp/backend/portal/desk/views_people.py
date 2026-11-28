@@ -35,6 +35,8 @@ from portal.desk.serializers import (
     DeskPeoplePage,
     DeskPersonContacts,
     DeskPersonPhoto,
+    DeskPersonRight,
+    DeskPersonRightIn,
     DeskPictureIn,
 )
 from rest_framework import status
@@ -124,7 +126,7 @@ class PeopleDeskViewSet(DeskViewSet):
     lookup_value_regex = r"\d+"
     queryset = Contact.objects.none()
     serializer_class = DeskPeoplePage
-    required_permissions = {"photo": PICTURE_EDITORS}
+    required_permissions = {"photo": PICTURE_EDITORS, "cabinet_right": PICTURE_EDITORS}
 
     @extend_schema(
         operation_id="parties_people_list",
@@ -165,6 +167,28 @@ class PeopleDeskViewSet(DeskViewSet):
         return Response(
             {"id": contact.pk, "name": contact.name, "phone": contact.phone or None, "email": contact.email or None}
         )
+
+    @extend_schema(
+        operation_id="parties_people_cabinet_right",
+        summary="Set the right to confirm of a client contact",
+        description=(
+            "КЛИЕНТ-1. «Может подтверждать» контакта клиента: без права контакт в Кабинете только смотрит КП и договор. "
+            "Право `deal.manage` или `supply.manage`; изменение пишется в журнал. Контакт вне списка «Люди» — 404."
+        ),
+        request=DeskPersonRightIn,
+        responses={200: DeskPersonRight, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["patch"], url_path="cabinet-right", url_name="cabinet-right")
+    def cabinet_right(self, request, pk=None):
+        queryset, _ = people_queryset(request.user, None, "")
+        contact = queryset.filter(pk=pk).select_related("company").first()
+        if contact is None:
+            raise NotFound()
+        body = DeskPersonRightIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        company_roles.set_contact_right(contact, body.validated_data["can_act"], actor=request.user)
+        return Response({"id": contact.pk, "can_act": contact.can_act})
 
     @extend_schema(
         methods=["GET"],
