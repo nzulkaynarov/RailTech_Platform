@@ -428,3 +428,15 @@
   display: block;
   white-space: normal;
 }
+
+.pf-calc-low {
+  display: inline-block;
+  margin-inline-start: 4px;
+  color: #7a4100;
+  font-weight: 700;
+}
+
+.pf-calc-ready-warn {
+  margin: 0 0 8px;
+  color: #7a4100;
+}

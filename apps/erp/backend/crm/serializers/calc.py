@@ -247,6 +247,8 @@ class CalcLineSerializer(serializers.Serializer):
     cost = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     client_price = serializers.DecimalField(max_digits=14, decimal_places=2)
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_below = serializers.BooleanField()
     visa = CalcVisaSerializer(allow_null=True)
     group = serializers.ChoiceField(choices=("stock", "supply", "engineer"))
     can_edit = serializers.BooleanField()
@@ -256,6 +258,9 @@ class CalcTotalsSerializer(serializers.Serializer):
     purchase = serializers.DecimalField(max_digits=16, decimal_places=2, allow_null=True)
     client = serializers.DecimalField(max_digits=16, decimal_places=2)
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    threshold_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_below = serializers.BooleanField()
     vat_included = serializers.BooleanField()
 
 

@@ -17701,6 +17701,10 @@ export interface components {
       client_price: components["schemas"]["DecimalString"];
       /** @description Наценка строки, % — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки ниже порога — предупреждение, не запрет */
+      margin_below?: boolean;
       visa: components["schemas"]["CalcLineVisa"] | null;
       /** @description Сотрудник может править и визировать строку (зона, черновик) */
       can_edit: boolean;
@@ -17712,6 +17716,12 @@ export interface components {
       purchase?: components["schemas"]["DecimalString"];
       /** @description Наценка итого — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого на цену, % — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
+      threshold_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
+      margin_below?: boolean;
       /** @constant */
       vat_included: false;
     };

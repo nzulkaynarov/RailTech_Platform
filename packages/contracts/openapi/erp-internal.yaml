@@ -24994,6 +24994,13 @@ components:
           format: decimal
           pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
           nullable: true
+        margin_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+        margin_below:
+          type: boolean
         visa:
           allOf:
           - $ref: '#/components/schemas/CalcVisa'
@@ -25015,6 +25022,8 @@ components:
       - item
       - kind
       - lead_days
+      - margin_below
+      - margin_pct
       - markup_pct
       - name
       - partner_price
@@ -25648,12 +25657,27 @@ components:
           format: decimal
           pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
           nullable: true
+        margin_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+        threshold_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+        margin_below:
+          type: boolean
         vat_included:
           type: boolean
       required:
       - client
+      - margin_below
+      - margin_pct
       - markup_pct
       - purchase
+      - threshold_pct
       - vat_included
     CalcVisa:
       type: object

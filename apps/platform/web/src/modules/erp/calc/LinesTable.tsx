@@ -567,18 +567,36 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
  */
 function Markup({ line, actions }: { line: CalcLine; actions: Actions }) {
   const { t } = useTranslation("calc");
+  const low = line.margin_below ? (
+    <span
+      className="pf-calc-low"
+      role="img"
+      aria-label={t("ready.marginLow.lineLow", { margin: line.margin_pct })}
+      title={t("ready.marginLow.lineLow", { margin: line.margin_pct })}
+    >
+      !
+    </span>
+  ) : null;
   if (!line.can_edit || line.cost === null || line.cost === undefined) {
-    return <span className="pf-num">{line.markup_pct ?? "—"}</span>;
+    return (
+      <span className="pf-num">
+        {line.markup_pct ?? "—"}
+        {low}
+      </span>
+    );
   }
   return (
-    <NumberCell
-      value={line.markup_pct ?? null}
-      label={t("lines.markupLabel", { name: line.name })}
-      disabled={actions.pending}
-      onCommit={(next) => {
-        actions.patch(line, { markup_pct: next });
-      }}
-    />
+    <>
+      <NumberCell
+        value={line.markup_pct ?? null}
+        label={t("lines.markupLabel", { name: line.name })}
+        disabled={actions.pending}
+        onCommit={(next) => {
+          actions.patch(line, { markup_pct: next });
+        }}
+      />
+      {low}
+    </>
   );
 }
 

@@ -82,6 +82,8 @@ def line(**extra: Any) -> dict[str, Any]:
         "cost": "90000000.00",
         "client_price": "99000000.00",
         "markup_pct": "10.0",
+        "margin_pct": "9.1",
+        "margin_below": False,
         "visa": {"by": "Демо Снабженцев", "at": "2026-10-27T10:00:00+00:00"},
         "group": "supply",
         "can_edit": True,
@@ -298,6 +300,8 @@ async def test_sheet_for_supply_has_cost_and_supplier_prices(
     assert goods["product_id"] == "3"
     assert goods["cost"] == "90000000.00"
     assert goods["markup_pct"] == "10.0"
+    assert goods["margin_pct"] == "9.1"
+    assert goods["margin_below"] is False
     assert goods["supplier"]["offer_price"] == "90000000.00"
     assert body["totals"] == {
         "client": "208800000.00",

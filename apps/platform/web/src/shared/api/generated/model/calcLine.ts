@@ -67,6 +67,10 @@ export interface CalcLine {
   client_price: DecimalString;
   /** Наценка строки, % — только группе `cost_margin` */
   markup_pct?: DecimalString | null;
+  /** Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */
+  margin_pct?: DecimalString | null;
+  /** Маржа строки ниже порога — предупреждение, не запрет */
+  margin_below?: boolean;
   visa: CalcLineVisa | null;
   /** Сотрудник может править и визировать строку (зона, черновик) */
   can_edit: boolean;

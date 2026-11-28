@@ -30169,6 +30169,14 @@ components:
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
+        margin_pct:
+          description: Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        margin_below:
+          type: boolean
+          description: Маржа строки ниже порога — предупреждение, не запрет
         visa:
           oneOf:
             - {$ref: '#/components/schemas/CalcLineVisa'}
@@ -30190,6 +30198,19 @@ components:
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
+        margin_pct:
+          description: Маржа итого на цену, % — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        threshold_pct:
+          description: Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        margin_below:
+          type: boolean
+          description: Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет
         vat_included: {type: boolean, const: false}
 
     CalcVisaGroup:

@@ -30322,6 +30322,11 @@ export const getGetCalcSheetResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -30335,6 +30340,15 @@ export const getGetCalcSheetResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -30674,6 +30688,11 @@ export const getStartCalcResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -30687,6 +30706,15 @@ export const getStartCalcResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31026,6 +31054,11 @@ export const getAddCalcLinesResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31039,6 +31072,15 @@ export const getAddCalcLinesResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31381,6 +31423,11 @@ export const getUpdateCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31394,6 +31441,15 @@ export const getUpdateCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -31736,6 +31792,11 @@ export const getDeleteCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -31749,6 +31810,15 @@ export const getDeleteCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32088,6 +32158,11 @@ export const getSignCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32101,6 +32176,15 @@ export const getSignCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32443,6 +32527,11 @@ export const getUpdateCalcTermsResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32456,6 +32545,15 @@ export const getUpdateCalcTermsResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -32795,6 +32893,11 @@ export const getMarkCalcReadyResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -32808,6 +32911,15 @@ export const getMarkCalcReadyResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -33150,6 +33262,11 @@ export const getNewCalcQuoteVersionResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([
       { ...getNewCalcQuoteVersionResponseCalcLineVisaMock() },
       null,
@@ -33166,6 +33283,15 @@ export const getNewCalcQuoteVersionResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -33508,6 +33634,11 @@ export const getLoseCalcRequestResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -33521,6 +33652,15 @@ export const getLoseCalcRequestResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -33993,6 +34133,11 @@ export const getCopyCalcLinesResponseMock = (
           faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
           null,
         ]),
+        margin_pct: faker.helpers.arrayElement([
+          faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+          null,
+        ]),
+        margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
         visa: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcLineVisaMock() }, null]),
         can_edit: faker.datatype.boolean(),
       }),
@@ -34007,6 +34152,15 @@ export const getCopyCalcLinesResponseMock = (
         faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
         null,
       ]),
+      margin_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      threshold_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       vat_included: false,
     },
     visas: {
@@ -34764,6 +34918,11 @@ export const getReserveCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
@@ -34777,6 +34936,15 @@ export const getReserveCalcLineResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {
@@ -35125,6 +35293,11 @@ export const getReleaseCalcLineReservationResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     visa: faker.helpers.arrayElement([
       { ...getReleaseCalcLineReservationResponseCalcLineVisaMock() },
       null,
@@ -35141,6 +35314,15 @@ export const getReleaseCalcLineReservationResponseMock = (
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
+    margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    margin_below: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     vat_included: false,
   },
   visas: {

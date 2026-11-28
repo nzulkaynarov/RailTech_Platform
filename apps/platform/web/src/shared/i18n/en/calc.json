@@ -291,6 +291,11 @@
       "rejected_client": "The client rejected the quote — choose above: a new quote version or «Close request»."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
+    "marginLow": {
+      "warn": "Margin {{margin}} % is below the {{threshold}} % threshold. You can still send the costing: the margin is checked when the quote is approved.",
+      "warnLines": "Below the threshold: {{count}} lines.",
+      "lineLow": "Margin {{margin}} % is below the threshold"
+    },
     "done": "Quote awaiting approval",
     "closed": {
       "approved": "Quote approved",

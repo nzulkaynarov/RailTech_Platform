@@ -195,6 +195,8 @@ class CalcLine(BaseModel):
     cost: str | None = None
     client_price: str
     markup_pct: str | None = None
+    margin_pct: str | None = None
+    margin_below: bool | None = None
     visa: CalcLineVisa | None
     can_edit: bool
 
@@ -203,6 +205,9 @@ class CalcTotals(BaseModel):
     client: str
     purchase: str | None = None
     markup_pct: str | None = None
+    margin_pct: str | None = None
+    threshold_pct: str | None = None
+    margin_below: bool | None = None
     vat_included: Literal[False] = False
 
 
@@ -499,6 +504,10 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         line.cost = raw.get("cost")
     if cost:
         line.markup_pct = raw.get("markup_pct")
+        if "margin_pct" in raw:
+            line.margin_pct = raw["margin_pct"]
+        if "margin_below" in raw:
+            line.margin_below = bool(raw["margin_below"])
     if offers:
         line.partner_price = _partner_price(raw.get("partner_price"))
     return line
@@ -571,6 +580,11 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
     if cost and totals.get("purchase") is not None:
         totals_model.purchase = totals.get("purchase")
         totals_model.markup_pct = totals.get("markup_pct")
+        if "margin_pct" in totals:
+            totals_model.margin_pct = totals["margin_pct"]
+            totals_model.threshold_pct = totals.get("threshold_pct")
+        if "margin_below" in totals:
+            totals_model.margin_below = bool(totals["margin_below"])
     return CalcSheet(
         number=number,
         title=deal_title(deal),

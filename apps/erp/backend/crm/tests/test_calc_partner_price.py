@@ -143,3 +143,32 @@ def test_configured_default_margin_is_used(prices):
     settings_row.save()
     _add(prices, product_id=prices["product"].pk)
     assert Quote.objects.get(deal=prices["deal"]).margin_percent == Decimal("12.50")
+
+
+def test_delivery_term_is_taken_from_the_chosen_partner_price(prices):
+    SupplierOffer.objects.filter(supplier=prices["b"]).update(order_lead_time_days=14, in_stock_lead_time_days=0)
+    line = _add(prices, product_id=prices["product"].pk)
+    assert line["partner_price"]["source"]["supplier"] == "ООО Партнёр 2"
+    assert line["lead_days"] == 14
+
+
+def test_margin_below_threshold_is_flagged_on_line_and_totals_but_does_not_block(prices):
+    settings_row = prices["seller"].settings
+    settings_row.default_margin_percent = Decimal("3.20")
+    settings_row.min_margin_percent = Decimal("12.00")
+    settings_row.save()
+    line = _add(prices, product_id=prices["product"].pk)
+    assert line["margin_below"] is True and line["margin_pct"] == "3.1", "маржа на цену, не наценка на себестоимость"
+    assert line["markup_pct"] == "3.2"
+    sheet = _api(prices["supply"]).get(_url(prices, "")).json()
+    assert sheet["totals"]["margin_below"] is True and sheet["totals"]["threshold_pct"] == "15.0", "порог — из задания резолюции"
+    assert sheet["ready"]["blocker"] != "margin_below", "предупреждение не запрещает «Расчёт готов»"
+
+
+def test_margin_at_default_is_not_flagged(prices):
+    settings_row = prices["seller"].settings
+    settings_row.default_margin_percent = Decimal("30.00")
+    settings_row.min_margin_percent = Decimal("12.00")
+    settings_row.save()
+    line = _add(prices, product_id=prices["product"].pk)
+    assert line["margin_below"] is False

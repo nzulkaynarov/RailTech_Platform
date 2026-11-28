@@ -143,7 +143,174 @@ export const CATALOG: readonly MockCatalogItem[] = [
   },
 ];
 
+/**
+ * РАСЧ-1: заявка с реалистичным расчётом для приёмки — 12 строк, длинные названия, два партнёра в разных валютах,
+ * одна истёкшая цена, одна строка без цены, строки с маржой ниже порога. Вымышленные названия.
+ */
+function wideCalc(base: MockCalc): MockCalc {
+  const alpha = "ООО «Вымышленная Сталь»";
+  const beta = "ООО «Демо Металл»";
+  const items: [string, string, number, number, number, number | null][] = [
+    // название, артикул, кол-во, закупка (сум), цена клиенту (сум), срок
+    [
+      "Насос центробежный консольный горизонтальный, нержавеющая сталь, фланцы DN80, 15 кВт",
+      "НЦК-80-15",
+      2,
+      31_500_000,
+      38_000_000,
+      21,
+    ],
+    [
+      "Кабель силовой медный с изоляцией из сшитого полиэтилена 3×95+1×50, барабан 500 м",
+      "КС-3095",
+      3,
+      48_200_000,
+      56_900_000,
+      14,
+    ],
+    [
+      "Шкаф управления электроприводом со степенью защиты IP65 и частотным преобразователем",
+      "ШУ-65",
+      1,
+      27_800_000,
+      28_400_000,
+      30,
+    ],
+    ["Задвижка клиновая стальная фланцевая DN100 PN16", "ЗК-100", 8, 2_950_000, 3_540_000, 10],
+    [
+      "Датчик давления измерительный 0–1,6 МПа, выход 4–20 мА",
+      "ДД-16",
+      12,
+      1_180_000,
+      1_330_000,
+      7,
+    ],
+    ["Фильтр сетчатый осадочный фланцевый DN100", "ФС-100", 6, 1_640_000, 1_960_000, 12],
+    [
+      "Редуктор цилиндрический двухступенчатый, передаточное число 25",
+      "РЦ-25",
+      2,
+      19_300_000,
+      21_700_000,
+      25,
+    ],
+    [
+      "Подшипниковый узел в сборе для насосных агрегатов серии НЦК",
+      "ПУ-НЦК",
+      10,
+      860_000,
+      1_040_000,
+      5,
+    ],
+    [
+      "Комплект уплотнений торцевых для насосов НЦК-80, двойное исполнение",
+      "КУ-80",
+      4,
+      3_120_000,
+      3_760_000,
+      9,
+    ],
+    [
+      "Автоматический выключатель в литом корпусе 250 А, 3 полюса",
+      "АВ-250",
+      5,
+      2_240_000,
+      2_890_000,
+      6,
+    ],
+    [
+      "Преобразователь частоты 15 кВт, 380 В, со встроенным фильтром ЭМС",
+      "ПЧ-15",
+      2,
+      14_600_000,
+      15_100_000,
+      18,
+    ],
+    ["Манометр показывающий с глицериновым заполнением, класс 1,0", "МП-10", 20, 310_000, 0, null],
+  ];
+  const partner = (i: number): MockLine["partner"] => {
+    if (i === 11) return { offerId: null, options: [], expired: null };
+    if (i === 8) {
+      return {
+        offerId: null,
+        options: [],
+        expired: { supplier: beta, validUntil: "2026-11-10" },
+      };
+    }
+    const price = items[i][3];
+    const usd = i % 3 === 1;
+    const opts = [
+      {
+        id: 100 + i * 2,
+        supplier: usd ? beta : alpha,
+        price: usd ? Math.round(price / 12_000) : price,
+        currency: usd ? "USD" : "UZS",
+        priceDate: "2026-11-24",
+        validUntil: i === 4 ? "2026-12-02" : "2026-12-31",
+        freshness: i === 4 ? "expiring" : "ok",
+      },
+      {
+        id: 101 + i * 2,
+        supplier: usd ? alpha : beta,
+        price: usd ? Math.round(price * 1.04) : Math.round(price / 12_000) + 40,
+        currency: usd ? "UZS" : "USD",
+        priceDate: "2026-11-18",
+        validUntil: "2026-12-20",
+        freshness: "ok" as const,
+      },
+    ];
+    return { offerId: opts[0].id, options: opts };
+  };
+  const lines: MockLine[] = items.map(([name, article, quantity, purchase, client, lead], i) => ({
+    id: 900 + i,
+    name,
+    article,
+    productId: 70 + i,
+    kind: "goods",
+    quantity,
+    unit: "шт.",
+    onHand: i % 4 === 0 ? 1 : 0,
+    supplier: (() => {
+      const chosen = partner(i)?.options[0];
+      return chosen
+        ? {
+            name: chosen.supplier,
+            leadDays: lead ?? 0,
+            minOrderQty: 1,
+            validUntil: chosen.validUntil,
+            offerPrice: `${String(chosen.price)}.00`,
+          }
+        : null;
+    })(),
+    leadDays: lead,
+    partner: partner(i),
+    purchase: i === 11 || i === 8 ? 0 : purchase,
+    currency: "UZS",
+    crewRate: null,
+    crewDays: null,
+    client: i === 11 || i === 8 ? 0 : client,
+    visa: null,
+  }));
+  return {
+    ...base,
+    number: "ЗВ-2026-121",
+    title: "Заявка ЗВ-2026-121 · насосное и электрооборудование",
+    letterNumber: "ВХ-121/26",
+    letterSubject: "Запрос КП на насосное и электрооборудование для цеха",
+    requestLines: lines.length,
+    requestFiles: [],
+    assignees: [{ zone: "goods", name: "Демо Снабженцев" }],
+    lines,
+  };
+}
+
 export function seedCalcs(): MockCalc[] {
+  const seeds = baseCalcs();
+  const first = seeds.find((c) => c.number === "ЗВ-2026-097");
+  return first ? [...seeds, wideCalc(first)] : seeds;
+}
+
+function baseCalcs(): MockCalc[] {
   return [
     // ЗАЯВ-1: прошлые заявки реестра — закрытая с причиной, КП ушло клиенту, стала проектом
     {

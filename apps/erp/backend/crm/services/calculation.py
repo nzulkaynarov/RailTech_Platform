@@ -197,6 +197,32 @@ def _money(value: Any) -> Optional[str]:
     return f"{Decimal(str(value)).quantize(_CENT, rounding=ROUND_HALF_UP):.2f}"
 
 
+def _margin(cost: Decimal, price: Decimal) -> Optional[Decimal]:
+    """Маржа на цену, % — (цена − себестоимость) / цена: так порог считает и проверка КП (`compute_quote_economics`)."""
+    if cost is None or price is None or cost <= 0 or price <= 0:
+        return None
+    return ((price - cost) / price * Decimal("100")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+
+def _threshold(task: CalcTask, quote: Optional[Quote]) -> Optional[Decimal]:
+    """Порог маржи: из задания резолюции, иначе из настроек компании (как в проверке КП)."""
+    if task.min_margin_pct is not None:
+        return Decimal(str(task.min_margin_pct))
+    if quote is None:
+        return None
+    from .quotes.pricing import compute_quote_economics
+
+    return Decimal(str(compute_quote_economics(quote)["min_margin_percent"]))
+
+
+def _fmt1(value: Optional[Decimal]) -> Optional[str]:
+    return None if value is None else f"{value:.1f}"
+
+
+def _below(margin: Optional[Decimal], threshold: Optional[Decimal]) -> bool:
+    return margin is not None and threshold is not None and margin < threshold
+
+
 def _markup(cost: Decimal, price: Decimal) -> Optional[str]:
     if cost is None or cost <= 0:
         return None
@@ -214,6 +240,8 @@ class _Context:
     photos: dict[int, int] = field(default_factory=dict)
     #: РАСЧ-1: цены партнёров по (карточка, валюта строки) — действующие от дешёвой и последняя истёкшая.
     partners: dict[tuple[int, Optional[str]], tuple[list, Any]] = field(default_factory=dict)
+    #: РАСЧ-1: порог маржи, % (None — не задан); строки ниже него получают предупреждение.
+    threshold: Optional[Decimal] = None
 
 
 def _context(items: list[QuoteItem], *, with_partners: bool = False) -> _Context:
@@ -462,6 +490,10 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "cost": _money(item.landed_cost) if zone_cost else None,
         "client_price": _money(item.final_price_excl_vat),
         "markup_pct": _markup(item.landed_cost, item.final_price_excl_vat) if show_cost else None,
+        "margin_pct": _fmt1(_margin(item.landed_cost, item.final_price_excl_vat)) if show_cost else None,
+        "margin_below": (
+            _below(_margin(item.landed_cost, item.final_price_excl_vat), ctx.threshold) if show_cost else False
+        ),
         "visa": (
             {
                 "by": calc.visa_by_name or person_name(calc.visa_by),
@@ -819,6 +851,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     quote = calc_quote(deal)
     items = _billable(quote)
     ctx = _context(items, with_partners=True)
+    ctx.threshold = _threshold(task, quote)
     show_cost = has_perm(user, Permission.QUOTE_VIEW_COST_MARGIN.value)
     rights = zone_rights(user)
     editable = quote is not None and quote_edit_lock_code(quote) is None
@@ -878,6 +911,9 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "purchase": _money(purchase) if show_cost else None,
             "client": _money(client),
             "markup_pct": _markup(purchase, client) if show_cost else None,
+            "margin_pct": _fmt1(_margin(purchase, client)) if show_cost else None,
+            "threshold_pct": (f"{ctx.threshold:.1f}" if ctx.threshold is not None else None) if show_cost else None,
+            "margin_below": _below(_margin(purchase, client), ctx.threshold) if show_cost else False,
             "vat_included": False,
         },
         "visas": {name: groups[name] for name in VISA_GROUPS},
@@ -1022,7 +1058,7 @@ def _apply_option(item: QuoteItem, option) -> None:
     item.frozen_base_price = option.price
     item.frozen_currency = _currency(option.currency)
     item.offer = offer
-    item.lead_time_days = offer.in_stock_lead_time_days or offer.order_lead_time_days or 0
+    item.lead_time_days = offer.order_lead_time_days or offer.in_stock_lead_time_days or 0
 
 
 def _prefill_from_offer(item: QuoteItem, product) -> None:

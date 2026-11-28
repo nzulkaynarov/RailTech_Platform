@@ -74,6 +74,19 @@ describe("Расчёт · закупка по цене партнёра (РАС�
     expect(within(source).getByRole("button", { name: "Запросить цену" })).toBeVisible();
   });
 
+  it("маржа ниже порога — предупреждение у «Расчёт готов» и метка у строки, кнопку оно не блокирует", async () => {
+    // Цена клиенту почти равна закупке: маржа около 1 % при пороге мока 12 %
+    const calc = seedCalcs().find((c) => c.number === NUMBER);
+    const lines = (calc?.lines ?? []).map((l) =>
+      l.name === RAIL ? { ...l, client: 91_000_000 } : l,
+    );
+    patchCalcMock(NUMBER, { lines });
+    await openCalc("supply@demo.example");
+    expect(await screen.findByText(/Маржа .* ниже порога/)).toBeInTheDocument();
+    expect(screen.getAllByText(/ниже порога/).length).toBeGreaterThan(0);
+    expect(within(lineRow(RAIL)).getByRole("img", { name: /ниже порога/ })).toBeVisible();
+  });
+
   it("гл. инженер и бухгалтер цен партнёров не видят", async () => {
     await openCalc("engineer@demo.example");
     expect(screen.queryByTestId("partner-source")).not.toBeInTheDocument();

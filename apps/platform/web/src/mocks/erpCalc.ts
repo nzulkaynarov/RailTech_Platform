@@ -169,6 +169,13 @@ const GROUP = { goods: "stock", goods_to_order: "supply", service: "engineer" } 
 const money = (value: number) => value.toFixed(2);
 const markup = (cost: number, price: number) =>
   cost > 0 ? (((price - cost) / cost) * 100).toFixed(1) : null;
+const marginOn = (cost: number, price: number) =>
+  cost > 0 && price > 0 ? (((price - cost) / price) * 100).toFixed(1) : null;
+const MOCK_THRESHOLD = 12;
+const below = (cost: number, price: number) => {
+  const value = marginOn(cost, price);
+  return value !== null && Number(value) < MOCK_THRESHOLD;
+};
 const signed = (line: MockLine) => line.visa !== null && line.visa.zone === zoneOf(line);
 
 function costOf(line: MockLine): number {
@@ -270,7 +277,13 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           cost: money(unit),
         }
       : {}),
-    ...(cost ? { markup_pct: markup(unit, line.client) } : {}),
+    ...(cost
+      ? {
+          markup_pct: markup(unit, line.client),
+          margin_pct: marginOn(unit, line.client),
+          margin_below: below(unit, line.client),
+        }
+      : {}),
     visa: signed(line) && line.visa ? { by: line.visa.by, at: line.visa.at } : null,
     can_edit: editable && canZone(user, zone),
   };
@@ -484,7 +497,15 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     lines,
     totals: {
       client: money(client),
-      ...(cost ? { purchase: money(purchase), markup_pct: markup(purchase, client) } : {}),
+      ...(cost
+        ? {
+            purchase: money(purchase),
+            markup_pct: markup(purchase, client),
+            margin_pct: marginOn(purchase, client),
+            threshold_pct: MOCK_THRESHOLD.toFixed(1),
+            margin_below: below(purchase, client),
+          }
+        : {}),
       vat_included: false,
     },
     visas: groups(calc),

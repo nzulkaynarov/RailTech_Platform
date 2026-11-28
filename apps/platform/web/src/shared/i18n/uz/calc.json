@@ -291,6 +291,11 @@
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
+    "marginLow": {
+      "warn": "Marja {{margin}} % — {{threshold}} % çegaradan past. Hisob-kitobni yuborsa bölade: marja KP tasdiqlanayotganda tekşiriladi.",
+      "warnLines": "Çegaradan past: {{count}} qator.",
+      "lineLow": "Marja {{margin}} % çegaradan past"
+    },
     "done": "TT maʼqullaşda",
     "closed": {
       "approved": "TT maʼqullandi",

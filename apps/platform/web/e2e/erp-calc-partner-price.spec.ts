@@ -44,3 +44,29 @@ test("закупка берёт цену партнёра, другую цену
     }
   }
 });
+
+// Реалистичный расчёт: 12 строк, два партнёра в разных валютах, истёкшая цена, строка без цены, маржа ниже порога —
+// предупреждение рядом с «Расчёт готов», сама кнопка не заблокирована предупреждением.
+test("расчёт на 12 строк: цены партнёров, истёкшая и отсутствующая цена, предупреждение о марже", async ({
+  page,
+}) => {
+  await loginAndWait(page, "supply@demo.example");
+  for (const [width, height] of [
+    [1512, 982],
+    [390, 844],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-121")}`);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Расчёт по заявке ЗВ-2026-121" }),
+    ).toBeVisible();
+    await expect(page.getByTestId("partner-source").first()).toContainText("Цена партнёра");
+    await expect(page.getByRole("status").filter({ hasText: "ниже порога" })).toBeVisible();
+    await settledScreenshot(page, `wide-${String(width)}`);
+    await showPurchaseColumn(page);
+    await settledScreenshot(page, `wide-prices-${String(width)}`);
+    await page.getByRole("status").filter({ hasText: "ниже порога" }).scrollIntoViewIfNeeded();
+    await settledScreenshot(page, `wide-ready-${String(width)}`);
+    await expectNoViolations(page, `расчёт на 12 строк, ${String(width)} px`);
+  }
+});
