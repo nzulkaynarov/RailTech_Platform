@@ -113,13 +113,33 @@
   },
   "denied": {
     "title": "«{{name}}» sizga berilmagan",
-    "need": "Bu bölimni açiş uçun «{{name}}» imkoniyati kerak: {{level}}. Hozir sizda — «{{current}}».",
+    "need": "Bu yerda {{needed}} uçun «{{name}}» imkoniyati kerak.",
+    "needPartial": "«{{name}}» imkoniyati sizda bor, lekin faqat: {{current}}; bu yerda kerak: {{needed}}.",
     "who": "Imkoniyatlarni administrator beradi.",
     "ask": "Imkoniyat söraş",
-    "askBody": "«{{name}}» imkoniyati kerak: {{level}}.",
+    "askBody": "Menga bu yerda {{level}} ruxsat bering: «{{name}}» imkoniyati.",
     "grantors": "Imkoniyatlarni beradiganlar: {{names}}.",
     "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing.",
-    "action": "Sizda bu amalga ruxsat yöq.",
-    "actionNeed": "«{{name}}» imkoniyati kerak: {{level}}."
+    "action": "Bu amal sizga mavjud emas.",
+    "actionGrantors": "Imkoniyatni beradiganlar: {{names}}.",
+    "cant": "Sizda {{what}} imkoniyati yöq.",
+    "cantGrantors": "Uni beradiganlar: {{names}}.",
+    "can": {
+      "contract": {
+        "work": "şartnomalar bilan işlaş"
+      },
+      "acts": {
+        "work": "aktlar bilan işlaş"
+      },
+      "invoices": {
+        "work": "hisoblar bilan işlaş"
+      },
+      "payments": {
+        "work": "tölovlar bilan işlaş"
+      },
+      "registry": {
+        "work": "hujjatlar reestri bilan işlaş"
+      }
+    }
   }
 }

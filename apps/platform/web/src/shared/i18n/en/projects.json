@@ -105,7 +105,6 @@
       "due": "Due"
     },
     "readOnly": "Read only",
-    "readOnlyHint": "View only.",
     "documents": {
       "title": "Project documents",
       "quote": "Quote",
@@ -321,7 +320,6 @@
       "remark_vote": "Answer saved.",
       "remark_decide": "Decision saved."
     },
-    "readOnly": "View only.",
     "template": {
       "title": "Contract from a template",
       "path": "Contract path",
@@ -528,8 +526,7 @@
       "attach_scan": "Scan attached, act signed.",
       "return": "Return recorded.",
       "reissue": "Act issued again."
-    },
-    "readOnly": "View only."
+    }
   },
   "files": {
     "choose": "Choose file",
@@ -561,7 +558,8 @@
     "scan_invalid": "The file does not look like a scan: a PDF or an image up to 20 MB is needed.",
     "scan_required": "Choose a scan file.",
     "no_file_provided": "Choose a scan file.",
-    "forbidden": "You lack the capability for this action. It is granted by those who manage employees; see Profile, “My capabilities”.",
+    "forbidden": "You do not have this capability.",
+    "forbiddenPart": "you do not have this capability",
     "unavailable": "The data did not load. Try again later.",
     "payload": "The file is larger than 20 MB.",
     "unknown": "It did not work. Try again.",

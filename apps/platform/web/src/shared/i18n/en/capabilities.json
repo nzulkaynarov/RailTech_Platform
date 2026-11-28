@@ -113,13 +113,33 @@
   },
   "denied": {
     "title": "“{{name}}” is not granted to you",
-    "need": "To open this section you need the capability “{{name}}”: {{level}}. Now you have “{{current}}”.",
+    "need": "To {{needed}} here you need the capability “{{name}}”.",
+    "needPartial": "You have “{{name}}”, but only to {{current}}; here you need to {{needed}}.",
     "who": "Capabilities are granted by the administrator.",
     "ask": "Ask for a capability",
-    "askBody": "I need the capability “{{name}}”: {{level}}.",
+    "askBody": "Please let me {{level}} here: capability “{{name}}”.",
     "grantors": "Capabilities are granted by: {{names}}.",
     "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator.",
-    "action": "You are not allowed to do this.",
-    "actionNeed": "This needs the capability “{{name}}”: {{level}}."
+    "action": "This action is not available to you.",
+    "actionGrantors": "The capability is granted by: {{names}}.",
+    "cant": "You do not have the capability to {{what}}.",
+    "cantGrantors": "It is granted by: {{names}}.",
+    "can": {
+      "contract": {
+        "work": "work with contracts"
+      },
+      "acts": {
+        "work": "work with acts"
+      },
+      "invoices": {
+        "work": "work with invoices"
+      },
+      "payments": {
+        "work": "work with payments"
+      },
+      "registry": {
+        "work": "work with the document registry"
+      }
+    }
   }
 }

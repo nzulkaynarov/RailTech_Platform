@@ -14,7 +14,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { projectRef } from "./api";
-import { reasonText } from "./errors";
+import { useReasonText } from "./errors";
 import { useApplyCard } from "./useProjectMutations";
 
 /** Подтверждение доставки: изображение, PDF или документ до 20 МБ — как у вложений ERP (`validate_document_upload`). */
@@ -89,6 +89,7 @@ function DeliveryDialog({
   const [files, setFiles] = useState<File[]>([]);
   const [touched, setTouched] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const describe = useReasonText();
   const mark = useMarkEdsProjectDelivery({
     mutation: {
       onSuccess: (card) => {
@@ -97,13 +98,11 @@ function DeliveryDialog({
         onClose();
       },
       onError: (error) => {
-        setFailure(
-          error instanceof ApiError && (error.status === 403 || error.status === 409)
-            ? reasonText(t, error)
-            : error instanceof ApiError
-              ? error.message
-              : t("card.delivery.failed"),
-        );
+        if (error instanceof ApiError && (error.status === 403 || error.status === 409)) {
+          void describe(error, false).then(setFailure);
+          return;
+        }
+        setFailure(error instanceof ApiError ? error.message : t("card.delivery.failed"));
       },
     },
   });
