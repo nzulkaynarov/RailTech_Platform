@@ -212,12 +212,16 @@ test.describe("Нет возможности", () => {
     await expect(
       page.getByRole("heading", { level: 2, name: "«Сотрудники и возможности» вам не выдано" }),
     ).toBeVisible();
-    await expect(page.getByText(/Сейчас у вас — «Нет»/)).toBeVisible();
+    await expect(
+      page.getByText("Чтобы здесь смотреть, нужна возможность «Сотрудники и возможности»."),
+    ).toBeVisible();
     await expect(page.getByText(/Выдают возможности: .*Демо Админов/)).toBeVisible();
     await page.getByRole("button", { name: "Попросить возможность" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("textbox")).toHaveValue(/«Сотрудники и возможности»: смотреть/);
+    await expect(dialog.getByRole("textbox")).toHaveValue(
+      "Прошу разрешить мне здесь смотреть: возможность «Сотрудники и возможности».",
+    );
   });
 
   for (const width of WIDTHS) {

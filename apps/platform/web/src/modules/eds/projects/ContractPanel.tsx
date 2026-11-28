@@ -25,7 +25,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { OnBehalfFields } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
-import { reasonText } from "./errors";
+import { useFailedText } from "./errors";
 import { FileLinks } from "./FileLinks";
 import { ReasonForm } from "./forms";
 import { ContractTemplateBlock } from "./ContractTemplateBlock";
@@ -122,6 +122,7 @@ function ContractBody({
   onDone?: (() => void) | undefined;
 }) {
   const { t } = useTranslation("projects");
+  const failedText = useFailedText();
   const { date } = useFormat();
   const { message } = App.useApp();
   const apply = useApplyCard(objectId);
@@ -139,7 +140,7 @@ function ContractBody({
 
   const fail = (e: unknown) => {
     setPending(null);
-    setError(t("errors.failed", { reason: reasonText(t, e) }));
+    failedText(e, setError);
   };
   const done = (next: ProjectCard, key: string) => {
     setPending(null);
@@ -353,9 +354,6 @@ function ContractBody({
         />
       ) : null}
       {primaryBlock}
-      {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (
-        <p className="pf-hint">{t("contract.readOnly")}</p>
-      ) : null}
 
       {canReject ? (
         <ActionToggle
@@ -401,13 +399,14 @@ function ContractBody({
 /** Кнопка строки «Договор»: сформировать проект, пока договора нет (тот же вызов, что был во вкладке окна). */
 export function ContractCreateButton({ objectId }: { objectId: string }) {
   const { t } = useTranslation("projects");
+  const failedText = useFailedText();
   const { message } = App.useApp();
   const apply = useApplyCard(objectId);
   const [error, setError] = useState<string | null>(null);
   const create = useCreateEdsProjectContract({
     mutation: {
       onError: (e) => {
-        setError(t("errors.failed", { reason: reasonText(t, e) }));
+        failedText(e, setError);
       },
     },
   });

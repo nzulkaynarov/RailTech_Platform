@@ -192,7 +192,11 @@ describe("Проект: карточка", () => {
     expect(button).toBeDisabled();
     // причина — в подписи обёртки: что нужно и кто выдаёт; не молчаливая кнопка
     const wrapper = button.closest("span[aria-label]");
-    expect(wrapper?.getAttribute("aria-label")).toMatch(/возможност|нет права/i);
+    const reason = wrapper?.getAttribute("aria-label") ?? "";
+    expect(reason).toMatch(/^У вас нет возможности работать с договорами\. Её выдают: .+\.$/);
+    expect(reason).not.toMatch(/Нужна возможность|Выдают возможности|«/);
+    // «Только чтение» — одна отметка в шапке, без повторов «Только просмотр.» в теле страницы
+    expect(screen.queryByText("Только просмотр.")).toBeNull();
   });
 
   it("ПОДПИСЬ-1: отказ 403 по «На подпись» показан сообщением со словами, а не молчит", async () => {
@@ -213,7 +217,25 @@ describe("Проект: карточка", () => {
     const panel = await screen.findByRole("region", { name: "Документы проекта" });
     await click(panel, "На подпись");
     expect(
-      await screen.findByText(/Не удалось отправить на подпись: Не хватает возможности/),
+      await screen.findByText(
+        /^Не удалось отправить на подпись: у вас нет такой возможности\. Её выдают: .*Демо Админов.*\.$/,
+      ),
+    ).toBeVisible();
+  });
+
+  it("ПОДПИСЬ-1: отказ 403, имён нет в ответе, — сообщение заканчивается на первом предложении", async () => {
+    signIn("accountant@demo.example");
+    server.use(
+      http.post("*/eds/projects/:ref/signing", () =>
+        HttpResponse.json({ code: "FORBIDDEN", message: "x", source: "bff" }, { status: 403 }),
+      ),
+      http.get("*/me/capabilities", () => HttpResponse.json({ groups: [], capabilities: [] })),
+    );
+    renderAt(PR(105));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    await click(panel, "На подпись");
+    expect(
+      await screen.findByText("Не удалось отправить на подпись: у вас нет такой возможности."),
     ).toBeVisible();
   });
 
