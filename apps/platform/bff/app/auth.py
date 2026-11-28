@@ -361,6 +361,7 @@ class AuthService:
             position=profile.get("position") or None,
             avatar_version=_avatar_version(profile),
             onboarding_done=bool(profile.get("onboarding_done", True)),
+            show_test=bool(profile.get("show_test")),
             whats_new_shown=_whats_new(profile, "whats_new_shown"),
             whats_new_read=_whats_new(profile, "whats_new_read"),
             language=_language(profile),
@@ -666,6 +667,7 @@ class AuthService:
         открытым (тело не прочитано), закрывает его вызывающий; отвергнутый 401 закрывается здесь.
         """
         data = await self._prepare(sid, backend)
+        params = test_scope(method, params, data.show_test)
         tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
         resp = await self._send(
@@ -865,6 +867,23 @@ def _whats_new(profile: dict[str, Any], key: str) -> str | None:
     return value if isinstance(value, str) and _WHATS_NEW.match(value) else None
 
 
+def test_scope(
+    method: str, params: dict[str, Any] | None, show_test: bool
+) -> dict[str, Any] | None:
+    """ТЕСТ-2: тестовые компании в чтении бэкендов решает профиль сотрудника, а не строка запроса.
+
+    Включено «Показывать тестовые» — запросу без `test` добавляется `test=all` (чтению, а также
+    отметке «прочитано» в уведомлениях: она видит те же строки); выключено —
+    `test=all` из запроса отбрасывается (`test=only` остаётся: вкладка «Тестовые» у контрагентов,
+    её параметр ставят только маршруты, которые его объявляют)."""
+    current = (params or {}).get("test")
+    if show_test and not current:
+        return {**(params or {}), "test": "all"}
+    if not show_test and current == "all":
+        return {key: value for key, value in (params or {}).items() if key != "test"}
+    return params
+
+
 def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     roles = roles_of(profile)
     access = list(profile.get("platform_access") or ["crm"])
@@ -872,6 +891,7 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     data.position = profile.get("position") or None
     data.avatar_version = _avatar_version(profile)
     data.onboarding_done = bool(profile.get("onboarding_done", True))
+    data.show_test = bool(profile.get("show_test"))
     data.whats_new_shown = _whats_new(profile, "whats_new_shown")
     data.whats_new_read = _whats_new(profile, "whats_new_read")
     data.language = _language(profile)

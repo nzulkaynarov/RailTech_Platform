@@ -233,7 +233,7 @@ def _lead_row(
         subtitle=join(name, short(why or lead.get("need_summary")), handed_by, ago(waiting, now)),
         due_label=due_label(due_at, now),
         due_at=due_at,
-        object=lead_ref(lead_id, name, conversation=True),
+        object=lead_ref(lead_id, name, conversation=True, is_test=bool(lead.get("is_test"))),
     )
     return Row(item, waiting)
 

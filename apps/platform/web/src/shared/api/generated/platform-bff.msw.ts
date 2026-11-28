@@ -1879,6 +1879,7 @@ export const getGetProfileResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 1000 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -1929,6 +1930,7 @@ export const getUpdateProfileResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 1000 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -2107,6 +2109,7 @@ export const getDeleteTelegramLinkResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 1000 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -2186,6 +2189,7 @@ export const getSetDeputyResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 1000 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -2236,6 +2240,7 @@ export const getClearDeputyResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 1000 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -2347,6 +2352,7 @@ export const getGetQueueResponseMock = (
       undefined,
     ]),
     object: {
+      is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
       number: faker.string.alpha({ length: { min: 10, max: 20 } }),
       title: faker.helpers.arrayElement([
@@ -2449,6 +2455,7 @@ export const getGetQueueWaitingResponseMock = (
       undefined,
     ]),
     object: {
+      is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
       kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
       number: faker.string.alpha({ length: { min: 10, max: 20 } }),
       title: faker.helpers.arrayElement([
@@ -2497,6 +2504,7 @@ export const getGetActivityTodayResponseMock = (
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
     object: faker.helpers.arrayElement([
       {
+        is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
         kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
         number: faker.string.alpha({ length: { min: 10, max: 20 } }),
         title: faker.helpers.arrayElement([
@@ -2527,6 +2535,7 @@ export const getListNotificationsResponseMock = (
   overrideResponse: Partial<Extract<NotificationPage, object>> = {},
 ): NotificationPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     id: faker.helpers.fromRegExp("^(crm|erp):[0-9]+$"),
     tab: faker.helpers.arrayElement(Object.values(NotificationTab)),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2536,6 +2545,7 @@ export const getListNotificationsResponseMock = (
     ]),
     object: faker.helpers.arrayElement([
       {
+        is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
         kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
         number: faker.string.alpha({ length: { min: 10, max: 20 } }),
         title: faker.helpers.arrayElement([
@@ -3104,6 +3114,7 @@ export const getSearchResponseMock = (
       items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
         () => ({
           object: {
+            is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
             kind: faker.helpers.arrayElement(Object.values(ObjectKind)),
             number: faker.string.alpha({ length: { min: 10, max: 20 } }),
             title: faker.helpers.arrayElement([
@@ -3160,6 +3171,7 @@ export const getListEdsDocumentsResponseMock = (
   overrideResponse: Partial<Extract<EdsDocumentPage, object>> = {},
 ): EdsDocumentPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     awaiting_signature: faker.datatype.boolean(),
     signer: faker.helpers.arrayElement([{ ...getListEdsDocumentsResponseEdsPersonMock() }, null]),
     undelivered: faker.datatype.boolean(),
@@ -4241,6 +4253,7 @@ export const getListEdsProjectsResponseMock = (
   overrideResponse: Partial<Extract<ProjectPage, object>> = {},
 ): ProjectPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -14246,6 +14259,7 @@ export const getListPaymentsResponseMock = (
   memos_to_pay: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   bank_details_ready: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     id: faker.number.int(),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -17743,6 +17757,7 @@ export const getListEmployeesResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   })),
   ...overrideResponse,
 });
@@ -17792,6 +17807,7 @@ export const getCreateEmployeeResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
@@ -17839,6 +17855,7 @@ export const getInviteEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -17884,6 +17901,7 @@ export const getResendInviteResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -17929,6 +17947,7 @@ export const getRetryEmployeeErpSyncResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -17977,6 +17996,7 @@ export const getIssueTemporaryPasswordResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
+    show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
@@ -18024,6 +18044,7 @@ export const getGetEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -18069,6 +18090,7 @@ export const getUpdateEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  show_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -21042,6 +21064,7 @@ export const getListLettersResponseMock = (
   overrideResponse: Partial<Extract<LetterPage, object>> = {},
 ): LetterPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     id: faker.string.uuid(),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -29972,6 +29995,7 @@ export const getListCalcRequestsResponseMock = (
   overrideResponse: Partial<Extract<CalcRequestList, object>> = {},
 ): CalcRequestList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     client: faker.helpers.arrayElement([
@@ -37445,6 +37469,7 @@ export const getListCrmLeadsResponseMock = (
   overrideResponse: Partial<Extract<LeadPage, object>> = {},
 ): LeadPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
     lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
@@ -37648,6 +37673,7 @@ export const getGetCrmLeadResponseLeadOriginMock = (
 export const getGetCrmLeadResponseMock = (
   overrideResponse: Partial<Extract<LeadCard, object>> = {},
 ): LeadCard => ({
+  is_test: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),

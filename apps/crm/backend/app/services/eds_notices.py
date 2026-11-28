@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.notices import ErpEventNotices
 from app.models.auth import User
-from app.services import staff_notifications
+from app.services import test_delivery
 
 logger = structlog.get_logger(__name__)
 
@@ -160,21 +160,32 @@ class EdsNoticeService:
         wanted = set(rows.all())
         return [uid for uid in recipients if uid in wanted]
 
-    async def _telegram(
+    async def _deliver(
         self,
         session: AsyncSession,
         event: Event,
         recipients: Sequence[int],
         kind: str,
         text: str,
+        *,
+        bell: dict[str, Any],
     ) -> None:
-        people = await self._telegram_recipients(session, recipients, kind)
-        if people:
-            self._notices.add(
-                session,
-                str(event.id),
-                [{"kind": "staff", "user_id": uid, "text": text} for uid in people],
-            )
+        """Колокольчик и Telegram — через шлюз ТЕСТ-2 (`test_delivery.deliver_staff`)."""
+        data: dict[str, Any] = dict(event.data)
+
+        async def telegram_for(sess: AsyncSession, ids: Sequence[int]) -> list[int]:
+            return await self._telegram_recipients(sess, ids, kind)
+
+        items = await test_delivery.deliver_staff(
+            session,
+            recipients,
+            test=bool(data.get("is_test")),
+            bell=bell,
+            text=text,
+            telegram_for=telegram_for,
+        )
+        if items:
+            self._notices.add(session, str(event.id), items)
 
     async def accept(self, session: AsyncSession, event: Event) -> int:
         """Колокольчик и Telegram получателям (в транзакции inbox). Возвращает число получателей."""
@@ -186,6 +197,9 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         skipped = len(set(data.get("recipients") or [])) - len(recipients)
         if not recipients:
             logger.info("eds_notice_no_recipients", kind=kind, number=number, skipped=skipped)
@@ -195,19 +209,23 @@ class EdsNoticeService:
         object_number = (
             str(document.get("number") or number) if isinstance(document, dict) else number
         )
-        staff_notifications.add_in(
-            session,
-            recipients,
-            kind=f"eds.{kind}"[:40],
-            tab=tab_of(kind),
-            title=title,
-            subtitle=subtitle,
-            object_kind="document" if document_id else "letter",
-            object_id=document_id or str(letter["eds_letter_id"]),
-            object_number=object_number,
-        )
         text = telegram_text(title, subtitle, self._link(str(letter["eds_letter_id"]), document_id))
-        await self._telegram(session, event, recipients, kind, text)
+        await self._deliver(
+            session,
+            event,
+            recipients,
+            kind,
+            text,
+            bell={
+                "kind": f"eds.{kind}"[:40],
+                "tab": tab_of(kind),
+                "title": title,
+                "subtitle": subtitle,
+                "object_kind": "document" if document_id else "letter",
+                "object_id": document_id or str(letter["eds_letter_id"]),
+                "object_number": object_number,
+            },
+        )
         logger.info(
             "eds_notice_accepted",
             kind=kind,
@@ -225,19 +243,26 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         if not recipients:
             logger.info("eds_signing_notice_no_recipients", notice_key=data.get("notice_key"))
             return 0
-        staff_notifications.add_in(
-            session,
-            recipients,
-            kind=f"eds.{SIGNING_EXPIRING_KIND}"[:40],
-            tab="decisions",
-            title=title,
-            subtitle=subtitle,
-        )
         text = telegram_text(title, subtitle, self._signing_link())
-        await self._telegram(session, event, recipients, SIGNING_EXPIRING_KIND, text)
+        await self._deliver(
+            session,
+            event,
+            recipients,
+            SIGNING_EXPIRING_KIND,
+            text,
+            bell={
+                "kind": f"eds.{SIGNING_EXPIRING_KIND}"[:40],
+                "tab": "decisions",
+                "title": title,
+                "subtitle": subtitle,
+            },
+        )
         logger.info(
             "eds_signing_notice_accepted",
             notice_key=data.get("notice_key"),
@@ -253,6 +278,9 @@ class EdsNoticeService:
         subtitle = data.get("subtitle")
         subtitle = str(subtitle) if subtitle else None
         recipients = await self._active(session, data.get("recipients") or [])
+        recipients = await test_delivery.allowed(
+            session, recipients, test=bool(data.get("is_test"))
+        )
         if not recipients:
             logger.info(
                 "eds_document_notice_no_recipients", kind=kind, notice_key=data.get("notice_key")
@@ -281,19 +309,23 @@ class EdsNoticeService:
             obj_kind, obj_id, label, link = None, None, None, self._signing_link()
         elif kind == _WITHDRAWN_KIND:  # подписант документ не видит: без объекта и ссылки
             obj_kind, obj_id, label, link = None, None, None, None
-        staff_notifications.add_in(
-            session,
-            recipients,
-            kind=f"eds.{kind}"[:40],
-            tab=tab_of(kind),
-            title=title,
-            subtitle=subtitle,
-            object_kind=obj_kind,
-            object_id=obj_id,
-            object_number=label,
-        )
         text = telegram_text(title, subtitle, link)
-        await self._telegram(session, event, recipients, kind, text)
+        await self._deliver(
+            session,
+            event,
+            recipients,
+            kind,
+            text,
+            bell={
+                "kind": f"eds.{kind}"[:40],
+                "tab": tab_of(kind),
+                "title": title,
+                "subtitle": subtitle,
+                "object_kind": obj_kind,
+                "object_id": obj_id,
+                "object_number": label,
+            },
+        )
         logger.info(
             "eds_document_notice_accepted",
             kind=kind,

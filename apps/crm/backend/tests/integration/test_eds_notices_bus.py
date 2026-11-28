@@ -512,3 +512,24 @@ async def test_approval_reminder_v2_is_a_decision_for_the_approver(stand: Stand)
     assert await stand.h.process(event_id) == "processed"
     [row] = await stand.bell()
     assert (row.user_id, row.kind, row.tab) == (approver.id, "eds.approval_reminder", "decisions")
+
+
+async def test_test_company_notice_goes_only_to_those_who_show_test(stand: Stand) -> None:
+    """ТЕСТ-2: шлюз — колокольчик и Telegram по тестовой компании только с включённым показом."""
+    sessions = stand.h.sessions
+    on, _ = await make_user(sessions, "on@x.uz", ["manager"])
+    off, _ = await make_user(sessions, "off@x.uz", ["manager"])
+    for user, tg in ((on, 8201), (off, 8202)):
+        await _link(sessions, user.id, tg, notify_tasks=True)
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == on.id).values(show_test=True))
+
+    event_id = await stand.receive(notice([on.id, off.id], is_test=True))
+    assert await stand.h.process(event_id) == "processed"
+    assert [r.user_id for r in await stand.bell()] == [on.id]
+    assert [chat for chat, _text in stand.h.bot.sent] == [8201]
+
+    # рабочая запись — всем, как раньше
+    event_id = await stand.receive(notice([on.id, off.id]))
+    assert await stand.h.process(event_id) == "processed"
+    assert sorted(r.user_id for r in await stand.bell()) == sorted([on.id, on.id, off.id])

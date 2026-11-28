@@ -83,6 +83,7 @@ class ErpAccessService:
                 role=access.role,
                 permissions=access.permissions,
                 role_codes=role_codes,
+                show_test=user.show_test,
             )
 
     async def revoke(self, user_id: int) -> Outcome:

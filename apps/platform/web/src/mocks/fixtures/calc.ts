@@ -36,6 +36,8 @@ export interface MockLine {
 }
 
 export interface MockCalc {
+  /** ТЕСТ-2: заявка тестовой компании — в реестре только у тех, у кого в профиле включено «Показывать тестовые» */
+  testCompany?: boolean;
   number: string;
   title: string;
   client: string;
@@ -131,6 +133,30 @@ export const CATALOG: readonly MockCatalogItem[] = [
 
 export function seedCalcs(): MockCalc[] {
   return [
+    // ТЕСТ-2: заявка тестовой компании, у которой в жизни и начался тупик прохода «заявка → расчёт → КП»
+    {
+      testCompany: true,
+      number: "ЗВ-2026-190",
+      title: "Проверка прохода: рельсовые накладки",
+      client: "ООО «Пробная Компания»",
+      stage: "CALCULATION",
+      letterNumber: "ВХ-190/26",
+      letterSubject: "Проверочная заявка",
+      resolution: "Посчитать для проверки.",
+      decidedAt: "2026-10-20T06:00:00Z",
+      decidedBy: "Демо Директоров",
+      due: "2026-10-30",
+      minMargin: "15.00",
+      manager: "Демо Широков",
+      assignees: [],
+      requestText: "Проверочная заявка тестовой компании.",
+      requestLines: 1,
+      started: false,
+      state: "in_progress",
+      quoteNumber: null,
+      directorComment: null,
+      lines: [],
+    },
     // ЗАЯВ-1: прошлые заявки реестра — закрытая с причиной, КП ушло клиенту, стала проектом
     {
       number: "ЗВ-2026-081",

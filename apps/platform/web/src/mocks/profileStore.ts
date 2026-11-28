@@ -28,6 +28,8 @@ export interface MockProfile {
   telegramUsername?: string;
   pendingLink?: boolean;
   deputy?: MockDeputy;
+  /** ТЕСТ-2: «Показывать тестовые» */
+  showTest?: boolean;
 }
 
 const DEFAULTS: MockProfile = { timezone: "Asia/Tashkent" };

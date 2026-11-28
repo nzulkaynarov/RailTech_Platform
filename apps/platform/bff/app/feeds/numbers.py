@@ -97,10 +97,13 @@ def deal_ref(deal: dict[str, Any]) -> ObjectRef:
         title=deal_title(deal),
         path=path,
         step=step,
+        is_test=bool(deal.get("is_test")),
     )
 
 
-def lead_ref(lead_id: int, title: str | None, *, conversation: bool = False) -> ObjectRef:
+def lead_ref(
+    lead_id: int, title: str | None, *, conversation: bool = False, is_test: bool = False
+) -> ObjectRef:
     """Лид открывается карточкой в «Все лиды»; строка, где от менеджера ждут ответа клиенту
     (`conversation`: передача бота, новое сообщение, лид без менеджера), — диалогом в «Ждут
     ответа» (D1-6): там «Забрать», лента и ответ."""
@@ -110,7 +113,7 @@ def lead_ref(lead_id: int, title: str | None, *, conversation: bool = False) -> 
         if conversation
         else f"/crm/leads?lead={segment(number)}&panel=open&tab=card"
     )
-    return ObjectRef(kind="lead", number=number, title=title, path=path)
+    return ObjectRef(kind="lead", number=number, title=title, path=path, is_test=is_test)
 
 
 def letter_ref(number: str, title: str | None) -> ObjectRef:
@@ -203,7 +206,7 @@ def partner_application_ref(company: str) -> ObjectRef:
     )
 
 
-def calc_ref(number: str, title: str | None) -> ObjectRef:
+def calc_ref(number: str, title: str | None, *, is_test: bool = False) -> ObjectRef:
     """Задание на расчёт (D2-8): экран расчёта заявки `/erp/calc/ЗВ-…` — строки, визы, «Расчёт
     готов»."""
     return ObjectRef(
@@ -212,6 +215,7 @@ def calc_ref(number: str, title: str | None) -> ObjectRef:
         title=title,
         path=f"/erp/calc/{segment(number)}",
         step="CALCULATION",
+        is_test=is_test,
     )
 
 

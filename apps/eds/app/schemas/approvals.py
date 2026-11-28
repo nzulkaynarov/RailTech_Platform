@@ -143,6 +143,8 @@ class ApprovalListItem(BaseModel):
     # СЦ-9 P11: шаг замещаемого — «за <имя>»; пусто, если шаг свой
     acting_for: PersonRef | None = None
     created_at: dt.datetime
+    #: ТЕСТ-2: маршрут тестовой компании; `true` только при `?test=all` (метка «Тестовая»)
+    is_test: bool = False
 
 
 class ApprovalPage(BaseModel):

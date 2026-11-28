@@ -4845,6 +4845,9 @@ components:
         on_control:
           type: boolean
           description: На контроле — поручения в работе (P8b)
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false
         overdue:
           type: boolean
           description: Есть просроченное поручение (P8b)
@@ -7234,6 +7237,9 @@ components:
         created_at:
           type: string
           format: date-time
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false
     ApprovalPage:
       type: object
       additionalProperties: false
@@ -7404,6 +7410,9 @@ components:
             - $ref: '#/components/schemas/Money'
             - type: 'null'
           description: Сумма строки (0.15.0); у письма и документа без суммы — `null`
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании; `true` только при `?test=all` (метка «Тестовая»), по умолчанию false
     RegistryPage:
       type: object
       additionalProperties: false

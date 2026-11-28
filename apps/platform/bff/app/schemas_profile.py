@@ -39,6 +39,8 @@ class Profile(BaseModel):
     language: Language
     timezone: str
     email_signature: str | None = None
+    # ТЕСТ-2: «Показывать тестовые компании и их документы» (по умолчанию выключено)
+    show_test: bool = False
     avatar_url: str | None = None
     telegram: TelegramState
     deputy: DeputyPeriod | None = None
@@ -53,6 +55,7 @@ class ProfileUpdate(BaseModel):
     language: Language | None = None
     timezone: str | None = Field(default=None, max_length=64)
     email_signature: str | None = Field(default=None, max_length=1000)
+    show_test: bool | None = None
 
     @field_validator("name")
     @classmethod
@@ -137,6 +140,7 @@ def to_profile(crm: dict[str, Any], covering: list[dict[str, Any]]) -> Profile:
         language=crm.get("language") or "ru",
         timezone=str(crm.get("timezone") or "Asia/Tashkent"),
         email_signature=crm.get("email_signature") or None,
+        show_test=bool(crm.get("show_test")),
         avatar_url=avatar_url(crm["id"], crm.get("avatar_version")),
         telegram=TelegramState(
             linked=crm.get("tg_user_id") is not None, username=crm.get("tg_username") or None

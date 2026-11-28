@@ -209,6 +209,7 @@ def map_erp(
         created_at=created,
         read=bool(row.get("is_read")),
         needs_action=tab_of(str(row.get("event_code") or "")) == "decisions",
+        is_test=bool(row.get("is_test")),
     )
 
 

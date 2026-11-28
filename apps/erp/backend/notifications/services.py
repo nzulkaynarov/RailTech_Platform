@@ -105,13 +105,17 @@ def notify_user(
         event_params=event_params or {},
     )
     if push:
-        push_notification_ws(notification)
+        push_notification_ws(notification)  # шлюз ТЕСТ-2 — внутри
     return notification
 
 
 def push_notification_ws(notification: Notification):
-    """Push a notification to the user via WebSocket channel layer."""
-    if not notification.user_id:
+    """Push a notification to the user via WebSocket channel layer.
+
+    Единственная точка живой доставки (ТЕСТ-2). Несохранённая строка — её не пропустил шлюз `Notification.objects` (запись
+    тестовой компании у сотрудника без «Показывать тестовые») — не отправляется. Прямой `group_send` вне этой функции
+    ловит охранный тест."""
+    if not notification.user_id or notification.pk is None:
         return
     try:
         channel_layer = get_channel_layer()

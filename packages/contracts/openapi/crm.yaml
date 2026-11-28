@@ -6236,6 +6236,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/InvitationOut'
           - type: 'null'
+        is_test:
+          default: false
+          title: Is Test
+          type: boolean
         language:
           title: Language
           type: string
@@ -6454,6 +6458,10 @@ components:
         id:
           title: Id
           type: integer
+        is_test:
+          default: false
+          title: Is Test
+          type: boolean
         language:
           title: Language
           type: string
@@ -7089,6 +7097,10 @@ components:
             type: string
           title: Roles
           type: array
+        show_test:
+          default: false
+          title: Show Test
+          type: boolean
         tg_dm_failed_at:
           anyOf:
           - format: date-time
@@ -7198,6 +7210,11 @@ components:
             type: string
           - type: 'null'
           title: Phone
+        show_test:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Show Test
         timezone:
           anyOf:
           - maxLength: 64
@@ -11345,6 +11362,10 @@ components:
             type: string
           title: Roles
           type: array
+        show_test:
+          default: false
+          title: Show Test
+          type: boolean
         tg_dm_failed_at:
           anyOf:
           - format: date-time

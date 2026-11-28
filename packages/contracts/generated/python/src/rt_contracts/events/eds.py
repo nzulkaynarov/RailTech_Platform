@@ -581,6 +581,10 @@ class DocumentNoticeRequestedV1(BaseModel):
     """
     document: NoticeDocumentRefV2
     actor: Actor
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
+    """
 
 
 class DocumentNoticeRequestedV21(BaseModel):
@@ -617,6 +621,10 @@ class DocumentNoticeRequestedV21(BaseModel):
     approval: Approval4 | None = None
     """
     Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
     """
 
 
@@ -655,6 +663,10 @@ class DocumentNoticeRequestedV22(BaseModel):
     """
     Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
     """
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
+    """
 
 
 class DocumentNoticeRequestedV23(BaseModel):
@@ -691,6 +703,10 @@ class DocumentNoticeRequestedV23(BaseModel):
     approval: Approval6
     """
     Маршрут согласования или подписи, у которого нет документа EDS (КП, коммерческий документ ERP): ведёт к строке «Задачи»
+    """
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
     """
 
 
@@ -1275,6 +1291,10 @@ class NoticeRequestedV1(BaseModel):
     Срок поручения, если уведомление о нём
     """
     actor: Actor
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
+    """
 
 
 class NoticeRequestedV2(BaseModel):
@@ -1315,6 +1335,10 @@ class NoticeRequestedV2(BaseModel):
     Срок поручения, если уведомление о нём
     """
     actor: ActorV2
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
+    """
 
 
 class Object(BaseModel):
@@ -1561,6 +1585,10 @@ class SigningAuthorityExpiringV1(BaseModel):
     """
     authority: Authority
     actor: Actor
+    is_test: bool | None = None
+    """
+    ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая
+    """
 
 
 class SigningDecidedV1(BaseModel):

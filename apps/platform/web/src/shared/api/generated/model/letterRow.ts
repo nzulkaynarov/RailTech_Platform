@@ -7,6 +7,8 @@ import type { LetterTrack } from "./letterTrack";
 import type { PersonRef } from "./personRef";
 
 export interface LetterRow {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   id: string;
   /** Номер ВХ-NNN/ГГ */
   number: string;

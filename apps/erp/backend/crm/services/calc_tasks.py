@@ -150,6 +150,7 @@ def _notify_assignee(user_id: int, deal: Deal, task: CalcTask, *, resolution: bo
             else f"Расчёт по заявке {deal_ref(deal)} до {text_date(task.due)}."
         ),
         link=f"#deal/{deal.id}",
+        deal=deal,  # ТЕСТ-2: по сделке шлюз уведомлений решает, тестовая ли она
         event_code="deal.calc_assigned",
         event_params={"deal_id": deal.id, "letter_number": task.letter_number, "due": task.due.isoformat()},
     )

@@ -58,7 +58,7 @@ def _lead_hit(lead: dict[str, Any]) -> SearchHit | None:
         return None
     name = str(lead.get("display_name") or lead_number(lead["id"]))
     return SearchHit(
-        object=lead_ref(lead["id"], name),
+        object=lead_ref(lead["id"], name, is_test=bool(lead.get("is_test"))),
         title=name,
         subtitle=join(lead_number(lead["id"]), short(lead.get("need_summary"), 80)) or None,
     )
@@ -74,6 +74,7 @@ def _client_hit(client: dict[str, Any]) -> SearchHit | None:
         number=str(client["id"]),
         title=name,
         path=f"/crm/clients/{segment(str(client['id']))}?panel=open&tab=card",
+        is_test=bool(client.get("is_test")),
     )
     return SearchHit(object=ref, title=name, subtitle=f"ИНН {inn}" if inn else None)
 
@@ -112,10 +113,13 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
         return None
     deal = deals.get(doc["deal"]) if isinstance(doc.get("deal"), int) else None
     context = deal_title(deal) if deal else None
+    of_test = deal is not None and bool(deal.get("is_test"))  # ТЕСТ-2: метка «Тестовая»
     if kind == "quote":
         drafting = doc.get("status_code") in _DRAFT_STATUSES
         return SearchHit(
-            object=quote_ref({"number": label}, title=context, drafting=drafting),
+            object=quote_ref({"number": label}, title=context, drafting=drafting).model_copy(
+                update={"is_test": of_test}
+            ),
             title=label,
             subtitle=context,
         )
@@ -124,7 +128,7 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
         path = project.path
     else:
         path = f"/eds/documents?type={kind}&q={segment(label)}"
-    ref = ObjectRef(kind=kind, number=label, title=context, path=path)
+    ref = ObjectRef(kind=kind, number=label, title=context, path=path, is_test=of_test)
     return SearchHit(object=ref, title=label, subtitle=context)
 
 

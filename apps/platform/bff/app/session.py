@@ -82,6 +82,9 @@ class SessionData(BaseModel):
     avatar_version: int | None = None
     # Приветствие и тур первого входа показаны (CRM `onboarding_done`, W15-H7); без поля — да.
     onboarding_done: bool = True
+    # ТЕСТ-2: «Показывать тестовые» (CRM `show_test`): BFF добавляет `test=all` к чтению бэкендов;
+    # значение — из снимка профиля на сервере, а не из запроса браузера.
+    show_test: bool = False
     # «Что нового» (CRM `whats_new_shown` / `whats_new_read`, W-REL): дата записи, о которой
     # окно уже показано, и последней открытой записи; None — ничего (или CRM поля не прислала).
     whats_new_shown: str | None = None
