@@ -68,7 +68,9 @@ export function AccessTags({ employee }: { employee: Employee }) {
   const { t } = useTranslation("modules");
   return (
     <span className="pf-org-tags">
-      {employee.is_service ? <StatusTag tone="default">{t("admin.org.service.tag")}</StatusTag> : null}
+      {employee.is_service ? (
+        <StatusTag tone="default">{t("admin.org.service.tag")}</StatusTag>
+      ) : null}
       <ErpTag employee={employee} />
       <TelegramTag state={employee.telegram} />
     </span>

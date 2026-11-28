@@ -149,7 +149,9 @@ function SetupWizard() {
     if (!self || !self.is_service) return me.name;
     const real = items.find(
       (employee) =>
-        !employee.is_service && employee.status !== "disabled" && employee.roles.some(isSystemAdmin),
+        !employee.is_service &&
+        employee.status !== "disabled" &&
+        employee.roles.some(isSystemAdmin),
     );
     return real?.name ?? me.name;
   })();

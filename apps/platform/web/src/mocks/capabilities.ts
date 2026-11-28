@@ -359,9 +359,7 @@ function cardOf(
     zones_known: known.zones,
     zones: known.zones ? (zones.get(person.id) ?? []) : [],
     ...(deputy ? { deputy } : {}),
-    warnings: everyone
-      ? warningsOf(everyone).filter((w) => w.person?.id === person.id)
-      : [],
+    warnings: everyone ? warningsOf(everyone).filter((w) => w.person?.id === person.id) : [],
     free_for_all: CATALOG.free_for_all,
   };
 }
