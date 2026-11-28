@@ -302,5 +302,9 @@
     "checkedAgo": "tekşirilgan: {{when}}",
     "never": "hali tekşirilmagan",
     "check": "Tekşiriş"
+  },
+  "testTag": {
+    "label": "Sinov",
+    "hint": "Sinov kompaniyasi: profilingizda sinov kompaniyalarini körsatiş yoqilgani üçün sizga körinadi."
   }
 }

@@ -42515,6 +42515,10 @@
                     "manager_name": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "ТЕСТ-2: заявка тестовой компании; приходит только при `?test=all`"
                     }
                 },
                 "required": [
@@ -55485,6 +55489,11 @@
                         "format": "date-time",
                         "readOnly": true,
                         "title": "Дата создания"
+                    },
+                    "is_test": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "ТЕСТ-2: уведомление по сделке тестовой компании"
                     }
                 },
                 "required": [
@@ -55492,6 +55501,7 @@
                     "event_code",
                     "event_params",
                     "id",
+                    "is_test",
                     "message",
                     "title"
                 ]
@@ -62044,6 +62054,10 @@
                     "company_name": {
                         "type": "string"
                     },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "ТЕСТ-2: проект тестовой компании; приходит только при `?test=all`"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time"
@@ -62387,6 +62401,10 @@
                     },
                     "company_name": {
                         "type": "string"
+                    },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "ТЕСТ-2: проект тестовой компании; приходит только при `?test=all`"
                     },
                     "created_at": {
                         "type": "string",
@@ -64423,6 +64441,10 @@
                     "client_name": {
                         "type": "string"
                     },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`"
+                    },
                     "currency": {
                         "type": "string",
                         "nullable": true
@@ -64796,6 +64818,10 @@
                     },
                     "client_name": {
                         "type": "string"
+                    },
+                    "is_test": {
+                        "type": "boolean",
+                        "description": "ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`"
                     },
                     "currency": {
                         "type": "string",

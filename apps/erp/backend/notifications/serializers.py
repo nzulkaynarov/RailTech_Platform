@@ -6,6 +6,7 @@ from .models import EmailTemplate, Notification
 class NotificationSerializer(serializers.ModelSerializer):
     type_code = serializers.CharField(source="type.code", read_only=True)
     type_name = serializers.CharField(source="type.name", read_only=True)
+    is_test = serializers.SerializerMethodField(help_text="ТЕСТ-2: уведомление по сделке тестовой компании")
 
     class Meta:
         model = Notification
@@ -24,8 +25,12 @@ class NotificationSerializer(serializers.ModelSerializer):
             "deal",
             "is_read",
             "created_at",
+            "is_test",
         ]
         read_only_fields = ["id", "created_at", "event_code", "event_params"]
+
+    def get_is_test(self, obj) -> bool:
+        return bool(obj.deal_id and obj.deal.company_id and obj.deal.company.is_test)
 
 
 class EmailTemplateSerializer(serializers.ModelSerializer):

@@ -23,4 +23,6 @@ export interface ProfileUpdate {
    * @maxLength 1000
    */
   email_signature?: string;
+  /** ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено */
+  show_test?: boolean;
 }

@@ -25,6 +25,8 @@ export interface Profile {
    * @maxLength 1000
    */
   email_signature?: string;
+  /** ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено */
+  show_test?: boolean;
   /** Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы */
   avatar_url?: string;
   telegram: TelegramState;

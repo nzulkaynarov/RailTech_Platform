@@ -6,6 +6,7 @@ import type { Employee } from "../../../shared/api/generated/model";
 import { PersonAvatar, PersonCell } from "../../../shared/ui/EntityCell";
 import { AccessTags, EmployeeStatusTag, RoleTags } from "./EmployeeCells";
 import { RegistryTable } from "../../../shared/ui/RegistryTable";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 
 export interface EmployeeListProps {
   items: readonly Employee[];
@@ -32,14 +33,24 @@ function NameLink({
 }) {
   const { t } = useTranslation("modules");
   return (
-    <Link
-      to={href}
-      className="pf-org-name pf-focusable"
-      aria-current={selected ? "true" : undefined}
-      aria-label={t("admin.org.open", { name: employee.name })}
-    >
-      {employee.name}
-    </Link>
+    <>
+      <Link
+        to={href}
+        className="pf-org-name pf-focusable"
+        aria-current={selected ? "true" : undefined}
+        aria-label={t("admin.org.open", { name: employee.name })}
+      >
+        {employee.name}
+      </Link>
+      {employee.show_test ? (
+        <>
+          {" "}
+          <StatusTag tone="default" title={t("admin.org.showTest.hint")}>
+            {t("admin.org.showTest.label")}
+          </StatusTag>
+        </>
+      ) : null}
+    </>
   );
 }
 

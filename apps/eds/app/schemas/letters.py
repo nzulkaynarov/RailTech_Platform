@@ -216,6 +216,8 @@ class LetterListItem(BaseModel):
     kind: str | None = None
     track: LetterTrack = LetterTrack.OFFICE
     on_control: bool = False
+    #: ТЕСТ-2: письмо тестовой компании; `true` только при `?test=all` (метка «Тестовая»)
+    is_test: bool = False
     overdue: bool = False
     executor: PersonRef | None = None
 

@@ -9,6 +9,7 @@ from typing import Any
 
 from finance.models import Invoice, Payment, PaymentConfirmation
 from finance.services import receivables
+from parties import test_companies
 from rest_framework import serializers
 
 _DISPLAY = serializers.ChoiceField(choices=receivables.DISPLAY_STATUSES)
@@ -25,6 +26,9 @@ class ReceivableRowSerializer(serializers.Serializer):
     deal_year = serializers.IntegerField(help_text="Год создания сделки (устарело: номер — `deal_number`)")
     client_id = serializers.IntegerField()
     client_name = serializers.CharField()
+    is_test = serializers.BooleanField(
+        required=False, help_text="ТЕСТ-2: счёт тестовой компании; приходит только при `?test=all`"
+    )
     currency = serializers.CharField(allow_null=True)
     total_incl_vat = serializers.DecimalField(max_digits=14, decimal_places=2)
     amount_paid = serializers.DecimalField(max_digits=14, decimal_places=2)
@@ -171,6 +175,7 @@ def row(invoice: Invoice, day: date | None = None) -> dict[str, Any]:
         "deal_year": deal.created_at.year,
         "client_id": deal.company_id,
         "client_name": deal.company.name if deal.company_id else "",
+        **test_companies.flag(deal.company if deal.company_id else None),
         "currency": invoice.currency.code if invoice.currency_id else None,
         "total_incl_vat": invoice.total_incl_vat,
         "amount_paid": invoice.amount_paid,

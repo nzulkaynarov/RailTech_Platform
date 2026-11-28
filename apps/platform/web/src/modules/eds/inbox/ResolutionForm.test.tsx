@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
@@ -118,6 +118,17 @@ describe("Резолюция: форма", () => {
   });
 
   it("срок в прошлом не выбрать: в календаре дни раньше сегодня по Ташкенту отключены", async () => {
+    // Середина дня по Ташкенту: около полуночи «сегодня» браузера (UTC в CI) и компании расходятся, и тест падал.
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-18T07:00:00Z"));
+    try {
+      await checkPastDaysDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  async function checkPastDaysDisabled() {
     const { form } = await openForm();
     const due = within(form).getByLabelText("Срок расчёта");
     fireEvent.mouseDown(due);
@@ -130,7 +141,7 @@ describe("Резолюция: форма", () => {
     expect(cell(companyDate(0))).not.toHaveClass("ant-picker-cell-disabled");
     fillDate(due, companyDate(5));
     expect(due).toHaveValue(companyDate(5).split("-").reverse().join("."));
-  });
+  }
 
   it("срок в прошлом и неверная маржа отсекаются в форме", async () => {
     const { form } = await openForm();

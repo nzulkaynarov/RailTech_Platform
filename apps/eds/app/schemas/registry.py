@@ -47,6 +47,8 @@ class RegistryItem(BaseModel):
     awaiting_signature: bool = False
     #: ГЛ-0: у кого письмо на подписи (вычисленный или выбранный подписант); у остальных — `null`
     signer: PersonRef | None = None
+    #: ТЕСТ-2: документ тестовой компании; `true` только при `?test=all` (метка «Тестовая»)
+    is_test: bool = False
 
 
 class RegistryPage(BaseModel):

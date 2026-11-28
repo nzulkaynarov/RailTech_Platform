@@ -58,6 +58,10 @@
     },
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "is_test": {
+      "type": "boolean",
+      "description": "ТЕСТ-2: уведомление о записи тестовой компании — CRM доставляет его сотрудникам только с включённым «Показывать тестовые»; поля нет — запись рабочая"
     }
   },
   "additionalProperties": false

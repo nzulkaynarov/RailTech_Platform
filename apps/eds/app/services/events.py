@@ -56,9 +56,44 @@ VERSION = dict.fromkeys(
 )
 
 
+NOTICE_EVENTS = frozenset({"notice.requested", "document.notice_requested", "signing_authority.expiring"})
+
+
+async def _of_test_company(session: AsyncSession, data: dict[str, Any]) -> bool:
+    """Объект уведомления (письмо, исходящий документ, маршрут) принадлежит тестовой компании."""
+    from sqlalchemy import select
+
+    from app.models.approvals import ApprovalRoute
+    from app.models.documents import Document
+    from app.models.letters import Letter
+    from app.services import test_companies
+
+    company: int | None = None
+    letter, document, approval = data.get("letter"), data.get("document"), data.get("approval")
+    if isinstance(letter, dict) and letter.get("eds_letter_id"):
+        company = await session.scalar(
+            select(Letter.erp_company_id).where(Letter.id == uuid.UUID(str(letter["eds_letter_id"])))
+        )
+    if company is None and isinstance(approval, dict) and approval.get("eds_approval_id"):
+        company = await session.scalar(
+            select(ApprovalRoute.erp_company_id).where(ApprovalRoute.id == uuid.UUID(str(approval["eds_approval_id"])))
+        )
+    if company is None and isinstance(document, dict) and document.get("eds_document_id"):
+        company = await session.scalar(
+            select(Document.recipient_company_id).where(Document.id == uuid.UUID(str(document["eds_document_id"])))
+        )
+    return bool(await test_companies.marked(session, test_companies.ALL, [company]))
+
+
 async def publish(
     bus: AsyncBus, session: AsyncSession, name: str, data: dict[str, Any], *, subject: str | uuid.UUID
 ) -> None:
     """Событие `uz.railtech.eds.<name>.v<N>` в outbox транзакции `session`; `subject` — номер или id объекта.
-    Типы с номером реестра — v2 (задача «Н»): шаблон v1 знает только прежние ВХ, ИСХ, СЗ, ЗЯ, ОТ."""
+    Типы с номером реестра — v2 (задача «Н»): шаблон v1 знает только прежние ВХ, ИСХ, СЗ, ЗЯ, ОТ.
+
+    ТЕСТ-2, шлюз доставки: уведомление сотрудникам (`NOTICE_EVENTS`) о записи тестовой компании несёт `is_test: true` —
+    колокольчик и Telegram получат только те, у кого включено «Показывать тестовые» (решает CRM). Одно место для всех
+    уведомлений EDS; охранный тест — `tests/test_delivery_guard.py`."""
+    if name in NOTICE_EVENTS and await _of_test_company(session, data):
+        data = {**data, "is_test": True}
     await bus.publish(session, f"{PREFIX}{name}.v{VERSION.get(name, 1)}", data, subject=str(subject))

@@ -44,9 +44,14 @@ def _emails_for(user_ids) -> list:
     )
 
 
-def send_deal_email(template: str, context: dict, user_ids) -> int:
-    """Поставить письмо в очередь каждому получателю после коммита. Возвращает число адресатов."""
-    recipients = _emails_for(user_ids)
+def send_deal_email(template: str, context: dict, user_ids, *, deal) -> int:
+    """Поставить письмо сотрудникам в очередь после коммита. Возвращает число адресатов.
+
+    `deal` обязателен (ТЕСТ-2): по записи тестовой компании письмо получают только сотрудники с включённым «Показывать
+    тестовые»; письма клиенту (Кабинет, `document_letters`) идут другим путём и не затрагиваются."""
+    from notifications.gate import staff_recipients
+
+    recipients = _emails_for(staff_recipients(user_ids, deal))
     if not recipients:
         return 0
 
@@ -91,7 +96,7 @@ def email_payment_received(payment) -> int:
         "is_fully_paid": invoice.amount_paid >= invoice.total_incl_vat,
         "invoice_url": _invoice_url(invoice),
     }
-    return send_deal_email("payment_received", context, seller_team_user_ids(deal))
+    return send_deal_email("payment_received", context, seller_team_user_ids(deal), deal=deal)
 
 
 def email_payment_reminder(invoice) -> int:

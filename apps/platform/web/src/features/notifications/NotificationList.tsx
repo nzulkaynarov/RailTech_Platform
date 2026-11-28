@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { objectLink } from "../../modules/objectLinks";
 import type { Notification } from "../../shared/api/generated/model";
 import { statusStyle } from "../../shared/lib/statuses";
+import { TestTag } from "../../shared/ui/TestTag";
 import { groupNotifications, type NotificationGroup } from "./groupNotifications";
 import { relativeTime } from "./relativeTime";
 import "./notifications.css";
@@ -59,7 +60,7 @@ export function NotificationList({ items, onOpen, label }: NotificationListProps
         <span className="pf-note-body">
           <span className="pf-note-title" style={{ display: "block" }}>
             {unread ? <span className="pf-sr-only">{t("notifications.unreadMark")}: </span> : null}
-            {title}
+            {title} <TestTag value={item.is_test ?? item.object?.is_test} />
             {many ? (
               <span className="pf-note-count">
                 {" · "}

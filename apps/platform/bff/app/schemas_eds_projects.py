@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from app.errors import backend_unavailable
 from app.schemas_do_not_work import DoNotWork
+from app.test_tag import TestTagged
 
 ProjectStage = Literal["CONTRACT", "PAYMENT", "DONE"]
 ClientStatus = Literal[
@@ -161,7 +162,7 @@ class ProjectDocuments(BaseModel):
     act: ProjectActRef | None
 
 
-class ProjectRow(BaseModel):
+class ProjectRow(TestTagged):
     number: str
     request_number: str
     title: str
@@ -491,6 +492,7 @@ class RawRow(_Raw):
     title: str = ""
     company_id: int | None = None
     company_name: str = ""
+    is_test: bool = False
     created_at: dt.datetime
     step: ProjectStage
     client_status: ClientStatus

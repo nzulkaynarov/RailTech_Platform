@@ -39,6 +39,7 @@ class CrmProfile:
             "phone": "+998901234567",
             "timezone": "Asia/Tashkent",
             "email_signature": "С уважением, Иван",
+            "show_test": False,
             "tg_user_id": 555001,
             "tg_username": "ivan_t",
             "avatar_version": None,
@@ -504,3 +505,18 @@ async def test_deputy_body_is_validated(web: Web, crm: CrmProfile, payload: dict
     await web.login(["MANAGER"])
     assert (await web.send("PUT", "/api/v1/me/deputy", json=payload)).status_code == 422
     assert crm.patches == []
+
+
+async def test_show_test_switch_is_own_profile_field_and_follows_the_session(
+    web: Web, crm: CrmProfile, check: ContractChecker
+) -> None:
+    """ТЕСТ-2: «Показывать тестовые» — поле профиля, по умолчанию выключено; хранит CRM."""
+    await web.login(["MANAGER"])
+    assert (await web.client.get("/api/v1/me/profile")).json()["show_test"] is False
+
+    response = await web.send("PATCH", "/api/v1/me/profile", json={"show_test": True})
+    assert response.status_code == 200, response.text
+    check(response, "/me/profile", "patch")
+    assert response.json()["show_test"] is True
+    assert crm.patches == [{"show_test": True}]
+    assert (await web.client.get("/api/v1/me/profile")).json()["show_test"] is True

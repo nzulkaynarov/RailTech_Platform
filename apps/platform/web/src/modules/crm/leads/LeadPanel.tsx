@@ -24,6 +24,7 @@ import { canCreateFromLead } from "../common/access";
 import { leadActionRules } from "../common/leadActions";
 import { ContactsBlock } from "./ContactsBlock";
 import { ErrorNote } from "../../../shared/ui/FormParts";
+import { TestTag } from "../../../shared/ui/TestTag";
 import { clientPath } from "../common/params";
 
 import "../crm.css";
@@ -125,6 +126,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
         <h3 className="pf-fp-title">{card.name}</h3>
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           <span className="pf-hint">{card.lead}</span>
+          <TestTag value={card.is_test} />
           {card.partner_application != null ? (
             <Tag>{t("leads:card.partner")}</Tag>
           ) : (

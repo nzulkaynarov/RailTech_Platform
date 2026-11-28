@@ -24,6 +24,9 @@ def notify_new_rfq_by_email(deal, user_ids, *, assigned: bool = False) -> None:
     break the stage transition — log and move on."""
     from accounts.models import CustomUser
 
+    from .gate import staff_recipients
+
+    user_ids = staff_recipients(user_ids, deal)  # ТЕСТ-2: запись тестовой компании — только с включённым показом
     emails = list(
         CustomUser.objects.filter(pk__in=user_ids, is_active=True).exclude(email="").values_list("email", "pk")
     )

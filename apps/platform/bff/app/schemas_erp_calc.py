@@ -61,6 +61,8 @@ class CalcRequestRow(BaseModel):
     path: str
     #: ЗАЯВ-1: клиент CRM компании заявки — «Создать по образцу» открывает форму на нём
     crm_client_id: int | None = None
+    #: ТЕСТ-2: заявка тестовой компании (метка «Тестовая»); поле есть только у таких заявок
+    is_test: bool | None = None
 
 
 class CalcRequestList(BaseModel):
@@ -420,6 +422,7 @@ def to_row(raw: dict[str, Any]) -> CalcRequestRow:
         assignees=_assignees(raw["assignees"]),
         path=calc_path(number),
         crm_client_id=raw.get("crm_client_id"),
+        **({"is_test": True} if deal.get("is_test") else {}),
     )
 
 

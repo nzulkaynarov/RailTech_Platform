@@ -388,3 +388,36 @@ async def test_staff_contacts_reveal_is_journaled_with_the_answer(
         ("staff", str(colleague.id), viewer.id)
     ]
     assert rows[0].after == {"name": stored.full_name}
+
+
+async def test_employee_switches_show_test_on_and_off_and_it_is_audited(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """ТЕСТ-2: «Показывать тестовые» — своё, по умолчанию выключено, каждое изменение в журнале."""
+    manager, password = await make_user(sessions, "show-test@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    assert client.get("/api/v1/me", headers=headers).json()["show_test"] is False
+
+    on = client.patch("/api/v1/me", headers=headers, json={"show_test": True})
+    assert on.status_code == 200
+    assert on.json()["show_test"] is True
+    again = client.patch("/api/v1/me", headers=headers, json={"show_test": True})
+    assert again.json()["show_test"] is True  # повтор ничего не пишет
+    assert (
+        client.patch("/api/v1/me", headers=headers, json={"show_test": False}).json()["show_test"]
+        is False
+    )
+
+    async with sessions() as session:
+        rows = (
+            await session.scalars(
+                select(AuditLog).where(
+                    AuditLog.action == "user.update", AuditLog.entity_id == str(manager.id)
+                )
+            )
+        ).all()
+    changes = [(r.before, r.after) for r in rows if "show_test" in (r.after or {})]
+    assert changes == [
+        ({"show_test": False}, {"show_test": True}),
+        ({"show_test": True}, {"show_test": False}),
+    ]
