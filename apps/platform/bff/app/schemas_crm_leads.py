@@ -23,6 +23,7 @@ from app.schemas_crm_messages import (
 )
 from app.schemas_do_not_work import DoNotWork
 from app.schemas_supplier_access import CounterpartyRoleState
+from app.test_tag import TestTagged
 
 LeadTab = Literal["all", "new", "dialog", "wants_quote", "client"]
 LeadScope = Literal["all", "mine", "overdue"]
@@ -58,7 +59,7 @@ UUID_PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 # --- лиды -----------------------------------------------------------------------------------------
 
 
-class LeadRow(BaseModel):
+class LeadRow(TestTagged):
     lead: str
     name: str
     status: LeadPlatformStatus
@@ -143,7 +144,7 @@ class LeadOrigin(BaseModel):
     language: Language | None
 
 
-class LeadCard(BaseModel):
+class LeadCard(TestTagged):
     lead: str
     name: str
     status: LeadPlatformStatus

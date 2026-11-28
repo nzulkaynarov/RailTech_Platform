@@ -6,7 +6,8 @@
     "legend": "Mijoz",
     "picked": "Mijoz: {{name}}",
     "name": "Kompaniya nomi",
-    "noInnNote": "Kompaniyada STIR yöq: ariza şu nom bilan mijoz oçadi."
+    "noInnNote": "Kompaniyada STIR yöq: ariza şu nom bilan mijoz oçadi.",
+    "noCardNote": "Kompaniyada hali mijoz kartoçkası yöq: u ariza bilan birga oçiladi va kompaniya mijoz böladi."
   },
   "contact": {
     "legend": "Kontakt",
@@ -65,6 +66,7 @@
     "legend": "Maʼlumotlarni qayta işlaşga rozilik",
     "given": "Botda {{date}} berilgan",
     "givenStaff": "Xodim tomonidan {{date}} belgilangan",
+    "newCompany": "Mijoz kartoçkası yoq kompaniya: maʼlumotlarni qayta işlaşga rozilik qanday olinganini belgilang.",
     "missing": "Mijoz hali rozilik bermagan.",
     "viaBot": "Telegramdagi lid rozilikni botda beradi: undan «Roziman»ni bosişini sörang.",
     "mark": "Rozilik olindi",

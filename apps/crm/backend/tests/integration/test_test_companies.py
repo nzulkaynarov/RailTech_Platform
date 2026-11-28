@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app import test_scope
 from app.api.v1.deals import deal_rows, filtered
 from app.models.clients import Client, ServiceRequest
 from app.models.deals import Deal
@@ -96,3 +97,42 @@ async def test_deal_list_and_summary_skip_test_companies_but_the_card_keeps_them
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+async def test_show_test_switch_makes_test_companies_visible_everywhere_checked(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ТЕСТ-2: с `?test=all` (контекст запроса) те же выборки включают тестовые компании."""
+    ids = await seed(sessions)
+    token = test_scope._show_all.set(True)
+    try:
+        async with sessions() as session:
+            working = set(await session.scalars(select(Lead.id).where(lead_visibility.working())))
+            common = await deal_rows(session, filtered(None, None, None, None, None))
+            requests = await service_requests.list_with_clients(session, "open", 50)
+            report = await deals.summary(session, 30, _now())
+    finally:
+        test_scope._show_all.reset(token)
+    assert working == {ids["real_lead"], ids["fake_lead"]}
+    assert {d.client_id for d in common} == {ids["real"], ids["fake"]}
+    assert sorted(name for _, name in requests) == ["Клиент fake", "Клиент real"]
+    assert report.open_count == 2
+    assert test_scope.show_all() is False  # контекст не течёт в следующий запрос
+
+
+async def test_lead_rows_of_test_companies_carry_the_tag_only_when_shown(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ТЕСТ-2: метка «Тестовая» в строках лидов — только при `?test=all`, без него лида нет."""
+    from app.repositories import crm
+
+    ids = await seed(sessions)
+    async with sessions() as session:
+        leads = list(await session.scalars(select(Lead).order_by(Lead.id)))
+        assert await crm.test_client_ids(session, leads) == frozenset()
+        token = test_scope._show_all.set(True)
+        try:
+            tests = await crm.test_client_ids(session, leads)
+        finally:
+            test_scope._show_all.reset(token)
+    assert tests == frozenset({ids["fake"]})

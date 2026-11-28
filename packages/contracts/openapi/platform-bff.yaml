@@ -20836,6 +20836,9 @@ components:
       additionalProperties: false
       required: [kind, number, path]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         kind:
           $ref: '#/components/schemas/ObjectKind'
         number:
@@ -21665,6 +21668,9 @@ components:
           description: >-
             Служебная учётная запись (ДОСТ-1п): тестовый или технический вход. В списке сотрудников она с меткой «Служебная»,
             а в таблице «Кто что может», расчёте «единственный, кто решает» и счётчиках команды её нет. По умолчанию `false`
+        show_test:
+          type: boolean
+          description: ТЕСТ-2. У сотрудника включено «Показывать тестовые» (одна малая отметка в «Сотрудники и возможности»)
 
     EmployeeList:
       type: object
@@ -22225,6 +22231,9 @@ components:
           type: string
           maxLength: 1000
           description: Подпись для исходящих писем
+        show_test:
+          type: boolean
+          description: ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено
         avatar_url:
           type: string
           description: Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы
@@ -22258,6 +22267,9 @@ components:
           type: string
           maxLength: 1000
           description: Пустая строка очищает
+        show_test:
+          type: boolean
+          description: ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено
 
     PictureUpload:
       type: object
@@ -22547,6 +22559,9 @@ components:
       additionalProperties: false
       required: [id, tab, title, created_at, read]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         id:
           type: string
           pattern: '^(crm|erp):[0-9]+$'
@@ -22748,6 +22763,9 @@ components:
     ProjectRow:
       type: object
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         number:
           description: 'Номер сделки из ERP (`Deal.number`; префиксы задаёт владелец в настройках нумерации), без номера — `D-<id>`. BFF его не составляет'
           type: string
@@ -23458,6 +23476,9 @@ components:
       additionalProperties: false
       required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable, undelivered, awaiting_signature]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         awaiting_signature: {type: boolean, description: 'Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS'}
         signer:
           oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]
@@ -24342,6 +24363,9 @@ components:
         [id, number, project_number, deal_id, client_name, amount, paid, balance, issued_at, due_date, status, days_overdue,
          has_pending_proof, proof_received_at]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         id: {type: integer, description: 'Счёт ERP; идёт в `GET /eds/payments/{id}`'}
         number: {type: string, examples: [СЧ-2026/142]}
         project_number: {type: string, examples: [ПР-2026-104]}
@@ -27212,6 +27236,9 @@ components:
       additionalProperties: false
       required: [id, number, subject, client_name, request_number, received_at, status, urgent, due]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         id: {type: string, format: uuid}
         number:
           type: string
@@ -29863,6 +29890,9 @@ components:
       additionalProperties: false
       required: [number, title, client, step, state, due, letter_number, lines, visas, responsible, assignees, path]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         number: {type: string, examples: [ЗВ-2026-104]}
         title: {type: string}
         client: {type: [string, 'null']}
@@ -31379,6 +31409,9 @@ components:
       additionalProperties: false
       required: [lead, name, status, channel, language, assigned, need, last_message_at, unread, handoff_open, overdue, client_id]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         lead: {type: string, pattern: '^L-\d{4,}$'}
         name: {type: string}
         status: {$ref: '#/components/schemas/LeadPlatformStatus'}
@@ -31515,6 +31548,9 @@ components:
       additionalProperties: false
       required: [lead, name, status, channel, language, assigned, contacts, consent, facts, need, interest, handoff, last_messages, client, confirmation, first_response, invitation]
       properties:
+        is_test:
+          type: boolean
+          description: ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false
         lead: {type: string, pattern: '^L-\d{4,}$'}
         name: {type: string}
         status: {$ref: '#/components/schemas/LeadPlatformStatus'}

@@ -6236,6 +6236,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/InvitationOut'
           - type: 'null'
+        is_test:
+          default: false
+          title: Is Test
+          type: boolean
         language:
           title: Language
           type: string
@@ -6454,6 +6458,10 @@ components:
         id:
           title: Id
           type: integer
+        is_test:
+          default: false
+          title: Is Test
+          type: boolean
         language:
           title: Language
           type: string
@@ -7093,6 +7101,10 @@ components:
             type: string
           title: Roles
           type: array
+        show_test:
+          default: false
+          title: Show Test
+          type: boolean
         tg_dm_failed_at:
           anyOf:
           - format: date-time
@@ -7202,6 +7214,11 @@ components:
             type: string
           - type: 'null'
           title: Phone
+        show_test:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Show Test
         timezone:
           anyOf:
           - maxLength: 64
@@ -11353,6 +11370,10 @@ components:
             type: string
           title: Roles
           type: array
+        show_test:
+          default: false
+          title: Show Test
+          type: boolean
         tg_dm_failed_at:
           anyOf:
           - format: date-time
@@ -12875,6 +12896,40 @@ paths:
       security:
       - HTTPBearer: []
       summary: Create Client
+      tags:
+      - clients
+  /api/v1/clients/actions/create_request_for_company:
+    post:
+      description: '«Заявка клиента» из письма компании без лида и без карточки клиента (ВХОД-1): карточку
+
+        находит по ИНН и названию или заводит. 422 `validation_failed` по полю `company` — компания не
+
+        названа, по полю `consent` — нет отметки согласия сотрудника (способ: письмо, звонок, бумага),
+
+        а лида с согласием у компании ещё нет.'
+      operationId: create_request_for_company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCreated'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Request For Company
       tags:
       - clients
   /api/v1/clients/{client_id}:

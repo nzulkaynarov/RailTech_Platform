@@ -22,6 +22,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.lead_sources import MANUAL_SOURCES
+from app.models.leads import Lead
 from app.repositories import events
 from app.repositories import leads as leads_repo
 from app.security import audit
@@ -64,33 +65,42 @@ class LeadConsentService:
                     "consent of a telegram lead is given in the bot",
                     reason=Reason.CONSENT_VIA_BOT,
                 )
-            moment = datetime.now(UTC)
-            note = (comment or "").strip() or None
-            lead.consent_given_at = moment
-            lead.consent_version = MANUAL_CONSENT_VERSION
-            lead.consent_method = method
-            lead_parts.add_note(
-                session,
-                lead,
-                who,
-                "Согласие на обработку данных получено "
-                f"{_METHOD_LABELS[method]}" + (f": {note}" if note else "."),
-                visible_to_bot=False,
-            )
-            await audit.record(
-                session,
-                who.actor,
-                "lead.consent_recorded",
-                "lead",
-                lead_id,
-                before={"consent_given_at": None},
-                after={
-                    "consent_given_at": moment.isoformat(),
-                    "consent_version": MANUAL_CONSENT_VERSION,
-                    "consent_method": method,
-                    "comment": note,
-                },
-            )
+            await apply_manual_consent(session, who, lead, method, comment)
             await events.publish(session, "lead.updated", lead_id=lead_id)
         logger.info("lead_consent_recorded", lead_id=lead_id, user_id=who.user_id, method=method)
         return True
+
+
+async def apply_manual_consent(
+    session: AsyncSession, who: Principal, lead: Lead, method: str, comment: str | None
+) -> None:
+    """Write the manual consent of a lead in the caller's transaction: the lead card, the lead feed
+    note and the `lead.consent_recorded` audit row (D-8) — one path for the button and for a lead
+    made from a letter."""
+    moment = datetime.now(UTC)
+    note = (comment or "").strip() or None
+    lead.consent_given_at = moment
+    lead.consent_version = MANUAL_CONSENT_VERSION
+    lead.consent_method = method
+    lead_parts.add_note(
+        session,
+        lead,
+        who,
+        "Согласие на обработку данных получено "
+        f"{_METHOD_LABELS[method]}" + (f": {note}" if note else "."),
+        visible_to_bot=False,
+    )
+    await audit.record(
+        session,
+        who.actor,
+        "lead.consent_recorded",
+        "lead",
+        lead.id,
+        before={"consent_given_at": None},
+        after={
+            "consent_given_at": moment.isoformat(),
+            "consent_version": MANUAL_CONSENT_VERSION,
+            "consent_method": method,
+            "comment": note,
+        },
+    )

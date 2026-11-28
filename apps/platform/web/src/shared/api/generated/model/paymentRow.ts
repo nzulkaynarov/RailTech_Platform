@@ -6,6 +6,8 @@ import type { PaymentDisplayStatus } from "./paymentDisplayStatus";
 import type { PaymentMoney } from "./paymentMoney";
 
 export interface PaymentRow {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   /** Счёт ERP; идёт в `GET /eds/payments/{id}` */
   id: number;
   number: string;

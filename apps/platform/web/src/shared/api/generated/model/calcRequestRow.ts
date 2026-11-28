@@ -8,6 +8,8 @@ import type { CalcVisaIndicators } from "./calcVisaIndicators";
 import type { StepCode } from "./stepCode";
 
 export interface CalcRequestRow {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   number: string;
   title: string;
   /** @nullable */

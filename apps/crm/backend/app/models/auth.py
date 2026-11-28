@@ -107,6 +107,9 @@ class User(TimestampMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(32))
     timezone: Mapped[str] = mapped_column(String(64), server_default=sql("'Asia/Tashkent'"))
     email_signature: Mapped[str | None] = mapped_column(Text)
+    # ТЕСТ-2: «Показывать тестовые» — тестовые компании и их документы видны сотруднику в работе
+    # (по умолчанию скрыты, ТЕСТ-1); BFF читает флаг из снимка профиля и добавляет `test=all`.
+    show_test: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # Ник Telegram, с которого сотрудник привязал бота («Привязан как @…»); у привязки админом NULL.
     tg_username: Mapped[str | None] = mapped_column(String(64))
     # Когда сотрудник привязал Telegram сам; NULL — привязал администратор или Telegram не привязан.

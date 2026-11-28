@@ -569,6 +569,7 @@ def _deal_brief(deal: Deal) -> dict:
         "stage_code": deal.stage.code if deal.stage_id else DealStageCode.DRAFT,
         "client_name": deal.company.name if deal.company_id else None,
         "manager_name": person_name(deal.manager) if deal.manager_id else None,
+        **test_companies.flag(deal.company if deal.company_id else None),
     }
 
 
@@ -1563,6 +1564,7 @@ def _notify_all_signed(deal: Deal, task: CalcTask, actor) -> None:
             title="Все строки расчёта подтверждены",
             message=f"Расчёт по {task.label}: все визы собраны, можно нажать «Расчёт готов».",
             link=f"#deal/{deal.id}",
+            deal=deal,
             event_code="calc.all_signed",
             event_params={"deal_id": deal.id, "letter_number": task.label},
         )

@@ -1292,6 +1292,30 @@
     "prefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
     "continue": "Continue the reply"
   },
+  "intake": {
+    "requestTitle": "{{number}}: client request",
+    "title": "Create from this letter",
+    "request": "Client request",
+    "partner": "Partner connection",
+    "done": {
+      "request": "A client request was created from {{number}}",
+      "partner": "A partner connection request was created from {{number}}"
+    },
+    "reason": {
+      "noRight": {
+        "request": "No access to the Clients section: a request cannot be created.",
+        "partner": "No access to supply: a connection request cannot be created."
+      },
+      "status": {
+        "closed": "The letter is closed without a reply: reopen it first.",
+        "duplicate": "The letter is marked as a duplicate: create the request from the first letter.",
+        "rejected": "The resolution on the letter was rejected: a request cannot be created.",
+        "returned": "The letter was returned for rework: a request cannot be created."
+      },
+      "hasRequest": "The letter already has request {{number}}.",
+      "requestMade": "A request was already created from this letter."
+    }
+  },
   "outcome": {
     "more": "More",
     "cancel": "Cancel",

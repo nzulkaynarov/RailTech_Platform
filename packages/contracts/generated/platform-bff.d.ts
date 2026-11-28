@@ -11521,6 +11521,8 @@ export interface components {
       | "partner_application"
       | "product";
     ObjectRef: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       kind: components["schemas"]["ObjectKind"];
       /**
        * @description Бизнес-номер SPEC-v3 §2.2 или код (для интеграции — её ключ)
@@ -11967,6 +11969,8 @@ export interface components {
       avatar_url?: string;
       /** @description Служебная учётная запись (ДОСТ-1п): тестовый или технический вход. В списке сотрудников она с меткой «Служебная», а в таблице «Кто что может», расчёте «единственный, кто решает» и счётчиках команды её нет. По умолчанию `false` */
       is_service?: boolean;
+      /** @description ТЕСТ-2. У сотрудника включено «Показывать тестовые» (одна малая отметка в «Сотрудники и возможности») */
+      show_test?: boolean;
     };
     EmployeeList: {
       items: components["schemas"]["Employee"][];
@@ -12259,6 +12263,8 @@ export interface components {
       timezone: components["schemas"]["Timezone"];
       /** @description Подпись для исходящих писем */
       email_signature?: string;
+      /** @description ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено */
+      show_test?: boolean;
       /** @description Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы */
       avatar_url?: string;
       telegram: components["schemas"]["TelegramState"];
@@ -12273,6 +12279,8 @@ export interface components {
       timezone?: components["schemas"]["Timezone"];
       /** @description Пустая строка очищает */
       email_signature?: string;
+      /** @description ТЕСТ-2. Показывать тестовые компании и их документы в работе; по умолчанию выключено */
+      show_test?: boolean;
     };
     PictureUpload: {
       /**
@@ -12436,6 +12444,8 @@ export interface components {
     /** @enum {string} */
     NotificationTab: "all" | "decisions" | "clients" | "system";
     Notification: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       id: string;
       tab: components["schemas"]["NotificationTab"];
       title: string;
@@ -12538,6 +12548,8 @@ export interface components {
       act: components["schemas"]["ProjectActRef"] | null;
     };
     ProjectRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       /** @description Номер сделки из ERP (`Deal.number`; префиксы задаёт владелец в настройках нумерации), без номера — `D-<id>`. BFF его не составляет */
       number: string;
       /** @description Тот же номер сделки: заявка и проект — один объект с одним номером */
@@ -13025,6 +13037,8 @@ export interface components {
       contact_id?: string | null;
     };
     EdsDocumentRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       /** @description Исходящее письмо передано на подпись и не подписано (СЦ-8): слово «На подписи» при `status = draft`; без передачи — «Черновик»; у остальных видов — `false`. Признак отдаёт EDS */
       awaiting_signature: boolean;
       /** @description ГЛ-0. У кого письмо на подписи (вычисленный или выбранный подписант); у остальных строк — `null`. Отдаёт реестр «Все документы» */
@@ -13862,6 +13876,8 @@ export interface components {
       overdue: number;
     };
     PaymentRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       /** @description Счёт ERP; идёт в `GET /eds/payments/{id}` */
       id: number;
       /** @example СЧ-2026/142 */
@@ -15570,6 +15586,8 @@ export interface components {
       date: string | null;
     };
     LetterRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       /** Format: uuid */
       id: string;
       /**
@@ -17484,6 +17502,8 @@ export interface components {
       name: string | null;
     };
     CalcRequestRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       /** @example ЗВ-2026-104 */
       number: string;
       title: string;
@@ -18607,6 +18627,8 @@ export interface components {
      */
     LeadPlatformStatus: "new" | "dialog" | "wants_quote" | "no_answer" | "client" | "lost";
     LeadRow: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       lead: string;
       name: string;
       status: components["schemas"]["LeadPlatformStatus"];
@@ -18723,6 +18745,8 @@ export interface components {
       can_resend: boolean;
     };
     LeadCard: {
+      /** @description ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+      is_test?: boolean;
       lead: string;
       name: string;
       status: components["schemas"]["LeadPlatformStatus"];

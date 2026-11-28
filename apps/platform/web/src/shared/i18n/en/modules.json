@@ -766,6 +766,10 @@
           "notEnabled": "Sign-in with a code is not on for this employee.",
           "default": "Something went wrong. Try again."
         }
+      },
+      "showTest": {
+        "label": "Sees test",
+        "hint": "This employee has showing test companies turned on"
       }
     },
     "roles": {

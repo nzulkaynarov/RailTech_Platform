@@ -10,6 +10,8 @@ import type { ProjectRowProblemsItem } from "./projectRowProblemsItem";
 import type { ProjectRowStep } from "./projectRowStep";
 
 export interface ProjectRow {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   /** Номер сделки из ERP (`Deal.number`; префиксы задаёт владелец в настройках нумерации), без номера — `D-<id>`. BFF его не составляет */
   number: string;
   /** Тот же номер сделки: заявка и проект — один объект с одним номером */

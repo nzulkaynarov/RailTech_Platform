@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { entityInitials } from "../lib/initials";
 
 import { Code } from "./Code";
+import { TestTag } from "./TestTag";
 import { PackageIcon, WrenchIcon } from "./lucide";
 import "./entity-cell.css";
 
@@ -117,12 +118,15 @@ export function CompanyCell({
   to,
   title,
   size = 24,
+  test,
 }: {
   name: string;
   inn?: string | null;
   innLabel?: string;
   logoUrl?: string | null;
   to?: string | null;
+  /** Компания тестовая (ТЕСТ-2): после названия — метка «Тестовая». */
+  test?: boolean;
   /** Своя ссылка на название (например, окно карточки модуля) вместо `to`; инициалы — из `name`. */
   title?: ReactNode;
   size?: Size;
@@ -134,6 +138,11 @@ export function CompanyCell({
       }
     >
       {title ?? <Title name={name} to={to} />}
+      {test ? (
+        <span className="pf-entity__caption">
+          <TestTag value />
+        </span>
+      ) : null}
       {inn ? (
         <span className="pf-entity__caption">
           <span className="pf-sr-only">{innLabel}: </span>

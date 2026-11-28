@@ -64,6 +64,7 @@ def to_out(view: UserView) -> UserOut:
         phone=view.phone,
         timezone=view.timezone,
         email_signature=view.email_signature,
+        show_test=view.show_test,
         tg_username=view.tg_username,
         avatar_version=view.avatar_version,
         deputy_user_id=view.deputy_user_id,

@@ -9,10 +9,11 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import test_scope
 from app.domain.company_conversation import MARK_KEY
 from app.domain.lead_sources import normalize_phone_e164
 from app.models.auth import User
-from app.models.clients import ClientContact
+from app.models.clients import Client, ClientContact
 from app.models.kb import Product
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
@@ -284,6 +285,21 @@ class IdentityFlags:
 
     phone: bool = False
     telegram: bool = False
+
+
+async def test_client_ids(session: AsyncSession, leads: Iterable[Lead]) -> frozenset[int]:
+    """ТЕСТ-2: клиенты-«Тестовые» среди лидов страницы — для метки в строках.
+
+    Без `?test=all` пусто: таких лидов в выдаче нет."""
+    if not test_scope.show_all():
+        return frozenset()
+    ids = {lead.client_id for lead in leads if lead.client_id is not None}
+    if not ids:
+        return frozenset()
+    found = await session.scalars(
+        select(Client.id).where(Client.id.in_(ids), Client.is_test.is_(True))
+    )
+    return frozenset(found)
 
 
 async def identity_flags(

@@ -141,6 +141,7 @@ def lead_out(
     identities: crm.IdentityFlags | None = None,
     via: ReplyVia | None = None,
     bot_channel: bool | None = None,
+    test_clients: frozenset[int] = frozenset(),
 ) -> LeadOut:
     owner = lead.assigned_user_id
     tg = identities or crm.IdentityFlags()
@@ -154,6 +155,7 @@ def lead_out(
         assigned_user_id=owner,
         assigned_user_name=(names or {}).get(owner) if owner is not None else None,
         client_id=lead.client_id,
+        is_test=lead.client_id in test_clients,
         unread=_unread(lead),
         need_summary=lead.need_summary,
         product_interest=list(lead.product_interest or []),
@@ -284,8 +286,12 @@ async def list_leads(
         escalations = await crm.active_escalations(session, [r.id for r in rows])
         names = await crm.user_names(session, rows, _handed_by(escalations))
         flags = await crm.identity_flags(session, [r.id for r in rows])
+        tests = await crm.test_client_ids(session, rows)
     return LeadPage(
-        items=[lead_out(r, escalations.get(r.id), names, None, flags.get(r.id)) for r in rows],
+        items=[
+            lead_out(r, escalations.get(r.id), names, None, flags.get(r.id), test_clients=tests)
+            for r in rows
+        ],
         total=total,
     )
 
@@ -319,6 +325,7 @@ async def inbox(
         vias = await cabinet_repo.reply_vias(session, [*escalated, *mine, *unassigned])
         bot_leads = await cabinet_repo.bot_channel_leads(session, ids)
         flags = await crm.identity_flags(session, ids)
+        tests = await crm.test_client_ids(session, [*escalated, *mine, *unassigned])
 
     def out(rows: list[Lead]) -> list[LeadOut]:
         return [
@@ -330,6 +337,7 @@ async def inbox(
                 flags.get(r.id),
                 vias.get(r.id),
                 r.id in bot_leads,
+                tests,
             ).model_copy(update={"handoff_note": notes.get(r.id)})
             for r in rows
         ]
@@ -391,7 +399,10 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             (await bounces.states(session, [lead.email])).get((lead.email or "").lower())
         )
         flags = await crm.identity_flags(session, [lead_id])
-    base = lead_out(lead, escalation, names, reply_channel, flags.get(lead_id), via, bot_channel)
+        tests = await crm.test_client_ids(session, [lead])
+    base = lead_out(
+        lead, escalation, names, reply_channel, flags.get(lead_id), via, bot_channel, tests
+    )
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
     waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)

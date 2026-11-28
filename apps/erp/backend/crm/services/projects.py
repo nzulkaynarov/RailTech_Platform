@@ -399,6 +399,7 @@ def project_row(deal) -> dict:
         "title": deal.title or "",
         "company_id": deal.company_id,
         "company_name": deal.company.name if deal.company_id else "",
+        **test_companies.flag(deal.company if deal.company_id else None),
         "created_at": deal.created_at,
         "step": project_step(deal),
         "client_status": client_status(deal),

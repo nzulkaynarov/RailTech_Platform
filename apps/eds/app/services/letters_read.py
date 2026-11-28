@@ -350,6 +350,7 @@ async def list_page(
             if status == instructions.IN_WORK and due < today:
                 late.add(letter_id)
     directory = await load_directory(session, executors.values())
+    tests = await test_companies.marked(session, test, (r.erp_company_id for r in page))
     items = [
         LetterListItem(
             id=r.id,
@@ -366,6 +367,7 @@ async def list_page(
             on_control=r.on_control,
             overdue=r.id in late,
             executor=directory.person(executors[r.id]) if r.id in executors else None,
+            is_test=r.erp_company_id in tests,
         )
         for r in page
     ]

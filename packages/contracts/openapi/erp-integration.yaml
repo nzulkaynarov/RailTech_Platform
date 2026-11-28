@@ -1630,6 +1630,11 @@ components:
           uniqueItems: true
           items:
             $ref: '#/components/schemas/SystemRoleCode'
+        show_test:
+          type: boolean
+          description: >-
+            ТЕСТ-2. «Показывать тестовые» из профиля сотрудника в CRM: только такому сотруднику ERP шлёт уведомления и письма
+            по записям тестовых компаний. Необязательное: поля нет — прежнее значение не меняется.
         is_active:
           type: boolean
           default: true

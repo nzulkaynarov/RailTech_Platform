@@ -88,6 +88,7 @@ function toProfile(userId: string): Profile {
     language: session?.language ?? user?.language ?? "ru",
     timezone: stored.timezone,
     ...(stored.signature ? { email_signature: stored.signature } : {}),
+    show_test: stored.showTest === true,
     ...(avatar ? { avatar_url: avatar } : {}),
     telegram: {
       linked: employee?.telegram_linked ?? false,
@@ -237,6 +238,7 @@ export const profileHandlers = [
         ? { phone: body.phone.trim() === "" ? undefined : `+${body.phone.replace(/\D/g, "")}` }
         : {}),
       ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
+      ...(body.show_test !== undefined ? { showTest: body.show_test } : {}),
       ...(body.email_signature !== undefined
         ? {
             signature: body.email_signature.trim() === "" ? undefined : body.email_signature.trim(),

@@ -40,6 +40,7 @@ class UserView:
     phone: str | None = None
     timezone: str = "Asia/Tashkent"
     email_signature: str | None = None
+    show_test: bool = False
     tg_username: str | None = None
     # Метка времени замены фото (секунды epoch): версия адреса картинки; None — фото нет.
     avatar_version: int | None = None
@@ -111,6 +112,7 @@ def view_of(
         phone=user.phone,
         timezone=user.timezone,
         email_signature=user.email_signature,
+        show_test=user.show_test,
         tg_username=user.tg_username,
         avatar_version=(
             int(user.avatar_updated_at.timestamp())

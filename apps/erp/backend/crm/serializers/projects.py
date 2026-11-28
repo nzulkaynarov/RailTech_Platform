@@ -98,6 +98,9 @@ class ProjectRowSerializer(serializers.Serializer):
     title = serializers.CharField(allow_blank=True)
     company_id = serializers.IntegerField(allow_null=True)
     company_name = serializers.CharField(allow_blank=True)
+    is_test = serializers.BooleanField(
+        required=False, help_text="ТЕСТ-2: проект тестовой компании; приходит только при `?test=all`"
+    )
     created_at = serializers.DateTimeField()
     step = serializers.ChoiceField(choices=STEPS)
     client_status = serializers.ChoiceField(choices=CLIENT_STATUSES, help_text="Ключ `client-statuses.yaml`")

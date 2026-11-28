@@ -30,6 +30,7 @@ import { InstructionsCard, OfficeDecision } from "./Instructions";
 import { ClosedBanner } from "../tasks/LetterOutcomes";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments, RequestAttachments } from "./Parts";
+import { LetterIntake } from "./LetterIntake";
 import { ResolutionPanel } from "./ResolutionPanel";
 import { PageFrame } from "../../../shared/ui/PageFrame";
 
@@ -170,6 +171,8 @@ function Content({
         <SourceBanner sources={letter.sources} onRetry={refetch} />
         <DuplicateBanner letter={letter} />
         <ClosedBanner letter={letter} />
+        {/* ВХОД-1: «Заявка клиента» и «Подключение партнёра» — действия самого письма */}
+        <LetterIntake letter={letter} />
         {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
         {letter.track === "office" ? null : (
           <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>

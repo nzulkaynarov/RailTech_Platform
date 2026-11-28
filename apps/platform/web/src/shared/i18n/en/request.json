@@ -6,7 +6,8 @@
     "legend": "Client",
     "picked": "Client: {{name}}",
     "name": "Company name",
-    "noInnNote": "The company has no tax ID: the request will create a client with this name."
+    "noInnNote": "The company has no tax ID: the request will create a client with this name.",
+    "noCardNote": "The company has no client card yet: it will be created with the request, and the company becomes a client."
   },
   "contact": {
     "legend": "Contact",
@@ -65,6 +66,7 @@
     "legend": "Consent to data processing",
     "given": "Given in the bot on {{date}}",
     "givenStaff": "Recorded by staff on {{date}}",
+    "newCompany": "Company without a client card: mark how the consent to data processing was received.",
     "missing": "The client has not given consent yet.",
     "viaBot": "A Telegram lead gives consent in the bot: ask them to press “I agree”.",
     "mark": "Consent received",

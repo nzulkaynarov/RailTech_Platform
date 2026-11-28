@@ -18,6 +18,7 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useShownValue } from "../../../shared/lib/useShownKey";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DocNumber } from "../../../shared/ui/DocNumber";
+import { TestTag } from "../../../shared/ui/TestTag";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { useSortParam } from "../../../shared/ui/DataTable/sort";
@@ -290,6 +291,7 @@ function DocumentsTable({
             <span className="pf-sr-only">{t("list.columns.kind")}: </span>
             {t(`kinds.${row.kind}`)}
           </div>
+          <TestTag value={row.is_test} />
         </>
       ),
     },
@@ -398,6 +400,7 @@ function DocumentsList({
           <div className="pf-docs-item-head">
             <RowStatus row={row} />
             {row.number ? <DocNumber number={row.number} /> : null}
+            <TestTag value={row.is_test} />
           </div>
           <div className="pf-docs-subject">
             <SubjectCell row={row} params={params} selected={selected === row.id} />

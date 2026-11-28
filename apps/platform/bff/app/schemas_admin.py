@@ -49,6 +49,8 @@ class Employee(BaseModel):
     avatar_url: str | None = None
     # ДОСТ-1п: служебная учётная запись — в списке с меткой, в командных экранах её нет
     is_service: bool = False
+    # ТЕСТ-2: у сотрудника включено «Показывать тестовые» — в списке одна малая отметка
+    show_test: bool = False
 
 
 class EmployeeList(BaseModel):
@@ -181,6 +183,7 @@ def to_employee(user: dict[str, Any], names: Mapping[str, str] | None = None) ->
         if user.get("is_active", True)
         else None,
         is_service=bool(user.get("is_service")),
+        show_test=bool(user.get("show_test")),
     )
 
 

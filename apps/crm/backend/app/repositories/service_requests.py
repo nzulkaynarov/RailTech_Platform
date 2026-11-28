@@ -2,13 +2,18 @@
 
 from typing import Literal
 
-from sqlalchemy import or_, select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import test_scope
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead
 
 RequestStatus = Literal["open", "closed"]
+
+
+def _visible() -> tuple[ColumnElement[bool], ...]:
+    return () if test_scope.show_all() else (Client.is_test.is_(False),)  # ТЕСТ-2
 
 
 async def list_with_clients(
@@ -19,7 +24,7 @@ async def list_with_clients(
     stmt = (
         select(ServiceRequest, Client.name)
         .join(Client, Client.id == ServiceRequest.client_id)
-        .where(ServiceRequest.status == status, Client.is_test.is_(False))  # ТЕСТ-1
+        .where(ServiceRequest.status == status, *_visible())  # ТЕСТ-1
         .order_by(order)
         .limit(limit)
     )

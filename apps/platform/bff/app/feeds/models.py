@@ -10,6 +10,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, model_serializer
 
 from app.rbac_generated import ModuleCode
+from app.test_tag import TestTagged
 
 SourceState = Literal["ok", "unavailable", "not_applicable"]
 ObjectKind = Literal[
@@ -110,7 +111,7 @@ class Sources(BaseModel):
         return data
 
 
-class ObjectRef(BaseModel):
+class ObjectRef(TestTagged):
     kind: ObjectKind
     number: str
     title: str | None = None
@@ -224,7 +225,7 @@ class ActivityFeed(BaseModel):
     sources: Sources
 
 
-class Notification(BaseModel):
+class Notification(TestTagged):
     id: str = Field(pattern=r"^(crm|erp):[0-9]+$")
     tab: NotificationTab
     title: str
