@@ -468,6 +468,14 @@
   font-weight: 700;
 }
 
+.pf-calc-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pf-col-num > .pf-calc-price {
+  align-items: flex-end;
+}
 .pf-calc-manual {
   display: block;
   font-size: var(--rt-font-size-sm, 12px);

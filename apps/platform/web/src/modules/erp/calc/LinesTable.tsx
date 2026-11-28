@@ -563,7 +563,7 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
   const manual = line.price_mode === "manual";
   const target = line.margin_target_pct;
   return (
-    <>
+    <span className="pf-calc-price">
       <NumberCell
         value={line.client_price}
         label={t("lines.clientLabel", { name: line.name })}
@@ -594,7 +594,7 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
           ) : null}
         </span>
       ) : null}
-    </>
+    </span>
   );
 }
 

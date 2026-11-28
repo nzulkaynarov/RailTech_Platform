@@ -127,18 +127,21 @@ test.describe("D26G: жизненный цикл КП — доработка, о
   }
 
   for (const width of WIDTHS) {
-    test(`наценка даёт цену клиенту, округлённую до сума, ${String(width)}`, async ({ page }) => {
+    test(`маржа строки даёт цену клиенту: себестоимость / (1 − маржа), вверх до шага, ${String(width)}`, async ({
+      page,
+    }) => {
       await signInAt(page, "supply@demo.example", width);
       await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-097")}`);
       const name = "Перевод стрелочный Р65 марки 1/11";
-      const markup = page.getByLabel(`Наценка, %: ${name}`);
-      await markup.fill("15.56");
-      await markup.press("Enter");
+      const margin = page.getByLabel(`Маржа, %: ${name}`);
+      await margin.fill("20");
+      await margin.press("Enter");
+      // 90 000 000 / (1 − 20 %) = 112 500 000
       await expect(page.getByLabel(`Цена клиенту без НДС за единицу для «${name}»`)).toHaveValue(
-        /^104\s004\s000/,
+        /^112\s500\s000/,
       );
       await shot(page, "calc-markup");
-      await expectNoViolations(page, `наценка ${String(width)}`);
+      await expectNoViolations(page, `маржа ${String(width)}`);
     });
   }
 });
