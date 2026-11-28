@@ -16,12 +16,13 @@ new_case() { # <имя>: чистое состояние; current_tag = A
   export RT_ROOT="$T" RT_STATE="$T/state" RT_RELEASES="$T/releases" RT_MAINTENANCE_DIR="$T/maint"
   echo "$A" > "$T/state/current_tag"
   CASE="$1"
-  unset FX_API_FAIL FX_ACTIVITY_RC; export FX_COMMITS="$C $B $A" FX_GREEN="$B $A" FX_STAND="$B $A" FX_COMPARE=ahead FX_IMAGES=0 FX_ACTIVITY=0 FX_DEPLOY=ok
+  unset FX_API_FAIL FX_ACTIVITY_RC FX_NO_TOKEN FX_STAND_FLIP; export FX_COMMITS="$C $B $A" FX_GREEN="$B $A" FX_STAND="$B $A" FX_COMPARE=ahead FX_IMAGES=0 FX_ACTIVITY=0 FX_DEPLOY=ok
   : > "$T/calls"
 }
 tick() { # <epoch>: один запуск auto-deploy.sh с подменёнными сетью и действиями
   (
     export AD_NOW="$1" AUTO_DEPLOY_ENV=/nonexistent
+    if [[ -n "${FX_NO_TOKEN:-}" ]]; then unset GITHUB_TOKEN; else export GITHUB_TOKEN=test-token; fi
     # shellcheck source=infra/deploy/auto-deploy.sh
     source "$script"
     api_get() {
@@ -32,7 +33,10 @@ tick() { # <epoch>: один запуск auto-deploy.sh с подменённы
           if [[ " $FX_GREEN " == *" $c "* ]]; then echo '{"check_runs":[{"status":"completed","conclusion":"success","started_at":"2026-11-27T10:00:00Z"}]}'
           else echo '{"check_runs":[{"status":"completed","conclusion":"failure","started_at":"2026-11-27T10:00:00Z"}]}'; fi ;;
         commits/*/statuses*) local c="${1#commits/}"; c="${c%%/*}"
-          if [[ " $FX_STAND " == *" $c "* ]]; then echo '[{"context":"ci","state":"success","created_at":"2026-11-27T09:00:00Z"},{"context":"stand-ok","state":"success","created_at":"2026-11-27T10:00:00Z"}]'
+          local n; n="$(cat "$T/stand_calls" 2>/dev/null || echo 0)"; echo $((n + 1)) > "$T/stand_calls"
+          # FX_STAND_FLIP: после этого числа обращений к statuses stand-ok «снимают» (имитация снятия посреди тика)
+          if [[ -n "${FX_STAND_FLIP:-}" && $((n + 1)) -gt $FX_STAND_FLIP ]]; then echo '[{"context":"stand-ok","state":"success","created_at":"2026-11-27T10:00:00Z"},{"context":"stand-ok","state":"failure","created_at":"2026-11-27T11:00:00Z"}]'
+          elif [[ " $FX_STAND " == *" $c "* ]]; then echo '[{"context":"ci","state":"success","created_at":"2026-11-27T09:00:00Z"},{"context":"stand-ok","state":"success","created_at":"2026-11-27T10:00:00Z"}]'
           else echo '[{"context":"ci","state":"success","created_at":"2026-11-27T09:00:00Z"}]'; fi ;;
         compare/*) printf '{"status":"%s"}' "$FX_COMPARE" ;;
         *) return 1 ;;
@@ -115,6 +119,28 @@ check "stand-ok без зелёного CI не годится" up-to-date idle
 new_case stand-revoked
 out="$(bash -c 'source "$1"; echo "[{\"context\":\"stand-ok\",\"state\":\"success\",\"created_at\":\"2026-11-27T10:00:00Z\"},{\"context\":\"stand-ok\",\"state\":\"failure\",\"created_at\":\"2026-11-27T11:00:00Z\"}]" | stand_ok' _ "$script")"
 assert "снятый stand-ok (failure позже success) не годится" test "$out" = false
+
+# снятие stand-ok после выбора кандидата: кэша нет, ничего не выкладывается, свой баннер снимается
+new_case revoked-after-banner; FX_ACTIVITY=7
+tick "$DAY"; check "днём активность: баннер" banner banner-12:15
+FX_STAND="$A"; tick $((DAY + 1200))
+check "stand-ok снят после баннера" wait-stand "ждёт проверки на стенде"; expect_calls "выкладки нет" "ghcr $B"
+assert "свой баннер снят" test ! -e "$T/maint/maintenance.json"
+
+new_case revoked-after-wait-images; FX_IMAGES=1; tick "$NIGHT"
+check "образов ещё нет" wait-images idle
+FX_IMAGES=0; FX_STAND="$A"; tick $((NIGHT + 600))
+check "stand-ok снят, образы готовы" wait-stand "ждёт проверки на стенде"; expect_calls "выкладки нет" "ghcr $B"
+
+new_case revoked-between-pick-and-deploy; FX_STAND_FLIP=1; tick "$NIGHT"   # statuses: 1-й вызов (выбор B) ок, перечитывание перед баннером уже видит снятие
+check "снят перед баннером" stand-revoked "stand-ok снят"; expect_calls "выкладки нет" "ghcr $B"
+
+new_case revoked-before-deploy; FX_STAND_FLIP=2; FX_COMMITS="$B $A"; tick "$NIGHT"   # выбор и перечитывание после образов - ок, перед выкладкой уже снят
+check "снят после тарбола, перед выкладкой" stand-revoked "stand-ok снят"; expect_calls "тарбол был, deploy нет" "ghcr $B;fetch $B"
+assert "current_tag прежний" test "$(cat "$T/state/current_tag")" = "$A"
+
+new_case no-token; FX_NO_TOKEN=1; tick "$NIGHT"
+check "без токена" no-token "нужен GITHUB_TOKEN в auto-deploy.env"; expect_calls "ничего не делаем" ""
 
 new_case ghcr-down; FX_IMAGES=2; tick "$NIGHT"
 check "GHCR недоступен" ghcr-unavailable idle

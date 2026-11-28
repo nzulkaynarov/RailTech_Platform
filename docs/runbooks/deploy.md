@@ -145,8 +145,12 @@ job `approve` — он запускается при ручном `deploy`/`roll
    (решение владельца 2026-11-28: на прод ничего не идёт, пока не проверено на тестовом стенде). Статус ставит архитектор после приёмки **ровно этого
    sha** на стенде: `scripts/stand-ok.sh <sha>` (`gh api` → `POST /repos/…/statuses/<sha>`, контекст `stand-ok`); снять — `scripts/stand-ok.sh --revoke <sha>`
    (позднее состояние failure отменяет раннее success). Нет статуса — тик пишет в журнал `wait-stand` с результатом «ждёт проверки на стенде» (то же в
-   `auto-deploy.status.json`) и ничего не делает; новейший sha без `stand-ok` пропускается, берётся новейший с обоими условиями. Способ чтения: GitHub API без токена, список коммитов и
-   проверки читаются с ETag (ответ 304 не тратит лимит 60 запросов/час на IP; зелёные sha кэшируются навсегда, за тик не больше 8 непроверенных).
+   `auto-deploy.status.json`) и ничего не делает; новейший sha без `stand-ok` пропускается, берётся новейший с обоими условиями. Способ чтения: GitHub API **с обязательным** `GITHUB_TOKEN` (только чтение, п. «Токен» ниже); без него тик пишет `no-token` и ничего не делает. Анонимный лимит 60 запросов/час
+   не годится: ответ 304 не списывается с лимита только у запросов с заголовком `Authorization`, а день с 10+ слияниями после последнего `stand-ok` даёт 11+ запросов за тик. Список коммитов
+   и проверки читаются с ETag; зелёная «CI ok» кэшируется навсегда (за тик не больше 8 незелёных коммитов), **`stand-ok` не кэшируется** — читается на каждом тике, ещё раз после проверки
+   образов (до баннера) и ещё раз после скачивания релиза, прямо перед выкладкой: снятие (`--revoke`) действует и в окне баннера, ожидания образов и `activity-unknown`
+   (журнал `stand-revoked`, баннер, поставленный самим скриптом, снимается). Худший тик: 1 commits + 8 check-runs + до 30 statuses + 2 перечитывания + 1 compare + 1 tarball = 43 запроса,
+   6 тиков в час = 258 из 5000.
    Сбой API или лимит — отступление 10, 20, 40, 60 минут (`state/auto-deploy.backoff`), журнал `api-unavailable`, затем `api-backoff`; **ничего не выкладывается**.
 3. Пропуск: кандидат равен `current_tag` (`up-to-date`; заодно снимается баннер, давно отыгравший свою минуту), лежит в `state/failed_tags` (`skip-failed`),
    старше выложенного (`skip-older`) или расходится с ним (`skip-diverged`, сравнение — API `compare`).
@@ -173,14 +177,15 @@ job `approve` — он запускается при ручном `deploy`/`roll
 **Пауза.** `touch /opt/rt/state/auto-deploy.paused` — тики идут, но ничего не выкладывают (в журнале `paused`); вернуть — `rm /opt/rt/state/auto-deploy.paused`.
 Полная остановка — `sudo systemctl disable --now rt-auto-deploy.timer`.
 
-**Репозиторий станет приватным.** Анонимные API и GHCR перестанут работать. Тогда на VPS 1 создаётся `/opt/rt/auto-deploy.env` (chmod 600, владелец `deploy`) со строками
+**Токен.** `GITHUB_TOKEN` нужен всегда (даже при публичном репозитории); при приватном репозитории анонимные GHCR тоже перестанут работать. На VPS 1 создаётся `/opt/rt/auto-deploy.env` (chmod 600, владелец `deploy`) со строками
 `GITHUB_TOKEN=<fine-grained, только чтение содержимого и checks репозитория>`, `GHCR_USER=<логин>`, `GHCR_TOKEN=<токен с read:packages>`; скрипт подхватывает файл сам
-(юнит читает его как `EnvironmentFile`), перед выкладкой делает `docker login ghcr.io`, после — `logout`. Лимит API с токеном — 5000 запросов/час.
+(юнит читает его как `EnvironmentFile`), перед выкладкой делает `docker login ghcr.io`, после — `logout`. Лимит API с токеном — 5000 запросов/час. `GHCR_USER` и `GHCR_TOKEN` нужны только для приватных пакетов.
 
 **Автовыкладка: установка** (один раз, от root на VPS 1; делает архитектор после слияния; в репозитории и на проде ничего не ставится само):
 ```bash
 # 1. дождаться, чтобы в /opt/rt/current лежал релиз с auto-deploy.sh: Actions → Deploy → deploy на sha слияния (одобрение владельца)
 ls /opt/rt/current/infra/deploy/auto-deploy.sh /opt/rt/current/scripts/maintenance-notice.sh
+# 1а. токен: /opt/rt/auto-deploy.env (chmod 600, владелец deploy) со строкой GITHUB_TOKEN=<fine-grained, только чтение>; без него тики пишут no-token
 # 2. юниты
 install -m 644 /opt/rt/current/infra/deploy/systemd/rt-auto-deploy.service /opt/rt/current/infra/deploy/systemd/rt-auto-deploy.timer /etc/systemd/system/
 systemctl daemon-reload && systemctl enable --now rt-auto-deploy.timer
@@ -191,7 +196,7 @@ systemctl list-timers rt-auto-deploy.timer
 Нужны `flock`, `curl`, `python3`, `tar` (есть в Ubuntu); `docker` — под пользователем `deploy`. Одновременно в GitHub: переменная репозитория `CRM_DOMAIN`
 (см. выше). Обновление самого `auto-deploy.sh` приезжает с обычной выкладкой (юнит запускает файл из `/opt/rt/current`); юниты при правке ставятся заново.
 
-**Тесты** (входят в `make deploy-check`): `auto-deploy-test.sh` — таблица со стабами API/GHCR/часов/активности: нет нового, нет `stand-ok` (ждёт стенда) / новейший без него / снятый `stand-ok`, ночью новый зелёный, днём тихо, днём активность → баннер → выкладка,
+**Тесты** (входят в `make deploy-check`): `auto-deploy-test.sh` — таблица со стабами API/GHCR/часов/активности: нет нового, нет `stand-ok` (ждёт стенда) / новейший без него / снятый `stand-ok` (в парсере, после баннера, после ожидания образов, между выбором и выкладкой), нет токена, ночью новый зелёный, днём тихо, днём активность → баннер → выкладка,
 образы неполные, failed-tag, старше/расходится, API недоступен и отступление, smoke упал → откат и failed-tag, три сбоя до переключения, замок занят, пауза, ротация журнала, ETag;
 `clock-decision-test.sh` — границы ночного окна; `deploy-jobgraph-test.py` — какие jobs `deploy.yml` запускаются на каждое событие, нет `schedule`, `images.yml` согласован с `deploy.yml` и сервером, ручная
 выкладка идёт под замком.

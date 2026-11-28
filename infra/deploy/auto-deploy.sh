@@ -6,14 +6,17 @@
 #   2. state/auto-deploy.paused - пауза, ничего не делаем;
 #   3. новейший коммит main с зелёной «CI ok» И статусом коммита `stand-ok` = success (его ставит архитектор через scripts/stand-ok.sh после
 #      приёмки ровно этого sha на тестовом стенде; «на прод ничего не идёт, пока не проверено на стенде»; нет статуса - тик пишет
-#      «ждёт проверки на стенде» и ничего не делает). GitHub API без токена, ETag-кэш, отступление при сбоях;
+#      «ждёт проверки на стенде» и ничего не делает). stand-ok не кэшируется: читается заново на каждом тике, после проверки образов (до
+#      баннера) и перед самой выкладкой, поэтому снятие действует и в окне между приёмкой и выкладкой. GitHub API с обязательным
+#      GITHUB_TOKEN (только чтение), ETag-кэш, отступление при сбоях;
 #   4. пропуск: равен current_tag, в failed_tags, старше выложенного или расходится с ним;
 #   5. образы sha целиком в GHCR (все образы из AUTO_DEPLOY_IMAGES; их собирает .github/workflows/images.yml) - иначе ждём;
 #   6. часы: ночное окно 00:45-05:30 Ташкента - выкладка; днём - daytime-decision.sh (30 минут тишины в Платформе, иначе баннер за 15 минут);
 #   7. релиз (infra/ этого sha) скачивается тарболом GitHub, проверяется, что это коммит main; deploy.sh (дамп, миграции, up, smoke);
 #      сбой после переключения - rollback.sh и sha в failed_tags; три сбоя до переключения - sha в failed_tags; баннер снимается всегда.
 # Журнал: state/auto-deploy.log (одна JSON-строка на тик: ts, sha, decision, result, duration_s), состояние: state/auto-deploy.status.json.
-# Токен не нужен, пока репозиторий и пакеты публичные; для приватного - файл $AUTO_DEPLOY_ENV (GITHUB_TOKEN, GHCR_USER, GHCR_TOKEN), chmod 600.
+# GITHUB_TOKEN обязателен (без него тик пишет no-token и ничего не делает): анонимный лимит 60 запросов/час не покрывает даже штатный день.
+# Файл $AUTO_DEPLOY_ENV (GITHUB_TOKEN, при приватных пакетах ещё GHCR_USER, GHCR_TOKEN), chmod 600.
 # Файл читается как source и содержит только присваивания. Скрипт можно подключить через source (тесты переопределяют сетевые функции).
 # shellcheck shell=bash
 set -uo pipefail
@@ -28,7 +31,8 @@ AD_ENV="${AUTO_DEPLOY_ENV:-$RT_ROOT/auto-deploy.env}"
 AD_CACHE="${AUTO_DEPLOY_CACHE:-$RT_STATE/auto-deploy.cache}"
 AD_LOG="$RT_STATE/auto-deploy.log"
 AD_MAX_ATTEMPTS="${AUTO_DEPLOY_MAX_ATTEMPTS:-3}"
-AD_SCAN_LIMIT=8   # сколько коммитов без кэша проверять за тик (лимит API без токена - 60 запросов в час)
+AD_SCAN_LIMIT=8   # сколько незелёных коммитов проверять за тик. Худший тик с токеном: 1 commits + 8 check-runs + до 30 statuses + 1 stand-ok перед баннером
+                  # + 1 compare + 1 stand-ok перед выкладкой + 1 tarball = 43 запроса; 6 тиков в час = 258 из 5000 (304 с токеном лимит не тратит)
 
 AD_SHA="-"; AD_DECISION="-"; AD_RESULT="-"; AD_T0=0; CAND=""; REL=""
 
@@ -58,7 +62,7 @@ journal() {
 }
 
 # ---------- сеть (тесты переопределяют) ----------
-# GitHub API: api_get <путь-внутри-репозитория> - тело в stdout, код 0 при успехе. Условные запросы (ETag) не тратят лимит.
+# GitHub API: api_get <путь-внутри-репозитория> - тело в stdout, код 0 при успехе. Условные запросы (ETag) не тратят лимит только с токеном (GITHUB_TOKEN обязателен); анонимно каждый тратит.
 api_get() {
   local path="$1" key body etagf hdr code etag authf=""
   key="$(printf '%s' "$path" | sha256sum | cut -c1-24)"
@@ -133,7 +137,9 @@ run_deploy() { bash "$REL/infra/deploy/deploy.sh" "$1" >"$RT_STATE/auto-deploy.d
 run_rollback() { bash "$REL/infra/deploy/rollback.sh" >>"$RT_STATE/auto-deploy.deploy.log" 2>&1; }
 notice_script() { echo "${AD_NOTICE_SCRIPT:-$AD_HERE/../../scripts/maintenance-notice.sh}"; }
 banner_set() { MAINTENANCE_DIR="$RT_MAINTENANCE_DIR" bash "$(notice_script)" set "$1" 20 planned >/dev/null; }
-banner_clear() { rm -f "$RT_MAINTENANCE_DIR/maintenance.json" 2>/dev/null || true; }
+banner_clear() { rm -f "$RT_MAINTENANCE_DIR/maintenance.json" "$RT_STATE/auto-deploy.banner" 2>/dev/null || true; }
+# Баннер, поставленный этим скриптом, помечен файлом; при отмене выкладки (снят stand-ok, сбой API) снимаем только свой.
+own_banner_clear() { [[ -f "$RT_STATE/auto-deploy.banner" ]] && banner_clear; return 0; }
 
 # ---------- разбор данных ----------
 # stdout: sha коммитов main, новые сверху
@@ -184,14 +190,19 @@ find_candidate() {
       json="$(api_get "commits/$c/check-runs?check_name=CI%20ok&filter=latest&per_page=100")" || return 1
       if [[ "$(ci_green <<<"$json")" == true ]]; then mkdir -p "$AD_CACHE"; : > "$AD_CACHE/green.$c"; else continue; fi
     fi
-    if [[ ! -f "$AD_CACHE/stand.$c" ]]; then
-      json="$(api_get "commits/$c/statuses?per_page=100")" || return 1
-      if [[ "$(stand_ok <<<"$json")" == true ]]; then mkdir -p "$AD_CACHE"; : > "$AD_CACHE/stand.$c"
-      else [[ -n "$WAIT_STAND" ]] || WAIT_STAND="$c"; continue; fi
-    fi
+    # stand-ok не кэшируется: снятие (failure позже success) должно действовать сразу
+    json="$(api_get "commits/$c/statuses?per_page=100")" || return 1
+    if [[ "$(stand_ok <<<"$json")" != true ]]; then [[ -n "$WAIT_STAND" ]] || WAIT_STAND="$c"; continue; fi
     CAND="$c"; return 0
   done
   return 0
+}
+
+# stand-ok кандидата прямо сейчас, без кэша: 0 - стоит, 1 - снят или не поставлен, 2 - сбой API
+stand_still_ok() {
+  local json
+  json="$(api_get "commits/$1/statuses?per_page=100")" || return 2
+  [[ "$(stand_ok <<<"$json")" == true ]]
 }
 
 attempts_get() {
@@ -206,13 +217,15 @@ run_tick() {
   local cur cand st phase now activity=0 banner=- banner_end=- bw decision at
   now="$(now_epoch)"
   if [[ -e "$RT_STATE/auto-deploy.paused" ]]; then AD_DECISION=paused; AD_RESULT=idle; return 0; fi
+  if [[ -z "${GITHUB_TOKEN:-}" ]]; then AD_DECISION="no-token"; AD_RESULT="нужен GITHUB_TOKEN в auto-deploy.env"; return 0; fi
   if backoff_active; then AD_DECISION="api-backoff"; AD_RESULT=idle; return 0; fi
   cur="$(state_get current_tag | tr -d '[:space:]')"
-  if ! find_candidate "$cur"; then backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0; fi
+  if ! find_candidate "$cur"; then own_banner_clear; backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0; fi
   rm -f "$RT_STATE/auto-deploy.backoff"
   cand="$CAND"
   if [[ -n "$WAIT_STAND" && ( -z "$cand" || "$cand" == "$cur" ) ]]; then
     # есть более новый зелёный sha, но архитектор ещё не принял его на стенде: на прод ничего не идёт
+    own_banner_clear
     AD_SHA="$WAIT_STAND"; AD_DECISION="wait-stand"; AD_RESULT="ждёт проверки на стенде"; return 0
   fi
   if [[ -z "$cand" ]]; then AD_DECISION="no-green-main"; AD_RESULT=idle; return 0; fi
@@ -228,7 +241,7 @@ run_tick() {
   fi
   if grep -qxF "$cand" "$RT_STATE/failed_tags" 2>/dev/null; then AD_DECISION="skip-failed"; AD_RESULT=idle; return 0; fi
   if [[ -n "$cur" ]]; then
-    st="$(api_get "compare/$cur...$cand?per_page=1" | compare_status)" || { backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0; }
+    st="$(api_get "compare/$cur...$cand?per_page=1" | compare_status)" || { own_banner_clear; backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0; }
     case "$st" in
       ahead) ;;
       behind|identical) AD_DECISION="skip-older"; AD_RESULT=idle; return 0 ;;
@@ -239,6 +252,13 @@ run_tick() {
     0) ;;
     1) AD_DECISION="wait-images"; AD_RESULT=idle; return 0 ;;
     *) AD_DECISION="ghcr-unavailable"; AD_RESULT=idle; return 0 ;;
+  esac
+
+  # stand-ok перечитывается заново: его могли снять после того, как кандидат выбран (ожидание образов, прошлый тик с баннером)
+  stand_still_ok "$cand"; case $? in
+    0) ;;
+    1) own_banner_clear; AD_DECISION="stand-revoked"; AD_RESULT="stand-ok снят"; return 0 ;;
+    *) own_banner_clear; backoff_fail; AD_DECISION="api-unavailable"; AD_RESULT=idle; return 0 ;;
   esac
 
   phase="$(bash "$AD_HERE/clock-decision.sh" phase "$now")"
@@ -254,7 +274,7 @@ run_tick() {
   case "$decision" in
     banner)
       at="$(TZ=Asia/Tashkent date -d "@$((now + 900))" +%H:%M)"
-      if banner_set "$at"; then AD_DECISION=banner; AD_RESULT="banner-$at"; else AD_DECISION="banner-failed"; AD_RESULT=error; fi
+      if banner_set "$at"; then : > "$RT_STATE/auto-deploy.banner"; AD_DECISION=banner; AD_RESULT="banner-$at"; else AD_DECISION="banner-failed"; AD_RESULT=error; fi
       return 0 ;;
     wait) AD_DECISION="wait-banner"; AD_RESULT=idle; return 0 ;;
     deploy-now|deploy-due) AD_DECISION="$decision" ;;
@@ -271,6 +291,12 @@ do_deploy() {
     [[ $n -ge $AD_MAX_ATTEMPTS ]] && { mark_failed_tag "$sha"; AD_RESULT="gave-up"; }
     banner_clear; return 0
   fi
+  # последняя проверка перед выкладкой: тарбол мог качаться долго
+  stand_still_ok "$sha"; case $? in
+    0) ;;
+    1) AD_DECISION="stand-revoked"; AD_RESULT="stand-ok снят"; banner_clear; return 0 ;;
+    *) AD_DECISION="api-unavailable"; AD_RESULT=idle; backoff_fail; banner_clear; return 0 ;;
+  esac
   if [[ -n "${GHCR_USER:-}" && -n "${GHCR_TOKEN:-}" ]]; then
     printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null 2>&1 || log "docker login ghcr.io не удался"
   fi

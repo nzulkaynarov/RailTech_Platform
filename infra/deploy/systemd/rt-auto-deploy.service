@@ -10,7 +10,7 @@ ConditionPathExists=/opt/rt/current/infra/deploy/auto-deploy.sh
 Type=oneshot
 User=deploy
 Group=deploy
-# Необязательный файл с GITHUB_TOKEN, GHCR_USER, GHCR_TOKEN (нужен, когда репозиторий станет приватным); chmod 600, владелец deploy
+# Файл с GITHUB_TOKEN (обязателен: без него тик ничего не делает), GHCR_USER, GHCR_TOKEN (последние - для приватных пакетов); chmod 600, владелец deploy
 EnvironmentFile=-/opt/rt/auto-deploy.env
 ExecStart=/bin/bash /opt/rt/current/infra/deploy/auto-deploy.sh
 # Выкладка с миграциями и дампом бывает долгой; зависший тик не должен держать замок бесконечно
