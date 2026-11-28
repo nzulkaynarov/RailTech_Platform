@@ -127,12 +127,25 @@ def run_graph(wf, event, inputs=None, schedule="", outputs=None, results=None):
         if name not in state:
             evaluate(name)
 
+    def ancestors(name):
+        found = set()
+        stack = list(as_list(jobs[name].get("needs")))
+        while stack:
+            n = stack.pop()
+            if n not in found:
+                found.add(n)
+                stack.extend(as_list(jobs[n].get("needs")))
+        return found
+
     def evaluate(name):
         job = jobs[name]
         needs = as_list(job.get("needs"))
         need_res = {n: state[n] for n in needs}
-        all_ok = all(r == "success" for r in need_res.values())
-        any_failed = any(r == "failure" for r in need_res.values())
+        # Неявный success()/failure() в GitHub смотрит всех предков по цепочке needs, не только прямые: пропущенный gate
+        # пропускает и build без своего `if`, хотя его прямой needs (prepare) успешен (регрессия #956).
+        anc_res = {a: state[a] for a in ancestors(name)}
+        all_ok = all(r == "success" for r in anc_res.values())
+        any_failed = any(r == "failure" for r in anc_res.values())
 
         def ctx(path):
             parts = path.split(".")

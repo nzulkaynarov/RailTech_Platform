@@ -242,18 +242,15 @@ run_tick() {
   esac
 
   phase="$(bash "$AD_HERE/clock-decision.sh" phase "$now")"
-  if [[ "$phase" == night ]]; then
-    decision=deploy-now
-  else
-    if [[ -f "$RT_MAINTENANCE_DIR/maintenance.json" ]]; then
-      bw="$(banner_window < "$RT_MAINTENANCE_DIR/maintenance.json")"; read -r banner banner_end <<<"$bw"
-    fi
-    if [[ "$banner" == - ]] || [[ "$now" -gt "$banner_end" ]]; then
-      activity="$(activity_count)" || { AD_DECISION="activity-unknown"; AD_RESULT=idle; return 0; }
-    fi
-    decision="$(bash "$AD_HERE/daytime-decision.sh" deploy 0 "$activity" "$banner" "$now" "$banner_end")" \
-      || { AD_DECISION="decision-error"; AD_RESULT=error; return 0; }
+  # Баннер учитывается в любой фазе (ночью выкладка не ждёт тишины, но уважает уже стоящее предупреждение); активность - только днём.
+  if [[ -f "$RT_MAINTENANCE_DIR/maintenance.json" ]]; then
+    bw="$(banner_window < "$RT_MAINTENANCE_DIR/maintenance.json")"; read -r banner banner_end <<<"$bw"
   fi
+  if [[ "$phase" == day ]] && { [[ "$banner" == - ]] || [[ "$now" -gt "$banner_end" ]]; }; then
+    activity="$(activity_count)" || { AD_DECISION="activity-unknown"; AD_RESULT=idle; return 0; }
+  fi
+  decision="$(bash "$AD_HERE/daytime-decision.sh" deploy 0 "$activity" "$banner" "$now" "$banner_end")" \
+    || { AD_DECISION="decision-error"; AD_RESULT=error; return 0; }
   case "$decision" in
     banner)
       at="$(TZ=Asia/Tashkent date -d "@$((now + 900))" +%H:%M)"
