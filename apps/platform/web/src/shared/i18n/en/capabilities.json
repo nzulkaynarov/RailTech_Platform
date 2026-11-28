@@ -51,6 +51,7 @@
     "title": "Worth a look:",
     "only_decider": "“{{capability}}”: only {{person}} decides, no deputy.",
     "only_decider_deputy": "“{{capability}}”: only {{person}} decides; a deputy is set for absences.",
+    "more": "and {{count}} more",
     "nobody_decides": "“{{capability}}”: nobody decides."
   },
   "card": {

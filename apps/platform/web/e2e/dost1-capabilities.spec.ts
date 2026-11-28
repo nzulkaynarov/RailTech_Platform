@@ -42,11 +42,8 @@ test.describe("Кто что может", () => {
     // подпись и «отвечает за» — отдельно от возможностей
     await expect(table.getByTestId("cap-row-signing")).toBeVisible();
     await expect(table.getByTestId("cap-row-zones")).toBeVisible();
-    // предупреждения по фактам
-    await expect(page.getByTestId("cap-warnings")).toBeVisible();
-
-    // виза без права подписи — не предупреждение
-    await expect(page.getByTestId("cap-warnings")).not.toContainText("нет права подписи");
+    // виза без права подписи — не предупреждение (в демо-данных других предупреждений нет)
+    await expect(page.getByTestId("cap-warnings")).toHaveCount(0);
 
     await page.getByText("Списком", { exact: true }).click();
     await expect(

@@ -593,8 +593,7 @@
       },
       "service": {
         "tag": "Xizmat hisobi",
-        "label": "Xizmat hisobi — jamoada körsatilmasin",
-        "hint": "Bu ro'yxatda qoladi, lekin «Kim nimani qila oladi» jadvalida va hisoblarda yöq."
+        "label": "Xizmat hisobi — jamoada körsatilmasin"
       },
       "access": {
         "erpPending": "Kiriş berilmoqda",

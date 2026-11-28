@@ -593,8 +593,7 @@
       },
       "service": {
         "tag": "Service",
-        "label": "Service account — do not show in the team",
-        "hint": "Stays in this list, but is left out of the “Who can do what” table and the counts."
+        "label": "Service account — do not show in the team"
       },
       "access": {
         "erpPending": "Access being granted",

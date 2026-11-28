@@ -51,6 +51,7 @@
     "title": "Обратите внимание:",
     "only_decider": "«{{capability}}»: решает только {{person}}, замещающего нет.",
     "only_decider_deputy": "«{{capability}}»: решает только {{person}}; на время отсутствия назначен замещающий.",
+    "more": "и ещё {{count}}",
     "nobody_decides": "«{{capability}}»: никто не решает."
   },
   "card": {
