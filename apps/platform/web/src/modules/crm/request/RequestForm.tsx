@@ -32,6 +32,7 @@ import {
 } from "../../../shared/ui/StepSections/StepSections";
 import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { reasonError } from "../common/errors";
+import { calcPath } from "../../erp/calc/api";
 import { clientPath, useRefreshCrm } from "../common/params";
 import { noteContext, noteLanguage, useCallNote, type NoteKind } from "./callNote";
 import {
@@ -182,9 +183,15 @@ function Created({
       ) : null}
       {waits ? <p className="pf-fp-sub">{t("request:done.waits")}</p> : null}
       <div className="pf-crm-actions" data-sheet={mobile}>
-        <LinkButton type="primary" to={clientPath(done.client_id)}>
-          {t("request:done.open")}
-        </LinkButton>
+        {row?.number ? (
+          <LinkButton type="primary" to={calcPath(row.number)}>
+            {t("request:done.open")}
+          </LinkButton>
+        ) : (
+          <LinkButton type="primary" to={clientPath(done.client_id)}>
+            {t("request:done.openClient")}
+          </LinkButton>
+        )}
         <Button onClick={onClose}>{t("clients:card.close")}</Button>
       </div>
     </div>

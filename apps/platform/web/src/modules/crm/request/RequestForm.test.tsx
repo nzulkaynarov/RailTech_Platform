@@ -270,7 +270,7 @@ describe("«Создать заявку» из лида и из клиента (
     expect(within(panel).getByText(String(created?.requests[0]?.number))).toBeVisible();
     expect(within(panel).getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
       "href",
-      `/crm/clients/${String(created?.id)}?panel=open&tab=card`,
+      `/erp/calc/${encodeURIComponent(String(created?.requests[0]?.number))}`,
     );
   });
 

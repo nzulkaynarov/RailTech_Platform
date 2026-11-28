@@ -16279,6 +16279,39 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/contacts/{id}/cabinet-right:
+    patch:
+      tags: [chats]
+      operationId: setContactCabinetRight
+      summary: 'Контакт клиента: «Может подтверждать»'
+      description: >-
+        КЛИЕНТ-1. ERP `PATCH parties/people/{id}/cabinet-right/`: без права контакт в Кабинете только смотрит КП и договор. Право — как на реквизиты контрагента (`crm.clients` или `erp.stock` — полный доступ; в ERP `deal.manage` или `supply.manage`). Изменение пишется в журнал ERP; повтор безопасен.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactRightIn'
+      responses:
+        '200':
+          description: Право сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactRight'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/contacts/{id}/photo:
     get:
       tags: [chats]
@@ -22279,6 +22312,19 @@ components:
           type: string
           format: binary
           description: Квадрат, уже обрезанный клиентом (логотип — квадрат, фото контакта — круг 256x256); PNG, JPEG или WebP до 2 МБ
+    ContactRightIn:
+      type: object
+      additionalProperties: false
+      required: [can_act]
+      properties:
+        can_act: {type: boolean}
+    ContactRight:
+      type: object
+      additionalProperties: false
+      required: [id, can_act]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        can_act: {type: boolean}
     ContactPhoto:
       type: object
       additionalProperties: false
@@ -31645,6 +31691,26 @@ components:
           oneOf:
             - type: integer
             - type: 'null'
+        request:
+          description: >-
+            Заявка, созданная из этого лида (КЛИЕНТ-1): последняя по номеру; `null` — заявки нет или CRM не ответила по сделкам.
+            Пока она есть, карточка показывает «Заявка … создана», а не «Создать заявку».
+          oneOf:
+            - $ref: '#/components/schemas/LeadRequest'
+            - type: 'null'
+
+    LeadRequest:
+      type: object
+      additionalProperties: false
+      required: [deal, number, transfer]
+      properties:
+        deal: {type: integer}
+        number: {type: [string, 'null'], description: 'Номер заявки в ERP; пока ERP её не приняла — null'}
+        transfer:
+          oneOf:
+            - type: string
+              enum: [pending, done, failed]
+            - type: 'null'
 
     LeadOrigin:
       type: object
@@ -32661,13 +32727,14 @@ components:
     CounterpartyCardPerson:
       type: object
       additionalProperties: false
-      required: [id, name, position, is_primary, has_cabinet, has_phone, has_email]
+      required: [id, name, position, is_primary, has_cabinet, can_act, has_phone, has_email]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
         position: {type: [string, 'null']}
         is_primary: {type: boolean, description: 'Главный контакт'}
         has_cabinet: {type: boolean, description: 'Входит в кабинет'}
+        can_act: {type: boolean, description: 'Может подтверждать (КЛИЕНТ-1): принимает КП и договор в Кабинете; иначе только просмотр'}
         has_phone: {type: boolean}
         has_email: {type: boolean}
         photo_url: {type: [string, 'null'], description: 'Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы'}

@@ -177,6 +177,7 @@ import type {
   CompanyBankAccountList,
   CompanyProfile,
   ContactPhoto,
+  ContactRight,
   ContractTemplate,
   ContractTemplateList,
   ConversationCard,
@@ -282,6 +283,7 @@ import type {
   LeadNotice,
   LeadOrigin,
   LeadPage,
+  LeadRequest,
   LegalAcceptancePage,
   LegalEditionDetail,
   LegalEditionList,
@@ -37666,6 +37668,23 @@ export const getGetCrmLeadResponseLeadOriginMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmLeadResponseLeadRequestMock = (
+  overrideResponse: Partial<LeadRequest> = {},
+): LeadRequest => ({
+  ...{
+    deal: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    transfer: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponseMock = (
   overrideResponse: Partial<Extract<LeadCard, object>> = {},
 ): LeadCard => ({
@@ -37768,6 +37787,7 @@ export const getGetCrmLeadResponseMock = (
   ]),
   duplicate_of: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
   partner_application: faker.helpers.arrayElement([faker.number.int(), null]),
+  request: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadRequestMock() }, null]),
   ...overrideResponse,
 });
 
@@ -40878,6 +40898,7 @@ export const getGetCounterpartyResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41010,6 +41031,7 @@ export const getUpdateCounterpartyRequisitesResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41148,6 +41170,7 @@ export const getUploadCounterpartyLogoResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41283,6 +41306,7 @@ export const getDeleteCounterpartyLogoResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41325,6 +41349,14 @@ export const getDeleteCounterpartyLogoResponseMock = (
     { ...getDeleteCounterpartyLogoResponseCounterpartyContractTermMock() },
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getSetContactCabinetRightResponseMock = (
+  overrideResponse: Partial<Extract<ContactRight, object>> = {},
+): ContactRight => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  can_act: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -41443,6 +41475,7 @@ export const getGetCounterpartyByClientResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41578,6 +41611,7 @@ export const getSetCounterpartyDoNotWorkResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41713,6 +41747,7 @@ export const getClearCounterpartyDoNotWorkResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41848,6 +41883,7 @@ export const getSetCounterpartyTestResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -41983,6 +42019,7 @@ export const getClearCounterpartyTestResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -42209,6 +42246,7 @@ export const getSetCounterpartyNotClientResponseMock = (
         ]),
         is_primary: faker.datatype.boolean(),
         has_cabinet: faker.datatype.boolean(),
+        can_act: faker.datatype.boolean(),
         has_phone: faker.datatype.boolean(),
         has_email: faker.datatype.boolean(),
         photo_url: faker.helpers.arrayElement([
@@ -42346,6 +42384,7 @@ export const getSetCounterpartyRoleResponseMock = (
       ]),
       is_primary: faker.datatype.boolean(),
       has_cabinet: faker.datatype.boolean(),
+      can_act: faker.datatype.boolean(),
       has_phone: faker.datatype.boolean(),
       has_email: faker.datatype.boolean(),
       photo_url: faker.helpers.arrayElement([
@@ -57684,6 +57723,30 @@ export const getDeleteCounterpartyLogoMockHandler = (
   );
 };
 
+export const getSetContactCabinetRightMockHandler = (
+  overrideResponse?:
+    | ContactRight
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<ContactRight> | ContactRight),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/people/contacts/:id/cabinet-right",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetContactCabinetRightResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetContactPhotoMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -59680,6 +59743,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetCounterpartyLogoMockHandler(),
   getUploadCounterpartyLogoMockHandler(),
   getDeleteCounterpartyLogoMockHandler(),
+  getSetContactCabinetRightMockHandler(),
   getGetContactPhotoMockHandler(),
   getUploadContactPhotoMockHandler(),
   getDeleteContactPhotoMockHandler(),

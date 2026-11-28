@@ -58,7 +58,9 @@
     "channels": {
       "telegram": "Telegram",
       "phone": "Phone",
-      "email": "Email"
+      "email": "Email",
+      "both": "Email and Telegram",
+      "unknown": "another channel"
     },
     "noChannels": "no contact channels",
     "preferred": "Prefers: {{channel}}",
@@ -206,7 +208,10 @@
       "primary": "primary contact",
       "cabinet": "account",
       "empty": "No people yet.",
-      "contacts": "Phones and email are in People"
+      "contacts": "Phones and email are in People",
+      "canAct": "Can approve",
+      "canActNamed": "Can approve: {{name}}",
+      "canActFailed": "Could not save the right. Try again."
     },
     "accounts": {
       "title": "Bank accounts",

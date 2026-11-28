@@ -17,6 +17,7 @@ import type { LeadMessagePreview } from "./leadMessagePreview";
 import type { LeadNotice } from "./leadNotice";
 import type { LeadOrigin } from "./leadOrigin";
 import type { LeadPlatformStatus } from "./leadPlatformStatus";
+import type { LeadRequest } from "./leadRequest";
 import type { MessageChannel } from "./messageChannel";
 import type { PersonRef } from "./personRef";
 
@@ -62,4 +63,6 @@ export interface LeadCard {
   duplicate_of?: string | null;
   /** Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
   partner_application?: number | null;
+  /** Заявка, созданная из этого лида (КЛИЕНТ-1): последняя по номеру; `null` — заявки нет или CRM не ответила по сделкам. Пока она есть, карточка показывает «Заявка … создана», а не «Создать заявку». */
+  request?: LeadRequest | null;
 }

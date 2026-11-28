@@ -78,9 +78,17 @@ test.describe("Лиды → «Создать заявку» → карточка
     // Б-7: номер, что дальше и «Открыть заявку»
     await expect(panel.getByText("RQ-2026-040")).toBeVisible();
     await expect(panel.getByText("Ждёт резолюции.")).toBeVisible();
-    await panel.getByRole("link", { name: "Открыть заявку" }).click();
+    await expect(panel.getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
+      "href",
+      "/erp/calc/RQ-2026-040",
+    );
 
-    // Карточка клиента: заявка ЗВ с шкалой и тем, что видит клиент — ровно одна
+    // Карточка клиента — из списка контрагентов (ссылка «Открыть заявку» ведёт в расчёт, не в карточку)
+    await spaGoto(page, "/crm/clients");
+    await page
+      .locator('a[href*="clients?client="]')
+      .and(page.getByRole("link", { name: "Открыть карточку ООО Демо-Логистик" }))
+      .click();
     await expect(page.getByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
     await expect(panel.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
@@ -166,7 +174,15 @@ test(
     await expect(sheet.getByText("Ждёт резолюции.")).toBeVisible();
     await settledScreenshot(page, "request-done");
     await expectNoViolations(page, "заявка создана 390");
-    await sheet.getByRole("link", { name: "Открыть заявку" }).click();
+    await expect(sheet.getByRole("link", { name: "Открыть заявку" })).toHaveAttribute(
+      "href",
+      "/erp/calc/RQ-2026-040",
+    );
+    await spaGoto(page, "/crm/clients");
+    await page
+      .locator('a[href*="clients?client="]')
+      .and(page.getByRole("link", { name: "Открыть карточку ООО Демо-Логистик" }))
+      .click();
     const card = page.getByRole("dialog", { name: "Карточка контрагента" });
     await expect(card.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     await expect(card.getByText("RQ-2026-040")).toBeVisible();

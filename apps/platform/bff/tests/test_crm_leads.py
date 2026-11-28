@@ -371,3 +371,20 @@ async def test_create_lead_with_a_missing_mail_domain_marks_the_email_field(
         ["email"],
         True,
     )
+
+
+async def test_card_shows_the_request_created_from_the_lead(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """КЛИЕНТ-1: после «Создать заявку» карточка лида знает свою заявку: номер и ход передачи."""
+    await web.login(["DIRECTOR"])
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/leads/{lead}", "get").json()
+    assert card["request"] == {"deal": 79, "number": "ПР-2026-007", "transfer": "done"}
+
+    crm.answer("GET", "deals", 200, [])
+    empty = (await web.client.get(f"{BASE}/L-2041")).json()
+    assert empty["request"] is None, "заявки нет — «Создать заявку» остаётся"
+
+    crm.answer("GET", "deals", 503, {"code": "unavailable"})
+    soft = (await web.client.get(f"{BASE}/L-2041")).json()
+    assert soft["request"] is None, "CRM не ответила по сделкам — карточка открывается без заявки"
