@@ -553,7 +553,7 @@
     "scan_invalid": "Fayl skanga öxşamaydi: 20 MB gaça PDF yoki rasm kerak.",
     "scan_required": "Skan faylini tanlang.",
     "no_file_provided": "Skan faylini tanlang.",
-    "forbidden": "Bu amal sizning rolingizga ruxsat etilmagan.",
+    "forbidden": "Bu amal uçun imkoniyat yetmeydi. Uni xodimlarni yuritadigan odamlar beradi; sizda nima bor — Profil, «Mening imkoniyatlarim».",
     "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta urinib köring.",
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib köring.",

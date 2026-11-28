@@ -439,8 +439,12 @@ async def test_setup_hint_names_the_director_only_when_the_name_matches_exactly_
     assert (await client.get("/api/v1/signing/setup-hint", headers=headers)).json()[
         "director"
     ] is None  # двое — не угадываем
-    await issue(client, staff["admin"], **CHARTER)
+    first = await issue(client, staff["admin"], **CHARTER)
     assert (await client.get("/api/v1/signing/setup-hint", headers=headers)).json()["has_authorities"] is True
+    # ПОДПИСЬ-1: отозванное полномочие подписать не даёт — шаг первого запуска снова не сделан
+    revoke = await client.post(f"{URL}/{first['id']}/revoke", json={"reason": "Ошибка"}, headers=headers)
+    assert revoke.status_code == 200, revoke.text
+    assert (await client.get("/api/v1/signing/setup-hint", headers=headers)).json()["has_authorities"] is False
 
 
 def test_today_is_the_company_date() -> None:

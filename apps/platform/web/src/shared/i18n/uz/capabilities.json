@@ -118,6 +118,8 @@
     "ask": "Imkoniyat söraş",
     "askBody": "«{{name}}» imkoniyati kerak: {{level}}.",
     "grantors": "Imkoniyatlarni beradiganlar: {{names}}.",
-    "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing."
+    "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing.",
+    "action": "Sizda bu amalga ruxsat yöq.",
+    "actionNeed": "«{{name}}» imkoniyati kerak: {{level}}."
   }
 }

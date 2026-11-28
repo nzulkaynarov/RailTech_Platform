@@ -14,7 +14,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
@@ -401,11 +401,24 @@ async def detail(session: AsyncSession, authority_id: uuid.UUID) -> SigningAutho
 
 
 async def setup_hint(session: AsyncSession) -> SigningSetupHint:
-    """Первый запуск: есть ли хоть одно полномочие, кто подписывает по уставу по бланку компании и кто это в проекции.
+    """Первый запуск: есть ли действующее полномочие, кто подписывает по уставу по бланку компании и кто это в проекции.
+
+    «Есть» — по реестру на сегодня (день компании): отозванное, не начавшееся и истёкшее полномочие подписать не даёт,
+    шаг «Права подписи» остаётся несделанным (ПОДПИСЬ-1; прежде считалась любая строка, и отозванное закрывало шаг).
 
     Директор «известен», если подписант бланка совпадает по ФИО (без регистра и лишних пробелов) ровно с одним активным
     сотрудником; иначе человека выбирает администратор — код не угадывает."""
-    exists = (await session.execute(select(func.count()).select_from(SigningAuthority))).scalar_one() > 0
+    day = today()
+    effective = (
+        select(func.count())
+        .select_from(SigningAuthority)
+        .where(
+            SigningAuthority.revoked_at.is_(None),
+            SigningAuthority.valid_from <= day,
+            or_(SigningAuthority.valid_to.is_(None), SigningAuthority.valid_to >= day),
+        )
+    )
+    exists = (await session.execute(effective)).scalar_one() > 0
     letterhead = (await session.execute(select(Letterhead))).scalar_one_or_none()
     name = (letterhead.signatory_name if letterhead else "").strip() or None
     position = (letterhead.signatory_position if letterhead else "").strip() or None

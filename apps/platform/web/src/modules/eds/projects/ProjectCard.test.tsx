@@ -184,6 +184,57 @@ describe("Проект: карточка", () => {
     expect(within(panel).queryByRole("button", { name: "Клиент отклонил договор…" })).toBeNull();
   });
 
+  it("ПОДПИСЬ-1: на странице «Только чтение» «На подпись» закрыта, причина названа словами", async () => {
+    signIn("manager@demo.example");
+    renderAt(PR(105));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    const button = await within(panel).findByRole("button", { name: "На подпись" });
+    expect(button).toBeDisabled();
+    // причина — в подписи обёртки: что нужно и кто выдаёт; не молчаливая кнопка
+    const wrapper = button.closest("span[aria-label]");
+    expect(wrapper?.getAttribute("aria-label")).toMatch(/возможност|нет права/i);
+  });
+
+  it("ПОДПИСЬ-1: отказ 403 по «На подпись» показан сообщением со словами, а не молчит", async () => {
+    signIn("accountant@demo.example");
+    server.use(
+      http.post("*/eds/projects/:ref/signing", () =>
+        HttpResponse.json(
+          {
+            code: "FORBIDDEN",
+            message: "Раздел или действие не положены вашей роли.",
+            source: "bff",
+          },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderAt(PR(105));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    await click(panel, "На подпись");
+    expect(
+      await screen.findByText(/Не удалось отправить на подпись: Не хватает возможности/),
+    ).toBeVisible();
+  });
+
+  it("ПОДПИСЬ-1: отказ 409 («документ уже в другом статусе») тоже назван", async () => {
+    signIn("accountant@demo.example");
+    server.use(
+      http.post("*/eds/projects/:ref/signing", () =>
+        HttpResponse.json(
+          { code: "CONFLICT", message: "conflict", source: "erp" },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderAt(PR(105));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    await click(panel, "На подпись");
+    expect(
+      await screen.findByText(/Не удалось отправить на подпись: Договор уже в другом статусе/),
+    ).toBeVisible();
+  });
+
   it("Х-8: у компании проекта «Не работать» — полоса с причиной, а договор в работе остаётся на месте", async () => {
     resetMarks();
     setMark("2001", "АО «Демо-Транс»", {
