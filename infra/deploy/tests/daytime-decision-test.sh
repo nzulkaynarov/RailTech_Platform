@@ -29,10 +29,10 @@ expect wait       "ночь: баннер на будущее время, акт
 expect wait       "ночь: баннер на 14 минут вперёд"                     deploy 0 0 $((now + 840)) $now $((now + 840 + 1200))
 expect deploy-due "ночь: время баннера наступило"                       deploy 0 0 $now $now $((now + 1200))
 expect deploy-now "ночь: баннер давно отыграл"                          deploy 0 0 $((now - 4000)) $now $((now - 4000 + 1200))
-# gate передаёт в решение реальный баннер в любой фазе (не подменяет его на «-» ночью)
-wf="$here/../../../.github/workflows/deploy.yml"
-grep -q 'daytime-decision.sh "\$should" "\$failed" "\$activity" "\$banner" "\$now" "\$banner_end"' "$wf" \
-  || { echo "FAIL: gate должен передавать в daytime-decision.sh реальные \$banner и \$banner_end"; exit 1; }
+# серверный таймер передаёт в решение реальный баннер в любой фазе (не подменяет его на «-» ночью)
+wf="$here/../auto-deploy.sh"
+grep -q 'daytime-decision.sh" deploy 0 "\$activity" "\$banner" "\$now" "\$banner_end"' "$wf" \
+  || { echo "FAIL: auto-deploy.sh должен передавать в daytime-decision.sh реальные \$banner и \$banner_end"; exit 1; }
 ! grep -q 'dbanner' "$wf" || { echo "FAIL: ночью баннер не подменяется (dbanner)"; exit 1; }
 expect skip       "sha уже выложен"                    skip-same 0 0 - $now
 expect skip       "sha старше выложенного"             skip-older 0 0 - $now
