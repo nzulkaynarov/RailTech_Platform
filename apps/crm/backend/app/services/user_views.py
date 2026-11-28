@@ -30,6 +30,7 @@ class UserView:
     platform_role_ids: list[int] = field(default_factory=list)
     platform_role_refs: list[RoleRef] = field(default_factory=list)
     position: str | None = None
+    is_service: bool = False
     language: str = "ru"
     erp_sync: str = "not_applicable"
     erp_sync_error: str | None = None
@@ -66,6 +67,7 @@ class UserPatch:
     platform_role_ids: Sequence[int] | None = None
     position: str | None = None  # `""` очищает
     language: str | None = None  # ru|uz|en (CRM-01b); None — не менять
+    is_service: bool | None = None  # служебная учётная запись; None — не менять
 
 
 def view_of(
@@ -95,6 +97,7 @@ def view_of(
         platform_role_ids=[r.id for r in platform],
         platform_role_refs=role_refs(platform),
         position=user.position,
+        is_service=user.is_service,
         language=user.language,
         erp_sync=erp_sync_status(
             has_erp="erp" in access,
@@ -146,5 +149,6 @@ def audit_of(view: UserView) -> dict[str, object]:
         "platform_role_ids": view.platform_role_ids,
         "platform_role_names": [r.name for r in view.platform_role_refs],
         "position": view.position,
+        "is_service": view.is_service,
         "language": view.language,
     }

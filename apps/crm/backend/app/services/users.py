@@ -586,6 +586,8 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.position = patch.position or None
     if patch.language is not None:
         user.language = patch.language
+    if patch.is_service is not None:
+        user.is_service = patch.is_service
 
 
 async def close_sessions(session: AsyncSession, user_id: int) -> datetime:

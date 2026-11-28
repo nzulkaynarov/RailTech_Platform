@@ -14,6 +14,8 @@ export interface EmployeeUpdate {
   /** @maxLength 120 */
   position?: string;
   is_active?: boolean;
+  /** Служебная учётная запись (ДОСТ-1п) — не показывать в команде */
+  is_service?: boolean;
   /**
    * Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
    * @pattern ^[1-9][0-9]*$

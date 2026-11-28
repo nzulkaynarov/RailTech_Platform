@@ -7027,6 +7027,10 @@ components:
         is_active:
           title: Is Active
           type: boolean
+        is_service:
+          default: false
+          title: Is Service
+          type: boolean
         language:
           default: ru
           enum:
@@ -11283,6 +11287,10 @@ components:
         is_active:
           title: Is Active
           type: boolean
+        is_service:
+          default: false
+          title: Is Service
+          type: boolean
         language:
           default: ru
           enum:
@@ -11435,6 +11443,11 @@ components:
           - type: boolean
           - type: 'null'
           title: Is Active
+        is_service:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Service
         language:
           anyOf:
           - enum:
@@ -20015,6 +20028,8 @@ paths:
   /api/v1/team/granters:
     get:
       description: 'Кто выдаёт возможности: действующие сотрудники с `admin` на изменение (ДОСТ-1).
+
+        Служебных учётных записей в списке нет.
 
 
         Любому сотруднику: имя и должность тех, к кому идти; ролей, почты и телефона нет.'

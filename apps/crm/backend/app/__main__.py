@@ -15,6 +15,7 @@
 - `staff-phones-check` — отчёт: телефоны сотрудников, не приводимые к E.164 (только чтение);
 - `republish-clients [--client-id N] [--dry-run]` — снимки клиентов (`client.updated`) на шину;
 - `reapply-known-contacts [--apply] [--lead-id N]` — лиды известных контактов, без флага счёт;
+- `mark-service-users EMAIL... [--unmark] [--apply]` — служебные записи, без флага счёт;
 - `republish-contacts [--apply]` — контакты переданных клиентов (`contact.updated`), без флага счёт;
 - `republish-ai-policy` — политика защиты данных для ИИ на шину заново (воркер делает сам);
 - `renumber-latin MAPPING [--apply]` — копии номеров CRM в латиницу по маппингу (СЦ-5);
@@ -182,6 +183,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     reapply_known.add_argument("--apply", action="store_true", help="записать (без флага — счёт)")
     reapply_known.add_argument("--lead-id", type=int, help="только этот лид")
+    mark_service = commands.add_parser(
+        "mark-service-users",
+        help="пометить служебные учётные записи по почте (по умолчанию счёт, ничего не пишет)",
+    )
+    mark_service.add_argument("emails", nargs="+", help="почта учётной записи")
+    mark_service.add_argument("--unmark", action="store_true", help="снять пометку")
+    mark_service.add_argument("--apply", action="store_true", help="записать (без флага — счёт)")
     republish_contacts = commands.add_parser(
         "republish-contacts",
         help="переопубликовать контакты переданных в ERP клиентов (по умолчанию только счёт)",
@@ -269,6 +277,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import reapply_known_contacts
 
         return await reapply_known_contacts.run(args)
+    if args.command == "mark-service-users":
+        from app.cli import mark_service_users
+
+        return await mark_service_users.run(args)
     if args.command == "republish-contacts":
         from app.cli import republish_contacts
 

@@ -11,7 +11,7 @@ const PAGES = [
   ["numbering", "/admin/numbering", "Нумерация"],
   ["company", "/admin/company", "Реквизиты и бланк"],
   ["sales", "/admin/sales", "Продажи"],
-  ["org", "/admin/org?view=list", "Сотрудники и возможности"],
+  ["org", "/admin/org?view=list", "Сотрудники"],
 ] as const;
 
 for (const width of WIDTHS) {

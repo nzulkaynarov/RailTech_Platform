@@ -11,7 +11,7 @@ import { MoneyText } from "../../shared/ui/MoneyText";
 import { LevelTag } from "./LevelTag";
 import { useKindNames } from "./useKindNames";
 import { WarningsList } from "./WarningsList";
-import { pickText } from "./model";
+import { pickText, stepLabel } from "./model";
 
 import "./capabilities.css";
 
@@ -141,7 +141,7 @@ function MatrixTable({
                 <div role="columnheader" className="pf-cap-cell pf-cap-groupcell">
                   {pickText(group.name, language)}
                   <span className="pf-cap-group-step pf-hint">
-                    {pickText(group.step, language)}
+                    {stepLabel(group, language)}
                   </span>
                 </div>
               </div>

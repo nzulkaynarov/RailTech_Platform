@@ -24,13 +24,13 @@ afterEach(() => {
 });
 
 describe("Кто что может", () => {
-  it("«Сотрудники и возможности» открываются таблицей: шаги сделки, уровни, подпись и «отвечает за»", async () => {
+  it("«Кто что может» — таблица: шаги сделки, уровни, подпись и «отвечает за»", async () => {
     signInAs("admin@demo.example");
-    renderApp("/admin/org");
+    renderApp("/admin/org?view=matrix");
 
     const table = await screen.findByRole("table", { name: "Что может каждый сотрудник" });
     expect(
-      screen.getByRole("heading", { level: 1, name: "Сотрудники и возможности" }),
+      screen.getByRole("heading", { level: 1, name: "Сотрудники" }),
     ).toBeVisible();
     for (const group of [
       "Лиды и клиенты",
@@ -52,12 +52,9 @@ describe("Кто что может", () => {
     expect(within(table).queryByRole("button")).toBeNull();
   });
 
-  it("переключатель «Списком» возвращает прежний список, имя в таблице открывает карточку", async () => {
+  it("страница открывается списком; «Кто что может» — вторая вкладка, имя в таблице открывает карточку", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");
-    await screen.findByRole("table", { name: "Что может каждый сотрудник" });
-
-    fireEvent.click(screen.getByRole("radio", { name: "Списком" }));
     expect(
       await screen.findByRole("link", { name: "Открыть карточку: Демо Менеджеров" }),
     ).toBeVisible();
@@ -77,7 +74,7 @@ describe("Кто что может", () => {
 
   it("директор видит таблицу без кнопки «Пригласить»", async () => {
     signInAs("director@demo.example");
-    renderApp("/admin/org");
+    renderApp("/admin/org?view=matrix");
     await screen.findByRole("table", { name: "Что может каждый сотрудник" });
     expect(screen.queryByRole("button", { name: "Пригласить сотрудника" })).toBeNull();
   });
@@ -89,8 +86,10 @@ describe("Что может этот человек", () => {
     renderApp("/admin/org?employee=u-demo-manager&panel=open&view=list");
 
     const card = await screen.findByTestId("cap-card");
-    expect(within(card).getByText("Что делает")).toBeVisible();
-    expect(within(card).getByText("Чего не может")).toBeVisible();
+    // пока нет сводки по областям, абзацев «Что делает / Что решает» нет; предупреждений в карточке нет
+    expect(within(card).queryByText("Что делает")).toBeNull();
+    expect(within(card).queryByText("Что решает")).toBeNull();
+    expect(within(card).queryByTestId("cap-warnings")).toBeNull();
     const contract = card.querySelector('[data-capability="contract"]') as HTMLElement;
     expect(within(contract).getByText("Смотреть")).toBeVisible();
     fireEvent.click(within(contract).getByRole("button"));
@@ -122,7 +121,8 @@ describe("Мои возможности", () => {
     renderApp("/me?part=capabilities");
 
     const mine = await screen.findByTestId("my-capabilities");
-    expect(within(mine).getByText("Что я делаю")).toBeVisible();
+    expect(within(mine).queryByText("Что я делаю")).toBeNull();
+    expect(within(mine).queryByText("Что я решаю")).toBeNull();
     const leads = mine.querySelector('[data-capability="leads"]') as HTMLElement;
     expect(within(leads).getByText("Работать")).toBeVisible();
     const staff = mine.querySelector('[data-capability="staff"]') as HTMLElement;

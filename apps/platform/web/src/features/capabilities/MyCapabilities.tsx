@@ -8,7 +8,6 @@ import { useGetMyCapabilities } from "../../shared/api/generated/platform-bff";
 import { CapabilityRows } from "./CapabilityRows";
 import { DeputyBlock, SigningBlock, ZonesBlock } from "./PersonBlocks";
 import { pickText } from "./model";
-import { summaryLines } from "./summary";
 
 import "./capabilities.css";
 
@@ -41,24 +40,11 @@ export function MyCapabilities() {
     );
   }
   const data = query.data;
-  const lines = summaryLines(data, i18n.language);
   return (
     <div data-testid="my-capabilities">
       <p className="pf-hint" style={{ margin: "0 0 12px" }}>
         {t("mine.lead")}
       </p>
-      {lines.length > 0 ? (
-        <dl className="pf-cap-summary">
-          {lines.map((line) => (
-            <div key={line.key}>
-              <dt>{t(`mine.summary.${line.key}`)}</dt>
-              <dd>{line.text}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="pf-hint">{t("card.nothing")}</p>
-      )}
       <CapabilityRows data={data} />
       <ZonesBlock title={t("mine.responsibleTitle")} known={data.zones_known} items={data.zones} />
       <SigningBlock

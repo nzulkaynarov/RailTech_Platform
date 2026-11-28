@@ -48,11 +48,10 @@
     "onlyMark": "the only one who decides"
   },
   "warnings": {
-    "title": "Worth a look",
+    "title": "Worth a look:",
     "only_decider": "“{{capability}}”: only {{person}} decides, no deputy.",
     "only_decider_deputy": "“{{capability}}”: only {{person}} decides; a deputy is set for absences.",
-    "nobody_decides": "“{{capability}}”: nobody decides.",
-    "visa_without_signing": "{{person}} signs off contracts but has no signing authority."
+    "nobody_decides": "“{{capability}}”: nobody decides."
   },
   "card": {
     "heading": "What this person can do",

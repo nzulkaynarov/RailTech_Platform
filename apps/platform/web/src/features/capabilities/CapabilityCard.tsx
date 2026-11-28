@@ -4,13 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useGetEmployeeCapabilities } from "../../shared/api/generated/platform-bff";
 import type { EmployeeCapabilities } from "../../shared/api/generated/model";
 import { CapabilityRows } from "./CapabilityRows";
-import { WarningsList } from "./WarningsList";
 import { DeputyBlock, SigningBlock, ZonesBlock } from "./PersonBlocks";
 import { pickText } from "./model";
-import { summaryLines } from "./summary";
-
-const namesOf = (data: EmployeeCapabilities) =>
-  Object.fromEntries(data.groups.flatMap((group) => group.rows.map((row) => [row.key, row.name])));
 
 import "./capabilities.css";
 
@@ -49,7 +44,6 @@ export function CapabilityCard({
     );
   }
   const data: EmployeeCapabilities = query.data;
-  const lines = summaryLines(data, i18n.language);
   return (
     <section className="pf-cap-card" aria-labelledby="pf-cap-card-title" data-testid="cap-card">
       <h3 id="pf-cap-card-title" style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600 }}>
@@ -58,19 +52,6 @@ export function CapabilityCard({
       <p className="pf-hint" style={{ margin: "0 0 12px" }}>
         {t("card.positionNote")}
       </p>
-      {lines.length > 0 ? (
-        <dl className="pf-cap-summary" data-testid="cap-summary">
-          {lines.map((line) => (
-            <div key={line.key}>
-              <dt>{t(`card.summary.${line.key}`)}</dt>
-              <dd>{line.text}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="pf-hint">{t("card.nothing")}</p>
-      )}
-      <WarningsList warnings={data.warnings} names={namesOf(data)} />
       <CapabilityRows data={data} showOthers />
       <ZonesBlock title={t("card.responsibleTitle")} known={data.zones_known} items={data.zones} />
       <SigningBlock

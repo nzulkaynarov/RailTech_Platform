@@ -270,7 +270,7 @@ describe("Баннер настройки и мастер", () => {
     cleanup();
     renderApp("/admin/org");
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Сотрудники и возможности" }),
+      await screen.findByRole("heading", { level: 1, name: "Сотрудники" }),
     ).toBeVisible();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -329,7 +329,7 @@ describe("Баннер настройки и мастер", () => {
     renderApp("/admin/org");
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Сотрудники и возможности" }),
+      await screen.findByRole("heading", { level: 1, name: "Сотрудники" }),
     ).toBeVisible();
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();

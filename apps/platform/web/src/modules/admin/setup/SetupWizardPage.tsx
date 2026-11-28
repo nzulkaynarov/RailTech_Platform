@@ -26,7 +26,8 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusStrip } from "../../../shared/ui/StatusStrip";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { isReady } from "../../../entities/status/facts";
-import { useGetSetupCabinet } from "../../../shared/api/generated/platform-bff";
+import { useGetSetupCabinet, useListEmployees } from "../../../shared/api/generated/platform-bff";
+import { isSystemAdmin } from "../../../entities/role/roles";
 import { CabinetAddress } from "../integrations/CabinetAddress";
 import { CompanyStep } from "./CompanyStep";
 import { ConnectionsStep } from "./ConnectionsStep";
@@ -140,6 +141,18 @@ function SetupWizard() {
   const editable = canEdit(me, "admin");
   const title = t("admin.setup.title");
   useDocumentTitle(title);
+  // «Администратор создан: …» называет настоящего администратора: служебная учётная запись (ДОСТ-1п) им не считается.
+  const staff = useListEmployees(undefined, { query: { staleTime: 60_000 } });
+  const adminName = (() => {
+    const items = staff.data?.items ?? [];
+    const self = items.find((employee) => employee.id === me.id);
+    if (!self || !self.is_service) return me.name;
+    const real = items.find(
+      (employee) =>
+        !employee.is_service && employee.status !== "disabled" && employee.roles.some(isSystemAdmin),
+    );
+    return real?.name ?? me.name;
+  })();
   const setup = useSetupProgress(editable, { fresh: true });
   const checklist = setup.checklist;
   const bannerHidden = useBannerHidden(me.id);
@@ -254,7 +267,7 @@ function SetupWizard() {
             </StatusTag>
           }
         >
-          <p style={{ margin: 0 }}>{t("admin.setup.adminDone", { name: me.name })}</p>
+          <p style={{ margin: 0 }}>{t("admin.setup.adminDone", { name: adminName })}</p>
         </StepCard>
         <StepCard
           title={t("admin.setup.erpTitle")}

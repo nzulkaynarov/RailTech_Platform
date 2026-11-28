@@ -224,3 +224,16 @@ async def test_granters_are_open_to_everyone_and_only_name_the_holders_of_staff_
 
     assert names(response) == ["Админ Админов"]
     assert set(response.json()[0]) <= {"id", "full_name", "initials", "position"}
+
+
+async def test_a_service_account_is_not_named_among_the_granters(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], team: dict[str, int]
+) -> None:
+    """ДОСТ-1п: служебная запись (тестовый вход) с правом выдачи не попадает в «к кому идти»."""
+    service = await staff(sessions, "svc@railtech.uz", "Служебный Проход", ["ADMIN"])
+    headers = login(client, "man@railtech.uz", PASSWORD)
+    assert "Служебный Проход" in names(client.get("/api/v1/team/granters", headers=headers))
+
+    await UserService(sessions).update(Actor.system(), service, UserPatch(is_service=True))
+
+    assert names(client.get("/api/v1/team/granters", headers=headers)) == ["Админ Админов"]

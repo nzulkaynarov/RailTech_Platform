@@ -48,11 +48,10 @@
     "onlyMark": "qaror qiladigan yagona odam"
   },
   "warnings": {
-    "title": "Nimaga itibor berişga arziydi",
+    "title": "Itibor bering:",
     "only_decider": "«{{capability}}»: faqat {{person}} qaror qiladi, almaştiruvçi yöq.",
     "only_decider_deputy": "«{{capability}}»: faqat {{person}} qaror qiladi; yöqligida almaştiruvçi tayinlangan.",
-    "nobody_decides": "«{{capability}}»: heç kim qaror qilmaydi.",
-    "visa_without_signing": "{{person}}da şartnomalar böyiça viza bor, lekin imzo huquqi yöq."
+    "nobody_decides": "«{{capability}}»: heç kim qaror qilmaydi."
   },
   "card": {
     "heading": "Bu odam nimani qila oladi",

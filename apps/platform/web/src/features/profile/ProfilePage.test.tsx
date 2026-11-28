@@ -51,13 +51,14 @@ function block(name: string): HTMLElement {
 }
 
 describe("Профиль /me", () => {
-  it("страница, а не окно: данные, роли словами, нет «Доступ: CRM · ERP»", async () => {
+  it("страница, а не окно: данные, ролей среди них нет (они на вкладке «Мои возможности»), нет «Доступ: CRM · ERP»", async () => {
     const page = await openProfile();
     const data = await within(page).findByRole("region", { name: "Личные данные" });
 
     expect(within(data).getByText("manager@demo.example")).toBeInTheDocument();
     expect(within(data).getByText("Менеджер по продажам")).toBeInTheDocument();
-    expect(within(data).getByText("Менеджер")).toBeInTheDocument(); // роль словами
+    expect(within(data).queryByText("Менеджер")).toBeNull(); // ролей и пояснения про роли здесь нет
+    expect(within(data).queryByText(/Роли определяют/)).toBeNull();
     expect(page).not.toHaveTextContent("Доступ");
     expect(page).not.toHaveTextContent("CRM · ERP");
     expect(screen.queryByRole("dialog")).toBeNull();

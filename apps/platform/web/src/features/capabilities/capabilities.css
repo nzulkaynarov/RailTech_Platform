@@ -238,3 +238,10 @@
   color: var(--rt-color-text-secondary);
   font-size: 12px;
 }
+
+.pf-cap-warn {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--rt-color-text-secondary);
+}

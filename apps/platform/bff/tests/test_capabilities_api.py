@@ -48,6 +48,7 @@ def world(be: Backends) -> dict[str, Any]:
         12: crm_user(12, "Борис Директоров", ("DIRECTOR",), position="Директор"),
         13: crm_user(13, "Вера Бухгалтерова", ("ACCOUNTANT",)),
         14: crm_user(14, "Глеб Отключённый", ("MANAGER",), is_active=False),
+        15: crm_user(15, "Служебный Проходной", ("ADMIN", "DIRECTOR"), is_service=True),
     }
     be.router.get(f"{CRM_URL}/api/v1/users").mock(
         side_effect=lambda r: httpx.Response(200, json=[with_refs(u) for u in users.values()])
@@ -92,6 +93,7 @@ async def test_matrix_is_the_sum_of_roles_per_active_employee(
     body = response.json()
     by_name = {e["person"]["name"]: e for e in body["employees"]}
     assert "Глеб Отключённый" not in by_name  # отключённого в таблице нет
+    assert "Служебный Проходной" not in by_name  # служебной записи в команде нет
     assert by_name["Анна Демова"]["cells"]["leads"] == {"level": "work", "partial": False}
     assert by_name["Вера Бухгалтерова"]["cells"]["payments"]["level"] == "decide"
     assert by_name["Анна Демова"]["cells"]["staff"]["level"] == "none"
@@ -107,7 +109,7 @@ async def test_matrix_is_the_sum_of_roles_per_active_employee(
     assert by_name["Вера Бухгалтерова"]["zones"][0]["role"] == "responsible"
     codes = {(w["code"], w.get("capability")) for w in body["warnings"]}
     assert ("only_decider", "payments") in codes
-    assert ("visa_without_signing", "contract") in codes  # бухгалтер визирует, подписи нет
+    assert not [c for c in codes if c[0] == "visa_without_signing"]  # визу без подписи не ругаем
     assert body["groups"][0]["key"] == "leads_clients"
 
 
@@ -132,7 +134,7 @@ async def test_director_reads_the_matrix_but_the_signing_register_is_unknown_to_
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["signing_known"] is False  # «не известно», а не «нет права подписи»
-    assert not [w for w in body["warnings"] if w["code"] == "visa_without_signing"]
+    assert all(w["code"] in ("only_decider", "nobody_decides") for w in body["warnings"])
 
 
 async def test_the_matrix_is_closed_to_those_without_the_admin_section(
@@ -252,3 +254,15 @@ async def test_my_capabilities_say_nothing_false_when_own_reads_fail(
     assert body["zones_known"] is False
     assert "grantors" not in body  # «не известно», а не «выдавать некому»
     assert "deputy" not in body
+
+
+async def test_a_service_account_does_not_count_as_a_second_decider(
+    web: Web, world: dict[str, Any], eds: EdsFake
+) -> None:
+    """Служебная запись с широкими ролями не отнимает у человека «единственный, кто решает»."""
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get("/api/v1/admin/capabilities")).json()
+
+    only = {(w["capability"], w["person"]["name"]) for w in body["warnings"] if "person" in w}
+    assert ("payments", "Вера Бухгалтерова") in only

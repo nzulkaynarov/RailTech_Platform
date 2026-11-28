@@ -382,7 +382,7 @@
     "title": "Settings",
     "sections": {
       "overview": "Status",
-      "org": "Staff and capabilities",
+      "org": "Employees",
       "roles": "Roles & permissions",
       "zones": "Responsibility zones",
       "signing": "Signing authority",
@@ -590,6 +590,11 @@
         "active": "Active",
         "invited": "Invited",
         "disabled": "Disabled"
+      },
+      "service": {
+        "tag": "Service",
+        "label": "Service account — do not show in the team",
+        "hint": "Stays in this list, but is left out of the “Who can do what” table and the counts."
       },
       "access": {
         "erpPending": "Access being granted",

@@ -93,6 +93,8 @@ class User(TimestampMixin, Base):
     # набор вычисляет `user_roles`, `platform_access` и права ERP (`domain/platform_roles.py`).
     # Должность текстом (SPEC-v3 §4.3), ≤ 120 символов.
     position: Mapped[str | None] = mapped_column(String(120))
+    # Служебная учётная запись (ДОСТ-1п): тестовая или технический вход; в командных экранах её нет.
+    is_service: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # Язык интерфейса сотрудника ru|uz|en (CRM-01b); меняет сам себе или админ.
     language: Mapped[str] = mapped_column(String(2), server_default=sql("'ru'"))
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает

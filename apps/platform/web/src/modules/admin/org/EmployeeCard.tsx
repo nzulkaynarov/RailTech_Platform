@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CapabilityCard } from "../../../features/capabilities/CapabilityCard";
 import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
 import { EmployeeDeputy } from "../../../features/assign-deputy/EmployeeDeputy";
+import { ServiceAccountToggle } from "../../../features/assign-role/ServiceAccountToggle";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { RetryErpSync } from "../../../features/assign-role/RetryErpSync";
 import { ResetPassword } from "../../../features/reset-password/ResetPassword";
@@ -15,6 +16,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmployeeStatusTag, RoleTags, TelegramText } from "./EmployeeCells";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { PersonAvatar } from "../../../shared/ui/EntityCell";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 
 export interface EmployeeCardProps {
   employee: Employee;
@@ -42,6 +44,12 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             {employee.name}
           </h3>
           <EmployeeStatusTag status={employee.status} />
+          {employee.is_service ? (
+            <>
+              {" "}
+              <StatusTag tone="default">{t("admin.org.service.tag")}</StatusTag>
+            </>
+          ) : null}
         </div>
       </div>
       <DefinitionList
@@ -107,6 +115,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
               otherActiveAdmins={otherActiveAdmins}
             />
           </div>
+          <ServiceAccountToggle employee={employee} />
           <EmployeeDeputy employee={employee} selfId={selfId} />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
           <ResetPassword employee={employee} selfId={selfId} />

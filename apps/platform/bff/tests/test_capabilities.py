@@ -228,14 +228,11 @@ def test_nobody_decides_when_no_one_holds_the_level() -> None:
     assert ("nobody_decides", "quote") in found
 
 
-def test_visa_without_signing_only_when_the_register_could_be_read() -> None:
+def test_a_visa_without_signing_authority_is_not_a_warning() -> None:
+    """Кто визирует договоры, не обязан их подписывать: такого предупреждения нет."""
     team = prepare([person("3", ["ACCOUNTANT"])])
-    unknown = warnings(team, Extras(signing_known=False), date(2026, 11, 27))
-    assert not [w for w in unknown if w.code == "visa_without_signing"]
-    known = warnings(team, Extras(signing_known=True), date(2026, 11, 27))
-    assert [
-        w for w in known if w.code == "visa_without_signing" and w.person and w.person.id == "3"
-    ]
+    found = warnings(team, Extras(signing_known=True), date(2026, 11, 27))
+    assert {w.code for w in found} <= {"only_decider", "nobody_decides"}
 
 
 def test_card_lists_who_else_can_and_the_matrix_has_every_capability() -> None:

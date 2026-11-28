@@ -625,9 +625,9 @@ DATA: Final[dict[str, Any]] = json.loads(
       {
        "key": "review",
        "text": {
-        "ru": "согласовывать КП в учётной системе",
-        "uz": "TTni hisob tizimida kelişiş",
-        "en": "review a quote in the accounting system"
+        "ru": "согласовывать КП",
+        "uz": "TTni kelişiş",
+        "en": "review a quote"
        },
        "gates": [
         "eds.drafts:full"
@@ -1475,9 +1475,9 @@ DATA: Final[dict[str, Any]] = json.loads(
       {
        "key": "team",
        "text": {
-        "ru": "управлять командой в учётной системе",
-        "uz": "hisob tizimida jamoani boşqariş",
-        "en": "manage the team in the accounting system"
+        "ru": "управлять сотрудниками в расчётах и заказах",
+        "uz": "hisob-kitob va buyurtmalarda xodimlarni boşqariş",
+        "en": "manage staff in costing and orders"
        },
        "gates": [
         "admin:full"
@@ -1892,9 +1892,9 @@ DATA: Final[dict[str, Any]] = json.loads(
    "key": "exceptional",
    "group": "settings",
    "name": {
-    "ru": "Исключительные действия",
-    "uz": "Istisno harakatlar",
-    "en": "Exceptional actions"
+    "ru": "Принудительные действия",
+    "uz": "Majburiy harakatlar",
+    "en": "Forced actions"
    },
    "levels": [
     {
@@ -1903,9 +1903,9 @@ DATA: Final[dict[str, Any]] = json.loads(
       {
        "key": "force",
        "text": {
-        "ru": "принудительно одобрить КП, отменить счёт, сменить стадию, войти в служебную панель учётной системы",
-        "uz": "TTni majburan tasdiqlaş, hisobni bekor qiliş, bosqiçni almaştiriş, hisob tizimining xizmat paneliga kiriş",
-        "en": "force-approve a quote, cancel an invoice, change a stage, open the accounting system service panel"
+        "ru": "принудительно одобрить КП, отменить счёт, сменить стадию, открыть служебную панель с прямым доступом к данным",
+        "uz": "TTni majburan tasdiqlaş, hisobni bekor qiliş, bosqiçni almaştiriş, maʼlumotlarga bevosita kiriş uçun xizmat paneliga kiriş",
+        "en": "force-approve a quote, cancel an invoice, change a stage, open the service panel with direct access to data"
        },
        "gates": [
         "admin:full"

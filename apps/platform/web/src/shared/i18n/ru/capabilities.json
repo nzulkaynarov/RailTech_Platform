@@ -48,11 +48,10 @@
     "onlyMark": "единственный, кто решает"
   },
   "warnings": {
-    "title": "На что обратить внимание",
+    "title": "Обратите внимание:",
     "only_decider": "«{{capability}}»: решает только {{person}}, замещающего нет.",
     "only_decider_deputy": "«{{capability}}»: решает только {{person}}; на время отсутствия назначен замещающий.",
-    "nobody_decides": "«{{capability}}»: никто не решает.",
-    "visa_without_signing": "У {{person}} есть виза по договорам, но нет права подписи."
+    "nobody_decides": "«{{capability}}»: никто не решает."
   },
   "card": {
     "heading": "Что может этот человек",

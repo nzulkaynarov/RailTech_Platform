@@ -382,7 +382,7 @@
     "title": "Sozlamalar",
     "sections": {
       "overview": "Holat",
-      "org": "Xodimlar va imkoniyatlar",
+      "org": "Xodimlar",
       "roles": "Rollar va huquqlar",
       "zones": "Masʼuliyat zonalari",
       "signing": "Imzo huquqlari",
@@ -590,6 +590,11 @@
         "active": "Faol",
         "invited": "Taklif qilingan",
         "disabled": "Öçirilgan"
+      },
+      "service": {
+        "tag": "Xizmat hisobi",
+        "label": "Xizmat hisobi — jamoada körsatilmasin",
+        "hint": "Bu ro'yxatda qoladi, lekin «Kim nimani qila oladi» jadvalida va hisoblarda yöq."
       },
       "access": {
         "erpPending": "Kiriş berilmoqda",

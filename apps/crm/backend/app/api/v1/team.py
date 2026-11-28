@@ -76,8 +76,9 @@ async def team(
 @router.get("/team/granters", response_model=list[TeamMember])
 async def granters(_: Settled, container: ContainerDep) -> list[TeamMember]:
     """Кто выдаёт возможности: действующие сотрудники с `admin` на изменение (ДОСТ-1).
+    Служебных учётных записей в списке нет.
 
     Любому сотруднику: имя и должность тех, к кому идти; ролей, почты и телефона нет.
     """
     async with container.session_factory() as session:
-        return await team_service.by_section(session, "admin", "full")
+        return await team_service.by_section(session, "admin", "full", skip_service=True)
