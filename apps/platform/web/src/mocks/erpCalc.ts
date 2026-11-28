@@ -237,7 +237,12 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           lead_days: line.supplier.leadDays,
           min_order_qty: line.supplier.minOrderQty,
           price_valid_until: line.supplier.validUntil,
-          ...(offers ? { offer_price: line.supplier.offerPrice, offer_currency: "UZS" } : {}),
+          ...(offers
+            ? {
+                offer_price: line.supplier.offerPrice,
+                offer_currency: line.partner?.options[0]?.currency ?? "UZS",
+              }
+            : {}),
         }
       : null,
     partner_price:

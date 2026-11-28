@@ -30,19 +30,22 @@ describe("Расчёт · закупка по цене партнёра (РАС�
   it("снабженец видит, чья цена стоит в закупке, от какой даты и до какой она действует", async () => {
     await openCalc("supply@demo.example");
     const source = within(lineRow(RAIL)).getByTestId("partner-source");
-    expect(source).toHaveTextContent(
-      /Цена партнёра ООО «Вымышленная Сталь» от .*20.*действует до .*31/,
+    // В строке — коротко, полный текст — в подсказке
+    expect(source).toHaveTextContent("ООО «Вымышленная Сталь» · до 31.12.2026 · 45 дн.");
+    expect(within(source).getByRole("button")).toHaveAttribute(
+      "title",
+      expect.stringMatching(/Цена партнёра ООО «Вымышленная Сталь» от .*20.*действует до .*31/),
     );
   });
 
   it("другую цену выбирают из короткого списка — закупка и валюта строки меняются", async () => {
     await openCalc("supply@demo.example");
     const row = within(lineRow(RAIL));
-    fireEvent.mouseDown(row.getByRole("combobox", { name: `Цена партнёра для «${RAIL}»` }));
-    fireEvent.click(await screen.findByText(/ООО «Демо Металл» · .*до/));
+    fireEvent.click(within(row.getByTestId("partner-source")).getByRole("button"));
+    fireEvent.click(await screen.findByRole("option", { name: /ООО «Демо Металл» · .*до/ }));
     await waitFor(() => {
       expect(within(lineRow(RAIL)).getByTestId("partner-source")).toHaveTextContent(
-        /Цена партнёра ООО «Демо Металл»/,
+        /ООО «Демо Металл» · до/,
       );
     });
     const purchase = within(lineRow(RAIL)).getByRole("spinbutton", {
@@ -83,6 +86,7 @@ describe("Расчёт · закупка по цене партнёра (РАС�
     patchCalcMock(NUMBER, { lines });
     await openCalc("supply@demo.example");
     expect(await screen.findByText(/Маржа .* ниже порога/)).toBeInTheDocument();
+    expect(within(lineRow(RAIL)).getByRole("img", { name: /ниже порога 12\.0 %/ })).toBeVisible();
     expect(screen.getAllByText(/ниже порога/).length).toBeGreaterThan(0);
     expect(within(lineRow(RAIL)).getByRole("img", { name: /ниже порога/ })).toBeVisible();
   });

@@ -172,3 +172,19 @@ def test_margin_at_default_is_not_flagged(prices):
     settings_row.save()
     line = _add(prices, product_id=prices["product"].pk)
     assert line["margin_below"] is False
+
+
+def test_cheapest_supplier_is_compared_in_soums_not_by_the_raw_number(prices):
+    """7 000 USD (84 млн сум) числом меньше 50 млн сум, но дороже: строка и блок поставщика называют одного партнёра и одну цену."""
+    SupplierOffer.objects.filter(supplier=prices["c"]).update(valid_until=None)  # 50 млн сум, снова действует
+    line = _add(prices, product_id=prices["product"].pk)
+    assert line["partner_price"]["source"]["supplier"] == "ООО Партнёр 3"
+    assert line["purchase_price"] == "50000000.00" and line["purchase_currency"] == "UZS"
+    assert line["supplier"]["name"] == "ООО Партнёр 3"
+    assert line["supplier"]["offer_price"] == "50000000.00" and line["supplier"]["offer_currency"] == "UZS"
+    # закупка введена руками — источник не подписан, но блок поставщика по-прежнему берёт честно самую низкую цену в сумах
+    response = _api(prices["supply"]).patch(
+        _url(prices, f"lines/{line['id']}/"), {"purchase_price": "123"}, format="json"
+    )
+    edited = next(entry for entry in response.json()["lines"] if entry["id"] == line["id"])
+    assert edited["supplier"]["name"] == "ООО Партнёр 3"

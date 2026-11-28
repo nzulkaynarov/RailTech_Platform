@@ -143,7 +143,6 @@
       "position": "Item",
       "quantity": "Qty",
       "stock": "Stock",
-      "supplier": "Partner · lead time",
       "purchase": "Purchase",
       "client": "Client price, UZS",
       "markup": "Markup, %",
@@ -160,10 +159,6 @@
     "noStockData": "Not in catalogue",
     "stockMore": "Bin and reserve — on the “Stock” screen",
     "days": "{{count}} days",
-    "supplierHint": "min. order {{qty}} · price valid to {{date}}",
-    "supplierHintNoDate": "min. order {{qty}} · price validity not set",
-    "offerPrice": "Partner price: {{price}}",
-    "noSupplier": "No partner chosen",
     "service": "Crew",
     "crewRate": "Crew rate, UZS/day",
     "crewDays": "Days",
@@ -294,7 +289,7 @@
     "marginLow": {
       "warn": "Margin {{margin}} % is below the {{threshold}} % threshold. You can still send the costing: the margin is checked when the quote is approved.",
       "warnLines": "Below the threshold: {{count}} lines.",
-      "lineLow": "Margin {{margin}} % is below the threshold"
+      "lineLow": "Margin {{margin}} % is below the {{threshold}} % threshold (margin is on the client price, not the markup)"
     },
     "done": "Quote awaiting approval",
     "closed": {
@@ -425,6 +420,8 @@
     "noDate": "no end date",
     "expired": "Partner {{name}} price expired on {{until}}.",
     "none": "No partner price.",
-    "request": "Request a price"
+    "request": "Request a price",
+    "until": "until {{date}}",
+    "minQty": "Quota from {{qty}}"
   }
 }

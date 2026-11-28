@@ -155,15 +155,24 @@ def _supplier_offers(product_ids: Iterable[int]) -> dict[int, Any]:
     if not ids:
         return {}
     today = timezone.localdate()
-    offers = (
+    offers = list(
         SupplierOffer.objects.filter(product_id__in=ids, is_active=True)
         .exclude(supplier_id=_own_company_id())
         .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
         .select_related("supplier", "currency")
         .order_by("product_id", "base_price")
     )
+    # РАСЧ-1: «самое дешёвое» сравнивается в сумах по курсу, а не по числу в разных валютах (7 000 USD дороже 50 млн сум);
+    # цена без курса в сравнение не попадает, если есть цена с курсом.
+    codes = {calc_partner_price._code(o) for o in offers}
+    rates = calc_partner_price._rates(codes, today)
+
+    def base(offer) -> Decimal:
+        rate = rates.get(calc_partner_price._code(offer))
+        return offer.base_price * rate if rate is not None else Decimal("Infinity")
+
     found: dict[int, Any] = {}
-    for offer in offers:
+    for offer in sorted(offers, key=lambda o: (o.product_id, base(o), o.pk)):
         found.setdefault(offer.product_id, offer)
     return found
 

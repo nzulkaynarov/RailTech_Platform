@@ -143,7 +143,6 @@
       "position": "Pozitsiya",
       "quantity": "Soni",
       "stock": "Ombor",
-      "supplier": "Hamkor · muddat",
       "purchase": "Xarid",
       "client": "Mijozga, söm",
       "markup": "Ustama, %",
@@ -160,10 +159,6 @@
     "noStockData": "Katalogda yöq",
     "stockMore": "Yaçeyka va zaxira — «Ombor» ekranida",
     "days": "{{count}} kun",
-    "supplierHint": "kvota {{qty}} dan · narx {{date}} gaça",
-    "supplierHintNoDate": "kvota {{qty}} dan · narx muddati körsatilmagan",
-    "offerPrice": "Hamkor narxi: {{price}}",
-    "noSupplier": "Hamkor tanlanmagan",
     "service": "Brigada",
     "crewRate": "Brigada stavkasi, söm/kun",
     "crewDays": "Kun",
@@ -294,7 +289,7 @@
     "marginLow": {
       "warn": "Marja {{margin}} % — {{threshold}} % çegaradan past. Hisob-kitobni yuborsa bölade: marja KP tasdiqlanayotganda tekşiriladi.",
       "warnLines": "Çegaradan past: {{count}} qator.",
-      "lineLow": "Marja {{margin}} % çegaradan past"
+      "lineLow": "Marja {{margin}} % — {{threshold}} % çegaradan past (marja mijoz narxidan, ustama emas)"
     },
     "done": "TT maʼqullaşda",
     "closed": {
@@ -425,6 +420,8 @@
     "noDate": "muddatsiz",
     "expired": "{{name}} hamkorning narxi {{until}} da tugagan.",
     "none": "Hamkor narxi yoq.",
-    "request": "Narx söraş"
+    "request": "Narx söraş",
+    "until": "{{date}} gaçha",
+    "minQty": "Kvota: {{qty}} dan"
   }
 }

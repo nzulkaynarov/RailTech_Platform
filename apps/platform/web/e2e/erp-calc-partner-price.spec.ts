@@ -27,18 +27,16 @@ test("закупка берёт цену партнёра, другую цену
     ).toBeVisible();
 
     const source = page.getByTestId("partner-source").first();
-    await expect(source).toContainText("Цена партнёра ООО «Вымышленная Сталь»");
-    await expect(source).toContainText("действует до");
+    await expect(source).toContainText("ООО «Вымышленная Сталь»");
+    await expect(source).toContainText("до 31.12.2026");
     await showPurchaseColumn(page);
     await settledScreenshot(page, `partner-price-${String(width)}`);
     await expectNoViolations(page, `расчёт с ценой партнёра, ${String(width)} px`);
 
     if (width === 1440) {
-      await page.locator(".pf-calc-partner-pick").first().click();
-      await page.getByText(/ООО «Демо Металл» · /).click();
-      await expect(page.getByTestId("partner-source").first()).toContainText(
-        "Цена партнёра ООО «Демо Металл»",
-      );
+      await page.getByTestId("partner-source").first().getByRole("button").click();
+      await page.getByRole("option", { name: /ООО «Демо Металл» · / }).click();
+      await expect(page.getByTestId("partner-source").first()).toContainText("ООО «Демо Металл»");
       await showPurchaseColumn(page);
       await settledScreenshot(page, "partner-price-picked-1440");
     }
@@ -53,6 +51,7 @@ test("расчёт на 12 строк: цены партнёров, истёкш
   await loginAndWait(page, "supply@demo.example");
   for (const [width, height] of [
     [1512, 982],
+    [1280, 800],
     [390, 844],
   ] as const) {
     await page.setViewportSize({ width, height });
@@ -60,10 +59,17 @@ test("расчёт на 12 строк: цены партнёров, истёкш
     await expect(
       page.getByRole("heading", { level: 1, name: "Расчёт по заявке ЗВ-2026-121" }),
     ).toBeVisible();
-    await expect(page.getByTestId("partner-source").first()).toContainText("Цена партнёра");
+    await expect(page.getByTestId("partner-source").first()).toContainText("до 31.12.2026");
     await expect(page.getByRole("status").filter({ hasText: "ниже порога" })).toBeVisible();
+    if (width >= 1280) {
+      // Стандарт владельца: на 1512 и 1280 таблица строк не прокручивается вбок
+      const overflow = await page.evaluate(
+        `Array.from(document.querySelectorAll(".pf-fp-scroll")).some((el) => el.scrollWidth > el.clientWidth + 1)`,
+      );
+      expect(overflow, `горизонтальная прокрутка таблицы на ${String(width)} px`).toBe(false);
+    }
     await settledScreenshot(page, `wide-${String(width)}`);
-    await showPurchaseColumn(page);
+    await page.getByTestId("partner-source").first().scrollIntoViewIfNeeded();
     await settledScreenshot(page, `wide-prices-${String(width)}`);
     await page.getByRole("status").filter({ hasText: "ниже порога" }).scrollIntoViewIfNeeded();
     await settledScreenshot(page, `wide-ready-${String(width)}`);

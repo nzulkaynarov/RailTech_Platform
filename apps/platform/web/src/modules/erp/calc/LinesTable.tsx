@@ -1,4 +1,4 @@
-import { App, Button, InputNumber, Popconfirm, Select } from "antd";
+import { App, Button, InputNumber, Popconfirm, Popover, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -275,46 +275,8 @@ function Stock({
   );
 }
 
-function Supplier({ line }: { line: CalcLine }) {
-  const { t } = useTranslation("calc");
-  const { date, money } = useFormat();
-  if (line.zone === "services") return <span className="pf-hint">{t("lines.service")}</span>;
-  const supplier = line.supplier;
-  if (!supplier) {
-    return (
-      <span className="pf-hint">
-        {t("lines.noSupplier")}
-        {line.lead_days ? ` · ${t("lines.days", { count: line.lead_days })}` : ""}
-      </span>
-    );
-  }
-  return (
-    <div className="pf-calc-supplier">
-      <span>
-        {supplier.name}
-        {supplier.lead_days ? ` · ${t("lines.days", { count: supplier.lead_days })}` : ""}
-      </span>
-      <span className="pf-hint">
-        {supplier.price_valid_until
-          ? t("lines.supplierHint", {
-              qty: supplier.min_order_qty,
-              date: date(supplier.price_valid_until),
-            })
-          : t("lines.supplierHintNoDate", { qty: supplier.min_order_qty })}
-      </span>
-      {supplier.offer_price ? (
-        <span className="pf-hint">
-          {t("lines.offerPrice", {
-            price: money(supplier.offer_price, { currency: supplier.offer_currency }),
-          })}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-/** РАСЧ-1: откуда закупка — цена партнёра (от какой даты, до какой), выбор другой цены из короткого списка и «Запросить
- *  цену», когда действующей нет (истёкшая цена молча не берётся). */
+/** РАСЧ-1: откуда закупка — одна короткая строка под ценой «Партнёр · до ДД.ММ · N дн.» (полный текст в подсказке);
+ *  нажатие открывает выбор другой цены партнёра; «Запросить цену», когда действующей нет (истёкшая цена молча не берётся). */
 function PartnerSource({
   line,
   actions,
@@ -326,48 +288,88 @@ function PartnerSource({
 }) {
   const { t } = useTranslation("calc");
   const { date, money } = useFormat();
+  const [open, setOpen] = useState(false);
   const part = line.partner_price;
   if (!part || line.zone === "services") return null;
   const source = part.source;
-  const alternatives = part.options.length > 1;
+  const days = line.lead_days ? t("lines.days", { count: line.lead_days }) : null;
+  const short = source
+    ? [
+        source.supplier,
+        source.valid_until
+          ? t("partner.until", { date: date(source.valid_until) })
+          : t("partner.noDate"),
+        days,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const full = source
+    ? [
+        source.valid_until
+          ? t("partner.source", {
+              name: source.supplier,
+              from: date(source.price_date),
+              until: date(source.valid_until),
+            })
+          : t("partner.sourceOpen", { name: source.supplier, from: date(source.price_date) }),
+        source.freshness === "expiring" ? t("partner.expiring") : null,
+        source.freshness === "stale" ? t("partner.stale") : null,
+        days,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const minQty = line.supplier?.min_order_qty;
+  const picker = (
+    <div
+      className="pf-calc-partner-menu"
+      role="listbox"
+      aria-label={t("partner.pickLabel", { name: line.name })}
+    >
+      {part.options.map((option) => (
+        <button
+          key={option.offer_id}
+          type="button"
+          role="option"
+          aria-selected={option.offer_id === source?.offer_id}
+          className="pf-calc-partner-option"
+          disabled={actions.pending || !line.can_edit}
+          onClick={() => {
+            setOpen(false);
+            if (option.offer_id !== source?.offer_id)
+              actions.patch(line, { offer_id: option.offer_id });
+          }}
+        >
+          {t("partner.option", {
+            name: option.supplier,
+            price: money(option.price, { currency: option.currency }),
+            until: option.valid_until ? date(option.valid_until) : t("partner.noDate"),
+          })}
+        </button>
+      ))}
+      {minQty ? <span className="pf-hint">{t("partner.minQty", { qty: minQty })}</span> : null}
+    </div>
+  );
   return (
     <div className="pf-calc-partner-source" data-testid="partner-source">
       {source ? (
-        <span className="pf-hint">
-          {source.valid_until
-            ? t("partner.source", {
-                name: source.supplier,
-                from: date(source.price_date),
-                until: date(source.valid_until),
-              })
-            : t("partner.sourceOpen", { name: source.supplier, from: date(source.price_date) })}
-          {source.freshness === "expiring" ? ` · ${t("partner.expiring")}` : null}
-          {source.freshness === "stale" ? ` · ${t("partner.stale")}` : null}
-        </span>
-      ) : null}
-      {alternatives && line.can_edit ? (
-        <Select
-          size="small"
-          aria-label={t("partner.pickLabel", { name: line.name })}
-          placeholder={t("partner.pick")}
-          value={source?.offer_id ?? null}
-          disabled={actions.pending}
-          popupMatchSelectWidth={false}
-          optionLabelProp="short"
-          options={part.options.map((option) => ({
-            value: option.offer_id,
-            short: option.supplier,
-            label: t("partner.option", {
-              name: option.supplier,
-              price: money(option.price, { currency: option.currency }),
-              until: option.valid_until ? date(option.valid_until) : t("partner.noDate"),
-            }),
-          }))}
-          onChange={(offerId: string) => {
-            if (offerId !== source?.offer_id) actions.patch(line, { offer_id: offerId });
-          }}
-          className="pf-calc-partner-pick"
-        />
+        <Popover
+          content={picker}
+          trigger="click"
+          open={open}
+          onOpenChange={setOpen}
+          placement="bottomRight"
+        >
+          <button
+            type="button"
+            className="pf-calc-partner-line pf-hint"
+            title={full}
+            aria-label={`${short}. ${t("partner.pickLabel", { name: line.name })}`}
+          >
+            {short}
+          </button>
+        </Popover>
       ) : null}
       {!source && part.can_request ? (
         <span className="pf-hint">
@@ -565,14 +567,22 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
  * Наценка строки (D26G-5): видна с доступом к себестоимости; правится там же, где цена клиенту. Введённая наценка —
  * цена из неё, округлённая до сума; введённая цена — хранится как есть, наценка пересчитывается из неё.
  */
-function Markup({ line, actions }: { line: CalcLine; actions: Actions }) {
+function Markup({
+  line,
+  actions,
+  threshold,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  threshold?: string | null;
+}) {
   const { t } = useTranslation("calc");
   const low = line.margin_below ? (
     <span
       className="pf-calc-low"
       role="img"
-      aria-label={t("ready.marginLow.lineLow", { margin: line.margin_pct })}
-      title={t("ready.marginLow.lineLow", { margin: line.margin_pct })}
+      aria-label={t("ready.marginLow.lineLow", { margin: line.margin_pct, threshold })}
+      title={t("ready.marginLow.lineLow", { margin: line.margin_pct, threshold })}
     >
       !
     </span>
@@ -746,8 +756,6 @@ export function LinesTable({
                 <Quantity line={line} actions={actions} />
                 <span className="pf-hint">{t("lines.columns.stock")}</span>
                 <Stock line={line} canStock={canStock} actions={actions} />
-                <span className="pf-hint">{t("lines.columns.supplier")}</span>
-                <Supplier line={line} />
                 <span className="pf-hint">{t("lines.columns.purchase")}</span>
                 <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 <span className="pf-hint">{t("lines.columns.client")}</span>
@@ -755,7 +763,7 @@ export function LinesTable({
                 {showMarkup ? (
                   <>
                     <span className="pf-hint">{t("lines.columns.markup")}</span>
-                    <Markup line={line} actions={actions} />
+                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
                   </>
                 ) : null}
               </div>
@@ -783,7 +791,6 @@ export function LinesTable({
                 {t("lines.columns.quantity")}
               </th>
               <th scope="col">{t("lines.columns.stock")}</th>
-              <th scope="col">{t("lines.columns.supplier")}</th>
               <th scope="col" className="pf-col-num">
                 {t("lines.columns.purchase")}
               </th>
@@ -817,9 +824,6 @@ export function LinesTable({
                 <td>
                   <Stock line={line} canStock={canStock} actions={actions} />
                 </td>
-                <td>
-                  <Supplier line={line} />
-                </td>
                 <td className="pf-col-num">
                   <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 </td>
@@ -827,7 +831,11 @@ export function LinesTable({
                   <ClientPrice line={line} actions={actions} />
                 </td>
                 <td className="pf-col-num">
-                  {showMarkup ? <Markup line={line} actions={actions} /> : "—"}
+                  {showMarkup ? (
+                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   <Visa line={line} actions={actions} />
