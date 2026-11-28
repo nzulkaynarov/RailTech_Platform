@@ -13,6 +13,8 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { DecisionSlot } from "../decision/DecisionSlot";
 import { Attachments } from "./Parts";
+import { LetterIntake } from "./LetterIntake";
+import { useViewport } from "../../../app/shell/useViewport";
 import { letterPath, letterRef, tasksPath } from "./api";
 import { clearDraft } from "./draft";
 import { OfficeResolutionForm } from "./OfficeResolutionForm";
@@ -21,6 +23,7 @@ import { useStateLabels } from "./labels";
 
 function Brief({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
+  const { mobile } = useViewport();
   const { date } = useFormat();
   return (
     <section className="pf-res-brief" aria-label={letter.number}>
@@ -29,6 +32,8 @@ function Brief({ letter }: { letter: LetterCard }) {
         <StatusTag kind="incoming" status={letter.status} />
       </div>
       <p className="pf-res-subject">{letter.subject}</p>
+      {/* ВХОД-1: в боковом окне — вверху; на телефоне лист «Резолюция» держит кнопки внизу, действия — в карточке */}
+      {mobile ? null : <LetterIntake letter={letter} />}
       <DefinitionList
         items={[
           {
