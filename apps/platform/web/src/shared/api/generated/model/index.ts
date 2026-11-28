@@ -126,6 +126,8 @@ export * from "./calcLineInKind";
 export * from "./calcLineKind";
 export * from "./calcLinePatch";
 export * from "./calcLinePatchKind";
+export * from "./calcLinePatchPriceMode";
+export * from "./calcLinePriceMode";
 export * from "./calcLinesIn";
 export * from "./calcLineVisa";
 export * from "./calcLostIn";

@@ -17,6 +17,10 @@ export interface CalcTotals {
   margin_pct?: DecimalString | null;
   /** Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
   threshold_pct?: DecimalString | null;
+  /** РАСЧ-3 — целевая маржа компании, %, по ней строки «от маржи» получают цену — только группе `cost_margin` */
+  target_pct?: DecimalString | null;
+  /** РАСЧ-3 — шаг округления цены вверх, сум (0 — без округления) — только группе `cost_margin` */
+  rounding_step?: DecimalString | null;
   /** Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
   margin_below?: boolean;
   vat_included: false;

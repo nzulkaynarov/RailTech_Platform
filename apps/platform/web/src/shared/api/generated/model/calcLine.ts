@@ -5,6 +5,7 @@
 import type { CalcCatalogHint } from "./calcCatalogHint";
 import type { CalcLineGroup } from "./calcLineGroup";
 import type { CalcLineKind } from "./calcLineKind";
+import type { CalcLinePriceMode } from "./calcLinePriceMode";
 import type { CalcLineVisa } from "./calcLineVisa";
 import type { CalcPartnerPrice } from "./calcPartnerPrice";
 import type { CalcStock } from "./calcStock";
@@ -65,6 +66,10 @@ export interface CalcLine {
   cost?: DecimalString | null;
   /** Клиенту за единицу, сум, без НДС */
   client_price: DecimalString;
+  /** РАСЧ-3: как поставлена цена. `margin` — считается сама от маржи (себестоимость / (1 − маржа), округление вверх, пересчёт при любом изменении до отправки КП); `manual` — цену ввёл человек, она не пересчитывается («Цена вручную»); `legacy` — строка до РАСЧ-3, цена не меняется сама. Нет поля — `legacy` */
+  price_mode?: CalcLinePriceMode;
+  /** РАСЧ-3: маржа строки «от маржи» (своя или целевая компании), % — и «вернуть N %» у строки с ценой вручную; у строки до РАСЧ-3 null — только группе `cost_margin` */
+  margin_target_pct?: DecimalString | null;
   /** Наценка строки, % — только группе `cost_margin` */
   markup_pct?: DecimalString | null;
   /** Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */

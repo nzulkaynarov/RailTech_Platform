@@ -25,6 +25,7 @@ class CalcPriceBasis(models.TextChoices):
 
     CLIENT = "client", _("Цена клиенту")
     MARKUP = "markup", _("Наценка")
+    MARGIN = "margin", _("От маржи")  # РАСЧ-3: цена = себестоимость / (1 − маржа), пересчитывается сама
 
 
 class CalcLine(models.Model):
@@ -82,8 +83,18 @@ class CalcLine(models.Model):
         verbose_name=_("Что ввели: цену или наценку"),
         help_text=_(
             "client — введена цена клиенту (она источник истины, наценка производная); markup — введена наценка "
-            "(цена считается из неё и округляется до сума); пусто — цену ещё не задавали"
+            "(цена считается из неё и округляется до сума); margin — цена от маржи (РАСЧ-3): себестоимость / (1 − маржа), "
+            "округление вверх, пересчёт при любом изменении до отправки КП; пусто — цену ещё не задавали (прежний расчёт)"
         ),
+    )
+    margin_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        verbose_name=_("Маржа строки (%)"),
+        help_text=_("РАСЧ-3: своя маржа строки «от маржи»; пусто — целевая маржа из настроек «Продажи»"),
     )
     catalog_hint = models.ForeignKey(
         "catalog.Product",

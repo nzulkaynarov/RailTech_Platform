@@ -57,18 +57,37 @@ describe("Расчёт · клиент отклонил КП (D26G-3)", () => {
   });
 });
 
-describe("Расчёт · цена клиенту и наценка (D26G-5)", () => {
-  it("введённая наценка даёт цену, округлённую до сума", async () => {
+describe("Расчёт · цена клиенту и маржа (РАСЧ-3)", () => {
+  it("введённая маржа строки даёт цену: себестоимость / (1 − маржа), вверх до шага", async () => {
     await openCalc("supply@demo.example", "ЗВ-2026-097");
     const name = "Перевод стрелочный Р65 марки 1/11";
-    const markup = screen.getByLabelText(`Наценка, %: ${name}`);
-    fireEvent.change(markup, { target: { value: "15.56" } });
-    fireEvent.blur(markup);
+    const margin = screen.getByLabelText(`Маржа, %: ${name}`);
+    fireEvent.change(margin, { target: { value: "20" } });
+    fireEvent.blur(margin);
     await waitFor(() => {
       expect(
         screen.getByLabelText<HTMLInputElement>(`Цена клиенту без НДС за единицу для «${name}»`)
           .value,
-      ).toMatch(/^104\s004\s000/);
+      ).toMatch(/^112\s500\s000/);
     });
+  });
+
+  it("введённая цена помечается «Цена вручную», «вернуть N %» считает её от маржи снова", async () => {
+    await openCalc("supply@demo.example", "ЗВ-2026-097");
+    const name = "Перевод стрелочный Р65 марки 1/11";
+    const price = () =>
+      screen.getByLabelText<HTMLInputElement>(`Цена клиенту без НДС за единицу для «${name}»`);
+    expect(screen.queryByTestId("price-manual")).toBeNull();
+    fireEvent.change(price(), { target: { value: "101000000" } });
+    fireEvent.blur(price());
+    const mark = await screen.findByTestId("price-manual");
+    expect(mark).toHaveTextContent("Цена вручную");
+    fireEvent.click(within(mark).getByRole("button", { name: `Вернуть цену строки «${name}» к марже` }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("price-manual")).toBeNull();
+    });
+    // 90 000 000 / (1 − 20 %) = 112 500 000
+    expect(price().value).toMatch(/^112\s500\s000/);
+    expect(screen.getByTestId("price-rule")).toHaveTextContent("маржа 20 %");
   });
 });

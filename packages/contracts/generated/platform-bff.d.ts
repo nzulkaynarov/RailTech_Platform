@@ -14588,8 +14588,10 @@ export interface components {
       default_margin_percent?: components["schemas"]["DecimalString"] | null;
       /** @description Минимальная маржа, % — поле группы `cost_margin` */
       min_margin_percent?: components["schemas"]["DecimalString"];
-      /** @description Целевая маржа, % — поле группы `cost_margin` */
+      /** @description Целевая маржа, % — поле группы `cost_margin`; по ней расчёт сам ставит цену клиенту (РАСЧ-3) */
       target_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Шаг округления цены клиенту вверх, сум; 0 — без округления (РАСЧ-3) — поле группы `cost_margin` */
+      price_rounding_step?: components["schemas"]["DecimalString"];
       /** @description Срок действия КП, дней */
       default_offer_validity_days: number | null;
       /** @description Отсрочка платежа, дней */
@@ -14677,8 +14679,10 @@ export interface components {
       default_margin_percent?: components["schemas"]["DecimalString"] | null;
       /** @description Минимальная маржа, % — поле группы `cost_margin` */
       min_margin_percent?: components["schemas"]["DecimalString"];
-      /** @description Целевая маржа, % — поле группы `cost_margin` */
+      /** @description Целевая маржа, % — поле группы `cost_margin`; по ней расчёт сам ставит цену клиенту (РАСЧ-3) */
       target_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Шаг округления цены клиенту вверх, сум; 0 — без округления (РАСЧ-3) — поле группы `cost_margin` */
+      price_rounding_step?: components["schemas"]["DecimalString"];
       /** @description Срок действия КП, дней */
       default_offer_validity_days?: number | null;
       /** @description Отсрочка платежа, дней */
@@ -17750,6 +17754,13 @@ export interface components {
       cost?: components["schemas"]["DecimalString"] | null;
       /** @description Клиенту за единицу, сум, без НДС */
       client_price: components["schemas"]["DecimalString"];
+      /**
+       * @description РАСЧ-3: как поставлена цена. `margin` — считается сама от маржи (себестоимость / (1 − маржа), округление вверх, пересчёт при любом изменении до отправки КП); `manual` — цену ввёл человек, она не пересчитывается («Цена вручную»); `legacy` — строка до РАСЧ-3, цена не меняется сама. Нет поля — `legacy`
+       * @enum {string}
+       */
+      price_mode?: "margin" | "manual" | "legacy";
+      /** @description РАСЧ-3: маржа строки «от маржи» (своя или целевая компании), % — и «вернуть N %» у строки с ценой вручную; у строки до РАСЧ-3 null — только группе `cost_margin` */
+      margin_target_pct?: components["schemas"]["DecimalString"] | null;
       /** @description Наценка строки, % — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
       /** @description Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */
@@ -17771,6 +17782,10 @@ export interface components {
       margin_pct?: components["schemas"]["DecimalString"] | null;
       /** @description Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
       threshold_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description РАСЧ-3 — целевая маржа компании, %, по ней строки «от маржи» получают цену — только группе `cost_margin` */
+      target_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description РАСЧ-3 — шаг округления цены вверх, сум (0 — без округления) — только группе `cost_margin` */
+      rounding_step?: components["schemas"]["DecimalString"] | null;
       /** @description Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
       margin_below?: boolean;
       /** @constant */
@@ -17913,6 +17928,13 @@ export interface components {
       client_price?: components["schemas"]["DecimalString"];
       /** @description Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
       markup_pct?: components["schemas"]["DecimalString"];
+      /** @description РАСЧ-3: своя маржа строки, % (0–95; одно из `client_price`, `markup_pct`, `margin_pct`, `price_mode`): строка остаётся «от маржи» и считается сама. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
+      margin_pct?: components["schemas"]["DecimalString"];
+      /**
+       * @description РАСЧ-3: `margin` — «вернуть N %»: ручная цена снимается, цена снова считается от маржи. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`)
+       * @enum {string}
+       */
+      price_mode?: "margin";
       product_id?: string | null;
       /** @enum {string} */
       kind?: "goods" | "service";

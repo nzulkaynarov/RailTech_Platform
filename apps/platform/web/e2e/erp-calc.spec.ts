@@ -73,7 +73,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expect(panel.getByRole("heading", { name: "Визы по заявке" })).toBeVisible();
     await settledScreenshot(page, "requests-task");
 
-    // Расчёт снабженца: закупка и наценка видны, «Расчёт готов» неактивна с подписью почему.
+    // Расчёт снабженца: закупка и маржа видны, «Расчёт готов» неактивна с подписью почему.
     await panel.getByRole("link", { name: "Открыть расчёт" }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
@@ -91,11 +91,13 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await settledScreenshot(page, "calc-supply");
     await expectNoViolations(page, "расчёт снабженца");
 
-    // Правка снимает визу: цена клиенту → наценка пересчитана; затем снабженец подтверждает обе товарные строки.
+    // Правка снимает визу: цена клиенту → маржа пересчитана; затем снабженец подтверждает обе товарные строки.
     const client = line(page, RAIL).getByLabel(`Цена клиенту без НДС за единицу для «${RAIL}»`);
     await client.fill("108000000");
     await client.press("Enter");
-    await expect(line(page, RAIL).getByLabel(`Наценка, %: ${RAIL}`)).toHaveValue(/^20([.,]0+)?$/);
+    // 108 000 000 при закупке 90 000 000: маржа на цену 16,7 %, цена введена вручную
+    await expect(line(page, RAIL).getByLabel(`Маржа, %: ${RAIL}`)).toHaveValue(/^16[.,]7$/);
+    await expect(line(page, RAIL).getByTestId("price-manual")).toBeVisible();
     await line(page, RAIL)
       .getByRole("button", { name: `Подтвердить строку «${RAIL}»` })
       .click();

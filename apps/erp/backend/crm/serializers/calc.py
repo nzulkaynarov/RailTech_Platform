@@ -249,6 +249,19 @@ class CalcLineSerializer(serializers.Serializer):
     crew_days = serializers.DecimalField(max_digits=6, decimal_places=1, allow_null=True)
     cost = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     client_price = serializers.DecimalField(max_digits=14, decimal_places=2)
+    price_mode = serializers.ChoiceField(
+        choices=("margin", "manual", "legacy"),
+        help_text=(
+            "РАСЧ-3: `margin` — цена считается сама от маржи (себестоимость / (1 − маржа), округление вверх); "
+            "`manual` — цену ввёл человек, она не пересчитывается; `legacy` — строка до РАСЧ-3, цена не меняется сама"
+        ),
+    )
+    margin_target_pct = serializers.DecimalField(
+        max_digits=7,
+        decimal_places=1,
+        allow_null=True,
+        help_text="РАСЧ-3: маржа строки «от маржи» (своя или целевая компании) и «вернуть N %» у ручной цены; null — у строки до РАСЧ-3",
+    )
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
     margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
     margin_below = serializers.BooleanField()
@@ -263,6 +276,18 @@ class CalcTotalsSerializer(serializers.Serializer):
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
     margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
     threshold_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    target_pct = serializers.DecimalField(
+        max_digits=7,
+        decimal_places=1,
+        allow_null=True,
+        help_text="РАСЧ-3: целевая маржа компании, % — по ней строки «от маржи» получают цену",
+    )
+    rounding_step = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        allow_null=True,
+        help_text="РАСЧ-3: шаг округления цены вверх, сум; 0 — без округления",
+    )
     margin_below = serializers.BooleanField()
     vat_included = serializers.BooleanField()
 
@@ -400,12 +425,28 @@ class CalcLinePatchSerializer(serializers.Serializer):
         required=False,
         help_text="Наценка строки, %: цена клиенту считается из неё и округляется до сума (D26G-5)",
     )
+    margin_pct = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=95,
+        required=False,
+        help_text="РАСЧ-3: своя маржа строки, % на цену; строка остаётся «от маржи» и считается сама",
+    )
+    price_mode = serializers.ChoiceField(
+        choices=("margin",),
+        required=False,
+        help_text="РАСЧ-3: `margin` — «вернуть N %»: цена снова считается от маржи (ручная цена снимается)",
+    )
     product_id = serializers.IntegerField(required=False, allow_null=True)
     kind = serializers.ChoiceField(choices=ITEM_KINDS, required=False)
 
     def validate(self, attrs):
         if "client_price" in attrs and "markup_pct" in attrs:
             raise serializers.ValidationError({"markup_pct": ["PRICE_OR_MARKUP"]})
+        pricing = [key for key in ("client_price", "markup_pct", "margin_pct", "price_mode") if key in attrs]
+        if len(pricing) > 1:
+            raise serializers.ValidationError({pricing[1]: ["ONE_PRICE_INPUT"]})
         return attrs
 
 

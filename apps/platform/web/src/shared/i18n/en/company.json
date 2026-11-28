@@ -362,7 +362,10 @@
       "services": "Services"
     },
     "partner_base_roles": "Documents for partners",
-    "partner_base_rolesHint": "A partner candidate gets a package of these documents; the text comes from approved templates."
+    "partner_base_rolesHint": "A partner candidate gets a package of these documents; the text comes from approved templates.",
+    "price_rounding_step": "Price rounding step, UZS",
+    "target_margin_percentHint": "The calculator sets the client price from it: cost / (1 − margin). It recalculates on any change until the quote is sent.",
+    "price_rounding_stepHint": "The client price is rounded up to the step; 0 — no rounding."
   },
   "charges": {
     "title": "Quote charge items",

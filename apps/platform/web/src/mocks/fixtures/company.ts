@@ -163,6 +163,7 @@ function seed(): CompanyMock {
       default_margin_percent: "18.00",
       min_margin_percent: "5.00",
       target_margin_percent: "20.00",
+      price_rounding_step: "1000.00",
       default_offer_validity_days: 14,
       payment_terms_days: 10,
       remind_overdue_invoices: false,

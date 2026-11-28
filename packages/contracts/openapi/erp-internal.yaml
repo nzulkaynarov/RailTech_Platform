@@ -25047,6 +25047,22 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        price_mode:
+          allOf:
+          - $ref: '#/components/schemas/CalcLinePriceModeEnum'
+          description: |-
+            РАСЧ-3: `margin` — цена считается сама от маржи (себестоимость / (1 − маржа), округление вверх); `manual` — цену ввёл человек, она не пересчитывается; `legacy` — строка до РАСЧ-3, цена не меняется сама
+
+            * `margin` - margin
+            * `manual` - manual
+            * `legacy` - legacy
+        margin_target_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+          description: 'РАСЧ-3: маржа строки «от маржи» (своя или целевая компании) и «вернуть N %» у ручной цены; null —
+            у строки до РАСЧ-3'
         markup_pct:
           type: string
           format: decimal
@@ -25082,10 +25098,12 @@ components:
       - lead_days
       - margin_below
       - margin_pct
+      - margin_target_pct
       - markup_pct
       - name
       - partner_price
       - position
+      - price_mode
       - product_draft
       - product_id
       - product_name
@@ -25144,6 +25162,21 @@ components:
         * `goods` - goods
         * `goods_to_order` - goods_to_order
         * `service` - service
+    CalcLinePatchPriceModeEnum:
+      enum:
+      - margin
+      type: string
+      description: '* `margin` - margin'
+    CalcLinePriceModeEnum:
+      enum:
+      - margin
+      - manual
+      - legacy
+      type: string
+      description: |-
+        * `margin` - margin
+        * `manual` - manual
+        * `legacy` - legacy
     CalcLineZoneEnum:
       enum:
       - goods
@@ -25725,6 +25758,18 @@ components:
           format: decimal
           pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
           nullable: true
+        target_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+          description: 'РАСЧ-3: целевая маржа компании, % — по ней строки «от маржи» получают цену'
+        rounding_step:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+          description: 'РАСЧ-3: шаг округления цены вверх, сум; 0 — без округления'
         margin_below:
           type: boolean
         vat_included:
@@ -25735,6 +25780,8 @@ components:
       - margin_pct
       - markup_pct
       - purchase
+      - rounding_step
+      - target_pct
       - threshold_pct
       - vat_included
     CalcVisa:
@@ -27122,7 +27169,14 @@ components:
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
           title: Целевая маржа (%)
-          description: Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
+          description: 'Желаемая валовая маржа (на цене). РАСЧ-3: по ней расчёт сам ставит цену клиенту (себестоимость / (1
+            − маржа)); зелёная зона в конструкторе КП.'
+        price_rounding_step:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          title: Шаг округления цены, сум
+          description: 'РАСЧ-3: цена клиенту в сумах округляется вверх до шага; 0 — без округления'
         catalog_price_visibility:
           allOf:
           - $ref: '#/components/schemas/PriceVisibilityEnum'
@@ -36932,6 +36986,18 @@ components:
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
           description: 'Наценка строки, %: цена клиенту считается из неё и округляется до сума (D26G-5)'
+        margin_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: 'РАСЧ-3: своя маржа строки, % на цену; строка остаётся «от маржи» и считается сама'
+        price_mode:
+          allOf:
+          - $ref: '#/components/schemas/CalcLinePatchPriceModeEnum'
+          description: |-
+            РАСЧ-3: `margin` — «вернуть N %»: цена снова считается от маржи (ручная цена снимается)
+
+            * `margin` - margin
         product_id:
           type: integer
           nullable: true
@@ -37332,7 +37398,14 @@ components:
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
           title: Целевая маржа (%)
-          description: Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
+          description: 'Желаемая валовая маржа (на цене). РАСЧ-3: по ней расчёт сам ставит цену клиенту (себестоимость / (1
+            − маржа)); зелёная зона в конструкторе КП.'
+        price_rounding_step:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          title: Шаг округления цены, сум
+          description: 'РАСЧ-3: цена клиенту в сумах округляется вверх до шага; 0 — без округления'
         default_offer_validity_days:
           type: integer
           maximum: 2147483647

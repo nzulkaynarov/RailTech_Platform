@@ -196,6 +196,11 @@ class CalcLine(BaseModel):
     crew_days: str | None
     cost: str | None = None
     client_price: str
+    #: РАСЧ-3: как поставлена цена — `margin` (считается сама от маржи), `manual` (введена, не пересчитывается),
+    #: `legacy` (строка до РАСЧ-3)
+    price_mode: Literal["margin", "manual", "legacy"] = "legacy"
+    #: РАСЧ-3: маржа строки «от маржи» (своя или целевая) и «вернуть N %» у ручной цены — только `cost_margin`
+    margin_target_pct: str | None = None
     markup_pct: str | None = None
     margin_pct: str | None = None
     margin_below: bool | None = None
@@ -209,6 +214,9 @@ class CalcTotals(BaseModel):
     markup_pct: str | None = None
     margin_pct: str | None = None
     threshold_pct: str | None = None
+    #: РАСЧ-3: целевая маржа и шаг округления цены из «Продажи» — только `cost_margin`
+    target_pct: str | None = None
+    rounding_step: str | None = None
     margin_below: bool | None = None
     vat_included: Literal[False] = False
 
@@ -397,6 +405,8 @@ class CalcLinePatch(BaseModel):
     crew_days: str | None = Field(default=None, pattern=DECIMAL, max_length=10)
     client_price: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
     markup_pct: str | None = Field(default=None, pattern=DECIMAL, max_length=8)
+    margin_pct: str | None = Field(default=None, pattern=DECIMAL, max_length=8)
+    price_mode: Literal["margin"] | None = None
     product_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     offer_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     kind: Literal["goods", "service"] | None = None
@@ -501,12 +511,16 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         visa=CalcLineVisa(**visa) if isinstance(visa, dict) else None,
         can_edit=bool(raw.get("can_edit")),
     )
+    if "price_mode" in raw:
+        line.price_mode = raw["price_mode"]
     if zone_cost:
         line.purchase_price = raw.get("purchase_price")
         line.purchase_currency = raw.get("purchase_currency")
         line.cost = raw.get("cost")
     if cost:
         line.markup_pct = raw.get("markup_pct")
+        if "margin_target_pct" in raw:
+            line.margin_target_pct = raw["margin_target_pct"]
         if "margin_pct" in raw:
             line.margin_pct = raw["margin_pct"]
         if "margin_below" in raw:
@@ -586,6 +600,9 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
         if "margin_pct" in totals:
             totals_model.margin_pct = totals["margin_pct"]
             totals_model.threshold_pct = totals.get("threshold_pct")
+        for key in ("target_pct", "rounding_step"):
+            if key in totals:
+                setattr(totals_model, key, totals[key])
         if "margin_below" in totals:
             totals_model.margin_below = bool(totals["margin_below"])
     return CalcSheet(

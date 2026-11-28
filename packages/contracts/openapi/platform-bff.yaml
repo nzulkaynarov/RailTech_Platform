@@ -25452,7 +25452,10 @@ components:
           description: Минимальная маржа, % — поле группы `cost_margin`
         target_margin_percent:
           $ref: '#/components/schemas/DecimalString'
-          description: Целевая маржа, % — поле группы `cost_margin`
+          description: 'Целевая маржа, % — поле группы `cost_margin`; по ней расчёт сам ставит цену клиенту (РАСЧ-3)'
+        price_rounding_step:
+          $ref: '#/components/schemas/DecimalString'
+          description: 'Шаг округления цены клиенту вверх, сум; 0 — без округления (РАСЧ-3) — поле группы `cost_margin`'
         default_offer_validity_days:
           type:
             - integer
@@ -25620,7 +25623,10 @@ components:
           description: Минимальная маржа, % — поле группы `cost_margin`
         target_margin_percent:
           $ref: '#/components/schemas/DecimalString'
-          description: Целевая маржа, % — поле группы `cost_margin`
+          description: 'Целевая маржа, % — поле группы `cost_margin`; по ней расчёт сам ставит цену клиенту (РАСЧ-3)'
+        price_rounding_step:
+          $ref: '#/components/schemas/DecimalString'
+          description: 'Шаг округления цены клиенту вверх, сум; 0 — без округления (РАСЧ-3) — поле группы `cost_margin`'
         default_offer_validity_days:
           type:
             - integer
@@ -30248,6 +30254,20 @@ components:
         client_price:
           $ref: '#/components/schemas/DecimalString'
           description: Клиенту за единицу, сум, без НДС
+        price_mode:
+          type: string
+          enum: [margin, manual, legacy]
+          description: >-
+            РАСЧ-3: как поставлена цена. `margin` — считается сама от маржи (себестоимость / (1 − маржа), округление вверх,
+            пересчёт при любом изменении до отправки КП); `manual` — цену ввёл человек, она не пересчитывается («Цена вручную»);
+            `legacy` — строка до РАСЧ-3, цена не меняется сама. Нет поля — `legacy`
+        margin_target_pct:
+          description: >-
+            РАСЧ-3: маржа строки «от маржи» (своя или целевая компании), % — и «вернуть N %» у строки с ценой вручную; у строки
+            до РАСЧ-3 null — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
         markup_pct:
           description: Наценка строки, % — только группе `cost_margin`
           oneOf:
@@ -30289,6 +30309,16 @@ components:
             - {type: 'null'}
         threshold_pct:
           description: Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        target_pct:
+          description: 'РАСЧ-3 — целевая маржа компании, %, по ней строки «от маржи» получают цену — только группе `cost_margin`'
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        rounding_step:
+          description: 'РАСЧ-3 — шаг округления цены вверх, сум (0 — без округления) — только группе `cost_margin`'
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
@@ -30485,6 +30515,17 @@ components:
           description: >-
             Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума.
             Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`)
+        margin_pct:
+          allOf: [{$ref: '#/components/schemas/DecimalString'}]
+          description: >-
+            РАСЧ-3: своя маржа строки, % (0–95; одно из `client_price`, `markup_pct`, `margin_pct`, `price_mode`): строка
+            остаётся «от маржи» и считается сама. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`)
+        price_mode:
+          type: string
+          enum: [margin]
+          description: >-
+            РАСЧ-3: `margin` — «вернуть N %»: ручная цена снимается, цена снова считается от маржи. Только с группой полей
+            `cost_margin` (иначе 422 `cost_forbidden`)
         product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
         kind: {type: string, enum: [goods, service]}
 

@@ -468,6 +468,21 @@
   font-weight: 700;
 }
 
+.pf-calc-manual {
+  display: block;
+  font-size: var(--rt-font-size-sm, 12px);
+  color: var(--rt-color-warning-text);
+  white-space: nowrap;
+}
+.pf-calc-manual-back.ant-btn {
+  padding: 0;
+  height: auto;
+  font-size: inherit;
+}
+.pf-calc-rule {
+  margin: 8px 0 0;
+}
+
 .pf-calc-ready-warn {
   margin: 0 0 8px;
   color: var(--rt-color-warning-text);

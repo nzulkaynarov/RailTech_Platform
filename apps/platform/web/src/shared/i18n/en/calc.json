@@ -145,9 +145,9 @@
       "stock": "Stock",
       "purchase": "Purchase",
       "client": "Client price, UZS",
-      "markup": "Markup, %",
       "visa": "Sign-off",
-      "action": "Action"
+      "action": "Action",
+      "margin": "Margin, %"
     },
     "kind": {
       "goods": "Goods",
@@ -195,7 +195,6 @@
     "reserveLabel": "Reserve {{count}} for “{{name}}”",
     "release": "Release reservation",
     "releaseLabel": "Release the reservation of line “{{name}}”",
-    "markupLabel": "Markup, %: {{name}}",
     "currencyLabel": "Purchase currency for “{{name}}”",
     "mpn": "Manufacturer part number",
     "hint": "Looks like: {{name}}",
@@ -203,7 +202,13 @@
     "hintTakeLabel": "Use it: “{{name}}”",
     "hintNew": "New item",
     "hintNewLabel": "New item: “{{name}}”",
-    "hintFirst": "choose the item first"
+    "hintFirst": "choose the item first",
+    "marginLabel": "Margin, %: {{name}}",
+    "manual": "Manual price",
+    "backToMargin": "back to {{pct}} %",
+    "backToMarginLabel": "Return the price of line “{{name}}” to margin",
+    "rule": "Price = cost / (1 − margin {{margin}} %), rounded up to {{step}}. Recalculates itself until the quote is sent; a manual price is never recalculated.",
+    "ruleNoRound": "Price = cost / (1 − margin {{margin}} %). Recalculates itself until the quote is sent; a manual price is never recalculated."
   },
   "add": {
     "button": "Add line",
@@ -331,7 +336,7 @@
     "client_price_below_cost": "The client price is below the purchase price.",
     "markup_out_of_range": "Markup is outside 0–500 %.",
     "zone_not_permitted": "Insufficient permissions.",
-    "cost_forbidden": "Purchase prices and markup are edited by employees with access to cost.",
+    "cost_forbidden": "Purchase prices, markup and margin are edited by employees with access to cost.",
     "forbidden": "Your role does not allow this action.",
     "unavailable": "Data did not load. Try again later.",
     "other": "Not saved: {{message}}",
@@ -343,7 +348,10 @@
     "comment_required": "Enter a comment.",
     "request_not_closable": "The request can no longer be closed: it is closed or became a project.",
     "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason.",
-    "offer_not_available": "The partner price is no longer valid: pick another or request a price."
+    "offer_not_available": "The partner price is no longer valid: pick another or request a price.",
+    "margin_out_of_range": "Margin is outside 0–95 %.",
+    "price_mode_unknown": "Unknown pricing mode.",
+    "one_price_input": "Give one thing: a price or a margin."
   },
   "load": {
     "retry": "Retry",

@@ -19816,6 +19816,10 @@ export const getGetQuoteDefaultsResponseMock = (
     faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
     undefined,
   ]),
+  price_rounding_step: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
   default_offer_validity_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   payment_terms_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   remind_overdue_invoices: faker.datatype.boolean(),
@@ -19904,6 +19908,10 @@ export const getUpdateQuoteDefaultsResponseMock = (
     undefined,
   ]),
   target_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
+  price_rounding_step: faker.helpers.arrayElement([
     faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
     undefined,
   ]),
@@ -30340,6 +30348,14 @@ export const getGetCalcSheetResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -30367,6 +30383,14 @@ export const getGetCalcSheetResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -30706,6 +30730,14 @@ export const getStartCalcResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -30733,6 +30765,14 @@ export const getStartCalcResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -31072,6 +31112,14 @@ export const getAddCalcLinesResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -31099,6 +31147,14 @@ export const getAddCalcLinesResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -31441,6 +31497,14 @@ export const getUpdateCalcLineResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -31468,6 +31532,14 @@ export const getUpdateCalcLineResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -31810,6 +31882,14 @@ export const getDeleteCalcLineResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -31837,6 +31917,14 @@ export const getDeleteCalcLineResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -32176,6 +32264,14 @@ export const getSignCalcLineResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -32203,6 +32299,14 @@ export const getSignCalcLineResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -32545,6 +32649,14 @@ export const getUpdateCalcTermsResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -32572,6 +32684,14 @@ export const getUpdateCalcTermsResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -32911,6 +33031,14 @@ export const getMarkCalcReadyResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -32938,6 +33066,14 @@ export const getMarkCalcReadyResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -33280,6 +33416,14 @@ export const getNewCalcQuoteVersionResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -33310,6 +33454,14 @@ export const getNewCalcQuoteVersionResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -33652,6 +33804,14 @@ export const getLoseCalcRequestResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -33679,6 +33839,14 @@ export const getLoseCalcRequestResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -34151,6 +34319,14 @@ export const getCopyCalcLinesResponseMock = (
           null,
         ]),
         client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        price_mode: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+          undefined,
+        ]),
+        margin_target_pct: faker.helpers.arrayElement([
+          faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+          null,
+        ]),
         markup_pct: faker.helpers.arrayElement([
           faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
           null,
@@ -34179,6 +34355,14 @@ export const getCopyCalcLinesResponseMock = (
         null,
       ]),
       threshold_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      target_pct: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      rounding_step: faker.helpers.arrayElement([
         faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
         null,
       ]),
@@ -34936,6 +35120,14 @@ export const getReserveCalcLineResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -34963,6 +35155,14 @@ export const getReserveCalcLineResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
@@ -35311,6 +35511,14 @@ export const getReleaseCalcLineReservationResponseMock = (
     ]),
     cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
     client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    price_mode: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["margin", "manual", "legacy"] as const),
+      undefined,
+    ]),
+    margin_target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
     markup_pct: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
@@ -35341,6 +35549,14 @@ export const getReleaseCalcLineReservationResponseMock = (
       null,
     ]),
     threshold_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    target_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    rounding_step: faker.helpers.arrayElement([
       faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
       null,
     ]),
