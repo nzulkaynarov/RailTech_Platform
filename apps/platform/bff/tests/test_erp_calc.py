@@ -82,6 +82,8 @@ def line(**extra: Any) -> dict[str, Any]:
         "cost": "90000000.00",
         "client_price": "99000000.00",
         "markup_pct": "10.0",
+        "margin_pct": "9.1",
+        "margin_below": False,
         "visa": {"by": "Демо Снабженцев", "at": "2026-10-27T10:00:00+00:00"},
         "group": "supply",
         "can_edit": True,
@@ -298,6 +300,8 @@ async def test_sheet_for_supply_has_cost_and_supplier_prices(
     assert goods["product_id"] == "3"
     assert goods["cost"] == "90000000.00"
     assert goods["markup_pct"] == "10.0"
+    assert goods["margin_pct"] == "9.1"
+    assert goods["margin_below"] is False
     assert goods["supplier"]["offer_price"] == "90000000.00"
     assert body["totals"] == {
         "client": "208800000.00",
@@ -1281,3 +1285,73 @@ async def test_request_file_of_a_draft_without_a_calc_task_is_streamed(
     assert response.content == b"draft file"
     assert file_route.called
     assert refs_route.calls.last.request.url.params["any"] == "1"
+
+
+PARTNER_PRICE = {
+    "source": {
+        "offer_id": 31,
+        "supplier": "ООО Вымышленный Поставщик",
+        "price": "7000.00",
+        "currency": "USD",
+        "price_date": "2026-11-20",
+        "valid_until": "2026-12-31",
+        "freshness": "ok",
+        "chosen": True,
+    },
+    "options": [
+        {
+            "offer_id": 31,
+            "supplier": "ООО Вымышленный Поставщик",
+            "price": "7000.00",
+            "currency": "USD",
+            "price_date": "2026-11-20",
+            "valid_until": "2026-12-31",
+            "freshness": "ok",
+            "chosen": True,
+        }
+    ],
+    "expired": None,
+    "can_request": False,
+}
+
+
+async def test_line_carries_the_partner_price_source_and_choice_only_for_price_holders(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """РАСЧ-1: источник и список цен партнёров — держателю цен поставщиков; инженеру не видно."""
+    erp.get(f"{CALC}/104/").mock(
+        return_value=httpx.Response(
+            200, json=sheet(lines=[line(partner_price=PARTNER_PRICE), service_line()])
+        )
+    )
+    await web.login(["SUPPLY"])
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
+    check(response, "/erp/calc/{number}", "get")
+    part = response.json()["lines"][0]["partner_price"]
+    assert part["source"]["offer_id"] == "31"
+    assert part["source"]["currency"] == "USD"
+    assert part["options"][0]["chosen"] is True
+    assert part["can_request"] is False
+
+    await web.login(["ENGINEER"])
+    hidden = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
+    assert "partner_price" not in json.dumps(hidden.json()["lines"][0])
+    assert "7000" not in json.dumps(hidden.json(), ensure_ascii=False)
+
+
+async def test_patch_offer_id_goes_to_erp_as_a_number(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = erp.patch(f"{CALC}/104/lines/7/").mock(
+        side_effect=[
+            httpx.Response(200, json=sheet()),
+            httpx.Response(409, json={"detail": "OFFER_NOT_AVAILABLE"}),
+        ]
+    )
+    ok = await call(web, "PATCH", f"/erp/calc/{ENCODED}/lines/7", {"offer_id": "31"})
+    assert ok.status_code == 200
+    assert json.loads(route.calls[0].request.content) == {"offer_id": 31}
+    gone = await call(web, "PATCH", f"/erp/calc/{ENCODED}/lines/7", {"offer_id": "32"})
+    assert gone.status_code == 409
+    check(gone, "/erp/calc/{number}/lines/{line_id}", "patch")

@@ -45,9 +45,7 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
 
     from django.utils import timezone
 
-    from accounts.models import CompanySettings
-
-    settings_row = CompanySettings.objects.filter(company=company).first()
+    settings_row = company.settings  # строка настроек создаётся с умолчаниями (РАСЧ-1: наценка по умолчанию)
     if settings_row is None:
         return quote
 

@@ -132,6 +132,31 @@ class CalcSupplier(BaseModel):
     offer_currency: str | None = None
 
 
+class CalcPartnerOption(BaseModel):
+    """РАСЧ-1: действующая цена партнёра в валюте строки (после перевода по курсу)."""
+
+    offer_id: str
+    supplier: str
+    price: str
+    currency: str
+    price_date: dt.date
+    valid_until: dt.date | None
+    freshness: Literal["ok", "expiring", "stale"]
+    chosen: bool
+
+
+class CalcPartnerExpired(BaseModel):
+    supplier: str
+    valid_until: dt.date
+
+
+class CalcPartnerPrice(BaseModel):
+    source: CalcPartnerOption | None
+    options: list[CalcPartnerOption]
+    expired: CalcPartnerExpired | None
+    can_request: bool
+
+
 class CalcLineVisa(BaseModel):
     by: str
     at: dt.datetime
@@ -162,6 +187,8 @@ class CalcLine(BaseModel):
     unit_code: str | None = None
     stock: CalcStock
     supplier: CalcSupplier | None
+    #: РАСЧ-1: источник закупки и выбор цены партнёра (`supplier_prices` или держатель зоны товаров)
+    partner_price: CalcPartnerPrice | None = None
     lead_days: int | None
     purchase_price: str | None = None
     purchase_currency: str | None = None
@@ -170,6 +197,8 @@ class CalcLine(BaseModel):
     cost: str | None = None
     client_price: str
     markup_pct: str | None = None
+    margin_pct: str | None = None
+    margin_below: bool | None = None
     visa: CalcLineVisa | None
     can_edit: bool
 
@@ -178,6 +207,9 @@ class CalcTotals(BaseModel):
     client: str
     purchase: str | None = None
     markup_pct: str | None = None
+    margin_pct: str | None = None
+    threshold_pct: str | None = None
+    margin_below: bool | None = None
     vat_included: Literal[False] = False
 
 
@@ -366,6 +398,7 @@ class CalcLinePatch(BaseModel):
     client_price: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
     markup_pct: str | None = Field(default=None, pattern=DECIMAL, max_length=8)
     product_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
+    offer_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     kind: Literal["goods", "service"] | None = None
 
 
@@ -474,6 +507,12 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         line.cost = raw.get("cost")
     if cost:
         line.markup_pct = raw.get("markup_pct")
+        if "margin_pct" in raw:
+            line.margin_pct = raw["margin_pct"]
+        if "margin_below" in raw:
+            line.margin_below = bool(raw["margin_below"])
+    if offers:
+        line.partner_price = _partner_price(raw.get("partner_price"))
     return line
 
 
@@ -488,6 +527,27 @@ def zones_of(access: Mapping[str, str]) -> set[str]:
 def _terms(raw: Any) -> dict[str, CalcTerms]:
     """Условия КП, если ERP их прислал (старый ERP — без ключа `terms`)."""
     return {"terms": CalcTerms(**raw)} if isinstance(raw, dict) else {}
+
+
+def _partner_option(raw: Any) -> CalcPartnerOption | None:
+    if not isinstance(raw, dict):
+        return None
+    return CalcPartnerOption(**{**raw, "offer_id": str(raw["offer_id"])})
+
+
+def _partner_price(raw: Any) -> CalcPartnerPrice | None:
+    """Источник закупки и список цен партнёров (РАСЧ-1); старый ERP — без ключа."""
+    if not isinstance(raw, dict):
+        return None
+    expired = raw.get("expired")
+    return CalcPartnerPrice(
+        source=_partner_option(raw.get("source")),
+        options=[
+            o for o in (_partner_option(x) for x in raw.get("options") or []) if o is not None
+        ],
+        expired=CalcPartnerExpired(**expired) if isinstance(expired, dict) else None,
+        can_request=bool(raw.get("can_request")),
+    )
 
 
 def _catalog_hint(raw: Any) -> CalcCatalogHint | None:
@@ -523,6 +583,11 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
     if cost and totals.get("purchase") is not None:
         totals_model.purchase = totals.get("purchase")
         totals_model.markup_pct = totals.get("markup_pct")
+        if "margin_pct" in totals:
+            totals_model.margin_pct = totals["margin_pct"]
+            totals_model.threshold_pct = totals.get("threshold_pct")
+        if "margin_below" in totals:
+            totals_model.margin_below = bool(totals["margin_below"])
     return CalcSheet(
         number=number,
         title=deal_title(deal),

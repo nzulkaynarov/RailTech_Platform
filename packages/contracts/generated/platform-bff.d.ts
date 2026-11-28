@@ -17664,6 +17664,40 @@ export interface components {
       /** @description Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods` */
       offer_currency?: string | null;
     };
+    /** @description РАСЧ-1 — действующая цена партнёра в валюте строки (после перевода по курсу) */
+    CalcPartnerOption: {
+      offer_id: string;
+      supplier: string;
+      price: components["schemas"]["DecimalString"];
+      currency: string;
+      /**
+       * Format: date
+       * @description Дата цены — подтверждение или последнее изменение
+       */
+      price_date: string;
+      /** Format: date */
+      valid_until: string | null;
+      /** @enum {string} */
+      freshness: "ok" | "expiring" | "stale";
+      /** @description Эта цена стоит в закупке строки */
+      chosen: boolean;
+    };
+    CalcPartnerExpired: {
+      supplier: string;
+      /** Format: date */
+      valid_until: string;
+    };
+    /** @description РАСЧ-1 — источник закупки строки и выбор цены партнёра. Группе `supplier_prices` или держателю `erp.calc.goods`; услуга и строка без карточки — null. */
+    CalcPartnerPrice: {
+      /** @description Цена партнёра, по которой взята закупка; null — закупку ввели руками или её нет */
+      source: components["schemas"]["CalcPartnerOption"] | null;
+      /** @description Короткий список действующих цен, от дешёвой (до 5) */
+      options: components["schemas"]["CalcPartnerOption"][];
+      /** @description Последняя истёкшая цена, когда действующих нет — молча не берётся, экран предлагает «Запросить цену» */
+      expired: components["schemas"]["CalcPartnerExpired"] | null;
+      /** @description Действующей цены нет */
+      can_request: boolean;
+    };
     CalcLineVisa: {
       /** @description Кто подтвердил строку (факт визы) */
       by: string;
@@ -17701,6 +17735,7 @@ export interface components {
       unit_code: string | null;
       stock: components["schemas"]["CalcStock"];
       supplier: components["schemas"]["CalcSupplier"] | null;
+      partner_price?: components["schemas"]["CalcPartnerPrice"] | null;
       /** @description Срок поставки строки, дней */
       lead_days: number | null;
       /** @description Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods` */
@@ -17717,6 +17752,10 @@ export interface components {
       client_price: components["schemas"]["DecimalString"];
       /** @description Наценка строки, % — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки ниже порога — предупреждение, не запрет */
+      margin_below?: boolean;
       visa: components["schemas"]["CalcLineVisa"] | null;
       /** @description Сотрудник может править и визировать строку (зона, черновик) */
       can_edit: boolean;
@@ -17728,6 +17767,12 @@ export interface components {
       purchase?: components["schemas"]["DecimalString"];
       /** @description Наценка итого — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого на цену, % — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
+      threshold_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
+      margin_below?: boolean;
       /** @constant */
       vat_included: false;
     };
@@ -17860,6 +17905,8 @@ export interface components {
       lead_days?: number | null;
       purchase_price?: components["schemas"]["DecimalString"];
       purchase_currency?: string;
+      /** @description РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (в валюте строки по курсу) */
+      offer_id?: string;
       crew_rate?: components["schemas"]["DecimalString"] | null;
       crew_days?: components["schemas"]["DecimalString"] | null;
       /** @description Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5) */

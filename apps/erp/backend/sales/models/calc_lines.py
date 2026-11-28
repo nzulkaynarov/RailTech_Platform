@@ -101,6 +101,13 @@ class CalcLine(models.Model):
         verbose_name=_("Решение по карточке принято"),
         help_text=_("Выбрали карточку или «Новая позиция»: подсказка больше не ставится"),
     )
+    partner_priced = models.BooleanField(
+        default=False,
+        verbose_name=_("Закупка из цены партнёра"),
+        help_text=_(
+            "РАСЧ-1: закупка взята из цены партнёра; ручная правка снимает флаг, поставщик строки (offer) остаётся"
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
