@@ -128,6 +128,21 @@ def test_manual_purchase_price_drops_the_partner_source(prices):
     assert len(edited["partner_price"]["options"]) == 2 and edited["partner_price"]["can_request"] is False
 
 
+def test_manual_purchase_price_keeps_the_chosen_supplier_of_the_line(prices):
+    from crm.services.calculation import line_supplier_offer
+
+    line = _add(prices, product_id=prices["product"].pk)  # по умолчанию — Партнёр 2 (дешевле)
+    chosen = SupplierOffer.objects.get(supplier=prices["a"])
+    url = _url(prices, f"lines/{line['id']}/")
+    assert _api(prices["supply"]).patch(url, {"offer_id": chosen.pk}, format="json").status_code == 200
+    response = _api(prices["supply"]).patch(url, {"purchase_price": "8000"}, format="json")
+    edited = next(entry for entry in response.json()["lines"] if entry["id"] == line["id"])
+    assert edited["purchase_price"] == "8000.00" and edited["partner_price"]["source"] is None
+    item = QuoteItem.objects.get(pk=line["id"])
+    assert item.offer_id == chosen.pk
+    assert line_supplier_offer(item).supplier_id == prices["a"].pk  # поставщик строки и черновика заказа — выбранный
+
+
 def test_partner_source_survives_exchange_rate_change(prices):
     _api(prices["supply"]).post(_url(prices, "start/"))
     Quote.objects.filter(deal=prices["deal"]).update(cost_currency_default=prices["uzs"])

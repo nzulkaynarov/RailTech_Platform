@@ -407,8 +407,11 @@ def _partner_payload(item: QuoteItem, ctx: _Context) -> Optional[dict]:
         return None
     options, expired = ctx.partners.get((item.product_id, _target_currency(item)), ([], None))
     # Источник — по сохранённой связи строки с ценой партнёра (`offer_id`), а не по равенству цены: цена в списке
-    # пересчитывается по курсу на сегодня, в строке лежит цена по курсу на день выбора. Ручная правка закупки снимает связь.
-    current = next((o for o in options if item.offer_id and item.offer_id == o.offer.pk), None)
+    # пересчитывается по курсу на сегодня, в строке лежит цена по курсу на день выбора. Ручная правка закупки снимает флаг `partner_priced`, связь с поставщиком (`offer_id`) остаётся.
+    calc = getattr(item, "calc", None)
+    current = next(
+        (o for o in options if calc is not None and calc.partner_priced and item.offer_id == o.offer.pk), None
+    )
     return {
         "source": _option_payload(current, chosen=True) if current is not None else None,
         "options": [_option_payload(o, chosen=o is current) for o in options[: calc_partner_price.MAX_OPTIONS]],
@@ -1055,16 +1058,23 @@ def _target_currency(item: QuoteItem) -> Optional[str]:
     return item.frozen_currency.code.upper() if item.frozen_currency_id else None
 
 
-def _apply_option(item: QuoteItem, option) -> None:
-    """Закупка строки из выбранной цены партнёра: цена в валюте строки, предложение и срок (РАСЧ-1)."""
+def _apply_option(item: QuoteItem, option, calc: Optional[CalcLine] = None) -> None:
+    """Закупка строки из выбранной цены партнёра: цена в валюте строки, предложение и срок (РАСЧ-1). Флаг
+    `partner_priced` у строки расчёта — «закупка взята из цены партнёра»; сохраняет вызывающий (или `calc is None`)."""
     offer = option.offer
+    if calc is None:
+        calc, _ = CalcLine.objects.get_or_create(item=item)
+        calc.partner_priced = True
+        calc.save(update_fields=["partner_priced", "updated_at"])
+    else:
+        calc.partner_priced = True
     item.frozen_base_price = option.price
     item.frozen_currency = _currency(option.currency)
     item.offer = offer
     item.lead_time_days = offer.order_lead_time_days or offer.in_stock_lead_time_days or 0
 
 
-def _prefill_from_offer(item: QuoteItem, product) -> None:
+def _prefill_from_offer(item: QuoteItem, product, calc: Optional[CalcLine] = None) -> None:
     """Закупка и срок по карточке: своё предложение (склад), иначе самая низкая действующая цена партнёра (РАСЧ-1:
     сравнение по курсу, цена в валюте строки; истёкшая цена молча не берётся)."""
     if product is None or item.frozen_base_price:
@@ -1080,10 +1090,10 @@ def _prefill_from_offer(item: QuoteItem, product) -> None:
     options, _expired = found.get(product.id, ([], None))
     chosen = calc_partner_price.best(options)
     if chosen is not None:
-        _apply_option(item, chosen)
+        _apply_option(item, chosen, calc)
 
 
-def _choose_partner_offer(item: QuoteItem, offer_id) -> None:
+def _choose_partner_offer(item: QuoteItem, offer_id, calc: CalcLine) -> None:
     """Человек выбрал другую цену из короткого списка строки (РАСЧ-1): только действующая цена партнёра по карточке строки."""
     if not item.product_id:
         raise CalcError("OFFER_NOT_AVAILABLE", 400)
@@ -1094,7 +1104,7 @@ def _choose_partner_offer(item: QuoteItem, offer_id) -> None:
     chosen = next((o for o in options if str(o.offer.pk) == str(offer_id)), None)
     if chosen is None:
         raise CalcError("OFFER_NOT_AVAILABLE", 409)
-    _apply_option(item, chosen)
+    _apply_option(item, chosen, calc)
 
 
 def _prefill_linked(quote: Quote) -> None:
@@ -1241,11 +1251,11 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
             item.unit_code, item.unit = product.uom.code, product.uom.name[:32]
         if quote.cost_currency_default_id:
             item.frozen_currency_id = quote.cost_currency_default_id
-        _prefill_from_offer(item, product)
+        calc = CalcLine(kind=CalcLineKind.SERVICE if row.kind == CalcLineKind.SERVICE else CalcLineKind.GOODS)
+        _prefill_from_offer(item, product, calc)
         item.save(skip_recalculate=True)
-        CalcLine.objects.create(
-            item=item, kind=CalcLineKind.SERVICE if row.kind == CalcLineKind.SERVICE else CalcLineKind.GOODS
-        )
+        calc.item = item
+        calc.save()
         created.append(item.id)
     _link_catalog(quote)
     _prefill_linked(quote)
@@ -1417,12 +1427,13 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         _require_zone(user, new_zone)
         if item.offer_id and (product is None or item.offer.product_id != product.id):
             item.offer = None
+            calc.partner_priced = False
         if product is None:
             # Снять карточку — строка остаётся в своей зоне: тип строки без карточки берётся из прежней зоны.
             calc.kind = CalcLineKind.SERVICE if zone == Zone.SERVICES else CalcLineKind.GOODS
         item.product = product
         if product is not None:
-            _prefill_from_offer(item, product)
+            _prefill_from_offer(item, product, calc)
         zone = new_zone
     own_draft = False
     if "kind" in changes:
@@ -1465,7 +1476,7 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         if zone == Zone.SERVICES:
             raise CalcError("SERVICE_COST_FROM_CREW", 400)
         _require(user, Permission.QUOTE_EDIT_PRICING.value)
-        _choose_partner_offer(item, changes["offer_id"])
+        _choose_partner_offer(item, changes["offer_id"], calc)
     if "purchase_price" in changes or "purchase_currency" in changes:
         if zone == Zone.SERVICES:
             raise CalcError("SERVICE_COST_FROM_CREW", 400)
@@ -1474,8 +1485,9 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
             item.frozen_base_price = Decimal(str(changes["purchase_price"]))
         if changes.get("purchase_currency"):
             item.frozen_currency = _currency(changes["purchase_currency"])
-        if item.offer_id and item.offer.supplier_id != _own_company_id():
-            item.offer = None  # закупку ввели руками: источник «цена партнёра» больше не действует
+        calc.partner_priced = (
+            False  # закупку ввели руками: источник «цена партнёра» больше не действует; поставщик строки остаётся
+        )
     if "crew_rate" in changes or "crew_days" in changes:
         if zone != Zone.SERVICES:
             raise CalcError("GOODS_HAVE_NO_CREW", 400)
@@ -1840,6 +1852,7 @@ def new_version(deal_id: int, user) -> dict:
                 crew_rate=line.crew_rate,
                 crew_days=line.crew_days,
                 price_basis=line.price_basis,
+                partner_priced=line.partner_priced,
             )
     _log_quote(
         source,
