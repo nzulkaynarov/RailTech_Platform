@@ -124,7 +124,26 @@
     "askBody": "«{{name}}» imkoniyati kerak: {{level}}.",
     "grantors": "Imkoniyatlarni beradiganlar: {{names}}.",
     "nobody": "Hozir imkoniyat beradigan odam yöq: xodimlarni hec kim yuritmaydi. Administratorga yozing.",
-    "action": "Sizda bu amalga ruxsat yöq.",
-    "actionNeed": "«{{name}}» imkoniyati kerak: {{level}}."
+    "action": "Bu amal sizga mavjud emas.",
+    "actionGrantors": "Imkoniyatni beradiganlar: {{names}}.",
+    "cant": "Sizda {{what}} imkoniyati yöq.",
+    "cantGrantors": "Uni beradiganlar: {{names}}.",
+    "can": {
+      "contract": {
+        "work": "şartnomalar bilan işlaş"
+      },
+      "acts": {
+        "work": "aktlar bilan işlaş"
+      },
+      "invoices": {
+        "work": "hisoblar bilan işlaş"
+      },
+      "payments": {
+        "work": "tölovlar bilan işlaş"
+      },
+      "registry": {
+        "work": "hujjatlar reestri bilan işlaş"
+      }
+    }
   }
 }

@@ -325,7 +325,6 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
           <RequestSteps stage={card.step} number={card.request_number} />
         </section>
         {note}
-        {writer ? null : <p className="pf-hint">{t("card.readOnlyHint")}</p>}
         <Documents card={card} objectId={objectId} />
         <Execution card={card} objectId={objectId} />
         <ProjectFactsTab card={card} />

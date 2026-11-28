@@ -124,7 +124,26 @@
     "askBody": "I need the capability “{{name}}”: {{level}}.",
     "grantors": "Capabilities are granted by: {{names}}.",
     "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator.",
-    "action": "You are not allowed to do this.",
-    "actionNeed": "This needs the capability “{{name}}”: {{level}}."
+    "action": "This action is not available to you.",
+    "actionGrantors": "The capability is granted by: {{names}}.",
+    "cant": "You do not have the capability to {{what}}.",
+    "cantGrantors": "It is granted by: {{names}}.",
+    "can": {
+      "contract": {
+        "work": "work with contracts"
+      },
+      "acts": {
+        "work": "work with acts"
+      },
+      "invoices": {
+        "work": "work with invoices"
+      },
+      "payments": {
+        "work": "work with payments"
+      },
+      "registry": {
+        "work": "work with the document registry"
+      }
+    }
   }
 }

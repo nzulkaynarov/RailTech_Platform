@@ -353,9 +353,6 @@ function ContractBody({
         />
       ) : null}
       {primaryBlock}
-      {allowed.length === 0 && !FINAL.has(contract.status) && !contract.send_blocker ? (
-        <p className="pf-hint">{t("contract.readOnly")}</p>
-      ) : null}
 
       {canReject ? (
         <ActionToggle

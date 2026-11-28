@@ -205,10 +205,6 @@ function ActBody({
         </ActionToggle>
       ) : null}
 
-      {act.actions.length === 0 && act.status !== "signed" && act.status !== "cancelled" ? (
-        <p className="pf-hint">{t("act.readOnly")}</p>
-      ) : null}
-
       {/* План 0.7 (FR-30): подписанный или отменённый акт на подпись не отправляют */}
       {act.status !== "signed" && act.status !== "cancelled" ? (
         <SigningButton objectId={objectId} kind="act" documentId={act.id} />

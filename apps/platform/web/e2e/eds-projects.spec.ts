@@ -250,7 +250,9 @@ test.describe("Проекты: чтение и доступ", () => {
       const reason = docs.locator(".pf-signing-denied").first();
       await expect(reason).toHaveAttribute("aria-label", /возможност/i);
       await reason.focus();
-      await expect(page.getByRole("tooltip")).toContainText("Нужна возможность");
+      await expect(page.getByRole("tooltip")).toContainText(
+        "У вас нет возможности работать с договорами. Её выдают:",
+      );
       await settledScreenshot(page, "project-read-only");
       await expectNoViolations(page, `менеджер: «На подпись» закрыта ${String(width)}`);
     });
@@ -282,7 +284,7 @@ test.describe("Проекты: чтение и доступ", () => {
       await expect(
         page
           .locator(".ant-message-notice")
-          .getByText(/Не удалось отправить на подпись: Не хватает/),
+          .getByText(/Не удалось отправить на подпись: у вас нет такой возможности\./),
       ).toBeVisible();
       await shot(page, "signing-403");
     });

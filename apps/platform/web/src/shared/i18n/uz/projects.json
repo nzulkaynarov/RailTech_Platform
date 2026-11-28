@@ -105,7 +105,6 @@
       "due": "Muddat"
     },
     "readOnly": "Faqat öqiş",
-    "readOnlyHint": "Faqat köriş.",
     "documents": {
       "title": "Loyiha hujjatlari",
       "quote": "TT",
@@ -321,7 +320,6 @@
       "remark_vote": "Javob saqlandi.",
       "remark_decide": "Qaror saqlandi."
     },
-    "readOnly": "Faqat köriş.",
     "template": {
       "title": "Şablon böyiça şartnoma",
       "path": "Şartnoma yöli",
@@ -528,8 +526,7 @@
       "attach_scan": "Skan biriktirildi, dalolatnoma imzolandi.",
       "return": "Qaytariş yozildi.",
       "reissue": "Dalolatnoma qaytadan çiqarildi."
-    },
-    "readOnly": "Faqat köriş."
+    }
   },
   "files": {
     "choose": "Fayl tanlaş",
@@ -552,7 +549,7 @@
     "not_delivered": "Dalolatnoma yetkazib berilgandan keyin çiqariladi: tovar hali yetkazilmagan.",
     "goods_not_shipped": "Tovar ombordan hali jönatilmagan: yetkazib beriş belgilari jönatilgandan keyin mavjud.",
     "delivery_transition_not_allowed": "Yetkazib beriş allaqaçon boşqa holatda. Sahifani yangilang.",
-    "fulfillment_not_ready": "Loyiha böyiça bajarilış hali yoq: u şartnomadan keyin paydo boladi.",
+    "fulfillment_not_ready": "Loyiha böyiça bajarilış hali yöq: u şartnomadan keyin paydo böladi.",
     "no_invoice": "Dalolatnoma rasmiylaştirilgan hisob böyiça çiqariladi: hisob hali yöq.",
     "contract_exists": "Şartnoma loyihasi allaqaçon şakllantirilgan.",
     "contract_create_not_allowed": "Ruxsat yetarli emas.",
@@ -561,7 +558,7 @@
     "scan_invalid": "Fayl skanga öxşamaydi: 20 MB gaça PDF yoki rasm kerak.",
     "scan_required": "Skan faylini tanlang.",
     "no_file_provided": "Skan faylini tanlang.",
-    "forbidden": "Bu amal uçun imkoniyat yetmeydi. Uni xodimlarni yuritadigan odamlar beradi; sizda nima bor — Profil, «Mening imkoniyatlarim».",
+    "forbidden": "sizda bunday imkoniyat yöq",
     "unavailable": "Maʼlumotlar yuklanmadi. Keyinroq qayta urinib köring.",
     "payload": "Fayl 20 MB dan katta.",
     "unknown": "Bajarilmadi. Qayta urinib köring.",
