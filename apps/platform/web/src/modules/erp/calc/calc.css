@@ -80,12 +80,11 @@
 .pf-calc-lines th:first-child,
 .pf-calc-lines td:first-child {
   padding-left: 12px;
-}
-/* Длинное название обрезается многоточием, а не растягивает таблицу: на 1512 и 1280 прокрутки вбок нет. */
-.pf-calc-lines td:first-child {
+  /* Длинное название обрезается многоточием, а не растягивает таблицу: на 1512 и 1280 прокрутки вбок нет. */
   width: 34%;
   max-width: 0;
 }
+
 .pf-calc-number {
   color: var(--rt-color-primary-text);
   white-space: nowrap;
