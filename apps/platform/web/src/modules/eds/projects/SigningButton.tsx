@@ -21,8 +21,11 @@ export function SigningButton({
   const { t } = useTranslation("projects");
   const { message } = App.useApp();
   const apply = useApplyCard(objectId);
-  // Отправка на подпись — действие раздела «Проекты» (полный доступ): без него кнопка закрыта, а не тихо отказывает (403).
-  const denied = useDeniedReason("eds.projects", "full");
+  // Отправка на подпись — действие раздела «Проекты» (полный доступ), как проверяет BFF; ERP проверяет ещё и вид документа:
+  // для счёта нужен полный «Операции · Финансы» (`finance.invoice`). Без права кнопка закрыта, а не тихо отказывает (403).
+  const projectsDenied = useDeniedReason("eds.projects", "full");
+  const paymentsDenied = useDeniedReason("eds.payments", "full");
+  const denied = projectsDenied ?? (kind === "invoice" ? paymentsDenied : null);
   const fail = useActionError(t("signing.failed"));
   const request = useRequestEdsProjectSigning({
     mutation: {

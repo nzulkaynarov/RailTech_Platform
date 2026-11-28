@@ -542,6 +542,12 @@
   "errors": {
     "contract_transition_not_allowed": "Şartnoma allaqaçon boşqa holatda. Sahifani yangilang.",
     "act_sign_not_allowed": "Dalolatnoma allaqaçon boşqa holatda. Sahifani yangilang.",
+    "not_issued": "Avval hujjatni çiqaring: qoralamada raqam yoq.",
+    "no_number": "Hujjatda raqam yoq.",
+    "already_requested": "Hujjat allaqaçon imzoda.",
+    "already_signed": "Hujjat allaqaçon imzolangan. Tuzatiş — yangi hujjat.",
+    "document_closed": "Hujjat bekor qilingan — imzolaş uçun hec nima yoq.",
+    "no_crm_user": "Hisobingiz hali xodim profili bilan bağlanmagan: imzoga yuborib bölmaydi.",
     "act_already_exists": "Loyihada dalolatnoma allaqaçon bor.",
     "not_delivered": "Dalolatnoma yetkazib berilgandan keyin çiqariladi: tovar hali yetkazilmagan.",
     "goods_not_shipped": "Tovar ombordan hali jönatilmagan: yetkazib beriş belgilari jönatilgandan keyin mavjud.",

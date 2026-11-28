@@ -542,6 +542,12 @@
   "errors": {
     "contract_transition_not_allowed": "The contract is already in another status. Refresh the page.",
     "act_sign_not_allowed": "The act is already in another status. Refresh the page.",
+    "not_issued": "Issue the document first: a draft has no number.",
+    "no_number": "The document has no number.",
+    "already_requested": "The document is already out for signing.",
+    "already_signed": "The document is already signed. A correction is a new document.",
+    "document_closed": "The document is cancelled: there is nothing to sign.",
+    "no_crm_user": "Your account is not linked to a staff profile yet: signing cannot be requested.",
     "act_already_exists": "The project already has an act.",
     "not_delivered": "The act is issued after delivery: the goods are not delivered yet.",
     "goods_not_shipped": "The goods are not shipped from the warehouse yet: delivery marks are available after shipping.",

@@ -217,12 +217,29 @@ describe("Проект: карточка", () => {
     ).toBeVisible();
   });
 
-  it("ПОДПИСЬ-1: отказ 409 («документ уже в другом статусе») тоже назван", async () => {
+  // Настоящие отказы ERP при `request-signing` (`signing_outbound.py`, все 409): BFF отдаёт код в `details.reason`
+  // строчными. Каждый называется своими словами, а не общим «Договор уже в другом статусе».
+  it.each([
+    ["not_issued", "Сначала выпустите документ: у черновика нет номера."],
+    ["no_number", "У документа нет номера."],
+    ["already_requested", "Документ уже на подписи."],
+    ["already_signed", "Документ уже подписан. Исправление — новый документ."],
+    ["document_closed", "Документ отменён — подписывать нечего."],
+    [
+      "no_crm_user",
+      "Ваша учётная запись ещё не связана с профилем сотрудника: отправить на подпись нельзя.",
+    ],
+  ])("ПОДПИСЬ-1: отказ ERP «%s» назван своими словами", async (reason, text) => {
     signIn("accountant@demo.example");
     server.use(
       http.post("*/eds/projects/:ref/signing", () =>
         HttpResponse.json(
-          { code: "CONFLICT", message: "conflict", source: "erp" },
+          {
+            code: "CONFLICT",
+            message: "Объект изменился. Обновите страницу.",
+            source: "erp",
+            details: { backend_status: 409, backend_code: reason.toUpperCase(), reason },
+          },
           { status: 409 },
         ),
       ),
@@ -230,9 +247,43 @@ describe("Проект: карточка", () => {
     renderAt(PR(105));
     const panel = await screen.findByRole("region", { name: "Документы проекта" });
     await click(panel, "На подпись");
-    expect(
-      await screen.findByText(/Не удалось отправить на подпись: Договор уже в другом статусе/),
-    ).toBeVisible();
+    const shown = await screen.findByText(new RegExp(`Не удалось отправить на подпись: ${text}`));
+    expect(shown).toBeVisible();
+    expect(shown.textContent).not.toMatch(/уже в другом статусе/);
+  });
+
+  it("ПОДПИСЬ-1: 409 без известного кода говорит общими словами, не выдавая их за причину документа", async () => {
+    signIn("accountant@demo.example");
+    server.use(
+      http.post("*/eds/projects/:ref/signing", () =>
+        HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "conflict",
+            source: "erp",
+            details: { reason: "новый_код" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderAt(PR(105));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    await click(panel, "На подпись");
+    expect(await screen.findByText(/Не удалось отправить на подпись: /)).toBeVisible();
+  });
+
+  it("ПОДПИСЬ-1: у счёта «На подпись» закрыта без «Финансов» (ERP: finance.invoice), у договора открыта", async () => {
+    // директор: «Проекты» — полный, «Операции · Финансы» — только чтение (platform-rbac.yaml)
+    signIn("director@demo.example");
+    renderAt(PR(97));
+    const panel = await screen.findByRole("region", { name: "Документы проекта" });
+    await within(panel).findAllByText("На подпись");
+    const buttons = within(panel).getAllByRole("button", { name: "На подпись" });
+    const disabled = buttons.filter((b) => b.hasAttribute("disabled"));
+    expect(disabled.length).toBeGreaterThan(0);
+    const wrapper = disabled[0]?.closest("span[aria-label]");
+    expect(wrapper?.getAttribute("aria-label")).toMatch(/Финанс|возможност/i);
   });
 
   it("Х-8: у компании проекта «Не работать» — полоса с причиной, а договор в работе остаётся на месте", async () => {

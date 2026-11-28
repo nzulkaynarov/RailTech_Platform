@@ -1,9 +1,9 @@
-import { App } from "antd";
 import type { TFunction } from "i18next";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
+import { useNotify } from "../../../shared/notify/NotifyProvider";
 
 /** Причина отказа действия по проекту словом: подкод ERP (`details.reason`), иначе по статусу ответа. */
 export function reasonText(t: TFunction<"projects">, error: unknown): string {
@@ -32,12 +32,12 @@ export function isStale(error: unknown): boolean {
  */
 export function useActionError(failed?: string): (error: unknown) => void {
   const { t } = useTranslation("projects");
-  const { message } = App.useApp();
+  const notify = useNotify();
   return useCallback(
     (error: unknown) => {
       const reason = reasonText(t, error);
-      void message.error(failed ? `${failed}: ${reason}` : t("errors.failed", { reason }));
+      notify.error(failed ? `${failed}: ${reason}` : t("errors.failed", { reason }));
     },
-    [t, message, failed],
+    [t, notify, failed],
   );
 }

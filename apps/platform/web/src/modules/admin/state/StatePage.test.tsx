@@ -49,6 +49,24 @@ describe("Настройки · «Состояние» (ЕВ-2а, доска 37)
     ).toEqual(["Люди и доступ", "Компания", "Правила работы", "Каналы и подключения", "Журнал"]);
   });
 
+  it.each([[500], [403]])(
+    "ПОДПИСЬ-1: реестр подписи не прочитан (%i) — «Права подписи» остаётся в «Готовности» со словом «Не удалось проверить»",
+    async (status) => {
+      server.use(
+        http.get("*/eds/signing/setup-hint", () =>
+          HttpResponse.json(
+            { code: "UNAVAILABLE", message: "нет ответа", source: "eds" },
+            { status },
+          ),
+        ),
+      );
+      await openState("admin@demo.example");
+      const readiness = await screen.findByRole("region", { name: /^Готовность · \d+ из \d+$/ });
+      const row = await within(readiness).findByText("Права подписи");
+      expect(row.closest("li")).toHaveTextContent("Не удалось проверить");
+    },
+  );
+
   it("постоянной строки «Внешняя проверка доступности — не подключена» нет (Л-06): служба показывает только проверенное", async () => {
     await openState("admin@demo.example");
     const services = await screen.findByRole("region", { name: "Службы" });
