@@ -35724,6 +35724,96 @@
                 }
             }
         },
+        "/api/v1/parties/people/{id}/cabinet-right/": {
+            "patch": {
+                "operationId": "parties_people_cabinet_right",
+                "description": "КЛИЕНТ-1. «Может подтверждать» контакта клиента: без права контакт в Кабинете только смотрит КП и договор. Право `deal.manage` или `supply.manage`; изменение пишется в журнал. Контакт вне списка «Люди» — 404.",
+                "summary": "Set the right to confirm of a client contact",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonRight"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/people/{id}/photo/": {
             "get": {
                 "operationId": "parties_people_photo_get",
@@ -48364,6 +48454,10 @@
                         "type": "boolean",
                         "description": "Входит в кабинет"
                     },
+                    "can_act": {
+                        "type": "boolean",
+                        "description": "Может подтверждать (КП, договор): иначе в Кабинете только просмотр"
+                    },
                     "has_phone": {
                         "type": "boolean"
                     },
@@ -48377,6 +48471,7 @@
                     }
                 },
                 "required": [
+                    "can_act",
                     "has_cabinet",
                     "has_email",
                     "has_phone",
@@ -51561,6 +51656,21 @@
                 "required": [
                     "id",
                     "photo_version"
+                ]
+            },
+            "DeskPersonRight": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "can_act": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_act",
+                    "id"
                 ]
             },
             "DeskPictureInRequest": {
@@ -59328,6 +59438,15 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                    }
+                }
+            },
+            "PatchedDeskPersonRightInRequest": {
+                "type": "object",
+                "properties": {
+                    "can_act": {
+                        "type": "boolean",
+                        "description": "Может подтверждать: принимать КП и договор в Кабинете от имени компании"
                     }
                 }
             },

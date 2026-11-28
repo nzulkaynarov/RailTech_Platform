@@ -496,6 +496,8 @@ export const crmLeadsHandlers = [
       lead.row.client_id = client.id;
       lead.card.status = "client";
       lead.card.client = { id: client.id, name: client.name, inn: client.inn };
+      // КЛИЕНТ-1: карточка лида знает свою заявку (как BFF по сделкам клиента)
+      lead.card.request = { deal: row.deal, number: row.number, transfer: row.transfer };
       if (!client.leads.some((l) => l.lead === lead.row.lead)) {
         client.leads.push({
           lead: lead.row.lead,

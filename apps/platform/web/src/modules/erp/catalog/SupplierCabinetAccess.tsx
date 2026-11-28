@@ -25,6 +25,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
+import { ContactRightSwitch } from "../../../shared/ui/ContactRightSwitch";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -630,17 +631,18 @@ function ContactRight({
     },
   });
   return (
-    <div className="pf-cat-switch pf-cat-contact-right">
-      <Switch
+    <div className="pf-cat-contact-right">
+      <ContactRightSwitch
         checked={contact.can_act}
-        disabled={!editable || update.isPending}
-        aria-label={t("cabinetAccess.contact.canActNamed", { name: contact.name })}
+        editable={editable}
+        pending={update.isPending}
+        ariaLabel={t("cabinetAccess.contact.canActNamed", { name: contact.name })}
+        label={t("cabinetAccess.contact.canAct")}
+        error={<ErrorNote message={update.error ? catalogErrorText(t, update.error) : null} />}
         onChange={(on) => {
           update.mutate({ id: supplierId, contactId: contact.id, data: { can_act: on } });
         }}
       />
-      <span aria-hidden="true">{t("cabinetAccess.contact.canAct")}</span>
-      <ErrorNote message={update.error ? catalogErrorText(t, update.error) : null} />
     </div>
   );
 }

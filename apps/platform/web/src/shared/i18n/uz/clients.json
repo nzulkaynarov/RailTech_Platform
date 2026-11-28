@@ -58,7 +58,9 @@
     "channels": {
       "telegram": "Telegram",
       "phone": "Telefon",
-      "email": "Poçta"
+      "email": "Poçta",
+      "both": "Poçta va Telegram",
+      "unknown": "boşqa kanal"
     },
     "noChannels": "aloqa kanallari yöq",
     "preferred": "Afzal köradi: {{channel}}",
@@ -206,7 +208,10 @@
       "primary": "asosiy kontakt",
       "cabinet": "kabinet",
       "empty": "Hozirça odamlar yöq.",
-      "contacts": "Telefon va poçta — «Odamlar»da"
+      "contacts": "Telefon va poçta — «Odamlar»da",
+      "canAct": "Tasdiqlay oladi",
+      "canActNamed": "Tasdiqlay oladi: {{name}}",
+      "canActFailed": "Huquqni saqlab bo‘lmadi. Qayta urining."
     },
     "accounts": {
       "title": "Bank hisoblari",

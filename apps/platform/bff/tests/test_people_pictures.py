@@ -238,3 +238,26 @@ async def test_people_list_carries_the_photo_address(
     assert (
         response.json()["items"][0]["photo_url"] == "/api/v1/people/contacts/31/photo?v=f0f0f0f0f0"
     )
+
+
+async def test_client_contact_right_goes_to_erp_with_the_requisites_permission(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """КЛИЕНТ-1: «Может подтверждать» клиентского контакта — то же право, что у реквизитов."""
+    await web.login(["DIRECTOR"])
+    router: respx.MockRouter = be.router
+    route = router.patch(f"{API}/parties/people/31/cabinet-right/").mock(
+        return_value=httpx.Response(200, json={"id": 31, "can_act": True})
+    )
+    response = await web.send(
+        "PATCH", "/api/v1/people/contacts/31/cabinet-right", json={"can_act": True}
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/people/contacts/{id}/cabinet-right", "patch")
+    assert response.json() == {"id": "31", "can_act": True}
+    assert route.calls.last.request.read() == b'{"can_act":true}'
+
+    refused = await web.send(
+        "PATCH", "/api/v1/people/contacts/31/cabinet-right", json={"can_act": "x"}
+    )
+    assert refused.status_code == 422

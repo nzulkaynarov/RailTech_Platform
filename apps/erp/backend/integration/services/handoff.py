@@ -32,7 +32,8 @@ from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from parties.company_admin import ensure_company_admin
-from parties.models import Company, CompanyType, Contact
+from parties.models import Company, CompanyRelationship, CompanyType, Contact, PartnerApplication
+from portal.desk.company_roles import ensure_client_role
 from portal.models import PortalRequestLine
 from portal.services.invitation import invite_contact
 
@@ -115,6 +116,17 @@ def _consent(company: Company, consent: Dict[str, Any]) -> None:
     company.save(update_fields=["consent_given_at", "consent_version"])
 
 
+def _is_blank_shell(company: Company) -> bool:
+    """Пустая оболочка: у компании нет контактов (и архивных), сделок, сопоставления с CRM, отношений и заявок партнёра."""
+    return not (
+        company.contacts.exists()
+        or Deal.objects.filter(company=company).exists()
+        or CrmClientMapping.objects.filter(company=company).exists()
+        or CompanyRelationship.objects.filter(company=company).exists()
+        or PartnerApplication.objects.filter(company=company).exists()
+    )
+
+
 def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Tuple[Company, bool]:
     """Компания по ИНН либо новая; второй элемент — «найдена по ИНН, а не создана».
 
@@ -132,6 +144,12 @@ def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Tuple[Co
                     "Handoff of CRM client #%s: INN is bound to CRM client #%s", crm_client_id, mapping.crm_client_id
                 )
                 raise IntegrationConflict(INN_CONFLICT)
+            if _is_blank_shell(existing):
+                # Компанию секунду назад завёл сам сотрудник (мастер заявки, «Завести»): ни контактов, ни сделок, ни связей —
+                # проверять нечего и утекать нечему. Это не «найдена по ИНН»: роль клиента выдаётся, контакт получает
+                # право подтверждать, приглашение уходит как у созданной (КЛИЕНТ-1).
+                ensure_client_role(existing, source="handoff")
+                return existing, False
             return existing, True
 
     language = c_data.get("language") or "ru"

@@ -25,6 +25,7 @@ from app.schemas_crm_leads import (
     LeadNotice,
     LeadOrigin,
     LeadPlatformStatus,
+    LeadRequest,
     LeadRow,
     LeadScope,
     LeadTab,
@@ -210,6 +211,30 @@ def lead_card(
         discarded=_discarded(lead.discarded_kind),
         duplicate_of=lead_number(lead.duplicate_of_lead_id) if lead.duplicate_of_lead_id else None,
         partner_application=lead.partner_application_id,
+    )
+
+
+def lead_request(raw: Any, lead_id: int) -> LeadRequest | None:
+    """Заявка этого лида среди сделок его клиента (КЛИЕНТ-1): последняя, у которой есть суть.
+    CRM не ответила или заявки нет — `None`: в карточке остаётся «Создать заявку»."""
+    rows = raw if isinstance(raw, list) else []
+    mine = [
+        d
+        for d in rows
+        if isinstance(d, dict)
+        and d.get("lead_id") == lead_id
+        and (d.get("request_summary") or d.get("erp_request_status"))
+        and d.get("stage") != "lost"
+    ]
+    if not mine:
+        return None
+    deal = max(mine, key=lambda d: int(d.get("id") or 0))
+    status = deal.get("erp_request_status")
+    number = deal.get("erp_number")
+    return LeadRequest(
+        deal=int(deal["id"]),
+        number=number if isinstance(number, str) and number else None,
+        transfer=status if status in ("pending", "done", "failed") else None,
     )
 
 
