@@ -237,9 +237,9 @@ function wideCalc(base: MockCalc): MockCalc {
         expired: { supplier: beta, validUntil: "2026-11-10" },
       };
     }
-    const price = items[i][3];
+    const price = items[i]?.[3] ?? 0;
     const usd = i % 3 === 1;
-    const opts = [
+    const opts: NonNullable<MockLine["partner"]>["options"] = [
       {
         id: 100 + i * 2,
         supplier: usd ? beta : alpha,
@@ -259,7 +259,7 @@ function wideCalc(base: MockCalc): MockCalc {
         freshness: "ok" as const,
       },
     ];
-    return { offerId: opts[0].id, options: opts };
+    return { offerId: opts[0]?.id ?? null, options: opts };
   };
   const lines: MockLine[] = items.map(([name, article, quantity, purchase, client, lead], i) => ({
     id: 900 + i,
