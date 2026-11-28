@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from typing import Final
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -33,20 +33,22 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.lead_sources import LeadSource
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
 from app.models.leads import Lead
 from app.repositories import events
 from app.repositories import leads as leads_repo
-from app.schemas.client_requests import RequestCreate, RequestCreated
+from app.schemas.client_requests import RequestCompanyIn, RequestCreate, RequestCreated
 from app.security import audit
 from app.security.principal import Principal
 from app.services import deals as deals_service
 from app.services import lead_parts, stages
 from app.services.clients import _bind_identities, _require_consent
-from app.services.lead_consent import LeadConsentService
+from app.services.lead_consent import LeadConsentService, apply_manual_consent
 from app.services.leads import ChatsChanged, notify_chats
+from app.services.request_contacts import _email, _phone
 from app.services.request_contacts import request_contact as _contact
 
 logger = structlog.get_logger(__name__)
@@ -112,6 +114,54 @@ class ClientRequestService:
             done = await self._repeat(body.request_key, client_id=client_id)
         return await self._after_commit(done, who)
 
+    async def create_for_company(self, who: Principal, body: RequestCreate) -> RequestCreated:
+        """«Создать заявку» из письма компании, у которой нет ни лида, ни карточки клиента (ВХОД-1).
+
+        Карточка клиента находится по ИНН и названию или заводится здесь же (одна компания — одна
+        карточка). Согласие на обработку данных отмечает сотрудник: без `body.consent` — 422 по
+        полю `consent`; лид заводится сам, его источник следует из способа согласия (письмо,
+        звонок). Дальше — обычная заявка клиента: ERP свяжет компанию с карточкой по ИНН.
+        """
+        await self._require_erp()
+        if body.company is None:
+            raise ValidationFailedError("choose a client or enter the company", field="company")
+        try:
+            async with self._sessions() as session, session.begin():
+                done = await self._for_company_tx(session, who, body, body.company)
+        except IntegrityError:
+            done = await self._repeat(body.request_key)
+        return await self._after_commit(done, who)
+
+    async def _for_company_tx(
+        self, session: AsyncSession, who: Principal, body: RequestCreate, company: RequestCompanyIn
+    ) -> _Done:
+        # Parallel submissions of one form: the second waits for the first to commit and sees its
+        # request; otherwise it makes its own client card and trips over the first request's key.
+        await session.execute(
+            select(
+                func.pg_advisory_xact_lock(
+                    func.hashtextextended(f"company_request:{body.request_key}", 0)
+                )
+            )
+        )
+        repeat = await _existing(session, body.request_key)
+        if repeat is not None:
+            return repeat
+        client = await _client_of_company(session, company, company.country, who)
+        again = await _same_letter_request(session, client, body)
+        if again is not None:
+            return again
+        if client.erp_company_id is None:
+            lead = await _latest_lead(session, client.id)
+            if lead is None or lead.consent_given_at is None:
+                if body.consent is None:
+                    # The legal basis is marked by the employee (D-8), the service never invents it.
+                    raise ValidationFailedError(
+                        "mark the consent of the company contact", field="consent"
+                    )
+                await _letter_lead(session, client, body, who)
+        return await self._for_client_tx(session, who, client.id, body)
+
     async def _repeat(
         self, key: uuid.UUID, *, lead_id: int | None = None, client_id: int | None = None
     ) -> _Done:
@@ -130,6 +180,9 @@ class ClientRequestService:
         repeat = await _existing(session, body.request_key, client_id=client.id)
         if repeat is not None:
             return repeat
+        again = await _same_letter_request(session, client, body)
+        if again is not None:
+            return again
         lead = await _latest_lead(session, client.id)
         if client.erp_company_id is None:
             # Клиент ещё не в ERP: задача передаст его — нужно согласие лида (ERP его не
@@ -292,14 +345,22 @@ async def _client_for(
         raise ValidationFailedError("choose a client or enter the company", field="company")
     # One company is one card (ЛП-1): look up by INN, then by normalised name and country first.
     country = body.company.country or country_of_phone(lead.phone_e164)
-    found = await find_client(session, body.company.name, body.company.inn, country)
+    return await _client_of_company(session, body.company, country, who)
+
+
+async def _client_of_company(
+    session: AsyncSession, company: RequestCompanyIn, country: str | None, who: Principal
+) -> Client:
+    """The one card of a company: found by INN, then by the normalised name (and country), else
+    created. Shared by the request from a lead and the request from a letter (ВХОД-1)."""
+    found = await find_client(session, company.name, company.inn, country)
     if found is not None:
         client = await session.get(Client, found.id, with_for_update=True)
         if client is not None:
             return client
     client = Client(
-        name=body.company.name.strip(),
-        inn=(body.company.inn or "").strip() or None,
+        name=company.name.strip(),
+        inn=(company.inn or "").strip() or None,
         country=country,
         owner_user_id=who.user_id,
     )
@@ -398,6 +459,83 @@ async def _same_request(
             created=False,
         )
     )
+
+
+async def _same_letter_request(
+    session: AsyncSession, client: Client, body: RequestCreate
+) -> _Done | None:
+    """A not failed request of this client made from the same letter file: a second press (a new
+    `request_key` after the form was closed) returns it instead of a second request (ВХОД-1)."""
+    deal = await session.scalar(
+        select(Deal)
+        .where(
+            Deal.client_id == client.id,
+            Deal.request_letter_file_id == body.letter_file_id,
+            Deal.request_key.is_not(None),
+            Deal.erp_request_status.in_(("pending", "done")),
+        )
+        .order_by(Deal.id)
+        .limit(1)
+    )
+    if deal is None:
+        return None
+    return _Done(
+        RequestCreated(
+            client_id=client.id,
+            deal_id=deal.id,
+            lead_id=deal.lead_id,
+            erp_request_status=deal.erp_request_status or "pending",
+            created=False,
+        )
+    )
+
+
+async def _letter_lead(
+    session: AsyncSession, client: Client, body: RequestCreate, who: Principal
+) -> Lead:
+    """Лид по письму компании: заявка клиента без лида не может уйти в ERP (передаче нужны лид и
+    согласие). Источник лида и основание следуют из отметки сотрудника: письмо или звонок."""
+    contact = body.contact
+    given = body.consent
+    assert given is not None  # noqa: S101 - checked by the caller (422 on `consent`)
+    by_letter = given.method == "email"
+    lead = Lead(
+        display_name=((contact.full_name or "").strip() or client.name)[:255],
+        language="ru",
+        stage=Stage.NEW.value,
+        owner_mode=OwnerMode.HUMAN.value,
+        assigned_user_id=who.user_id,
+        source=(LeadSource.EMAIL if by_letter else LeadSource.PHONE).value,
+        phone_e164=_phone(contact.phone),
+        email=_email(contact.email),
+        company_name=client.name[:255],
+        need_summary=body.summary.strip()[:4000],
+        client_id=client.id,
+    )
+    session.add(lead)
+    await session.flush()
+    await bus_events.lead_created(session, lead, who.actor)
+    await _become_customer(session, lead, who)
+    await audit.record(
+        session,
+        who.actor,
+        "lead.create",
+        "lead",
+        lead.id,
+        after={
+            "source": lead.source,
+            "client_id": client.id,
+            "basis": "letter" if by_letter else "file",
+            "letter_file_id": str(body.letter_file_id),
+        },
+    )
+    # Consent by letter goes the same way as the employee's mark: lead feed note and audit (D-8).
+    kind = "письмо, файл" if by_letter else "файл основания"
+    basis = f"основание — {kind} {body.letter_file_id}"
+    note = f"{given.comment.strip()}; {basis}" if given.comment else basis
+    await apply_manual_consent(session, who, lead, given.method, note)
+    await events.publish(session, "lead.updated", lead_id=lead.id)
+    return lead
 
 
 async def _become_customer(session: AsyncSession, lead: Lead, who: Principal) -> None:

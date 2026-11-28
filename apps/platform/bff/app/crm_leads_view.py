@@ -109,6 +109,7 @@ def lead_row(lead: crm.LeadOut, names: Names, now: datetime) -> LeadRow:
         overdue=_overdue(lead.escalation, now),
         client_id=lead.client_id,
         company=lead.company_name if lead.client_id is not None else None,
+        is_test=bool(lead.is_test),
     )
 
 
@@ -207,6 +208,7 @@ def lead_card(
         invitation=invitation(lead.invitation),
         email_problem=email_problem(lead.email_undeliverable),
         origin=origin_of(lead.origin),
+        is_test=bool(lead.is_test),
         discarded=_discarded(lead.discarded_kind),
         duplicate_of=lead_number(lead.duplicate_of_lead_id) if lead.duplicate_of_lead_id else None,
         partner_application=lead.partner_application_id,

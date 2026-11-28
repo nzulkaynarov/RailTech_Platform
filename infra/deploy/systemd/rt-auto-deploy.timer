@@ -1,0 +1,13 @@
+# Таймер автовыкладки VPS 1 (ВЫКЛ-3): тик через 10 минут после окончания предыдущего. Часы - серверные, расписание GitHub не нужно.
+[Unit]
+Description=RailTech auto-deploy timer
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=10min
+RandomizedDelaySec=30s
+AccuracySec=10s
+Unit=rt-auto-deploy.service
+
+[Install]
+WantedBy=timers.target

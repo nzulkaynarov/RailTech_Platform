@@ -246,6 +246,7 @@ async def list_page(
     directory = Directory()
     covered = await access.covered_employees(session, employee) if mine else []
     newer = await newer_versions(session, page)
+    tests = await test_companies.marked(session, test, (r.erp_company_id for r in page))
     items = [
         ApprovalListItem(
             id=r.id,
@@ -263,6 +264,7 @@ async def list_page(
             if mine and r.current_step is not None and (r.id, r.current_step) in current_steps
             else None,
             created_at=r.created_at,
+            is_test=r.erp_company_id in tests,
         )
         for r in page
     ]

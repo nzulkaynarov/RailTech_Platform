@@ -6,6 +6,8 @@ import type { NotificationTab } from "./notificationTab";
 import type { ObjectRef } from "./objectRef";
 
 export interface Notification {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   /** @pattern ^(crm|erp):[0-9]+$ */
   id: string;
   tab: NotificationTab;

@@ -237,7 +237,12 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
     return stmt
 
 
-def _item(row: Any, directory: Directory, signers: dict[uuid.UUID, PersonRef] | None = None) -> RegistryItem:
+def _item(
+    row: Any,
+    directory: Directory,
+    signers: dict[uuid.UUID, PersonRef] | None = None,
+    tests: frozenset[int] = frozenset(),
+) -> RegistryItem:
     named = row.client_name is not None or row.client_inn is not None
     return RegistryItem(
         kind=RegistryKind(row.kind),
@@ -264,6 +269,7 @@ def _item(row: Any, directory: Directory, signers: dict[uuid.UUID, PersonRef] | 
         undelivered=bool(row.undelivered),
         awaiting_signature=bool(row.awaiting_signature),
         signer=(signers or {}).get(row.id),
+        is_test=row.erp_company_id in tests,
     )
 
 
@@ -316,7 +322,8 @@ async def list_page(
         page, next_cursor = paging.cut_sorted(rows, limit, ordering, lambda r: r.id)
     directory = await load_directory(session, (r.responsible for r in page))
     signers = await _signers(session, [r.id for r in page if r.awaiting_signature])
-    return RegistryPage(items=[_item(r, directory, signers) for r in page], next_cursor=next_cursor)
+    tests = await test_companies.marked(session, filters.test, (r.erp_company_id for r in page))
+    return RegistryPage(items=[_item(r, directory, signers, tests) for r in page], next_cursor=next_cursor)
 
 
 async def export_rows(session: AsyncSession, employee: Employee, filters: Filters) -> list[RegistryItem] | None:
@@ -327,4 +334,5 @@ async def export_rows(session: AsyncSession, employee: Employee, filters: Filter
     if len(rows) > EXPORT_LIMIT:
         return None
     directory = await load_directory(session, (r.responsible for r in rows))
-    return [_item(r, directory) for r in rows]
+    tests = await test_companies.marked(session, filters.test, (r.erp_company_id for r in rows))
+    return [_item(r, directory, tests=tests) for r in rows]

@@ -22,6 +22,7 @@ import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
 import { MODULE_ICONS } from "../../shared/ui/moduleIcons";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
+import { TestTag } from "../../shared/ui/TestTag";
 import { matchActions } from "./actions";
 import "./global-search.css";
 
@@ -73,6 +74,8 @@ interface Option {
   subtitle?: string | undefined;
   /** Подпись справа: тип объекта или «Действие» */
   tag: string;
+  /** Запись тестовой компании (ТЕСТ-2): после названия — метка «Тестовая» */
+  test?: boolean | undefined;
   path: string;
   /** Действие («создать заявку») — при Enter не перебивает найденный объект */
   action?: boolean;
@@ -237,6 +240,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           title: hit.title,
           subtitle: hit.subtitle,
           tag: t(`search.kind.${hit.object.kind}`),
+          test: hit.object.is_test,
           path: objectLink(hit.object),
         })),
       });
@@ -413,7 +417,9 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
                         </span>
                       ) : null}
                       <span className="pf-gsearch-text">
-                        <span className="pf-gsearch-title">{option.title}</span>
+                        <span className="pf-gsearch-title">
+                          {option.title} <TestTag value={option.test} />
+                        </span>
                         {option.subtitle ? (
                           <span className="pf-hint">{option.subtitle}</span>
                         ) : null}

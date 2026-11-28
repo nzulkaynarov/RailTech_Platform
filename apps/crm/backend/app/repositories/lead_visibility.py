@@ -6,8 +6,9 @@
 
 from typing import Final
 
-from sqlalchemy import ColumnElement, select
+from sqlalchemy import ColumnElement, select, true
 
+from app import test_scope
 from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.clients import Client
 from app.models.leads import Lead
@@ -27,6 +28,8 @@ def listed() -> ColumnElement[bool]:
 
 def not_test_client() -> ColumnElement[bool]:
     """ТЕСТ-1: лид не принадлежит тестовой компании (отметка из ERP); лид без клиента проходит."""
+    if test_scope.show_all():  # ТЕСТ-2: у сотрудника включено «Показывать тестовые»
+        return true()
     return Lead.client_id.not_in(
         select(Client.id).where(Client.is_test.is_(True))
     ) | Lead.client_id.is_(None)

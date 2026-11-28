@@ -8,7 +8,11 @@ import { useNavigate } from "react-router";
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterCard, LetterInstruction } from "../../../shared/api/generated/model";
+import type {
+  LetterCard,
+  LetterInstruction,
+  RequestCreatedView,
+} from "../../../shared/api/generated/model";
 import {
   addCoExecutor,
   closeLetterWithoutReply,
@@ -26,6 +30,7 @@ import { useRefreshLetters } from "../inbox/api";
 import { RequestForm } from "../../crm/request/RequestForm";
 
 const CLOSE_REASONS = "close-reasons";
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function errorText(failure: unknown, fallback: string): string {
   return failure instanceof ApiError ? failure.message || fallback : fallback;
@@ -267,7 +272,7 @@ type Kind = "client_request" | "partner_application" | "memo";
  * Подключение партнёра из письма (план 1.9): компания, ИНН, почта и суть подставлены из письма; заявка уходит в очередь
  * «Заявки на подключение» — дальше обычный договорный шлюз. Поручение закрывается ссылкой на заявку.
  */
-function PartnerDialog({
+export function PartnerDialog({
   letter,
   onClose,
   onCreated,
@@ -282,7 +287,7 @@ function PartnerDialog({
     company: letter.sender.name ?? "",
     inn: letter.sender.inn ?? "",
     contact: "",
-    email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(sender) ? sender : "",
+    email: EMAIL.test(sender) ? sender : "",
     offer: letter.summary,
   });
   const [pending, setPending] = useState(false);
@@ -357,6 +362,52 @@ function PartnerDialog({
 }
 
 /**
+ * Заявка клиента из письма: форма «Создать заявку» с файлом этого письма и названием отправителя (ВХОД-1). Компания без
+ * карточки клиента не тупик: карточка заводится вместе с заявкой. Кто создал — решает вызывающий (закрыть поручение или
+ * просто показать результат).
+ */
+export function RequestSheet({
+  letter,
+  onClose,
+  onCreated,
+  title,
+  error = null,
+}: {
+  letter: LetterCard;
+  onClose: () => void;
+  onCreated: (result: RequestCreatedView) => void;
+  title?: string;
+  error?: string | null;
+}) {
+  const { t } = useTranslation("letters");
+  const file = letter.files[0];
+  return (
+    // Заявка клиента — длинная форма со своими кнопками: широкая панель без подвала (стандарт интерфейса §6)
+    <FormSheet
+      layer="drawer"
+      wide
+      readOnly
+      title={title ?? t("outcome.hand.title", { number: letter.number })}
+      onCancel={onClose}
+      error={error ? <Alert type="error" showIcon role="alert" message={error} /> : undefined}
+    >
+      <RequestForm
+        lead={null}
+        clientId={null}
+        letterFile={file ? { id: file.id, name: file.name } : null}
+        letterHint={{
+          company: letter.sender.name ?? "",
+          summary: letter.summary,
+          email: EMAIL.test(letter.sender.contact ?? "") ? (letter.sender.contact ?? "") : "",
+        }}
+        onCreated={onCreated}
+        onCancel={onClose}
+      />
+    </FormSheet>
+  );
+}
+
+/**
  * «Передать в работу» (план 1.9, исследование 2026-11-11 §4.2): из письма создаётся заявка клиента (форма с файлом этого
  * письма) или служебная записка (форма документа); созданный объект закрывает поручение ссылкой на себя.
  */
@@ -382,7 +433,6 @@ function HandOverDialog({
   );
   const [step, setStep] = useState<"choose" | "request" | "partner">("choose");
   const [error, setError] = useState<string | null>(null);
-  const file = letter.files[0];
 
   const next = () => {
     if (kind === "memo") {
@@ -427,23 +477,12 @@ function HandOverDialog({
   }
   if (step === "request") {
     return (
-      // Заявка клиента — длинная форма со своими кнопками: широкая панель без подвала (стандарт интерфейса §6)
-      <FormSheet
-        layer="drawer"
-        wide
-        readOnly
-        title={t("outcome.hand.title", { number: letter.number })}
-        onCancel={onClose}
-        error={error ? <Alert type="error" showIcon role="alert" message={error} /> : undefined}
-      >
-        <RequestForm
-          lead={null}
-          clientId={null}
-          letterFile={file ? { id: file.id, name: file.name } : null}
-          onCreated={(result) => void linkRequest(result.deal)}
-          onCancel={onClose}
-        />
-      </FormSheet>
+      <RequestSheet
+        letter={letter}
+        onClose={onClose}
+        error={error}
+        onCreated={(result) => void linkRequest(result.deal)}
+      />
     );
   }
   return (

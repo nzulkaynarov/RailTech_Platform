@@ -1475,6 +1475,7 @@ class LeadDetail(BaseModel):
     has_telegram: Annotated[bool | None, Field(title="Has Telegram")] = False
     id: Annotated[int, Field(title="Id")]
     invitation: InvitationOut | None = None
+    is_test: Annotated[bool | None, Field(title="Is Test")] = False
     language: Annotated[str, Field(title="Language")]
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]
@@ -1530,6 +1531,7 @@ class LeadOut(BaseModel):
     has_phone: Annotated[bool | None, Field(title="Has Phone")] = False
     has_telegram: Annotated[bool | None, Field(title="Has Telegram")] = False
     id: Annotated[int, Field(title="Id")]
+    is_test: Annotated[bool | None, Field(title="Is Test")] = False
     language: Annotated[str, Field(title="Language")]
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]

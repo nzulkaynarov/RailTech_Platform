@@ -8,6 +8,8 @@ import type { MessageChannel } from "./messageChannel";
 import type { PersonRef } from "./personRef";
 
 export interface LeadRow {
+  /** ТЕСТ-2. Запись тестовой компании — метка «Тестовая»; `true` только при включённом «Показывать тестовые», иначе поля нет или false */
+  is_test?: boolean;
   /** @pattern ^L-\d{4,}$ */
   lead: string;
   name: string;

@@ -47,6 +47,8 @@ class Employee(BaseModel):
     erp_sync_error: str | None = None
     # СУЩ-3: фото сотрудника (адрес на BFF с версией); отключённому не отдаётся — инициалы
     avatar_url: str | None = None
+    # ТЕСТ-2: у сотрудника включено «Показывать тестовые» — в списке одна малая отметка
+    show_test: bool = False
 
 
 class EmployeeList(BaseModel):
@@ -177,6 +179,7 @@ def to_employee(user: dict[str, Any], names: Mapping[str, str] | None = None) ->
         avatar_url=avatar_url(user["id"], version if isinstance(version, int) else None)
         if user.get("is_active", True)
         else None,
+        show_test=bool(user.get("show_test")),
     )
 
 

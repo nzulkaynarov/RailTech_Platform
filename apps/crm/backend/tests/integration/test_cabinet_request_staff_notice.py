@@ -198,3 +198,22 @@ async def test_lead_feed_names_the_request_and_quote_by_number_not_internal_id(
     assert texts[0] == f"В бэк-офисе создана заявка D-{ERP_DEAL} (источник: cabinet)."
     assert texts[1].startswith(f"Клиенту отправлено КП по D-{ERP_DEAL}, версия 1")
     assert not any("#" in text for text in texts)
+
+
+async def test_request_of_a_test_company_reaches_only_who_shows_test(
+    harness: Harness, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """ТЕСТ-2: шлюз — колокольчик и Telegram по тестовому клиенту только при включённом показе."""
+    client_id, _ = await harness.seed_client(tg_user_id=None)
+    off = await staff(sessions, "off@x.uz", 9101, "tpl:MANAGER")
+    on = await staff(sessions, "on@x.uz", 9102, "tpl:MANAGER")
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == on).values(show_test=True))
+        await session.execute(update(Client).where(Client.id == client_id).values(is_test=True))
+    event_id = await harness.store("request.created", client_id, payload=cabinet_payload())
+
+    assert await harness.process(event_id) == "processed"
+
+    assert [n.user_id for n in await bell(sessions)] == [on]
+    assert harness.bot.sent == [(9102, TEXT)]
+    assert off != on

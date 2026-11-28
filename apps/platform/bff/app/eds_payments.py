@@ -203,6 +203,7 @@ class Receivable(BaseModel):
     deal_number: str = ""
     client_id: int | None = None
     client_name: str
+    is_test: bool = False
     currency: str | None
     total_incl_vat: str
     amount_paid: str
@@ -230,6 +231,7 @@ def row_of(raw: dict[str, Any]) -> PaymentRow:
         deal_id=item.deal_id,
         client_name=item.client_name,
         client_id=item.client_id,
+        is_test=item.is_test,
         amount=_money(item.total_incl_vat, item.currency),
         paid=_money(item.amount_paid, item.currency),
         balance=_money(item.balance_due, item.currency),

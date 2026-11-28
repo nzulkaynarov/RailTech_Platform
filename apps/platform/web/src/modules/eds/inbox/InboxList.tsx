@@ -137,7 +137,11 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
             <p className="pf-letters-card-subject">{row.subject}</p>
             {row.client_name ? (
               <p className="pf-letters-card-subject">
-                <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+                <CompanyCell
+                  name={row.client_name}
+                  logoUrl={row.client_logo_url ?? null}
+                  test={row.is_test}
+                />
               </p>
             ) : null}
             {row.request_number ? <p className="pf-hint">{row.request_number}</p> : null}
@@ -208,7 +212,11 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
         <NameCode
           name={
             row.client_name ? (
-              <CompanyCell name={row.client_name} logoUrl={row.client_logo_url ?? null} />
+              <CompanyCell
+                name={row.client_name}
+                logoUrl={row.client_logo_url ?? null}
+                test={row.is_test}
+              />
             ) : (
               "—"
             )

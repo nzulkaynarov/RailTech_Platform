@@ -30,6 +30,9 @@ class CalcDealSerializer(serializers.Serializer):
     stage_code = serializers.CharField()
     client_name = serializers.CharField(allow_null=True)
     manager_name = serializers.CharField(allow_null=True)
+    is_test = serializers.BooleanField(
+        required=False, help_text="ТЕСТ-2: заявка тестовой компании; приходит только при `?test=all`"
+    )
 
 
 class CalcAssigneeSerializer(serializers.Serializer):

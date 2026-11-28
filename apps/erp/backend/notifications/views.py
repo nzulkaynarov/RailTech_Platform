@@ -1,4 +1,5 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from parties import test_companies
 from rest_framework import permissions
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -54,9 +55,14 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Notification.objects.none()
+        user = self.request.user
+        queryset = self._audience(user)
+        # ТЕСТ-2: уведомления по сделкам тестовых компаний — только при «Показывать тестовые» (`?test=all` от BFF)
+        return test_companies.hide(queryset, "deal__company")
+
+    def _audience(self, user):
         from django.db.models import Q
 
-        user = self.request.user
         # Аудитория видимости: PLATFORM_ADMIN-канал — только для Platform Admin; USER-канал — для
         # адресата. Админ НЕ видит чужие клиентские уведомления; USER НЕ видит platform-алёрты.
         # Админ CRM заведён в ERP как суперпользователь и сам получает адресованные ему

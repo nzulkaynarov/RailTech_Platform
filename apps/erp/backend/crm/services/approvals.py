@@ -36,6 +36,7 @@ def _notify_user(
     *,
     event_code: str,
     event_params: dict,
+    deal,
     type_code: str = "INFO",
     link: str = "",
 ) -> None:
@@ -59,6 +60,7 @@ def _notify_user(
         title=title,
         message=message,
         link=link,
+        deal=deal,
         event_code=event_code,
         event_params=event_params,
     )
@@ -228,6 +230,7 @@ def _notify_order(quote: Quote, order: int) -> None:
                 f"КП #{quote.number or quote.id}: ваша очередь согласовать.",
                 type_code="WARNING",
                 link=_link(quote),
+                deal=quote.deal,
                 event_code="quote.approval_your_turn",
                 event_params={"number": quote.number or quote.id},
             )
@@ -243,6 +246,7 @@ def _notify_informed(quote: Quote, message: str, *, event_code: str, event_param
                 message,
                 type_code="INFO",
                 link=_link(quote),
+                deal=quote.deal,
                 event_code=event_code,
                 event_params=event_params,
             )
@@ -314,6 +318,7 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             f"КП #{quote.number or quote.id} отклонён на согласовании. {comment}".strip(),
             type_code="WARNING",
             link=_link(quote),
+            deal=quote.deal,
             event_code="quote.approval_returned",
             event_params={"number": quote.number or quote.id, "comment": comment},
         )
@@ -358,6 +363,7 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             f"КП #{quote.number or quote.id}: визы собраны, КП передано директору на одобрение.",
             type_code="INFO",
             link=_link(quote),
+            deal=quote.deal,
             event_code="quote.visas_complete",
             event_params={"number": quote.number or quote.id},
         )

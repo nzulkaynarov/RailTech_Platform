@@ -146,7 +146,7 @@ def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> lis
             ),
             due_label=due_label(due_at, now),
             due_at=due_at,
-            object=calc_ref(number, title),
+            object=calc_ref(number, title, is_test=bool(deal.get("is_test"))),
         )
         out.append((item, None))
     return out

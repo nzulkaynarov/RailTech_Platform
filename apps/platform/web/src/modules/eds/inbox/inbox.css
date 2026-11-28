@@ -372,3 +372,40 @@
 .pf-instr-by {
   margin-top: 4px;
 }
+
+/* ВХОД-1: действия «из письма» — кнопка и причина под ней, в одну или несколько колонок */
+.pf-letter-intake {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-letter-intake__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.pf-letter-intake__action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 320px;
+}
+.pf-letter-intake__action .pf-disabled-reason {
+  margin: 0;
+  text-align: left;
+}
+@media (max-width: 767px) {
+  .pf-letter-intake {
+    padding: 16px;
+  }
+  .pf-letter-intake__action {
+    max-width: none;
+    width: 100%;
+  }
+  .pf-letter-intake__action .ant-btn {
+    width: 100%;
+  }
+}
