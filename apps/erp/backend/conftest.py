@@ -8,6 +8,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, SystemRole, WorkspaceRole
 
+pytest_plugins = ["core.pytest_shard"]  # --shard=I/N, --shard-report (CI-1)
+
+# rt_docs.pdf делает `from weasyprint import HTML` при импорте. Если первый импорт в процессе случится внутри
+# `patch("weasyprint.HTML", FakeHTML)` (test_pdf_render_race, test_sign_draft_mark), в модуле навсегда останется подмена и
+# следующие тесты рендера падают («FakeHTML has no attribute render»). Какой тест импортирует первым — зависит от разбиения
+# набора на шарды и воркеры, поэтому импортируем настоящий модуль до тестов.
+import rt_docs.pdf  # noqa: E402,F401
+
 User = get_user_model()
 
 # Шина читает подписки тестов (crm, erp), а не боевой список: новый подписчик боевого файла (platform-bff, коннекторы)
