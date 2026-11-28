@@ -125,6 +125,21 @@ def test_manual_purchase_price_drops_the_partner_source(prices):
     )
     edited = next(entry for entry in response.json()["lines"] if entry["id"] == line["id"])
     assert edited["purchase_price"] == "6500.00" and edited["partner_price"]["source"] is None
+    assert len(edited["partner_price"]["options"]) == 2 and edited["partner_price"]["can_request"] is False
+
+
+def test_partner_source_survives_exchange_rate_change(prices):
+    _api(prices["supply"]).post(_url(prices, "start/"))
+    Quote.objects.filter(deal=prices["deal"]).update(cost_currency_default=prices["uzs"])
+    line = _add(prices, product_id=prices["product"].pk)
+    assert line["purchase_price"] == "84000000.00"
+    ExchangeRate.objects.filter(currency=prices["usd"]).update(rate_to_uzs=Decimal("12050"))
+    response = _api(prices["supply"]).get(_url(prices, ""))
+    assert response.status_code == 200, response.json()
+    again = next(entry for entry in response.json()["lines"] if entry["id"] == line["id"])
+    part = again["partner_price"]
+    assert part["source"] is not None and part["source"]["supplier"] == "ООО Партнёр 2"
+    assert [o["chosen"] for o in part["options"]] == [True, False] and part["can_request"] is False
 
 
 def test_client_price_is_purchase_plus_default_margin(prices):
@@ -161,7 +176,9 @@ def test_margin_below_threshold_is_flagged_on_line_and_totals_but_does_not_block
     assert line["margin_below"] is True and line["margin_pct"] == "3.1", "маржа на цену, не наценка на себестоимость"
     assert line["markup_pct"] == "3.2"
     sheet = _api(prices["supply"]).get(_url(prices, "")).json()
-    assert sheet["totals"]["margin_below"] is True and sheet["totals"]["threshold_pct"] == "15.0", "порог — из задания резолюции"
+    assert (
+        sheet["totals"]["margin_below"] is True and sheet["totals"]["threshold_pct"] == "15.0"
+    ), "порог — из задания резолюции"
     assert sheet["ready"]["blocker"] != "margin_below", "предупреждение не запрещает «Расчёт готов»"
 
 

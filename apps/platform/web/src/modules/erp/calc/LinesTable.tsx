@@ -353,7 +353,7 @@ function PartnerSource({
   );
   return (
     <div className="pf-calc-partner-source" data-testid="partner-source">
-      {source ? (
+      {source || part.options.length > 0 ? (
         <Popover
           content={picker}
           trigger="click"
@@ -365,9 +365,9 @@ function PartnerSource({
             type="button"
             className="pf-calc-partner-line pf-hint"
             title={full}
-            aria-label={`${short}. ${t("partner.pickLabel", { name: line.name })}`}
+            aria-label={`${short || t("partner.pick")}. ${t("partner.pickLabel", { name: line.name })}`}
           >
-            {short}
+            {short || t("partner.pick")}
           </button>
         </Popover>
       ) : null}

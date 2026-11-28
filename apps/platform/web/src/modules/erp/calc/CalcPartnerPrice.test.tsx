@@ -77,6 +77,19 @@ describe("Расчёт · закупка по цене партнёра (РАС�
     expect(within(source).getByRole("button", { name: "Запросить цену" })).toBeVisible();
   });
 
+  it("закупку ввели руками, но цены партнёров есть: список выбора открывается", async () => {
+    const calc = seedCalcs().find((c) => c.number === NUMBER);
+    if (!calc) throw new Error("нет расчёта");
+    const lines = calc.lines.map((l) =>
+      l.name === RAIL && l.partner ? { ...l, partner: { ...l.partner, offerId: null } } : l,
+    );
+    patchCalcMock(NUMBER, { lines });
+    await openCalc("supply@demo.example");
+    const source = within(lineRow(RAIL)).getByTestId("partner-source");
+    fireEvent.click(within(source).getByRole("button", { name: /Другая цена/ }));
+    expect(await screen.findByRole("option", { name: /ООО «Демо Металл» · .*до/ })).toBeInTheDocument();
+  });
+
   it("маржа ниже порога — предупреждение у «Расчёт готов» и метка у строки, кнопку оно не блокирует", async () => {
     // Цена клиенту почти равна закупке: маржа около 1 % при пороге мока 12 %
     const calc = seedCalcs().find((c) => c.number === NUMBER);

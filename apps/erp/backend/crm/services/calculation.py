@@ -406,16 +406,9 @@ def _partner_payload(item: QuoteItem, ctx: _Context) -> Optional[dict]:
     if not item.product_id:
         return None
     options, expired = ctx.partners.get((item.product_id, _target_currency(item)), ([], None))
-    current = next(
-        (
-            o
-            for o in options
-            if item.offer_id == o.offer.pk
-            and o.price == item.frozen_base_price
-            and o.currency == (item.frozen_currency.code.upper() if item.frozen_currency_id else o.currency)
-        ),
-        None,
-    )
+    # Источник — по сохранённой связи строки с ценой партнёра (`offer_id`), а не по равенству цены: цена в списке
+    # пересчитывается по курсу на сегодня, в строке лежит цена по курсу на день выбора. Ручная правка закупки снимает связь.
+    current = next((o for o in options if item.offer_id and item.offer_id == o.offer.pk), None)
     return {
         "source": _option_payload(current, chosen=True) if current is not None else None,
         "options": [_option_payload(o, chosen=o is current) for o in options[: calc_partner_price.MAX_OPTIONS]],
@@ -1481,6 +1474,8 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
             item.frozen_base_price = Decimal(str(changes["purchase_price"]))
         if changes.get("purchase_currency"):
             item.frozen_currency = _currency(changes["purchase_currency"])
+        if item.offer_id and item.offer.supplier_id != _own_company_id():
+            item.offer = None  # закупку ввели руками: источник «цена партнёра» больше не действует
     if "crew_rate" in changes or "crew_days" in changes:
         if zone != Zone.SERVICES:
             raise CalcError("GOODS_HAVE_NO_CREW", 400)
