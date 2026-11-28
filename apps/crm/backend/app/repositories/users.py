@@ -60,13 +60,18 @@ async def set_roles(
     await session.flush()
 
 
-async def count_active_admins(session: AsyncSession, *, excluding: int | None = None) -> int:
+async def count_active_admins(
+    session: AsyncSession, *, excluding: int | None = None, include_service: bool = False
+) -> int:
+    """Активные администраторы; служебные учётные записи в счёт «последнего» не идут."""
     stmt = (
         select(func.count(func.distinct(User.id)))
         .join(UserRole, UserRole.user_id == User.id)
         .join(Role, Role.id == UserRole.role_id)
         .where(Role.name == "admin", User.is_active.is_(True))
     )
+    if not include_service:
+        stmt = stmt.where(User.is_service.is_(False))
     if excluding is not None:
         stmt = stmt.where(User.id != excluding)
     return int(await session.scalar(stmt) or 0)
