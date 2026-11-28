@@ -26,7 +26,9 @@
   "matrix": {
     "label": "Har bir xodim nimani qila oladi",
     "hint": "Odamni açiş uçun ismiga bosing.",
-    "readOnly": "Jadval xodimlar bugun nimani qila olişini körsatadi. Huquqlar rollar orqali beriladi — odam kartoçkasida.",
+    "area": "Soha",
+    "expandAll": "Hammasini oçiş",
+    "collapseAll": "Hammasini yiğiş",
     "capability": "Imkoniyat",
     "unavailable": "Jadvalni yuklab bölmadi. Sahifani yangilang.",
     "retry": "Takrorlaş",
@@ -63,11 +65,15 @@
     "heading": "Bu odam nimani qila oladi",
     "positionNote": "Lavozim — imzo, imkoniyatlarga tasir qilmaydi.",
     "summary": {
-      "does": "Nima qiladi",
-      "decides": "Nimani hal qiladi",
-      "responsible": "Nima uçun masul",
-      "lacks": "Nimani qila olmaydi"
+      "does": "Yuritadi",
+      "decides": "Qaror qiladi",
+      "responsible": "Javob beradi",
+      "lacks": "Qila olmaydi"
     },
+    "summaryMore": "yana {{count}} ta",
+    "open": "Açiş",
+    "back": "Barça xodimlar",
+    "changeRoles": "Rollarni özgartiriş",
     "nothing": "Hozirça heç nima",
     "rows": "Bitim bosqiçlari böyiça imkoniyatlar",
     "from": "Roldan: {{roles}}",
@@ -105,10 +111,10 @@
     "ask": "Imkoniyat söraş",
     "askBody": "«{{name}}» imkoniyati kerak: «{{level}}».",
     "summary": {
-      "does": "Men nima qilaman",
-      "decides": "Men nimani hal qilaman",
-      "responsible": "Men nima uçun masulman",
-      "lacks": "Men nimani qila olmayman"
+      "does": "Yuritaman",
+      "decides": "Qaror qilaman",
+      "responsible": "Javob beraman",
+      "lacks": "Qila olmayman"
     },
     "signingTitle": "Imzolayman",
     "responsibleTitle": "Masulman",

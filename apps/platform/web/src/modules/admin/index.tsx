@@ -10,6 +10,7 @@ import { BusJournalPage } from "./bus/BusJournalPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { LegalPage } from "./legal/LegalPage";
+import { EmployeeCapabilitiesPage } from "../../features/capabilities/EmployeeCapabilitiesPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 import { SigningPage } from "./signing/SigningPage";
@@ -73,7 +74,7 @@ export function Component() {
     return (
       <SettingsFrame>
         <RequireAccess rule={section.access}>
-          <OrgPage objectId={objectId} />
+          {objectId ? <EmployeeCapabilitiesPage id={objectId} /> : <OrgPage />}
         </RequireAccess>
       </SettingsFrame>
     );

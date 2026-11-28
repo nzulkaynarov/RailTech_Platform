@@ -26,7 +26,9 @@
   "matrix": {
     "label": "What each employee can do",
     "hint": "Click a name to open the person.",
-    "readOnly": "The table shows what employees can do today. Rights are granted through roles — in the person card.",
+    "area": "Area",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
     "capability": "Capability",
     "unavailable": "Could not load the table. Refresh the page.",
     "retry": "Retry",
@@ -63,11 +65,15 @@
     "heading": "What this person can do",
     "positionNote": "The position is a label; it does not affect capabilities.",
     "summary": {
-      "does": "Does",
+      "does": "Handles",
       "decides": "Decides",
       "responsible": "Responsible for",
       "lacks": "Cannot"
     },
+    "summaryMore": "and {{count}} more",
+    "open": "Open",
+    "back": "All employees",
+    "changeRoles": "Change roles",
     "nothing": "Nothing yet",
     "rows": "Capabilities along the deal",
     "from": "From role: {{roles}}",
@@ -105,10 +111,10 @@
     "ask": "Ask for a capability",
     "askBody": "I need the capability “{{name}}”: “{{level}}”.",
     "summary": {
-      "does": "What I do",
-      "decides": "What I decide",
-      "responsible": "What I am responsible for",
-      "lacks": "What I cannot do"
+      "does": "I handle",
+      "decides": "I decide",
+      "responsible": "I am responsible for",
+      "lacks": "I cannot"
     },
     "signingTitle": "I sign",
     "responsibleTitle": "I am responsible for",

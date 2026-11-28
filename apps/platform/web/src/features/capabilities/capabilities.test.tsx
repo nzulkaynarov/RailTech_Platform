@@ -24,30 +24,33 @@ afterEach(() => {
 });
 
 describe("Кто что может", () => {
-  it("«Кто что может» — таблица: шаги сделки, уровни, подпись и «отвечает за»", async () => {
+  it("«Кто что может» — пять областей сделки в строках, уровни, подпись и «отвечает за»; область раскрывается", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org?view=matrix");
 
     const table = await screen.findByRole("table", { name: "Что может каждый сотрудник" });
     expect(screen.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
-    for (const group of [
+    for (const area of [
       "Лиды и клиенты",
       "Заявки и расчёт",
       "КП и договор",
       "Оплата и документы",
+      "Настройки",
     ]) {
-      expect(within(table).getByRole("columnheader", { name: new RegExp(group) })).toBeVisible();
+      expect(within(table).getByRole("button", { name: new RegExp(area) })).toBeVisible();
     }
-    // у бухгалтера «Оплаты» — решать; у менеджера те же «Оплаты» — смотреть
+    // возможности свёрнуты: «Оплаты» видно только после раскрытия области
+    expect(within(table).queryByRole("rowheader", { name: "Оплаты" })).toBeNull();
+    fireEvent.click(within(table).getByRole("button", { name: /Оплата и документы/ }));
     const payments = within(table)
       .getByRole("rowheader", { name: "Оплаты" })
       .closest('[role="row"]') as HTMLElement;
     expect(within(payments).getAllByText("Решать").length).toBeGreaterThan(0);
     expect(within(payments).getAllByText("Смотреть").length).toBeGreaterThan(0);
+    // в строках «Подписывает» и «Отвечает за» — одно короткое значение, подробности в подсказке
     expect(within(table).getByText("Подписывает")).toBeVisible();
     expect(within(table).getByText("Отвечает за")).toBeVisible();
-    // только чтение: ни одной кнопки выдачи в таблице
-    expect(within(table).queryByRole("button")).toBeNull();
+    expect(within(table).queryByRole("button", { name: "Решать" })).toBeNull();
   });
 
   it("страница открывается списком; «Кто что может» — вторая вкладка, имя в таблице открывает карточку", async () => {
@@ -79,33 +82,43 @@ describe("Кто что может", () => {
 });
 
 describe("Что может этот человек", () => {
-  it("итог словами, строка раскрывается в действия «есть» и «нет», выдача — прежняя, ролями", async () => {
+  it("боковое окно — короткий итог по областям и «Открыть»; страница человека — таблица, подпись, области, замещение", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org?employee=u-demo-manager&panel=open&view=list");
 
     const card = await screen.findByTestId("cap-card");
-    // пока нет сводки по областям, абзацев «Что делает / Что решает» нет; предупреждений в карточке нет
-    expect(within(card).queryByText("Что делает")).toBeNull();
-    expect(within(card).queryByText("Что решает")).toBeNull();
-    expect(within(card).queryByTestId("cap-warnings")).toBeNull();
-    const contract = card.querySelector('[data-capability="contract"]') as HTMLElement;
+    const summary = within(card).getByTestId("cap-summary");
+    // не больше четырёх строк, каждая не длиннее 90 знаков вместе с подписью
+    const lines = [...summary.querySelectorAll("[data-line]")];
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.length).toBeLessThanOrEqual(4);
+    for (const line of lines) expect(line.textContent.length).toBeLessThanOrEqual(90);
+    expect(within(card).queryByTestId("cap-rows")).toBeNull();
+    expect(
+      within(card).getByRole("button", { name: "Изменить через роли (до следующего шага)" }),
+    ).toBeVisible();
+    cleanup();
+    endSession();
+
+    signInAs("admin@demo.example");
+    renderApp("/admin/org/u-demo-manager");
+    const page = await screen.findByTestId("cap-page");
+    const contract = (await within(page).findByTestId("cap-rows")).querySelector(
+      '[data-capability="contract"]',
+    ) as HTMLElement;
     expect(within(contract).getByText("Смотреть")).toBeVisible();
     fireEvent.click(within(contract).getByRole("button"));
     expect(
       within(contract).getByText("готовить договор по шаблону и отправлять клиенту"),
     ).toBeVisible();
-    // у менеджера подготовка договора выключена, чтение — включено
     expect(contract.querySelectorAll(".pf-cap-action-off").length).toBeGreaterThan(0);
     expect(within(contract).getByText(/Из роли: Менеджер/)).toBeVisible();
-    expect(within(card).getByTestId("cap-signing")).toBeVisible();
-    expect(within(card).getByTestId("cap-zones")).toBeVisible();
-    expect(within(card).getByTestId("cap-deputy")).toBeVisible();
-    expect(
-      within(card).getByRole("button", { name: "Изменить через роли (до следующего шага)" }),
-    ).toBeVisible();
+    expect(within(page).getByTestId("cap-signing")).toBeVisible();
+    expect(within(page).getByTestId("cap-zones")).toBeVisible();
+    expect(within(page).getByTestId("cap-deputy")).toBeVisible();
   });
 
-  it("у директора ссылки на выдачу ролей нет: он читает, а не выдаёт", async () => {
+  it("у директора ссылки на выдачу ролей в окне нет: он читает, а не выдаёт", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/org?employee=u-demo-manager&panel=open&view=list");
     await screen.findByTestId("cap-card");
