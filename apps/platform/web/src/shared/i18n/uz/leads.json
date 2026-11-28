@@ -52,7 +52,10 @@
     "openChat": "Yozişmani oçiş",
     "triage": "Saralaş",
     "triageLabel": "{{name}} — «Javob kutmoqda»da saralaş",
-    "reopen": "Qayta oçiş"
+    "reopen": "Qayta oçiş",
+    "openRequest": "Arizani oçiş",
+    "openClient": "Mijozni oçiş",
+    "another": "Yana bir ariza"
   },
   "paging": {
     "label": "Lidlar sahifalari",
@@ -116,7 +119,8 @@
     },
     "none": "—",
     "partner": "Hamkor sifatida topşirilgan",
-    "partnerOpen": "Hamkor arizasi"
+    "partnerOpen": "Hamkor arizasi",
+    "request": "Ariza"
   },
   "newLead": {
     "title": "Yangi lid",
@@ -183,5 +187,10 @@
     "spam": "Spam",
     "test": "Test",
     "duplicate": "Dublikat"
+  },
+  "request": {
+    "made": "{{number}} ariza yaratildi",
+    "madeNoNumber": "Ariza yaratildi",
+    "madeFailed": "Ariza yaratildi, lekin hisobga uzatilmadi"
   }
 }

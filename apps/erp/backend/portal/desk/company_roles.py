@@ -24,6 +24,7 @@ from django.utils import timezone
 from parties.models import (
     Company,
     CompanyRelationship,
+    CompanyType,
     Contact,
     PartnerApplication,
     PartnerApplicationStatus,
@@ -114,6 +115,59 @@ def cabinet_truth(company: Company) -> dict[str, Any]:
         "last_login_at": last_login,
         "logged_in_contacts": sum(1 for c in contacts if c.last_login_at),
     }
+
+
+# ── «Клиент» ────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+def ensure_client_role(company: Company, *, actor=None, source: str = "request") -> bool:
+    """Любая заявка компании делает её клиентом (КЛИЕНТ-1): роль `client` выдаётся здесь, один раз и одним способом, а не
+    типом «наугад» там, где компанию завели. Компания, заведённая мастером заявки из лида «организацией», иначе оставалась
+    без входа в Кабинет. Тип добавляется к имеющимся (поставщик остаётся поставщиком); повтор ничего не делает.
+    У компании с отношением «партнёр» роль не выдаётся — её даёт подтверждённая связь (PART-CRM). Возвращает `True`, если роль выдана сейчас (тогда запись в журнале).
+    """
+    if company.types.filter(code=CompanyTypeCode.CLIENT).exists():
+        return False
+    if (
+        CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER)
+        .exclude(status=RelationshipStatus.TERMINATED)
+        .exists()
+    ):
+        # Партнёр становится клиентом только после подтверждённой связи с клиентом CRM (PART-CRM): заявка этого не заменяет
+        return False
+    client_type, _ = CompanyType.objects.get_or_create(code=CompanyTypeCode.CLIENT, defaults={"name": "Клиент"})
+    company.types.add(client_type)
+    record(
+        actor if getattr(actor, "pk", None) else None,
+        entity="company",
+        instance=company,
+        event="client_role_granted",
+        action="Компании выдана роль «Клиент»: по ней создана заявка",
+        before={"client": False},
+        after={"client": True, "source": source},
+        detail=company.name,
+    )
+    return True
+
+
+def set_contact_right(contact: Contact, can_act: bool, *, actor) -> bool:
+    """«Может подтверждать» контакта клиента (КЛИЕНТ-1): без права контакт в Кабинете только смотрит. Одно место для
+    Платформы; запись в журнале с компанией и именем контакта. Повтор с тем же значением ничего не пишет."""
+    if contact.can_act == can_act:
+        return False
+    contact.can_act = can_act
+    contact.save(update_fields=["can_act", "updated_at"])
+    record(
+        actor,
+        entity="company",
+        instance=contact.company,
+        event="contact_right_changed",
+        action=("Контакту дано право подтверждать" if can_act else "У контакта снято право подтверждать"),
+        before={"can_act": not can_act},
+        after={"can_act": can_act},
+        detail=f"{contact.name} · {contact.company.name}",
+    )
+    return True
 
 
 # ── «Не клиент» ─────────────────────────────────────────────────────────────────────────────────────────────────────

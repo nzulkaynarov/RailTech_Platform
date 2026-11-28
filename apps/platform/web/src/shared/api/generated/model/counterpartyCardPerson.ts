@@ -13,6 +13,8 @@ export interface CounterpartyCardPerson {
   is_primary: boolean;
   /** Входит в кабинет */
   has_cabinet: boolean;
+  /** Может подтверждать (КЛИЕНТ-1): принимает КП и договор в Кабинете; иначе только просмотр */
+  can_act: boolean;
   has_phone: boolean;
   has_email: boolean;
   /**

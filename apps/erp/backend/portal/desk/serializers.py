@@ -573,6 +573,7 @@ class DeskCounterpartyPerson(serializers.Serializer):
     position = serializers.CharField(allow_null=True)
     is_primary = serializers.BooleanField(help_text="Главный контакт — отдельного поля «контактное лицо» нет")
     has_cabinet = serializers.BooleanField(help_text="Входит в кабинет")
+    can_act = serializers.BooleanField(help_text="Может подтверждать (КП, договор): иначе в Кабинете только просмотр")
     has_phone = serializers.BooleanField()
     has_email = serializers.BooleanField()
     photo_version = serializers.CharField(allow_null=True, help_text="Версия фото контакта; `null` — фото нет")
@@ -714,6 +715,17 @@ class DeskCounterpartyLogos(serializers.Serializer):
 class DeskPersonPhoto(serializers.Serializer):
     id = serializers.IntegerField()
     photo_version = serializers.CharField(allow_null=True, help_text="Новая версия фото; `null` — фото убрано")
+
+
+class DeskPersonRightIn(serializers.Serializer):
+    can_act = serializers.BooleanField(
+        help_text="Может подтверждать: принимать КП и договор в Кабинете от имени компании"
+    )
+
+
+class DeskPersonRight(serializers.Serializer):
+    id = serializers.IntegerField()
+    can_act = serializers.BooleanField()
 
 
 class DeskCounterpartyRoleStates(serializers.Serializer):

@@ -31,12 +31,14 @@ import {
   useSetCounterpartyDoNotWork,
   useSetCounterpartyRole,
   useUpdateCounterpartyRequisites,
+  useSetContactCabinetRight,
   useUploadContactPhoto,
   useUploadCounterpartyLogo,
 } from "../../../shared/api/generated/platform-bff";
 import { PictureEdit } from "../../../features/picture-edit/PictureEdit";
 import { companyToday } from "../../../shared/lib/dates";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { ContactRightSwitch } from "../../../shared/ui/ContactRightSwitch";
 import { DateField } from "../../../shared/ui/DateField";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { DoNotWorkStrip } from "../../../shared/ui/DoNotWorkStrip";
@@ -526,6 +528,23 @@ function Overview({
   // СУЩ-3: фото контакта — тот же запрос и то же право, что у реквизитов; карточка получает новый адрес с версией
   const upload = useUploadContactPhoto();
   const remove = useDeleteContactPhoto();
+  const right = useSetContactCabinetRight();
+  const isClient = card.roles.client;
+  const setRight = (personId: string, canAct: boolean) => {
+    right.mutate(
+      { id: personId, data: { can_act: canAct } },
+      {
+        onSuccess: (done) => {
+          onChanged({
+            ...card,
+            people: card.people.map((p) =>
+              p.id === personId ? { ...p, can_act: done.can_act } : p,
+            ),
+          });
+        },
+      },
+    );
+  };
   const setPhoto = (personId: string, photoUrl: string | null) => {
     onChanged({
       ...card,
@@ -573,6 +592,23 @@ function Overview({
                     .filter(Boolean)
                     .join(" · ")}
                 />
+                {isClient ? (
+                  <ContactRightSwitch
+                    checked={person.can_act}
+                    editable={editable}
+                    pending={right.isPending && right.variables.id === person.id}
+                    label={t("counterparty.people.canAct")}
+                    ariaLabel={t("counterparty.people.canActNamed", { name: person.name })}
+                    error={
+                      right.isError && right.variables.id === person.id ? (
+                        <ErrorNote message={t("counterparty.people.canActFailed")} />
+                      ) : null
+                    }
+                    onChange={(on) => {
+                      setRight(person.id, on);
+                    }}
+                  />
+                ) : null}
               </li>
             ))}
           </ul>

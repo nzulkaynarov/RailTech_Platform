@@ -144,6 +144,14 @@ class LeadOrigin(BaseModel):
     language: Language | None
 
 
+class LeadRequest(BaseModel):
+    """КЛИЕНТ-1: заявка, созданная из лида; `number` — номер в ERP, пока её не приняли, его нет."""
+
+    deal: int
+    number: str | None
+    transfer: Transfer | None
+
+
 class LeadCard(TestTagged):
     lead: str
     name: str
@@ -172,6 +180,8 @@ class LeadCard(TestTagged):
     duplicate_of: str | None = None
     # ЛП-1: лид передан как партнёр — номер заявки кандидата в ERP («Заявки партнёров»)
     partner_application: int | None = None
+    # КЛИЕНТ-1: заявка этого лида; в карточке вместо «Создать заявку» — «Заявка … создана»
+    request: LeadRequest | None = None
 
 
 # --- клиенты --------------------------------------------------------------------------------------
