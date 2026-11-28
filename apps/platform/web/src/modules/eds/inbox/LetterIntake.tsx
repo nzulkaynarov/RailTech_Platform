@@ -69,7 +69,6 @@ export function LetterIntake({ letter }: { letter: LetterCard }) {
       <div className="pf-letter-intake__actions">
         <div className="pf-letter-intake__action">
           <Button
-            type="primary"
             disabled={requestReason !== null}
             aria-describedby={requestReason ? "intake-request-reason" : undefined}
             onClick={() => {

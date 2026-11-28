@@ -86,5 +86,25 @@ for (const width of [1440, 390] as const) {
         page.getByText(`По письму ${LETTER} создана заявка на подключение партнёра`),
       ).toBeVisible();
     });
+
+    test("в боковом окне письма во «Входящих» действия тоже вверху", async ({ page }) => {
+      test.skip(width < 768, "на телефоне лист «Резолюция» — на весь экран, действия в карточке");
+      await loginAndWait(page, "manager@demo.example");
+      await spaGoto(page, "/eds/inbox");
+      await page
+        .getByRole("row")
+        .filter({
+          has: page.getByRole("link", { name: `Показать письмо ${LETTER} в боковом окне` }),
+        })
+        .getByText(SENDER)
+        .click();
+      const panel = page.locator("#pf-context-panel");
+      await expect(panel.getByRole("button", { name: "Заявка клиента" })).toBeEnabled();
+      await expect(panel.getByRole("button", { name: "Подключение партнёра" })).toBeDisabled();
+      await expect(panel.getByText("Нет доступа к снабжению", { exact: false })).toBeVisible();
+      await expect(page.locator("main .ant-btn-primary:visible")).toHaveCount(0);
+      await settledScreenshot(page, "letter-drawer-actions");
+      await expectNoViolations(page, `боковое окно письма ${String(width)}`);
+    });
   });
 }
