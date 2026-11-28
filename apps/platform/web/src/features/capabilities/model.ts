@@ -14,17 +14,6 @@ export function pickText(text: CapabilityText, language: string): string {
   return text[lang] || text.ru;
 }
 
-/** Подпись шага группы; совпадает с названием («Настройки · настройки») — не показывается. */
-export function stepLabel(
-  group: { name: CapabilityText; step: CapabilityText },
-  language: string,
-): string {
-  const step = pickText(group.step, language);
-  return step.toLocaleLowerCase() === pickText(group.name, language).toLocaleLowerCase()
-    ? ""
-    : step;
-}
-
 export function rank(level: CapabilityLevel): number {
   return LEVELS.indexOf(level);
 }

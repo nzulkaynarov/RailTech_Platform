@@ -10,6 +10,7 @@ import type {
   CapabilityZone,
 } from "../../shared/api/generated/model";
 import { useGetCapabilityMatrix } from "../../shared/api/generated/platform-bff";
+import { currencyLabel } from "../../shared/lib/money";
 import { useFormat } from "../../shared/lib/useFormat";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { MoneyText } from "../../shared/ui/MoneyText";
@@ -30,7 +31,7 @@ export interface CapabilityMatrixViewProps {
 
 /**
  * «Кто что может» (ДОСТ-1, пересборка ДОСТ-1п): строки — области сделки (их пять), столбцы — действующие сотрудники, в
- * клетке — высший уровень человека в области («Смотреть / Работать / Решать») и «не всё», если область у него не вся; строка
+ * клетке — высший уровень человека в области («Смотреть / Работать / Решать»); «не всё» — только в раскрытых строках; строка
  * раскрывается в возможности. Внизу — «Подписывает» и «Отвечает за» одним коротким значением в клетке, подробности — в подсказке.
  * Только чтение: нажатие на имя открывает страницу человека.
  */
@@ -136,16 +137,6 @@ function MatrixTable({
         <span className="pf-cap-only">
           <span className="pf-cap-only-mark" aria-hidden="true" /> {t("legend.only")}
         </span>
-        <span className="pf-cap-legend-end">{t("matrix.hint")}</span>
-        <button
-          type="button"
-          className="pf-cap-more"
-          onClick={() => {
-            setOpen(allOpen ? new Set() : new Set(matrix.groups.map((group) => group.key)));
-          }}
-        >
-          {allOpen ? t("matrix.collapseAll") : t("matrix.expandAll")}
-        </button>
       </div>
       <div className="pf-cap-matrix-wrap" tabIndex={0} role="region" aria-label={t("matrix.label")}>
         <div
@@ -157,7 +148,15 @@ function MatrixTable({
           <div role="rowgroup">
             <div role="row" className="pf-cap-line">
               <div role="columnheader" className="pf-cap-cell pf-cap-corner">
-                {t("matrix.area")}
+                <button
+                  type="button"
+                  className="pf-cap-more"
+                  onClick={() => {
+                    setOpen(allOpen ? new Set() : new Set(matrix.groups.map((group) => group.key)));
+                  }}
+                >
+                  {allOpen ? t("matrix.collapseAll") : t("matrix.expandAll")}
+                </button>
               </div>
               {matrix.employees.map((employee) => (
                 <div
@@ -205,11 +204,9 @@ function MatrixTable({
                     </button>
                   </div>
                   {matrix.employees.map((employee) => {
-                    const { level, partial } = areaLevel(
+                    const level = areaLevel(
                       group.capabilities.map((cap) => ({
                         level: employee.cells[cap.key]?.level ?? "none",
-                        partial: employee.cells[cap.key]?.partial ?? false,
-                        max: cap.levels.at(-1) ?? "none",
                       })),
                     );
                     const decider = group.capabilities.some((cap) =>
@@ -222,7 +219,7 @@ function MatrixTable({
                             —
                           </span>
                         ) : (
-                          <LevelTag level={level} partial={partial} />
+                          <LevelTag level={level} />
                         )}
                         {decider ? (
                           <span
@@ -318,7 +315,9 @@ function MatrixTable({
                                   amount: `${new Intl.NumberFormat(language, {
                                     notation: "compact",
                                     maximumFractionDigits: 1,
-                                  }).format(Number(short.money.amount))} ${short.money.currency}`,
+                                  }).format(
+                                    Number(short.money.amount),
+                                  )} ${currencyLabel(short.money.currency, language)}`,
                                 })
                               : short.text}
                           </span>

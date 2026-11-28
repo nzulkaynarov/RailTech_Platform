@@ -39,6 +39,10 @@ describe("Кто что может", () => {
     ]) {
       expect(within(table).getByRole("button", { name: new RegExp(area) })).toBeVisible();
     }
+    // в строках областей пометки «не всё» нет — она живёт на строках возможностей; ни подсказок, ни шагов
+    expect(within(table).queryByText("не всё")).toBeNull();
+    expect(screen.queryByText(/Нажмите на имя/)).toBeNull();
+    expect(within(table).queryByText(/шаг/)).toBeNull();
     // возможности свёрнуты: «Оплаты» видно только после раскрытия области
     expect(within(table).queryByRole("rowheader", { name: "Оплаты" })).toBeNull();
     fireEvent.click(within(table).getByRole("button", { name: /Оплата и документы/ }));
@@ -94,9 +98,8 @@ describe("Что может этот человек", () => {
     expect(lines.length).toBeLessThanOrEqual(4);
     for (const line of lines) expect(line.textContent.length).toBeLessThanOrEqual(90);
     expect(within(card).queryByTestId("cap-rows")).toBeNull();
-    expect(
-      within(card).getByRole("button", { name: "Изменить через роли (до следующего шага)" }),
-    ).toBeVisible();
+    // подсказок «изменить через роли» в окне нет: форма ролей ниже и так подписана
+    expect(within(card).queryByText(/Изменить через роли|до следующего шага/)).toBeNull();
     cleanup();
     endSession();
 
@@ -117,13 +120,6 @@ describe("Что может этот человек", () => {
     expect(within(page).getByTestId("cap-zones")).toBeVisible();
     expect(within(page).getByTestId("cap-deputy")).toBeVisible();
   });
-
-  it("у директора ссылки на выдачу ролей в окне нет: он читает, а не выдаёт", async () => {
-    signInAs("director@demo.example");
-    renderApp("/admin/org?employee=u-demo-manager&panel=open&view=list");
-    await screen.findByTestId("cap-card");
-    expect(screen.queryByTestId("cap-change-link")).toBeNull();
-  });
 });
 
 describe("Мои возможности", () => {
@@ -134,6 +130,8 @@ describe("Мои возможности", () => {
     const mine = await screen.findByTestId("my-capabilities");
     expect(within(mine).queryByText("Что я делаю")).toBeNull();
     expect(within(mine).queryByText("Что я решаю")).toBeNull();
+    expect(within(mine).queryByText(/Что вы можете делать в Платформе сегодня/)).toBeNull();
+    expect(within(mine).queryByText(/шаг/)).toBeNull();
     const leads = mine.querySelector('[data-capability="leads"]') as HTMLElement;
     expect(within(leads).getByText("Работать")).toBeVisible();
     const staff = mine.querySelector('[data-capability="staff"]') as HTMLElement;

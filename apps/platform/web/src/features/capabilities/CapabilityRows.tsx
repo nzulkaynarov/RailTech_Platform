@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { CapabilityRow, EmployeeCapabilities } from "../../shared/api/generated/model";
 import { LevelTag } from "./LevelTag";
-import { pickText, stepLabel } from "./model";
+import { pickText } from "./model";
 
 import "./capabilities.css";
 
@@ -28,10 +28,7 @@ export function CapabilityRows({
           className="pf-cap-group"
           aria-label={pickText(group.name, i18n.language)}
         >
-          <h3 className="pf-cap-group-title">
-            {pickText(group.name, i18n.language)}
-            <span className="pf-cap-group-step">{stepLabel(group, i18n.language)}</span>
-          </h3>
+          <h3 className="pf-cap-group-title">{pickText(group.name, i18n.language)}</h3>
           <ul className="pf-cap-rows">
             {group.rows.map((row) => (
               <Row key={row.key} row={row} showOthers={showOthers} language={i18n.language} t={t} />

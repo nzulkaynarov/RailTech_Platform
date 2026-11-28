@@ -10,16 +10,9 @@ import "./capabilities.css";
 
 /**
  * «Что может этот человек» в боковом окне списка (ДОСТ-1п): только короткий итог по областям и ссылка «Открыть» на страницу
- * человека (там таблица, «Отвечает за», «Подписывает», «Замещение»); плюс честная ссылка на выдачу прав ролями.
+ * человека (там таблица, «Отвечает за», «Подписывает», «Замещение»);.
  */
-export function CapabilityCard({
-  employeeId,
-  rolesTargetId,
-}: {
-  employeeId: string;
-  /** `id` блока выдачи ролей на этой же карточке; без него ссылки нет (нет права выдавать) */
-  rolesTargetId?: string;
-}) {
+export function CapabilityCard({ employeeId }: { employeeId: string }) {
   const { t } = useTranslation("capabilities");
   const query = useGetEmployeeCapabilities(employeeId);
   if (query.isPending) return <Skeleton active paragraph={{ rows: 6 }} />;
@@ -54,25 +47,6 @@ export function CapabilityCard({
           {t("card.open")}
         </Link>
       </p>
-      {rolesTargetId ? (
-        <p style={{ margin: "12px 0 0" }}>
-          <Button
-            type="link"
-            style={{ padding: 0, height: "auto" }}
-            data-testid="cap-change-link"
-            onClick={() => {
-              const target = document.getElementById(rolesTargetId);
-              target?.scrollIntoView({ block: "start" });
-              target?.focus();
-            }}
-          >
-            {t("card.change")}
-          </Button>
-          <span className="pf-hint" style={{ display: "block" }}>
-            {t("card.changeHint")}
-          </span>
-        </p>
-      ) : null}
     </section>
   );
 }

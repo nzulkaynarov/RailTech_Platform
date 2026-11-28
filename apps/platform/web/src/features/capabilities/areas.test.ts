@@ -16,20 +16,12 @@ const row = (key: string, level: string) =>
     others_total: 0,
   }) as never;
 
-describe("область: высший уровень и «не всё»", () => {
-  const cell = (level: string, max: string, partial = false) => ({ level, max, partial }) as never;
-  it("берётся самый высокий; «не всё» — если что-то не дошло до своего высшего уровня", () => {
-    expect(areaLevel([cell("decide", "decide"), cell("view", "work")])).toEqual({
-      level: "decide",
-      partial: true,
-    });
-    // всё выдано полностью: у одной возможности высший уровень «работать», у другой — «решать»
-    expect(areaLevel([cell("decide", "decide"), cell("work", "work")])).toEqual({
-      level: "decide",
-      partial: false,
-    });
-    expect(areaLevel([cell("work", "work", true)])).toEqual({ level: "work", partial: true });
-    expect(areaLevel([cell("none", "work")])).toEqual({ level: "none", partial: false });
+describe("область: высший уровень", () => {
+  const cell = (level: string) => ({ level }) as never;
+  it("берётся самый высокий из возможностей области", () => {
+    expect(areaLevel([cell("view"), cell("decide"), cell("work")])).toBe("decide");
+    expect(areaLevel([cell("none"), cell("none")])).toBe("none");
+    expect(areaLevel([])).toBe("none");
   });
 });
 

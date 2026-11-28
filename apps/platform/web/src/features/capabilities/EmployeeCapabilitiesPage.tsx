@@ -109,10 +109,11 @@ export function EmployeeCapabilitiesPage({ id }: { id: string }) {
           <PersonAvatar name={name} photoUrl={employee?.avatar_url} size={40} />
           <div className="pf-cap-head-main">
             <h1>{name}</h1>
-            <p className="pf-hint" style={{ margin: 0 }}>
-              {employee?.position ? `${employee.position} · ` : ""}
-              {t("card.positionNote")}
-            </p>
+            {employee?.position ? (
+              <p className="pf-hint" style={{ margin: 0 }}>
+                {employee.position}
+              </p>
+            ) : null}
           </div>
           {employee ? <EmployeeStatusTag status={employee.status} /> : null}
           <Link to={`/admin/org?employee=${id}&panel=open`}>{t("card.changeRoles")}</Link>

@@ -47,9 +47,6 @@ export function MyCapabilities() {
   const data = query.data;
   return (
     <div data-testid="my-capabilities" className="pf-cap-page">
-      <p className="pf-hint" style={{ margin: 0 }}>
-        {t("mine.lead")}
-      </p>
       <section className="pf-cap-box">
         <SummaryBox data={data} person="first" onMore={openTable} />
       </section>

@@ -25,11 +25,8 @@
   },
   "matrix": {
     "label": "What each employee can do",
-    "hint": "Click a name to open the person.",
-    "area": "Area",
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
-    "capability": "Capability",
     "unavailable": "Could not load the table. Refresh the page.",
     "retry": "Retry",
     "empty": {
@@ -39,14 +36,11 @@
     "apart": "Apart from capabilities",
     "signs": "Signs",
     "responsible": "Responsible for",
-    "deputy": "Covers for",
     "noSigning": "—",
     "noZones": "—",
     "unlimited": "no limit",
     "upTo": "up to {{amount}}",
     "open": "Open: {{name}}",
-    "cell": "{{capability}}: {{level}}",
-    "cellPartial": "{{capability}}: {{level}}, not all",
     "onlyMark": "the only one who decides"
   },
   "warnings": {
@@ -63,7 +57,6 @@
   },
   "card": {
     "heading": "What this person can do",
-    "positionNote": "The position is a label; it does not affect capabilities.",
     "summary": {
       "does": "Handles",
       "decides": "Decides",
@@ -90,7 +83,6 @@
       "curator": "curator"
     },
     "responsibleEmpty": "Not assigned to any area",
-    "responsibleNote": "An area is only recorded for now: it does not route tasks.",
     "signingTitle": "Signs",
     "signingEmpty": "No signing authority",
     "signingUntil": "until {{date}}",
@@ -99,15 +91,12 @@
     "deputyNone": "No deputy",
     "deputyLine": "{{name}} · {{from}} — {{to}}",
     "deputyPasses": "Approvals, resolutions and quote approval pass over. Signing and payment confirmation do not.",
-    "change": "Change through roles (until the next step)",
-    "changeHint": "Rights are granted as before — through roles. Separate switches will come in the next step.",
     "unavailable": "Could not load capabilities. Refresh the page.",
     "retry": "Retry",
     "free": "Everyone, without granting: {{text}}"
   },
   "mine": {
     "title": "My capabilities",
-    "lead": "What you can do in the Platform today. Rights are granted by the administrator.",
     "ask": "Ask for a capability",
     "askBody": "I need the capability “{{name}}”: “{{level}}”.",
     "summary": {

@@ -9,22 +9,11 @@ import { pickText, rank } from "./model";
 export const LINE_MAX = 90;
 export const ITEMS_MAX = 6;
 
-export interface AreaLevel {
-  level: CapabilityLevel;
-  /** В области есть что-то ниже её высшего уровня — «не всё» */
-  partial: boolean;
-}
-
-/** Высший уровень человека в области: самый высокий из её возможностей; «не всё» — если не всё в области выдано полностью. */
-export function areaLevel(
-  cells: readonly { level: CapabilityLevel; partial: boolean; max: CapabilityLevel }[],
-): AreaLevel {
+/** Высший уровень человека в области: самый высокий из её возможностей («не всё» — только в строках возможностей). */
+export function areaLevel(cells: readonly { level: CapabilityLevel }[]): CapabilityLevel {
   let top: CapabilityLevel = "none";
   for (const cell of cells) if (rank(cell.level) > rank(top)) top = cell.level;
-  if (top === "none") return { level: "none", partial: false };
-  // «не всё» — хоть одна возможность области не дошла до своего высшего уровня или у неё часть действий снята
-  const partial = cells.some((cell) => rank(cell.level) < rank(cell.max) || cell.partial);
-  return { level: top, partial };
+  return top;
 }
 
 /** «Лиды и клиенты» → «лиды и клиенты»; сокращения («КП», «ИИ») остаются как есть. */

@@ -25,11 +25,8 @@
   },
   "matrix": {
     "label": "Har bir xodim nimani qila oladi",
-    "hint": "Odamni açiş uçun ismiga bosing.",
-    "area": "Soha",
     "expandAll": "Hammasini oçiş",
     "collapseAll": "Hammasini yiğiş",
-    "capability": "Imkoniyat",
     "unavailable": "Jadvalni yuklab bölmadi. Sahifani yangilang.",
     "retry": "Takrorlaş",
     "empty": {
@@ -39,14 +36,11 @@
     "apart": "Imkoniyatlardan alohida",
     "signs": "Imzolaydi",
     "responsible": "Masul",
-    "deputy": "Almaştiradi",
     "noSigning": "—",
     "noZones": "—",
     "unlimited": "çegarasiz",
     "upTo": "{{amount}} gaçha",
     "open": "Açiş: {{name}}",
-    "cell": "{{capability}}: {{level}}",
-    "cellPartial": "{{capability}}: {{level}}, hammasi emas",
     "onlyMark": "qaror qiladigan yagona odam"
   },
   "warnings": {
@@ -63,7 +57,6 @@
   },
   "card": {
     "heading": "Bu odam nimani qila oladi",
-    "positionNote": "Lavozim — imzo, imkoniyatlarga tasir qilmaydi.",
     "summary": {
       "does": "Yuritadi",
       "decides": "Qaror qiladi",
@@ -90,7 +83,6 @@
       "curator": "kurator"
     },
     "responsibleEmpty": "Hec bir soha uçun tayinlanmagan",
-    "responsibleNote": "Soha hozirça faqat yozib qöyilgan: vazifalarni yönaltirmaydi.",
     "signingTitle": "Imzolaydi",
     "signingEmpty": "Imzo huquqi yöq",
     "signingUntil": "{{date}} gaçha",
@@ -99,15 +91,12 @@
     "deputyNone": "Almaştiruvçi tayinlanmagan",
     "deputyLine": "{{name}} · {{from}} — {{to}}",
     "deputyPasses": "Kelişişlar, rezolyutsiyalar va TTni tasdiqlaş ötadi. Imzo va tölovni tasdiqlaş ötmaydi.",
-    "change": "Rollar orqali özgartiriş (keyingi qadamgaçha)",
-    "changeHint": "Huquqlar avvalgidek — rollar bilan beriladi. Alohida tugmalar keyingi qadamda paydo böladi.",
     "unavailable": "Imkoniyatlarni yuklab bölmadi. Sahifani yangilang.",
     "retry": "Takrorlaş",
     "free": "Hammaga bermasdan: {{text}}"
   },
   "mine": {
     "title": "Mening imkoniyatlarim",
-    "lead": "Bugun Platformada nimalar qila olasiz. Huquqlarni administrator beradi.",
     "ask": "Imkoniyat söraş",
     "askBody": "«{{name}}» imkoniyati kerak: «{{level}}».",
     "summary": {

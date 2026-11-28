@@ -97,8 +97,7 @@ test.describe("Что может этот человек", () => {
     await expect(card.getByTestId("cap-warnings")).toHaveCount(0);
     await expect(card.getByTestId("cap-summary").locator("[data-line]").first()).toBeVisible();
     await expect(card.getByTestId("cap-rows")).toHaveCount(0);
-    // выдача прав — прежняя: ссылка ведёт к форме ролей на этой же карточке
-    await card.getByRole("button", { name: "Изменить через роли (до следующего шага)" }).click();
+    // выдача прав — прежняя: форма ролей в этом же окне
     await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeVisible();
 
     await card.getByRole("link", { name: "Открыть" }).click();
@@ -117,14 +116,6 @@ test.describe("Что может этот человек", () => {
     await expect(full.getByTestId("cap-signing")).toBeVisible();
     await expect(full.getByTestId("cap-zones")).toBeVisible();
     await expect(full.getByTestId("cap-deputy")).toBeVisible();
-  });
-
-  test("у директора ссылки «Изменить через роли» нет", async ({ page }) => {
-    await loginAndWait(page, "director@demo.example");
-    await openMatrix(page);
-    await page.getByRole("link", { name: "Открыть: Демо Менеджеров" }).click();
-    await expect(page.locator(PANEL).getByTestId("cap-card")).toBeVisible();
-    await expect(page.getByTestId("cap-change-link")).toHaveCount(0);
   });
 
   for (const width of WIDTHS) {
