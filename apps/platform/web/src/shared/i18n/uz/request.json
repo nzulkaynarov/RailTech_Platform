@@ -93,7 +93,8 @@
     "repeated": "Bu ariza allaqaçon yaratilgan — uni körsatamiz.",
     "waits": "Rezolyutsiya kutilmoqda.",
     "failed": "Hisobga uzatilmadi: mijoz kartoçkasida qayta yuboring.",
-    "open": "Arizani oçiş"
+    "open": "Arizani oçiş",
+    "openClient": "Mijozni oçiş"
   },
   "errors": {
     "company": "Kompaniyani tanlang",

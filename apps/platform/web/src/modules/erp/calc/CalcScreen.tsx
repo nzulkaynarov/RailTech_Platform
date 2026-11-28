@@ -251,8 +251,22 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
   const waiting = GROUPS.filter((g) => sheet.visas[g].state === "waiting").map((g) =>
     t(`groups.${g}`),
   );
+  const lowLines = sheet.lines.filter((l) => l.margin_below).length;
+  const warning =
+    sheet.totals.margin_below || lowLines > 0 ? (
+      <p className="pf-calc-ready-warn" role="status">
+        {sheet.totals.margin_below
+          ? t("ready.marginLow.warn", {
+              margin: sheet.totals.margin_pct,
+              threshold: sheet.totals.threshold_pct,
+            })
+          : null}
+        {lowLines > 0 ? ` ${t("ready.marginLow.warnLines", { count: lowLines })}` : ""}
+      </p>
+    ) : null;
   return (
     <div className="pf-calc-ready">
+      {warning}
       {blocker ? (
         <p id={hintId} className="pf-calc-ready-hint">
           {t(`ready.hint.${readyHintKey(sheet)}`, { count: sheet.ready.missing })}
@@ -417,7 +431,16 @@ function Content({ sheet }: { sheet: CalcSheet }) {
             }
             styles={{ body: { padding: 0 } }}
           >
-            <LinesTable sheet={sheet} />
+            <LinesTable
+              sheet={sheet}
+              onRequestPrice={
+                editable && sheet.rights.stock === true
+                  ? () => {
+                      openForm("price");
+                    }
+                  : undefined
+              }
+            />
             <Ready sheet={sheet} />
           </Card>
         )}

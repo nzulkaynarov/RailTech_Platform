@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from app.api.crm_messages import _Crm, _lead_id
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
-from app.crm_leads_view import client_short, lead_card, lead_row, list_params
+from app.crm_leads_view import client_short, lead_card, lead_request, lead_row, list_params
 from app.deps import Authed, require, require_any
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.numbers import lead_number
@@ -79,12 +79,17 @@ async def get_lead(lead: LeadParam, authed: Reader) -> LeadCard:
         _soft(api, f"{API}/leads/{lead_id}/messages", {"limit": 5}),
     )
     detail = crm.LeadDetail.model_validate(raw)
-    client_raw, products = await asyncio.gather(
+    client_raw, products, deals_raw = await asyncio.gather(
         _soft(api, f"{API}/clients/{detail.client_id}") if detail.client_id else _none(),
         api.products(list(detail.product_interest)),
+        _soft(api, f"{API}/deals", {"client_id": detail.client_id})
+        if detail.client_id
+        else _none(),
     )
     messages = [crm.MessageOut.model_validate(m) for m in messages_raw or []]
-    return lead_card(detail, names, products, messages, client_short(client_raw, detail))
+    card = lead_card(detail, names, products, messages, client_short(client_raw, detail))
+    card.request = lead_request(deals_raw, lead_id)
+    return card
 
 
 async def _none() -> None:

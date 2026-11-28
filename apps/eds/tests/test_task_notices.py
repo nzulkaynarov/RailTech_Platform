@@ -169,3 +169,75 @@ async def test_resubmitted_returned_letter_signals_the_addressee_again(
     notices = await tasks(container, "resolve_letter")  # регистрация + две подачи: у директора три прихода строки
     assert [n["recipients"] for n in notices] == [[3], [3], [3]]
     assert len({n["notice_key"] for n in notices}) == 3  # ключ меняется с подачей, иначе CRM отбросит повтор
+
+
+async def test_lawyer_gets_the_visa_task_when_the_accountant_who_sent_it_visas_first(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Walk 2026-11-28: the accountant sent the contract for signing and visaed first; the lawyer gets the next step."""
+    await _grant_director(client, staff)
+    envelope = _request(staff)
+    envelope["data"]["requested_by"] = {
+        "crm_user_id": staff["accountant"].id,
+        "name": staff["accountant"].name,
+        "position": "",
+    }
+    await deliver_erp(client, container, envelope)
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
+    )
+    assert resp.status_code == 200, resp.text
+
+    visas = await tasks(container, "visa_commercial")
+    assert [n["recipients"] for n in visas][-1] == [staff["lawyer"].id]
+    mine = await client.get(
+        "/api/v1/approvals",
+        params={"mine": "true", "template": ["signing"], "status": ["open"]},
+        headers=staff["lawyer"].headers,
+    )
+    assert [item["id"] for item in mine.json()["items"]] == [approval_id]
+
+
+async def test_lawyer_waits_for_the_accountant_and_the_test_company_gate_does_not_hide_the_route(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Walk 2026-11-28, "no visa task for the lawyer": the route is sequential (accountant, then lawyer). Before the
+    accountant's visa the lawyer's queue and bell are empty by design, but the route is listed for him. The ТЕСТ-2 gate
+    is not the cause: the signing route carries no company (ERP sends `erp_company_id: null`), so a test company mark
+    neither removes it from the default queue nor flags the notice `is_test`."""
+    from tests.test_test_companies import COMPANY, company_event
+
+    assert await deliver_erp(client, container, company_event("2026-11-28T09:00:00Z", is_test=True)) == "processed"
+    await _grant_director(client, staff)
+    envelope = _request(staff)
+    envelope["data"]["object"]["erp_company_id"] = COMPANY  # the deal's company is a test one
+    await deliver_erp(client, container, envelope)
+    [approval_id] = await _open_ids(client, staff)
+
+    async def queue(who: str, **params: Any) -> list[str]:
+        resp = await client.get(
+            "/api/v1/approvals",
+            params={"template": ["signing"], "status": ["open"], **params},
+            headers=staff[who].headers,
+        )
+        assert resp.status_code == 200, resp.text
+        return [item["id"] for item in resp.json()["items"]]
+
+    # the first step is the accountant's: the lawyer has nothing "mine" yet, but sees the route among all
+    assert await queue("accountant", mine="true") == [approval_id]
+    assert await queue("lawyer", mine="true") == []
+    assert await queue("lawyer", mine="false") == [approval_id]
+    assert [n["recipients"] for n in await tasks(container, "visa_commercial")] == [[staff["accountant"].id]]
+
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
+    )
+    assert resp.status_code == 200, resp.text
+
+    # the gate does not touch the route: no `test` parameter needed, the notice is not flagged
+    assert await queue("lawyer", mine="true") == [approval_id]
+    assert await queue("lawyer", mine="false") == [approval_id]
+    visas = await tasks(container, "visa_commercial")
+    assert visas[-1]["recipients"] == [staff["lawyer"].id]
+    assert not visas[-1].get("is_test")

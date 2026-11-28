@@ -35724,6 +35724,96 @@
                 }
             }
         },
+        "/api/v1/parties/people/{id}/cabinet-right/": {
+            "patch": {
+                "operationId": "parties_people_cabinet_right",
+                "description": "КЛИЕНТ-1. «Может подтверждать» контакта клиента: без права контакт в Кабинете только смотрит КП и договор. Право `deal.manage` или `supply.manage`; изменение пишется в журнал. Контакт вне списка «Люди» — 404.",
+                "summary": "Set the right to confirm of a client contact",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskPersonRightInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonRight"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/people/{id}/photo/": {
             "get": {
                 "operationId": "parties_people_photo_get",
@@ -42684,6 +42774,15 @@
                         ],
                         "nullable": true
                     },
+                    "partner_price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerPrice"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "РАСЧ-1: источник закупки и выбор цены партнёра; null — услуга, строка без карточки или нет права"
+                    },
                     "lead_days": {
                         "type": "integer",
                         "nullable": true
@@ -42727,6 +42826,15 @@
                         "pattern": "^-?\\d{0,6}(?:\\.\\d{0,1})?$",
                         "nullable": true
                     },
+                    "margin_pct": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,1})?$",
+                        "nullable": true
+                    },
+                    "margin_below": {
+                        "type": "boolean"
+                    },
                     "visa": {
                         "allOf": [
                             {
@@ -42755,8 +42863,11 @@
                     "item",
                     "kind",
                     "lead_days",
+                    "margin_below",
+                    "margin_pct",
                     "markup_pct",
                     "name",
+                    "partner_price",
                     "position",
                     "product_draft",
                     "product_id",
@@ -42942,6 +43053,109 @@
                         "description": "docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ"
                     }
                 }
+            },
+            "CalcPartnerExpired": {
+                "type": "object",
+                "properties": {
+                    "supplier": {
+                        "type": "string"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                },
+                "required": [
+                    "supplier",
+                    "valid_until"
+                ]
+            },
+            "CalcPartnerOption": {
+                "type": "object",
+                "properties": {
+                    "offer_id": {
+                        "type": "integer"
+                    },
+                    "supplier": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "description": "За единицу в валюте строки (по курсу)"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "price_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Дата цены: подтверждение или последнее изменение"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "freshness": {
+                        "$ref": "#/components/schemas/FreshnessEnum"
+                    },
+                    "chosen": {
+                        "type": "boolean",
+                        "description": "Эта цена стоит в закупке строки"
+                    }
+                },
+                "required": [
+                    "chosen",
+                    "currency",
+                    "freshness",
+                    "offer_id",
+                    "price",
+                    "price_date",
+                    "supplier",
+                    "valid_until"
+                ]
+            },
+            "CalcPartnerPrice": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerOption"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Цена партнёра, по которой взята закупка; null — закупку ввели руками или её нет"
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CalcPartnerOption"
+                        },
+                        "description": "Короткий список действующих цен, от дешёвой"
+                    },
+                    "expired": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcPartnerExpired"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Последняя истёкшая цена, когда действующих нет (молча не берётся)"
+                    },
+                    "can_request": {
+                        "type": "boolean",
+                        "description": "Действующей цены нет — предложить «Запросить цену»"
+                    }
+                },
+                "required": [
+                    "can_request",
+                    "expired",
+                    "options",
+                    "source"
+                ]
             },
             "CalcPrevious": {
                 "type": "object",
@@ -43496,14 +43710,32 @@
                         "pattern": "^-?\\d{0,6}(?:\\.\\d{0,1})?$",
                         "nullable": true
                     },
+                    "margin_pct": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,1})?$",
+                        "nullable": true
+                    },
+                    "threshold_pct": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,6}(?:\\.\\d{0,1})?$",
+                        "nullable": true
+                    },
+                    "margin_below": {
+                        "type": "boolean"
+                    },
                     "vat_included": {
                         "type": "boolean"
                     }
                 },
                 "required": [
                     "client",
+                    "margin_below",
+                    "margin_pct",
                     "markup_pct",
                     "purchase",
+                    "threshold_pct",
                     "vat_included"
                 ]
             },
@@ -45297,7 +45529,7 @@
                         "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
                         "nullable": true,
                         "title": "Маржа по умолчанию (%)",
-                        "description": "Наценка на себестоимость, подставляемая в новый КП"
+                        "description": "Наценка на себестоимость, подставляемая в новый КП и в цену клиенту строки расчёта (РАСЧ-1); по умолчанию 20 %"
                     },
                     "default_offer_validity_days": {
                         "type": "integer",
@@ -48368,6 +48600,10 @@
                         "type": "boolean",
                         "description": "Входит в кабинет"
                     },
+                    "can_act": {
+                        "type": "boolean",
+                        "description": "Может подтверждать (КП, договор): иначе в Кабинете только просмотр"
+                    },
                     "has_phone": {
                         "type": "boolean"
                     },
@@ -48381,6 +48617,7 @@
                     }
                 },
                 "required": [
+                    "can_act",
                     "has_cabinet",
                     "has_email",
                     "has_phone",
@@ -51567,6 +51804,21 @@
                     "photo_version"
                 ]
             },
+            "DeskPersonRight": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "can_act": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_act",
+                    "id"
+                ]
+            },
             "DeskPictureInRequest": {
                 "type": "object",
                 "description": "Загрузка логотипа или фото (ЕД-5, СУЩ-3): квадрат, уже обрезанный клиентом.",
@@ -53987,6 +54239,15 @@
                 "required": [
                     "email"
                 ]
+            },
+            "FreshnessEnum": {
+                "enum": [
+                    "ok",
+                    "expiring",
+                    "stale"
+                ],
+                "type": "string",
+                "description": "* `ok` - ok\n* `expiring` - expiring\n* `stale` - stale"
             },
             "Fulfillment": {
                 "type": "object",
@@ -57983,6 +58244,11 @@
                         "minLength": 3,
                         "maxLength": 3
                     },
+                    "offer_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (цена в валюте строки по курсу)"
+                    },
                     "crew_rate": {
                         "type": "string",
                         "format": "decimal",
@@ -58479,7 +58745,7 @@
                         "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
                         "nullable": true,
                         "title": "Маржа по умолчанию (%)",
-                        "description": "Наценка на себестоимость, подставляемая в новый КП"
+                        "description": "Наценка на себестоимость, подставляемая в новый КП и в цену клиенту строки расчёта (РАСЧ-1); по умолчанию 20 %"
                     },
                     "min_margin_percent": {
                         "type": "string",
@@ -59338,6 +59604,15 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                    }
+                }
+            },
+            "PatchedDeskPersonRightInRequest": {
+                "type": "object",
+                "properties": {
+                    "can_act": {
+                        "type": "boolean",
+                        "description": "Может подтверждать: принимать КП и договор в Кабинете от имени компании"
                     }
                 }
             },

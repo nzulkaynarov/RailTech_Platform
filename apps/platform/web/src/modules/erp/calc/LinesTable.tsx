@@ -1,4 +1,4 @@
-import { App, Button, InputNumber, Popconfirm, Select } from "antd";
+import { App, Button, InputNumber, Popconfirm, Popover, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -275,45 +275,133 @@ function Stock({
   );
 }
 
-function Supplier({ line }: { line: CalcLine }) {
+/** РАСЧ-1: откуда закупка — одна короткая строка под ценой «Партнёр · до ДД.ММ · N дн.» (полный текст в подсказке);
+ *  нажатие открывает выбор другой цены партнёра; «Запросить цену», когда действующей нет (истёкшая цена молча не берётся). */
+function PartnerSource({
+  line,
+  actions,
+  onRequestPrice,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  onRequestPrice?: () => void;
+}) {
   const { t } = useTranslation("calc");
   const { date, money } = useFormat();
-  if (line.zone === "services") return <span className="pf-hint">{t("lines.service")}</span>;
-  const supplier = line.supplier;
-  if (!supplier) {
-    return (
-      <span className="pf-hint">
-        {t("lines.noSupplier")}
-        {line.lead_days ? ` · ${t("lines.days", { count: line.lead_days })}` : ""}
-      </span>
-    );
-  }
-  return (
-    <div className="pf-calc-supplier">
-      <span>
-        {supplier.name}
-        {supplier.lead_days ? ` · ${t("lines.days", { count: supplier.lead_days })}` : ""}
-      </span>
-      <span className="pf-hint">
-        {supplier.price_valid_until
-          ? t("lines.supplierHint", {
-              qty: supplier.min_order_qty,
-              date: date(supplier.price_valid_until),
+  const [open, setOpen] = useState(false);
+  const part = line.partner_price;
+  if (!part || line.zone === "services") return null;
+  const source = part.source;
+  const days = line.lead_days ? t("lines.days", { count: line.lead_days }) : null;
+  const short = source
+    ? [
+        source.supplier,
+        source.valid_until
+          ? t("partner.until", { date: date(source.valid_until) })
+          : t("partner.noDate"),
+        days,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const full = source
+    ? [
+        source.valid_until
+          ? t("partner.source", {
+              name: source.supplier,
+              from: date(source.price_date),
+              until: date(source.valid_until),
             })
-          : t("lines.supplierHintNoDate", { qty: supplier.min_order_qty })}
-      </span>
-      {supplier.offer_price ? (
-        <span className="pf-hint">
-          {t("lines.offerPrice", {
-            price: money(supplier.offer_price, { currency: supplier.offer_currency }),
+          : t("partner.sourceOpen", { name: source.supplier, from: date(source.price_date) }),
+        source.freshness === "expiring" ? t("partner.expiring") : null,
+        source.freshness === "stale" ? t("partner.stale") : null,
+        days,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const minQty = line.supplier?.min_order_qty;
+  const picker = (
+    <div
+      className="pf-calc-partner-menu"
+      role="listbox"
+      aria-label={t("partner.pickLabel", { name: line.name })}
+    >
+      {part.options.map((option) => (
+        <button
+          key={option.offer_id}
+          type="button"
+          role="option"
+          aria-selected={option.offer_id === source?.offer_id}
+          className="pf-calc-partner-option"
+          disabled={actions.pending || !line.can_edit}
+          onClick={() => {
+            setOpen(false);
+            if (option.offer_id !== source?.offer_id)
+              actions.patch(line, { offer_id: option.offer_id });
+          }}
+        >
+          {t("partner.option", {
+            name: option.supplier,
+            price: money(option.price, { currency: option.currency }),
+            until: option.valid_until ? date(option.valid_until) : t("partner.noDate"),
           })}
+        </button>
+      ))}
+      {minQty ? <span className="pf-hint">{t("partner.minQty", { qty: minQty })}</span> : null}
+    </div>
+  );
+  return (
+    <div className="pf-calc-partner-source" data-testid="partner-source">
+      {source || part.options.length > 0 ? (
+        <Popover
+          content={picker}
+          trigger="click"
+          open={open}
+          onOpenChange={setOpen}
+          placement="bottomRight"
+        >
+          <button
+            type="button"
+            className="pf-calc-partner-line pf-hint"
+            title={full}
+            aria-label={`${short || t("partner.pick")}. ${t("partner.pickLabel", { name: line.name })}`}
+          >
+            {short || t("partner.pick")}
+          </button>
+        </Popover>
+      ) : null}
+      {!source && part.can_request ? (
+        <span className="pf-hint">
+          {part.expired
+            ? t("partner.expired", {
+                name: part.expired.supplier,
+                until: date(part.expired.valid_until),
+              })
+            : t("partner.none")}
+          {onRequestPrice && line.can_edit ? (
+            <>
+              {" "}
+              <Button type="link" size="small" onClick={onRequestPrice}>
+                {t("partner.request")}
+              </Button>
+            </>
+          ) : null}
         </span>
       ) : null}
     </div>
   );
 }
 
-function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
+function Purchase({
+  line,
+  actions,
+  onRequestPrice,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  onRequestPrice?: () => void;
+}) {
   const { t, i18n } = useTranslation("calc");
   const currencies = useCurrencyCodes();
   if (line.zone === "services") {
@@ -394,6 +482,7 @@ function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
       ) : (
         <span className="pf-hint">{currencyLabel(currency, i18n.language)}</span>
       )}
+      <PartnerSource line={line} actions={actions} onRequestPrice={onRequestPrice} />
     </div>
   );
 }
@@ -478,20 +567,46 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
  * Наценка строки (D26G-5): видна с доступом к себестоимости; правится там же, где цена клиенту. Введённая наценка —
  * цена из неё, округлённая до сума; введённая цена — хранится как есть, наценка пересчитывается из неё.
  */
-function Markup({ line, actions }: { line: CalcLine; actions: Actions }) {
+function Markup({
+  line,
+  actions,
+  threshold,
+}: {
+  line: CalcLine;
+  actions: Actions;
+  threshold?: string | null;
+}) {
   const { t } = useTranslation("calc");
+  const low = line.margin_below ? (
+    <span
+      className="pf-calc-low"
+      role="img"
+      aria-label={t("ready.marginLow.lineLow", { margin: line.margin_pct, threshold })}
+      title={t("ready.marginLow.lineLow", { margin: line.margin_pct, threshold })}
+    >
+      !
+    </span>
+  ) : null;
   if (!line.can_edit || line.cost === null || line.cost === undefined) {
-    return <span className="pf-num">{line.markup_pct ?? "—"}</span>;
+    return (
+      <span className="pf-num">
+        {line.markup_pct ?? "—"}
+        {low}
+      </span>
+    );
   }
   return (
-    <NumberCell
-      value={line.markup_pct ?? null}
-      label={t("lines.markupLabel", { name: line.name })}
-      disabled={actions.pending}
-      onCommit={(next) => {
-        actions.patch(line, { markup_pct: next });
-      }}
-    />
+    <>
+      <NumberCell
+        value={line.markup_pct ?? null}
+        label={t("lines.markupLabel", { name: line.name })}
+        disabled={actions.pending}
+        onCommit={(next) => {
+          actions.patch(line, { markup_pct: next });
+        }}
+      />
+      {low}
+    </>
   );
 }
 
@@ -589,7 +704,13 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
  * клиенту · наценка · виза. Правит строку тот, у кого право её зоны (`can_edit`): товар — снабженец, услуга —
  * гл. инженер (ставка бригады и дни). Себестоимость и наценка — только при `rights.cost`. На телефоне — карточки.
  */
-export function LinesTable({ sheet }: { sheet: CalcSheet }) {
+export function LinesTable({
+  sheet,
+  onRequestPrice,
+}: {
+  sheet: CalcSheet;
+  onRequestPrice?: () => void;
+}) {
   const { t } = useTranslation("calc");
   const { mobile } = useViewport();
   const actions = useLineActions(sheet);
@@ -635,16 +756,14 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <Quantity line={line} actions={actions} />
                 <span className="pf-hint">{t("lines.columns.stock")}</span>
                 <Stock line={line} canStock={canStock} actions={actions} />
-                <span className="pf-hint">{t("lines.columns.supplier")}</span>
-                <Supplier line={line} />
                 <span className="pf-hint">{t("lines.columns.purchase")}</span>
-                <Purchase line={line} actions={actions} />
+                <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 <span className="pf-hint">{t("lines.columns.client")}</span>
                 <ClientPrice line={line} actions={actions} />
                 {showMarkup ? (
                   <>
                     <span className="pf-hint">{t("lines.columns.markup")}</span>
-                    <Markup line={line} actions={actions} />
+                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
                   </>
                 ) : null}
               </div>
@@ -672,7 +791,6 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 {t("lines.columns.quantity")}
               </th>
               <th scope="col">{t("lines.columns.stock")}</th>
-              <th scope="col">{t("lines.columns.supplier")}</th>
               <th scope="col" className="pf-col-num">
                 {t("lines.columns.purchase")}
               </th>
@@ -706,17 +824,18 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <td>
                   <Stock line={line} canStock={canStock} actions={actions} />
                 </td>
-                <td>
-                  <Supplier line={line} />
-                </td>
                 <td className="pf-col-num">
-                  <Purchase line={line} actions={actions} />
+                  <Purchase line={line} actions={actions} onRequestPrice={onRequestPrice} />
                 </td>
                 <td className="pf-col-num">
                   <ClientPrice line={line} actions={actions} />
                 </td>
                 <td className="pf-col-num">
-                  {showMarkup ? <Markup line={line} actions={actions} /> : "—"}
+                  {showMarkup ? (
+                    <Markup line={line} actions={actions} threshold={sheet.totals.threshold_pct} />
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   <Visa line={line} actions={actions} />

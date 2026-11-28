@@ -14,7 +14,8 @@ const CARDS: readonly IntegrationCardKey[] = ["erp", "telegram", "mail", "models
 
 /**
  * Прогресс первого запуска по шагам, которые видит администратор (СЦ-3): чек-лист BFF, адрес кабинета и права подписи.
- * Права подписи спрашиваются только у того, кто вправе их выдавать (BFF требует полный раздел), иначе строки нет.
+ * Права подписи спрашиваются только у того, кто вправе их выдавать (BFF требует полный раздел), иначе строки нет;
+ * если спросить не удалось (ошибка, 403 EDS без `signing.manage`), строка остаётся со словом «Не удалось проверить».
  * Слово «Работает» у шагов служб — из обзора «Сервисов» (`entities/status`): сохранённое без проверки шага не готовит.
  */
 export function useSetupProgress(enabled: boolean, options: { fresh?: boolean } = {}) {
@@ -37,7 +38,13 @@ export function useSetupProgress(enabled: boolean, options: { fresh?: boolean } 
     data && !overview.isPending
       ? visibleSteps(data, {
           cabinetUrl: cabinet.data ? (cabinet.data.url ?? null) : undefined,
-          signing: signingAllowed && signing.data ? signing.data.has_authorities : undefined,
+          signing: !signingAllowed
+            ? undefined
+            : signing.isError
+              ? "unknown"
+              : signing.data
+                ? signing.data.has_authorities
+                : undefined,
           facts,
         })
       : [];

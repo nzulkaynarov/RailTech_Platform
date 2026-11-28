@@ -94,6 +94,7 @@ _MESSAGES = {
     "LINE_INCOMPLETE": "Сначала заполните закупку и цену клиенту.",
     "CATALOG_MATCH_PENDING": "Сначала выберите позицию каталога или «Новая позиция».",
     "PURCHASE_REQUIRED": "Сначала укажите закупку: от неё считается наценка.",
+    "OFFER_NOT_AVAILABLE": "Цена партнёра уже не действует: выберите другую или запросите цену.",
     "CALC_NOT_STARTED": "Расчёт ещё не начат.",
     "DEAL_NOT_IN_CALCULATION": (
         "Заявка закрыта или ушла дальше расчёта: КП на одобрение отсюда не отправить."
@@ -452,7 +453,7 @@ async def update_line(
             status_code=422,
             details={"reason": "nothing_to_change"},
         )
-    cost_fields = sorted({"purchase_price", "purchase_currency"} & set(patch))
+    cost_fields = sorted({"purchase_price", "purchase_currency", "offer_id"} & set(patch))
     # Закупку товара правит тот, кто её видит: `cost_margin` или держатель зоны товаров (Q-D2-1-2).
     if (
         cost_fields
@@ -474,6 +475,8 @@ async def update_line(
         )
     if patch.get("product_id") is not None:
         patch["product_id"] = int(patch["product_id"])
+    if patch.get("offer_id") is not None:
+        patch["offer_id"] = int(patch["offer_id"])
     return await _sheet(authed, number, "PATCH", f"lines/{line_id}/", patch)
 
 

@@ -188,6 +188,33 @@ class CalcCatalogHintSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class CalcPartnerOptionSerializer(serializers.Serializer):
+    offer_id = serializers.IntegerField()
+    supplier = serializers.CharField()
+    price = serializers.DecimalField(max_digits=14, decimal_places=2, help_text="За единицу в валюте строки (по курсу)")
+    currency = serializers.CharField()
+    price_date = serializers.DateField(help_text="Дата цены: подтверждение или последнее изменение")
+    valid_until = serializers.DateField(allow_null=True)
+    freshness = serializers.ChoiceField(choices=("ok", "expiring", "stale"))
+    chosen = serializers.BooleanField(help_text="Эта цена стоит в закупке строки")
+
+
+class CalcPartnerExpiredSerializer(serializers.Serializer):
+    supplier = serializers.CharField()
+    valid_until = serializers.DateField()
+
+
+class CalcPartnerPriceSerializer(serializers.Serializer):
+    source = CalcPartnerOptionSerializer(
+        allow_null=True, help_text="Цена партнёра, по которой взята закупка; null — закупку ввели руками или её нет"
+    )
+    options = CalcPartnerOptionSerializer(many=True, help_text="Короткий список действующих цен, от дешёвой")
+    expired = CalcPartnerExpiredSerializer(
+        allow_null=True, help_text="Последняя истёкшая цена, когда действующих нет (молча не берётся)"
+    )
+    can_request = serializers.BooleanField(help_text="Действующей цены нет — предложить «Запросить цену»")
+
+
 class CalcLineSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     position = serializers.IntegerField()
@@ -211,6 +238,10 @@ class CalcLineSerializer(serializers.Serializer):
     )
     stock = CalcStockSerializer()
     supplier = CalcSupplierSerializer(allow_null=True)
+    partner_price = CalcPartnerPriceSerializer(
+        allow_null=True,
+        help_text="РАСЧ-1: источник закупки и выбор цены партнёра; null — услуга, строка без карточки или нет права",
+    )
     lead_days = serializers.IntegerField(allow_null=True)
     purchase_price = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     purchase_currency = serializers.CharField(allow_null=True)
@@ -219,6 +250,8 @@ class CalcLineSerializer(serializers.Serializer):
     cost = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     client_price = serializers.DecimalField(max_digits=14, decimal_places=2)
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_below = serializers.BooleanField()
     visa = CalcVisaSerializer(allow_null=True)
     group = serializers.ChoiceField(choices=("stock", "supply", "engineer"))
     can_edit = serializers.BooleanField()
@@ -228,6 +261,9 @@ class CalcTotalsSerializer(serializers.Serializer):
     purchase = serializers.DecimalField(max_digits=16, decimal_places=2, allow_null=True)
     client = serializers.DecimalField(max_digits=16, decimal_places=2)
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    threshold_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    margin_below = serializers.BooleanField()
     vat_included = serializers.BooleanField()
 
 
@@ -342,6 +378,11 @@ class CalcLinePatchSerializer(serializers.Serializer):
     lead_days = serializers.IntegerField(min_value=0, max_value=3650, required=False, allow_null=True)
     purchase_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False)
     purchase_currency = serializers.CharField(max_length=3, min_length=3, required=False)
+    offer_id = serializers.IntegerField(
+        min_value=1,
+        required=False,
+        help_text="РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (цена в валюте строки по курсу)",
+    )
     crew_rate = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, allow_null=True)
     crew_days = serializers.DecimalField(max_digits=6, decimal_places=1, min_value=0, required=False, allow_null=True)
     client_price = serializers.DecimalField(

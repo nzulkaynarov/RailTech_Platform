@@ -129,6 +129,8 @@
     "ask": "Ask for a capability",
     "askBody": "I need the capability “{{name}}”: {{level}}.",
     "grantors": "Capabilities are granted by: {{names}}.",
-    "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator."
+    "nobody": "Nobody can grant capabilities right now: no one manages employees. Write to the administrator.",
+    "action": "You are not allowed to do this.",
+    "actionNeed": "This needs the capability “{{name}}”: {{level}}."
   }
 }

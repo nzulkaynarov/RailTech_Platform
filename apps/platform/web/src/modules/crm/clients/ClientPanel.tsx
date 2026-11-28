@@ -163,7 +163,9 @@ function invitationText(
   fmt: ReturnType<typeof useFormat>,
   inv: ClientInvitation,
 ): string {
-  const via = inv.sent_via.map((c) => t(`card.channels.${c}`, { defaultValue: c })).join(", ");
+  const via = inv.sent_via
+    .map((c) => t(`card.channels.${c}`, { defaultValue: t("card.channels.unknown") }))
+    .join(", ");
   if (inv.status === "sent") {
     return [
       t("leads:card.notice.sent", { date: inv.sent_at ? fmt.date(inv.sent_at, "datetime") : "" }),

@@ -197,6 +197,8 @@ class CounterpartyCardPerson(BaseModel):
     position: str | None
     is_primary: bool
     has_cabinet: bool
+    # КЛИЕНТ-1: «Может подтверждать» — без права контакт в Кабинете только смотрит
+    can_act: bool
     has_phone: bool
     has_email: bool
     photo_url: str | None = None
@@ -312,6 +314,7 @@ def to_card(raw: Any) -> CounterpartyCard:
                 position=_text(person.get("position")),
                 is_primary=bool(person.get("is_primary")),
                 has_cabinet=bool(person.get("has_cabinet")),
+                can_act=bool(person.get("can_act")),
                 has_phone=bool(person.get("has_phone")),
                 has_email=bool(person.get("has_email")),
                 photo_url=contact_photo_url(person.get("id"), person.get("photo_version")),
@@ -858,3 +861,31 @@ async def counterparty_picker_people(
             if "id" in row
         ]
     )
+
+
+class ContactRightIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    can_act: bool
+
+
+class ContactRight(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    can_act: bool
+
+
+@router.patch(
+    "/people/contacts/{id}/cabinet-right",
+    response_model=ContactRight,
+    operation_id="setContactCabinetRight",
+)
+async def set_contact_cabinet_right(
+    id: ContactId, body: ContactRightIn, authed: RequisitesWriter
+) -> ContactRight:
+    """«Может подтверждать» контакта клиента (КЛИЕНТ-1): право — как на реквизиты (ERP
+    `deal.manage`, `supply.manage`); проверку и запись в журнал делает ERP."""
+    raw = await ErpCompany(authed.call).data(
+        "PATCH", f"parties/people/{id}/cabinet-right/", json={"can_act": body.can_act}
+    )
+    row: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    return ContactRight(id=str(row.get("id", id)), can_act=bool(row.get("can_act", body.can_act)))

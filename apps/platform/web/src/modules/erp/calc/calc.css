@@ -80,7 +80,11 @@
 .pf-calc-lines th:first-child,
 .pf-calc-lines td:first-child {
   padding-left: 12px;
+  /* Длинное название обрезается многоточием, а не растягивает таблицу: на 1512 и 1280 прокрутки вбок нет. */
+  width: 34%;
+  max-width: 0;
 }
+
 .pf-calc-number {
   color: var(--rt-color-primary-text);
   white-space: nowrap;
@@ -410,4 +414,61 @@
   justify-content: flex-end;
   padding: 12px 16px;
   border-top: 1px solid var(--rt-color-surface-split);
+}
+
+/* РАСЧ-1: откуда закупка — цена партнёра, выбор другой цены, «Запросить цену» */
+.pf-calc-partner-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 220px;
+  min-width: 0;
+  text-align: right;
+}
+.pf-calc-partner-line {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.pf-calc-partner-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 320px;
+}
+.pf-calc-partner-option {
+  padding: 4px 8px;
+  text-align: left;
+  background: none;
+  border: 1px solid var(--rt-color-surface-split);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pf-calc-partner-option[aria-selected="true"] {
+  font-weight: 600;
+}
+.pf-calc-partner-source > span {
+  display: block;
+  white-space: normal;
+}
+
+.pf-calc-low {
+  display: inline-block;
+  margin-inline-start: 4px;
+  color: var(--rt-color-warning-text);
+  font-weight: 700;
+}
+
+.pf-calc-ready-warn {
+  margin: 0 0 8px;
+  color: var(--rt-color-warning-text);
 }

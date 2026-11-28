@@ -143,7 +143,6 @@
       "position": "Pozitsiya",
       "quantity": "Soni",
       "stock": "Ombor",
-      "supplier": "Hamkor · muddat",
       "purchase": "Xarid",
       "client": "Mijozga, söm",
       "markup": "Ustama, %",
@@ -160,10 +159,6 @@
     "noStockData": "Katalogda yöq",
     "stockMore": "Yaçeyka va zaxira — «Ombor» ekranida",
     "days": "{{count}} kun",
-    "supplierHint": "kvota {{qty}} dan · narx {{date}} gaça",
-    "supplierHintNoDate": "kvota {{qty}} dan · narx muddati körsatilmagan",
-    "offerPrice": "Hamkor narxi: {{price}}",
-    "noSupplier": "Hamkor tanlanmagan",
     "service": "Brigada",
     "crewRate": "Brigada stavkasi, söm/kun",
     "crewDays": "Kun",
@@ -291,6 +286,11 @@
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki «Arizani yopiş»."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
+    "marginLow": {
+      "warn": "Marja {{margin}} % — {{threshold}} % çegaradan past. Hisob-kitobni yuborsa bölade: marja KP tasdiqlanayotganda tekşiriladi.",
+      "warnLines": "Çegaradan past: {{count}} qator.",
+      "lineLow": "Marja {{margin}} % — {{threshold}} % çegaradan past (marja mijoz narxidan, ustama emas)"
+    },
     "done": "TT maʼqullaşda",
     "closed": {
       "approved": "TT maʼqullandi",
@@ -342,7 +342,8 @@
     "reason_unknown": "Röyxatdan sababni tanlang.",
     "comment_required": "Izoh kiriting.",
     "request_not_closable": "Arizani endi yopib bölmaydi: u yopilgan yoki loyihaga aylangan.",
-    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang."
+    "reason_not_allowed_after_quote": "TT mijozda: boşqa sabab tanlang.",
+    "offer_not_available": "Hamkor narxi endi amal qilmaydi: boşqasini tanlang yoki narx sörang."
   },
   "load": {
     "retry": "Qayta uriniş",
@@ -407,5 +408,20 @@
     "client": "Mijoz",
     "stage": "Qadam",
     "textRequest": "Mijoz arizasi"
+  },
+  "partner": {
+    "source": "{{name}} hamkorning narxi {{from}} dan, {{until}} gaça amal qiladi",
+    "sourceOpen": "{{name}} hamkorning narxi {{from}} dan",
+    "expiring": "tezda tugaydi",
+    "stale": "uzoq vaqt tasdiqlanmagan",
+    "pick": "Boşqa narx",
+    "pickLabel": "«{{name}}» uçun hamkor narxi",
+    "option": "{{name}} · {{price}} · {{until}} gaça",
+    "noDate": "muddatsiz",
+    "expired": "{{name}} hamkorning narxi {{until}} da tugagan.",
+    "none": "Hamkor narxi yoq.",
+    "request": "Narx söraş",
+    "until": "{{date}} gaçha",
+    "minQty": "Kvota: {{qty}} dan"
   }
 }

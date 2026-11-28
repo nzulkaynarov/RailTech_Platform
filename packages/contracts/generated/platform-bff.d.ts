@@ -8995,6 +8995,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/contacts/{id}/cabinet-right": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Контакт клиента: «Может подтверждать»
+     * @description КЛИЕНТ-1. ERP `PATCH parties/people/{id}/cabinet-right/`: без права контакт в Кабинете только смотрит КП и договор. Право — как на реквизиты контрагента (`crm.clients` или `erp.stock` — полный доступ; в ERP `deal.manage` или `supply.manage`). Изменение пишется в журнал ERP; повтор безопасен.
+     */
+    patch: operations["setContactCabinetRight"];
+    trace?: never;
+  };
   "/people/contacts/{id}/photo": {
     parameters: {
       query?: never;
@@ -12288,6 +12308,13 @@ export interface components {
        * @description Квадрат, уже обрезанный клиентом (логотип — квадрат, фото контакта — круг 256x256); PNG, JPEG или WebP до 2 МБ
        */
       file: string;
+    };
+    ContactRightIn: {
+      can_act: boolean;
+    };
+    ContactRight: {
+      id: string;
+      can_act: boolean;
     };
     ContactPhoto: {
       id: string;
@@ -17637,6 +17664,40 @@ export interface components {
       /** @description Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods` */
       offer_currency?: string | null;
     };
+    /** @description РАСЧ-1 — действующая цена партнёра в валюте строки (после перевода по курсу) */
+    CalcPartnerOption: {
+      offer_id: string;
+      supplier: string;
+      price: components["schemas"]["DecimalString"];
+      currency: string;
+      /**
+       * Format: date
+       * @description Дата цены — подтверждение или последнее изменение
+       */
+      price_date: string;
+      /** Format: date */
+      valid_until: string | null;
+      /** @enum {string} */
+      freshness: "ok" | "expiring" | "stale";
+      /** @description Эта цена стоит в закупке строки */
+      chosen: boolean;
+    };
+    CalcPartnerExpired: {
+      supplier: string;
+      /** Format: date */
+      valid_until: string;
+    };
+    /** @description РАСЧ-1 — источник закупки строки и выбор цены партнёра. Группе `supplier_prices` или держателю `erp.calc.goods`; услуга и строка без карточки — null. */
+    CalcPartnerPrice: {
+      /** @description Цена партнёра, по которой взята закупка; null — закупку ввели руками или её нет */
+      source: components["schemas"]["CalcPartnerOption"] | null;
+      /** @description Короткий список действующих цен, от дешёвой (до 5) */
+      options: components["schemas"]["CalcPartnerOption"][];
+      /** @description Последняя истёкшая цена, когда действующих нет — молча не берётся, экран предлагает «Запросить цену» */
+      expired: components["schemas"]["CalcPartnerExpired"] | null;
+      /** @description Действующей цены нет */
+      can_request: boolean;
+    };
     CalcLineVisa: {
       /** @description Кто подтвердил строку (факт визы) */
       by: string;
@@ -17674,6 +17735,7 @@ export interface components {
       unit_code: string | null;
       stock: components["schemas"]["CalcStock"];
       supplier: components["schemas"]["CalcSupplier"] | null;
+      partner_price?: components["schemas"]["CalcPartnerPrice"] | null;
       /** @description Срок поставки строки, дней */
       lead_days: number | null;
       /** @description Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods` */
@@ -17690,6 +17752,10 @@ export interface components {
       client_price: components["schemas"]["DecimalString"];
       /** @description Наценка строки, % — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки на цену, % = (цена − себестоимость) / цена — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа строки ниже порога — предупреждение, не запрет */
+      margin_below?: boolean;
       visa: components["schemas"]["CalcLineVisa"] | null;
       /** @description Сотрудник может править и визировать строку (зона, черновик) */
       can_edit: boolean;
@@ -17701,6 +17767,12 @@ export interface components {
       purchase?: components["schemas"]["DecimalString"];
       /** @description Наценка итого — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого на цену, % — только группе `cost_margin` */
+      margin_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Порог маржи, % (из задания, иначе из настроек компании) — только группе `cost_margin` */
+      threshold_pct?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа итого ниже порога — предупреждение перед «Расчёт готов», не запрет */
+      margin_below?: boolean;
       /** @constant */
       vat_included: false;
     };
@@ -17833,6 +17905,8 @@ export interface components {
       lead_days?: number | null;
       purchase_price?: components["schemas"]["DecimalString"];
       purchase_currency?: string;
+      /** @description РАСЧ-1: закупка по выбранной действующей цене партнёра из списка строки (в валюте строки по курсу) */
+      offer_id?: string;
       crew_rate?: components["schemas"]["DecimalString"] | null;
       crew_days?: components["schemas"]["DecimalString"] | null;
       /** @description Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5) */
@@ -18801,6 +18875,14 @@ export interface components {
       duplicate_of?: string | null;
       /** @description Лид передан как партнёр (ЛП-1): номер заявки кандидата в ERP («Заявки партнёров»); иначе `null`. Лид закрыт, в списках его нет, карточка открывается по номеру. */
       partner_application?: number | null;
+      /** @description Заявка, созданная из этого лида (КЛИЕНТ-1): последняя по номеру; `null` — заявки нет или CRM не ответила по сделкам. Пока она есть, карточка показывает «Заявка … создана», а не «Создать заявку». */
+      request?: components["schemas"]["LeadRequest"] | null;
+    };
+    LeadRequest: {
+      deal: number;
+      /** @description Номер заявки в ERP; пока ERP её не приняла — null */
+      number: string | null;
+      transfer: ("pending" | "done" | "failed") | null;
     };
     /** @description Факты об источнике лида, сохранённые при приёме заявки с сайта или из Cabinet */
     LeadOrigin: {
@@ -19738,6 +19820,8 @@ export interface components {
       is_primary: boolean;
       /** @description Входит в кабинет */
       has_cabinet: boolean;
+      /** @description Может подтверждать (КЛИЕНТ-1): принимает КП и договор в Кабинете; иначе только просмотр */
+      can_act: boolean;
       has_phone: boolean;
       has_email: boolean;
       /** @description Фото контакта: адрес на BFF с `?v=<версия>` (СУЩ-3); null — инициалы */
@@ -37203,6 +37287,40 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setContactCabinetRight: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContactRightIn"];
+      };
+    };
+    responses: {
+      /** @description Право сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContactRight"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

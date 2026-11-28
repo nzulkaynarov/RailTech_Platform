@@ -232,6 +232,62 @@ test.describe("Проекты: чтение и доступ", () => {
     await expectNoViolations(page, "менеджер: чтение");
   });
 
+  // ПОДПИСЬ-1: «На подпись» закрыта на странице «Только чтение» и называет причину; отказ сервера показан словами.
+  // Снимки для приёмки — E2E_SCREENSHOT_DIR (1512×982 и 390).
+  for (const [width, height] of [
+    [1512, 982],
+    [390, 844],
+  ] as const) {
+    test(`ПОДПИСЬ-1: менеджер, «Только чтение» — «На подпись» закрыта, причина названа (${String(width)})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await loginAndWait(page, "manager@demo.example");
+      await openProject(page, 105);
+      const docs = page.getByRole(DOCS.role, { name: DOCS.name });
+      const signing = docs.getByRole("button", { name: "На подпись" });
+      await expect(signing).toBeDisabled();
+      const reason = docs.locator(".pf-signing-denied").first();
+      await expect(reason).toHaveAttribute("aria-label", /возможност/i);
+      await reason.focus();
+      await expect(page.getByRole("tooltip")).toContainText("Нужна возможность");
+      await settledScreenshot(page, "project-read-only");
+      await expectNoViolations(page, `менеджер: «На подпись» закрыта ${String(width)}`);
+    });
+
+    test(`ПОДПИСЬ-1: отказ 403 по «На подпись» — сообщение с причиной (${String(width)})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      // MSW живёт в service worker — `page.route` его ответы не видит, поэтому подменяем fetch страницы
+      await page.addInitScript(`(() => {
+        const original = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const url = input instanceof Request ? input.url : String(input);
+          const method = (input instanceof Request ? input.method : init && init.method) || "GET";
+          return method === "POST" && /\\/eds\\/projects\\/[^/]+\\/signing$/.test(url)
+            ? Promise.resolve(new Response(
+                JSON.stringify({ code: "FORBIDDEN", message: "forbidden", source: "bff" }),
+                { status: 403, headers: { "content-type": "application/json" } },
+              ))
+            : original(input, init);
+        };
+      })()`);
+      await loginAndWait(page, "accountant@demo.example");
+      await openProject(page, 105);
+      await page
+        .getByRole(DOCS.role, { name: DOCS.name })
+        .getByRole("button", { name: "На подпись" })
+        .click();
+      await expect(
+        page
+          .locator(".ant-message-notice")
+          .getByText(/Не удалось отправить на подпись: Не хватает/),
+      ).toBeVisible();
+      await shot(page, "signing-403");
+    });
+  }
+
   test("администратор без раздела eds.projects: «Нет доступа»", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/eds/projects");

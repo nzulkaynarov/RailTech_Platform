@@ -14,7 +14,10 @@ import sys
 from sqlalchemy import select
 
 from app.container import get_container
+from app.domain.errors import ConflictError
 from app.models.auth import User
+from app.security.audit import Actor
+from app.services.user_views import UserPatch
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -24,23 +27,30 @@ async def run(args: argparse.Namespace) -> int:
     changed: list[str] = []
     same: list[str] = []
     missing: list[str] = []
+    blocked: list[str] = []
     try:
-        async with container.session_factory() as session, session.begin():
-            rows = (
-                await session.scalars(select(User).where(User.email.in_(emails)).with_for_update())
-            ).all()
-            found = {u.email.lower(): u for u in rows}
-            for email in emails:
-                user = found.get(email)
-                if user is None:
-                    missing.append(email)
-                elif user.is_service == target:
-                    same.append(email)
+        async with container.session_factory() as session:
+            rows = (await session.scalars(select(User).where(User.email.in_(emails)))).all()
+        found = {u.email.lower(): u for u in rows}
+        for email in emails:
+            user = found.get(email)
+            if user is None:
+                missing.append(email)
+            elif user.is_service == target:
+                same.append(email)
+            elif not args.apply:
+                changed.append(email)
+            else:
+                # Через сервис: те же защиты «последний администратор/директор» и запись в журнал,
+                # что и у API.
+                try:
+                    await container.user_service.update(
+                        Actor.system(), user.id, UserPatch(is_service=target)
+                    )
+                except ConflictError as exc:
+                    blocked.append(f"{email} ({exc.code})")
                 else:
                     changed.append(email)
-                    user.is_service = target
-            if not args.apply:
-                await session.rollback()
     finally:
         await container.aclose()
     mode = "применено" if args.apply else "dry-run, ничего не записано"
@@ -51,4 +61,6 @@ async def run(args: argparse.Namespace) -> int:
         sys.stdout.write(f"  {email}\n")
     for email in missing:
         sys.stdout.write(f"  не найден: {email}\n")
-    return 0
+    for item in blocked:
+        sys.stdout.write(f"  отклонено защитой: {item}\n")
+    return 1 if blocked else 0

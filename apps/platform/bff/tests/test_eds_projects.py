@@ -927,6 +927,39 @@ async def test_signing_request_created_by_erp_with_201_is_success(
     assert len(erp.calls_to("POST", rf"{slug}/{doc_id}/request-signing/")) == 1
 
 
+@pytest.mark.parametrize(
+    "code",
+    [
+        "NOT_ISSUED",
+        "NO_NUMBER",
+        "ALREADY_REQUESTED",
+        "ALREADY_SIGNED",
+        "DOCUMENT_CLOSED",
+        "NO_CRM_USER",
+    ],
+)
+async def test_signing_request_refusal_of_erp_keeps_its_reason(
+    web: Web, erp: ProjectsFake, code: str
+) -> None:
+    """Отказы ERP при `request-signing` (все 409): код доходит строчным в `details.reason`."""
+    await _as(web, "ACCOUNTANT")
+    erp.cards[DEAL] = card(contract=contract_card(), act=act_card(), invoices=[invoice_card()])
+    erp.answer(
+        "POST",
+        rf"invoices/{INVOICE_ID}/request-signing/",
+        httpx.Response(409, json={"code": code, "detail": "текст ERP"}),
+    )
+
+    response = await web.send(
+        "POST", f"{BASE}/{NUMBER}/signing", json={"kind": "invoice", "document_id": INVOICE_ID}
+    )
+
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert body["details"]["reason"] == code.lower()
+    assert body["message"] != "Объект изменился. Обновите страницу."
+
+
 # --- ДОК-10: договор по утверждённому шаблону ---------------------------------------------------
 
 

@@ -136,13 +136,15 @@ export const SIGNING_PATH = "/admin/signing";
 
 /**
  * Состояние каждого видимого шага. `cabinetUrl` — `undefined`, пока адрес кабинета не загружен; `signing` — `undefined`,
- * если у сотрудника нет права выдавать полномочия подписи или ответ ещё не пришёл: строки «Права подписи» тогда нет.
+ * если у сотрудника нет права выдавать полномочия подписи или ответ ещё не пришёл: строки «Права подписи» тогда нет;
+ * `"unknown"` — право есть, а проверить реестр не удалось (ошибка, отказ EDS): строка остаётся со словом «Не удалось
+ * проверить», шаг не пропадает молча.
  */
 export function visibleSteps(
   c: SetupChecklist,
   extra: {
     cabinetUrl?: string | null;
-    signing?: boolean;
+    signing?: boolean | "unknown";
     /** Проверки служб из обзора «Сервисов» по карточкам: без них шаг службы не «Работает», а «Не удалось проверить» */
     facts?: Partial<Record<IntegrationCardKey, StatusFact>>;
   },
@@ -182,7 +184,8 @@ export function visibleSteps(
     fromChecklist("first_employee"),
   ];
   if (extra.signing !== undefined) {
-    steps.push(step("signing", extra.signing ? "done" : "todo", SIGNING_PATH));
+    const state = extra.signing === "unknown" ? "unknown" : extra.signing ? "done" : "todo";
+    steps.push(step("signing", state, SIGNING_PATH));
   }
   return steps;
 }

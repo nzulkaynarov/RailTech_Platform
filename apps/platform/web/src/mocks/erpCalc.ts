@@ -170,6 +170,13 @@ const GROUP = { goods: "stock", goods_to_order: "supply", service: "engineer" } 
 const money = (value: number) => value.toFixed(2);
 const markup = (cost: number, price: number) =>
   cost > 0 ? (((price - cost) / cost) * 100).toFixed(1) : null;
+const marginOn = (cost: number, price: number) =>
+  cost > 0 && price > 0 ? (((price - cost) / price) * 100).toFixed(1) : null;
+const MOCK_THRESHOLD = 12;
+const below = (cost: number, price: number) => {
+  const value = marginOn(cost, price);
+  return value !== null && Number(value) < MOCK_THRESHOLD;
+};
 const signed = (line: MockLine) => line.visa !== null && line.visa.zone === zoneOf(line);
 
 function costOf(line: MockLine): number {
@@ -231,9 +238,40 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           lead_days: line.supplier.leadDays,
           min_order_qty: line.supplier.minOrderQty,
           price_valid_until: line.supplier.validUntil,
-          ...(offers ? { offer_price: line.supplier.offerPrice, offer_currency: "UZS" } : {}),
+          ...(offers
+            ? {
+                offer_price: line.supplier.offerPrice,
+                offer_currency: line.partner?.options[0]?.currency ?? "UZS",
+              }
+            : {}),
         }
       : null,
+    partner_price:
+      offers && line.partner && zone === "goods"
+        ? (() => {
+            const options = line.partner.options.map((o) => ({
+              offer_id: String(o.id),
+              supplier: o.supplier,
+              price: money(o.price),
+              currency: o.currency,
+              price_date: o.priceDate,
+              valid_until: o.validUntil,
+              freshness: o.freshness,
+              chosen: o.id === line.partner?.offerId,
+            }));
+            return {
+              source: options.find((o) => o.chosen) ?? null,
+              options,
+              expired: line.partner.expired
+                ? {
+                    supplier: line.partner.expired.supplier,
+                    valid_until: line.partner.expired.validUntil,
+                  }
+                : null,
+              can_request: options.length === 0,
+            };
+          })()
+        : null,
     lead_days: line.leadDays,
     crew_rate: zoneCost && line.crewRate !== null ? money(line.crewRate) : null,
     crew_days: zoneCost && line.crewDays !== null ? line.crewDays.toFixed(1) : null,
@@ -245,7 +283,13 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           cost: money(unit),
         }
       : {}),
-    ...(cost ? { markup_pct: markup(unit, line.client) } : {}),
+    ...(cost
+      ? {
+          markup_pct: markup(unit, line.client),
+          margin_pct: marginOn(unit, line.client),
+          margin_below: below(unit, line.client),
+        }
+      : {}),
     visa: signed(line) && line.visa ? { by: line.visa.by, at: line.visa.at } : null,
     can_edit: editable && canZone(user, zone),
   };
@@ -459,7 +503,15 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     lines,
     totals: {
       client: money(client),
-      ...(cost ? { purchase: money(purchase), markup_pct: markup(purchase, client) } : {}),
+      ...(cost
+        ? {
+            purchase: money(purchase),
+            markup_pct: markup(purchase, client),
+            margin_pct: marginOn(purchase, client),
+            threshold_pct: MOCK_THRESHOLD.toFixed(1),
+            margin_below: below(purchase, client),
+          }
+        : {}),
       vat_included: false,
     },
     visas: groups(calc),
@@ -828,7 +880,19 @@ export const erpCalcHandlers = [
       line.unitCode = patch.unit_code;
       line.unit = unit;
     }
-    if (patch.purchase_price !== undefined) line.purchase = Number(patch.purchase_price);
+    if (patch.offer_id !== undefined) {
+      const option = line.partner?.options.find((o) => String(o.id) === patch.offer_id);
+      if (!option || !line.partner) {
+        return conflict("offer_not_available", "Цена партнёра уже не действует.");
+      }
+      line.partner.offerId = option.id;
+      line.purchase = option.price;
+      line.currency = option.currency;
+    }
+    if (patch.purchase_price !== undefined) {
+      line.purchase = Number(patch.purchase_price);
+      if (line.partner) line.partner.offerId = null;
+    }
     if (patch.purchase_currency) line.currency = patch.purchase_currency;
     if (patch.crew_rate !== undefined)
       line.crewRate = patch.crew_rate === null ? null : Number(patch.crew_rate);

@@ -93,7 +93,8 @@
     "repeated": "This request has already been created — showing it.",
     "waits": "Waiting for a resolution.",
     "failed": "Not passed to accounting: retry sending in the client card.",
-    "open": "Open request"
+    "open": "Open request",
+    "openClient": "Open client"
   },
   "errors": {
     "company": "Pick the company",

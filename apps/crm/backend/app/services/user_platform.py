@@ -120,15 +120,20 @@ async def guard_system_holders(
     held: Sequence[PlatformRole],
     requested: Sequence[PlatformRole] | None,
     deactivating: bool,
+    user_service: bool = False,
+    becoming_service: bool = False,
 ) -> None:
-    """Нельзя оставить компанию без активного администратора или директора (409)."""
-    if not user_active:
-        return  # неактивный сотрудник в счёт «последнего» не идёт
+    """Нельзя оставить компанию без активного администратора или директора (409).
+
+    Служебная учётная запись в счёт не идёт: пометка последнего настоящего держателя служебным —
+    такая же потеря роли, как снятие или отключение."""
+    if not user_active or user_service:
+        return  # неактивный и служебный сотрудник в счёт «последнего» не идёт
     keep = None if requested is None else {r.id for r in requested}
     for role in held:
         if not role.is_system:
             continue
-        leaving = deactivating or (keep is not None and role.id not in keep)
+        leaving = deactivating or becoming_service or (keep is not None and role.id not in keep)
         if leaving and await repo.count_active_holders(session, role.id, excluding=user_id) == 0:
             if role.code == ADMIN_CODE:
                 raise LastAdminError("the last active administrator cannot lose the ADMIN role")

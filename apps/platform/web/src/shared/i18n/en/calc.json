@@ -143,7 +143,6 @@
       "position": "Item",
       "quantity": "Qty",
       "stock": "Stock",
-      "supplier": "Partner · lead time",
       "purchase": "Purchase",
       "client": "Client price, UZS",
       "markup": "Markup, %",
@@ -160,10 +159,6 @@
     "noStockData": "Not in catalogue",
     "stockMore": "Bin and reserve — on the “Stock” screen",
     "days": "{{count}} days",
-    "supplierHint": "min. order {{qty}} · price valid to {{date}}",
-    "supplierHintNoDate": "min. order {{qty}} · price validity not set",
-    "offerPrice": "Partner price: {{price}}",
-    "noSupplier": "No partner chosen",
     "service": "Crew",
     "crewRate": "Crew rate, UZS/day",
     "crewDays": "Days",
@@ -291,6 +286,11 @@
       "rejected_client": "The client rejected the quote — choose above: a new quote version or «Close request»."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
+    "marginLow": {
+      "warn": "Margin {{margin}} % is below the {{threshold}} % threshold. You can still send the costing: the margin is checked when the quote is approved.",
+      "warnLines": "Below the threshold: {{count}} lines.",
+      "lineLow": "Margin {{margin}} % is below the {{threshold}} % threshold (margin is on the client price, not the markup)"
+    },
     "done": "Quote awaiting approval",
     "closed": {
       "approved": "Quote approved",
@@ -342,7 +342,8 @@
     "reason_unknown": "Pick a reason from the list.",
     "comment_required": "Enter a comment.",
     "request_not_closable": "The request can no longer be closed: it is closed or became a project.",
-    "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason."
+    "reason_not_allowed_after_quote": "The quote is already with the client: pick another reason.",
+    "offer_not_available": "The partner price is no longer valid: pick another or request a price."
   },
   "load": {
     "retry": "Retry",
@@ -407,5 +408,20 @@
     "client": "Client",
     "stage": "Step",
     "textRequest": "Client request"
+  },
+  "partner": {
+    "source": "Partner {{name}} price from {{from}}, valid until {{until}}",
+    "sourceOpen": "Partner {{name}} price from {{from}}",
+    "expiring": "expires soon",
+    "stale": "not confirmed for a long time",
+    "pick": "Another price",
+    "pickLabel": "Partner price for “{{name}}”",
+    "option": "{{name}} · {{price}} · until {{until}}",
+    "noDate": "no end date",
+    "expired": "Partner {{name}} price expired on {{until}}.",
+    "none": "No partner price.",
+    "request": "Request a price",
+    "until": "until {{date}}",
+    "minQty": "Quota from {{qty}}"
   }
 }
