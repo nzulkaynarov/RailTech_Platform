@@ -111,9 +111,9 @@ def request_status(deal) -> str:
     if code == DealStageCode.CLOSED_LOST:
         return "closed"
     quotes = list(deal.quotes.all())
-    if code in (DealStageCode.QUOTE_SENT, DealStageCode.CONTRACT_SIGNED):
-        return "quoted"
-    if any((q.status.code if q.status else QuoteStatusCode.DRAFT) != QuoteStatusCode.DRAFT for q in quotes):
+    # «Есть предложение» — только когда клиент уже может его открыть: тот же предикат, что у списка «Предложения»
+    # (`client_quotes_visible`). КП на проверке ВЭД, у директора или «готово к отправке» клиенту пока не обещано (КАБ-1).
+    if any(client_quotes_visible(q) for q in quotes):
         return "quoted"
     if code == DealStageCode.DRAFT and not quotes:
         return "new"

@@ -36,6 +36,15 @@ describe('Заявки', () => {
     await expectNoAxeViolations();
   });
 
+  it('карточка: пока КП не ушло клиенту — «В работе», а не «Есть предложение» (КАБ-1)', async () => {
+    signedIn();
+    renderApp('/requests/502');
+    await heading('Заявка ПР-2026-057');
+    expect(screen.getByText('Готовим коммерческое предложение.')).toBeInTheDocument();
+    expect(screen.queryByText('Предложение готово — откройте его ниже.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Есть предложение')).not.toBeInTheDocument();
+  });
+
   it('карточка: без назначенного менеджера строки «Ведёт» нет', async () => {
     signedIn();
     renderApp('/requests/503');
